@@ -8,6 +8,7 @@ import React, {
   useEffect,
 } from "react";
 import { adminService, userService } from "@/services";
+import { userCacheKey, LEGACY_USER_CACHE_KEY } from "@/lib/authSurface";
 
 interface User {
   id: string;
@@ -87,22 +88,12 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     const checkAuth = async () => {
       const hasToken = userService.isAuthenticated();
 
-      // Se não há token, tenta restaurar do cache
+      // Sem session hint da superfície ATUAL = deslogado nesta superfície. NÃO
+      // restaura cache: isso é o que evita o vazamento entre superfícies (logar no
+      // organizador não pode mostrar o storefront logado). O cache só é usado como
+      // resiliência offline QUANDO há hint mas o /profile falha por rede (abaixo).
       if (!hasToken) {
-        try {
-          const cachedUser = localStorage.getItem("user");
-          if (cachedUser) {
-            const user = JSON.parse(cachedUser);
-            // Verifica se o cache não está muito antigo (30 dias)
-            const cacheAge = Date.now() - (user._cachedAt || 0);
-            if (cacheAge < 30 * 24 * 60 * 60 * 1000) {
-              setUser(user);
-              return;
-            }
-          }
-        } catch (e) {
-          console.warn("Failed to restore user from cache:", e);
-        }
+        setUser(null);
         return;
       }
 
@@ -110,7 +101,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       try {
         const { data: profile } = await userService.getProfile();
         const userWithCache = { ...profile, _cachedAt: Date.now() };
-        localStorage.setItem("user", JSON.stringify(userWithCache));
+        localStorage.setItem(userCacheKey(), JSON.stringify(userWithCache));
         setUser(profile);
       } catch (profileError: any) {
         console.error("Profile fetch failed:", profileError);
@@ -118,7 +109,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         // Se o erro não for 401/403, tenta usar cache
         if (profileError?.response?.status !== 401 && profileError?.response?.status !== 403) {
           try {
-            const cachedUser = localStorage.getItem("user");
+            const cachedUser = localStorage.getItem(userCacheKey());
             if (cachedUser) {
               const user = JSON.parse(cachedUser);
               setUser(user);
@@ -137,7 +128,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
             clearAuthData();
           } else {
             try {
-              const cachedUser = localStorage.getItem("user");
+              const cachedUser = localStorage.getItem(userCacheKey());
               if (cachedUser) {
                 setUser(JSON.parse(cachedUser));
               }
@@ -169,7 +160,8 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   }, []);
 
   const clearAuthData = () => {
-    localStorage.removeItem("user");
+    localStorage.removeItem(userCacheKey());
+    localStorage.removeItem(LEGACY_USER_CACHE_KEY); // limpa o cache global pré-isolamento
     const apiClient = (userService as any).apiClient;
     if (apiClient && apiClient.clearTokens) {
       apiClient.clearTokens();
@@ -182,7 +174,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     try {
       const { data } = await userService.getProfile();
       const userWithCache = { ...data, _cachedAt: Date.now() };
-      localStorage.setItem("user", JSON.stringify(userWithCache));
+      localStorage.setItem(userCacheKey(), JSON.stringify(userWithCache));
       setUser(data);
       return data;
     } catch (error: any) {
@@ -194,7 +186,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       } else {
         // Para outros erros, tenta usar cache
         try {
-          const cachedUser = localStorage.getItem("user");
+          const cachedUser = localStorage.getItem(userCacheKey());
           if (cachedUser) {
             const user = JSON.parse(cachedUser);
             setUser(user);
@@ -236,7 +228,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
           }
         }
         const userWithCache = { ...user, _cachedAt: Date.now() };
-        localStorage.setItem("user", JSON.stringify(userWithCache));
+        localStorage.setItem(userCacheKey(), JSON.stringify(userWithCache));
         // JWT de organizador não deve chamar /auth/profile (participante): 401/403 limpa sessão em refetchUser.
         if (data.accountType === "ORGANIZER") {
           setUser(user as User);
@@ -274,7 +266,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
           }
         }
         const userWithCache = { ...user, _cachedAt: Date.now() };
-        localStorage.setItem("user", JSON.stringify(userWithCache));
+        localStorage.setItem(userCacheKey(), JSON.stringify(userWithCache));
         if (accountType === "ORGANIZER") {
           setUser(user as User);
         } else {
@@ -351,7 +343,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         accountType: createdUser.accountType ?? "USER",
         avatarUrl: createdUser.avatarUrl ?? "",
       };
-      localStorage.setItem("user", JSON.stringify({ ...userObj, _cachedAt: Date.now() }));
+      localStorage.setItem(userCacheKey(), JSON.stringify({ ...userObj, _cachedAt: Date.now() }));
       setUser(userObj as any);
 
       // Busca o perfil completo em background para popular todos os campos do User

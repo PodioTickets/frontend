@@ -1,5 +1,6 @@
 import "server-only";
 import { headers, cookies } from "next/headers";
+import { surfaceFromHost } from "../authSurface";
 
 /**
  * Resolve, no SERVER (RSC), o access token httpOnly da superfície correta para
@@ -18,17 +19,6 @@ import { headers, cookies } from "next/headers";
  */
 const SURFACE_ORDER = ["organizer", "admin", "client"] as const;
 
-function hostnameOf(raw?: string): string | null {
-  const v = raw?.trim();
-  if (!v) return null;
-  try {
-    const url = v.includes("://") ? new URL(v) : new URL(`http://${v}`);
-    return url.hostname.toLowerCase();
-  } catch {
-    return v.split("/")[0].split(":")[0].toLowerCase();
-  }
-}
-
 export async function readServerSurfaceToken(): Promise<string | null> {
   const h = await headers();
   const host = (h.get("x-forwarded-host") || h.get("host") || "")
@@ -37,16 +27,13 @@ export async function readServerSurfaceToken(): Promise<string | null> {
     .trim()
     .toLowerCase();
 
-  const adminHost = hostnameOf(
+  // Mesma resolução host→superfície do client (match exato + rótulo do subdomínio).
+  // Aceita os env vars com e sem prefixo NEXT_PUBLIC_ (server-side pode usar bare).
+  const preferred = surfaceFromHost(
+    host,
     process.env.NEXT_PUBLIC_ADMIN_APP_HOST || process.env.ADMIN_APP_HOST,
-  );
-  const orgHost = hostnameOf(
     process.env.NEXT_PUBLIC_ORGANIZER_APP_HOST || process.env.ORGANIZER_APP_HOST,
   );
-
-  let preferred: (typeof SURFACE_ORDER)[number] | null = null;
-  if (adminHost && host === adminHost) preferred = "admin";
-  else if (orgHost && host === orgHost) preferred = "organizer";
 
   const c = await cookies();
   const read = (s: string): string | null => {

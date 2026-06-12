@@ -48,31 +48,45 @@ function hostHasSegment(host: string, label: string | null): boolean {
 }
 
 /**
- * Superfície atual:
- *  - HOST: match exato com NEXT_PUBLIC_ADMIN/ORGANIZER_APP_HOST OU pelo RÓTULO
- *    distintivo do subdomínio (`app`/`test890`). O rótulo resolve o caso em que o
+ * Resolve a superfície SÓ pelo host (sem path/window) — helper compartilhado pelo
+ * client (`getCurrentSurface`), pelo SSR (`readServerSurfaceToken`) e pelo
+ * `RootLayout`. Retorna `null` quando o host não identifica admin/organizer (aí
+ * cada caller decide o fallback: path no client, ordem de cookie no SSR, client).
+ *
+ *  - HOST exato: match com o env (quando aponta o host real do ambiente).
+ *  - RÓTULO distintivo do subdomínio (`app`/`test890`): resolve o caso em que o
  *    build herdou o host de DEV (`app.localhost`) mas roda em
  *    `homologacao.app.podioticket.com.br`/`app.podioticket.com.br` — o segmento
  *    `app` aparece nos três → superfície correta sem depender do env por ambiente.
- *  - PATH: fallback p/ same-host (/admin, /organizer; resto = client).
- *  - SSR (sem window): 'client' (chamadas SSR são anônimas ou usam Bearer).
+ */
+export function surfaceFromHost(
+  host: string,
+  adminHostEnv?: string,
+  orgHostEnv?: string,
+): AuthSurface | null {
+  if (!host) return null;
+  const h = host.toLowerCase();
+  if (h === hostnameOf(adminHostEnv)) return "admin";
+  if (h === hostnameOf(orgHostEnv)) return "organizer";
+  if (hostHasSegment(h, distinctiveLabel(adminHostEnv))) return "admin";
+  if (hostHasSegment(h, distinctiveLabel(orgHostEnv))) return "organizer";
+  return null;
+}
+
+/**
+ * Superfície atual (CLIENT): host (ver `surfaceFromHost`) → path
+ * (/admin, /organizer) → client. SSR (sem window) = 'client'.
  */
 export function getCurrentSurface(): AuthSurface {
   if (typeof window === "undefined") return "client";
 
-  const host = window.location.hostname.toLowerCase();
-  const adminHostEnv = process.env.NEXT_PUBLIC_ADMIN_APP_HOST;
-  const orgHostEnv = process.env.NEXT_PUBLIC_ORGANIZER_APP_HOST;
+  const byHost = surfaceFromHost(
+    window.location.hostname,
+    process.env.NEXT_PUBLIC_ADMIN_APP_HOST,
+    process.env.NEXT_PUBLIC_ORGANIZER_APP_HOST,
+  );
+  if (byHost) return byHost;
 
-  // 1) Host exato (dev same-host, ou env apontando o host real do ambiente).
-  if (host === hostnameOf(adminHostEnv)) return "admin";
-  if (host === hostnameOf(orgHostEnv)) return "organizer";
-
-  // 2) Rótulo do subdomínio — resiliente ao ambiente (ver doc acima).
-  if (hostHasSegment(host, distinctiveLabel(adminHostEnv))) return "admin";
-  if (hostHasSegment(host, distinctiveLabel(orgHostEnv))) return "organizer";
-
-  // 3) Path (same-host dev, ou painéis sob /admin|/organizer).
   const p = window.location.pathname;
   if (p === "/admin" || p.startsWith("/admin/")) return "admin";
   if (p === "/organizer" || p.startsWith("/organizer/")) return "organizer";
@@ -90,3 +104,18 @@ export function sessionHintCookieName(
 ): string {
   return `pt_authed_${surface}`;
 }
+
+/**
+ * Chave do cache de user no localStorage, SCOPED por superfície. Como cookies são
+ * de domínio-pai (compartilhados entre subdomínios) e localStorage é por-origin,
+ * sem o sufixo a sessão de uma superfície (ex.: organizer) "vazaria" pra outra
+ * (client) servida no MESMO origin → o storefront mostraria o organizador logado.
+ */
+export function userCacheKey(
+  surface: AuthSurface = getCurrentSurface(),
+): string {
+  return `user_${surface}`;
+}
+
+/** Chave LEGADA (global, pré-isolamento). Limpada no logout p/ não deixar lixo. */
+export const LEGACY_USER_CACHE_KEY = "user";
