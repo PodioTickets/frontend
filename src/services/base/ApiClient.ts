@@ -33,7 +33,25 @@ export class ApiClient {
       withCredentials: true,
     });
 
+    this.clearLegacyJsTokens();
     this.setupInterceptors();
+  }
+
+  /**
+   * Remove cookies de token LEGÍVEIS por JS (`access_token`/`refresh_token`) —
+   * resquício da era pré-httpOnly (quando o front os gravava via js-cookie).
+   * Pós-migração, um token visível ao JS é sempre obsoleto (o válido é httpOnly,
+   * invisível) e pode "sombrear" o cookie httpOnly novo → o backend lê o velho
+   * inválido e responde 401. `Cookies.remove` não afeta o cookie httpOnly (o
+   * browser ignora escrita via document.cookie em httpOnly) nem o hint
+   * `pt_authed`. Roda 1× na criação do singleton (no-op no SSR).
+   */
+  private clearLegacyJsTokens(): void {
+    if (typeof document === "undefined") return;
+    if (Cookies.get("access_token") || Cookies.get("refresh_token")) {
+      Cookies.remove("access_token");
+      Cookies.remove("refresh_token");
+    }
   }
 
   getBaseURL(): string {
@@ -95,19 +113,25 @@ export class ApiClient {
           originalRequest.url?.includes("/auth/login") ||
           originalRequest.url?.includes("/auth/register") ||
           originalRequest.url?.includes("/auth/refresh") ||
+          originalRequest.url?.includes("/auth/logout") ||
           originalRequest.url?.includes("/auth/change-password");
 
         if (
           error.response?.status === 401 &&
           !originalRequest._retry &&
-          !isAuthRoute
+          !isAuthRoute &&
+          // Só tenta refresh se há indício de sessão (cookie-dica `pt_authed`).
+          // Sem isso, um 401 de usuário deslogado (ex.: logout/getProfile antes
+          // do login) dispararia /auth/refresh à toa → "Refresh token ausente".
+          this.hasSessionHint()
         ) {
           if (this.isRefreshing) {
             return new Promise((resolve, reject) => {
               this.failedQueue.push({ resolve, reject });
             })
-              .then((token) => {
-                originalRequest.headers.Authorization = `Bearer ${token}`;
+              .then(() => {
+                // Auth por cookie httpOnly: nada de Authorization manual — o
+                // cookie renovado já viaja com withCredentials. Só repete.
                 return this.client(originalRequest);
               })
               .catch((err) => Promise.reject(err));
@@ -117,35 +141,11 @@ export class ApiClient {
           this.isRefreshing = true;
 
           try {
-            const refreshToken = this.getRefreshToken();
-            if (!refreshToken) {
-              // Se não há refresh token, limpa tokens e rejeita com o erro original
-              this.clearTokens();
-              return Promise.reject(error);
-            }
-
-            const response = await this.refreshToken(refreshToken);
-            const body = response as any;
-            // Backend devolve { message, data: { access_token, refresh_token } }.
-            // Lê do nível `data` (com fallback plano por segurança). Ler errado
-            // resultava em access_token=undefined e envenenava o cookie.
-            const access_token = body?.data?.access_token ?? body?.access_token;
-            const newRefreshToken =
-              body?.data?.refresh_token ?? body?.refresh_token;
-
-            if (!access_token) {
-              // Refresh sem token válido: NÃO sobrescreve o cookie (senão grava
-              // "undefined" e derruba a sessão boa). Trata como falha de refresh.
-              throw new Error("Refresh response sem access_token");
-            }
-
-            this.setAccessToken(access_token);
-            if (newRefreshToken) {
-              this.setRefreshToken(newRefreshToken);
-            }
-            this.processQueue(null, access_token);
-
-            originalRequest.headers.Authorization = `Bearer ${access_token}`;
+            // O refresh_token vive em cookie httpOnly (invisível ao JS). O backend
+            // o lê do cookie e responde com Set-Cookie dos tokens renovados —
+            // não há token pra ler/passar aqui. withCredentials envia o cookie.
+            await this.client.post("/api/v1/auth/refresh");
+            this.processQueue(null, null);
             return this.client(originalRequest);
           } catch (refreshError: any) {
             console.error("Token refresh failed:", refreshError);
@@ -204,6 +204,13 @@ export class ApiClient {
     this.failedQueue = [];
   }
 
+  // Dica de sessão (cookie `pt_authed`, não-httpOnly, sem segredo) setada pelo
+  // backend no login. Permite saber "provavelmente logado" sem expor o token —
+  // o access_token httpOnly NÃO é legível por JS de propósito.
+  hasSessionHint(): boolean {
+    return Cookies.get("pt_authed") === "1";
+  }
+
   getAccessToken(): string | null {
     return this.readToken("access_token");
   }
@@ -220,26 +227,20 @@ export class ApiClient {
     return v;
   }
 
-  setAccessToken(token: string): void {
-    // Nunca grava valor vazio/undefined — evita cookie "undefined" e o consequente
-    // "Bearer undefined" que derruba a sessão.
-    if (!token) return;
-    Cookies.set("access_token", token, {
-      expires: 30, // 30 days
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "strict",
-    });
+  // Auth agora é por cookie httpOnly setado pelo BACKEND no login/refresh — o
+  // front NÃO grava mais o token (js-cookie não faz httpOnly, então gravar aqui
+  // recriaria um cookie legível por JS, reabrindo o vetor de roubo via XSS).
+  // Mantidos como no-op para não quebrar os chamadores do fluxo de login.
+  setAccessToken(_token: string): void {
+    // intencionalmente vazio — ver comentário acima.
   }
 
-  setRefreshToken(token: string): void {
-    if (!token) return;
-    Cookies.set("refresh_token", token, {
-      expires: 90, // 90 days
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "strict",
-    });
+  setRefreshToken(_token: string): void {
+    // intencionalmente vazio — ver comentário acima.
   }
 
+  // Remove qualquer cookie legado legível por JS (sessões anteriores à migração
+  // httpOnly). O cookie httpOnly real só é limpo pelo endpoint POST /auth/logout.
   clearTokens(): void {
     Cookies.remove("access_token");
     Cookies.remove("refresh_token");

@@ -31,6 +31,16 @@ const nextConfig: NextConfig = {
   // ESLint não precisa de flag: o Next 16 removeu a integração com `next build`.
   typescript: { ignoreBuildErrors: true },
 
+  // Remove TODOS os console.* do bundle de produção (mantém error/warn para
+  // observabilidade real). Evita vazar dado de usuário/preço/IDs em produção
+  // sem precisar caçar cada log manualmente. Em dev os logs continuam ativos.
+  compiler: {
+    removeConsole:
+      process.env.NODE_ENV === "production"
+        ? { exclude: ["error", "warn"] }
+        : false,
+  },
+
   transpilePackages: ["quill-resize-module"],
   async redirects() {
     return [

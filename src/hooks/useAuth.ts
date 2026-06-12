@@ -129,11 +129,11 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
           }
         }
 
-        // Erro de autenticação no /auth/profile (ex.: JWT só de organizador)
+        // Erro de autenticação no /auth/profile (ex.: JWT só de organizador).
+        // Sem dica de sessão → realmente deslogado, limpa. Com dica → mantém o
+        // cache (o interceptor do ApiClient já tentou refresh por cookie).
         if ((profileError?.response?.status === 401 || profileError?.response?.status === 403)) {
-          const apiClient = (userService as any).apiClient;
-          const refreshToken = apiClient?.getRefreshToken?.();
-          if (!refreshToken) {
+          if (!userService.isAuthenticated()) {
             clearAuthData();
           } else {
             try {
@@ -154,16 +154,10 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     // Refresh automático do token a cada 12 horas para manter sessão ativa
     const refreshInterval = setInterval(async () => {
       try {
-        const apiClient = (userService as any).apiClient;
-        const refreshToken = apiClient?.getRefreshToken?.();
-        if (refreshToken && userService.isAuthenticated()) {
-          const response = await userService.refreshToken(refreshToken);
-          if (response?.access_token) {
-            apiClient.setAccessToken(response.access_token);
-            if (response.refresh_token) {
-              apiClient.setRefreshToken(response.refresh_token);
-            }
-          }
+        // Auth por cookie httpOnly: refresh lê/escreve cookies no backend.
+        // Nada de token em JS — só dispara se a dica de sessão estiver presente.
+        if (userService.isAuthenticated()) {
+          await userService.refreshToken();
         }
       } catch (error) {
         console.error("Automatic token refresh failed:", error);

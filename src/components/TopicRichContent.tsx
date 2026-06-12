@@ -2,6 +2,11 @@
 
 import { useEffect, useRef, useState } from "react";
 
+import {
+  filterAllowedEmbedScriptSrcs,
+  sanitizeRichHtml,
+} from "@/lib/richContent";
+
 interface TopicRichContentProps {
   html: string;
   className?: string;
@@ -13,9 +18,12 @@ export function TopicRichContent({ html: rawHtml, className }: TopicRichContentP
   // Nunca renderiza a string "undefined"/"null": `DOMParser.parseFromString(undefined)`
   // coage o argumento pra "undefined" e exibe esse texto literal. Normaliza pra "".
   const html = typeof rawHtml === "string" ? rawHtml : "";
-  // Start with the raw html so server and client render the same thing (no hydration mismatch).
-  // The useEffect below replaces Quill code blocks with real HTML on the client.
-  const [renderedHtml, setRenderedHtml] = useState(html);
+  // Render inicial (SSR + primeiro paint) já sanitizado — o conteúdo bruto NUNCA
+  // chega ao DOM sem passar pelo DOMPurify, então `<img onerror>`/`on*` não dispara.
+  // `sanitizeRichHtml` é isomórfica (jsdom no servidor, DOM nativo no client),
+  // logo servidor e client produzem o mesmo HTML inicial → sem hydration mismatch.
+  // O useEffect abaixo decodifica os embeds do Quill e re-sanitiza no client.
+  const [renderedHtml, setRenderedHtml] = useState(() => sanitizeRichHtml(html));
 
   // Scripts pendentes que precisam ser injetados/processados *depois* que o React
   // commitar o novo `renderedHtml`. Ver explicação no segundo effect.
@@ -65,9 +73,19 @@ export function TopicRichContent({ html: rawHtml, className }: TopicRichContentP
 
     // Guarda os scripts para serem processados após o commit. Atribuir ao ref
     // sobrescreve qualquer pendência anterior (correto: o conteúdo mudou).
-    pendingScriptSrcsRef.current = scriptSrcs;
-    // Commit the processed HTML — blockquotes/iframes are now real DOM nodes
-    setRenderedHtml(doc.body.innerHTML);
+    // Só mantém scripts de provedores de embed na allowlist — qualquer outro
+    // `<script src>` injetado no HTML do tópico é descartado (vetor de XSS).
+    pendingScriptSrcsRef.current = filterAllowedEmbedScriptSrcs(
+      scriptSrcs,
+      (blocked) =>
+        console.warn(
+          "[TopicRichContent] script de embed bloqueado (fora da allowlist):",
+          blocked,
+        ),
+    );
+    // Commit do HTML processado — sanitizado antes de ir ao DOM. Mantém os
+    // iframes de embed confiáveis e remove tudo que for perigoso.
+    setRenderedHtml(sanitizeRichHtml(doc.body.innerHTML));
   }, [html]);
 
   // Etapa 2 — depende de `renderedHtml` para garantir que o React já commitou

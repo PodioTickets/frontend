@@ -1,7 +1,5 @@
 "use client";
 
-import Cookies from "js-cookie";
-
 /**
  * Telemetria de atividade do usuário — ingestão no backend via
  * `POST /api/v1/me/activity/events` (aceita anônimo).
@@ -100,19 +98,16 @@ export function trackUserActivity(
     }
 
     const sessionId = getActivitySessionId();
-    // Bearer opcional: com JWT o backend associa o userId; sem, vai anônimo
-    // (o sessionId costura depois). Cookie inválido legado ("undefined") é
-    // tratado como ausência — mesmo cuidado do ApiClient.
-    const token = Cookies.get("access_token");
+    // Auth por cookie httpOnly: `credentials: "include"` envia o cookie quando
+    // logado (backend associa o userId); deslogado vai anônimo e o sessionId
+    // costura depois. Não lê mais o token em JS (invisível com httpOnly).
     const headers: Record<string, string> = {
       "Content-Type": "application/json",
     };
-    if (token && token !== "undefined" && token !== "null") {
-      headers.Authorization = `Bearer ${token}`;
-    }
 
     void fetch(`${API_BASE}/api/v1/me/activity/events`, {
       method: "POST",
+      credentials: "include",
       headers,
       keepalive: true, // sobrevive à navegação/fechamento da aba
       body: JSON.stringify({

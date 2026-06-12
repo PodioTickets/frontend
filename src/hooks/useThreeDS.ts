@@ -170,13 +170,12 @@ interface AuthParams {
 export function useThreeDS() {
   const authenticate = useCallback(
     async (params: AuthParams): Promise<ThreeDSAuthResult> => {
-      const token = apiClient.getAccessToken();
-      if (!token) throw new ThreeDSError("TOKEN_ERROR", "Não autenticado");
-
-      // 1. Obter AccessToken 3DS do backend
+      // 1. Obter AccessToken 3DS do backend. Auth por cookie httpOnly
+      // (`credentials: "include"`); 401 cai no !ok abaixo. O `accessToken`
+      // retornado é o token da Braspag (não o nosso JWT) — esse vai pro SDK.
       const tokenRes = await fetch(
         `${API_BASE_URL}/api/v1/orders/${params.orderId}/3ds-token`,
-        { headers: { Authorization: `Bearer ${token}` } },
+        { credentials: "include" },
       );
       if (!tokenRes.ok) {
         throw new ThreeDSError(

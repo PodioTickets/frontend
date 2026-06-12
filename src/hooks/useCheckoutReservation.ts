@@ -1,5 +1,4 @@
 import { useCallback } from "react";
-import { apiClient } from "@/services";
 import {
   OrderApiError,
   type OrderErrorResponse,
@@ -33,18 +32,13 @@ export function generateIdempotencyKey(): string {
   });
 }
 
+// Auth por cookie httpOnly: o token não é mais legível em JS. Cada fetch usa
+// `credentials: "include"` (envia o cookie cross-origin) e o backend lê do
+// cookie. Sem 401 antecipado no client — se não autenticado, o backend responde
+// 401 e o handleResponse trata.
 function authHeaders(extra?: Record<string, string>): HeadersInit {
-  const token = apiClient.getAccessToken();
-  if (!token) {
-    throw new OrderApiError({
-      statusCode: 401,
-      code: "UNAUTHORIZED",
-      message: "Você precisa estar autenticado",
-    });
-  }
   return {
     "Content-Type": "application/json",
-    Authorization: `Bearer ${token}`,
     ...extra,
   };
 }
@@ -161,7 +155,7 @@ export function useCheckoutReservation() {
     async (payload: ReserveOrderRequest): Promise<OrderResponse> => {
       const res = await fetch(`${API_BASE_URL}${ORDERS_PATH}/reserve`, {
         method: "POST",
-        headers: authHeaders(),
+        credentials: "include", headers: authHeaders(),
         body: JSON.stringify(payload),
       });
       return handleOrderResponse(res);
@@ -174,7 +168,7 @@ export function useCheckoutReservation() {
     async (orderId: string): Promise<OrderResponse> => {
       const res = await fetch(`${API_BASE_URL}${ORDERS_PATH}/${orderId}`, {
         method: "GET",
-        headers: authHeaders(),
+        credentials: "include", headers: authHeaders(),
       });
       return handleOrderResponse(res);
     },
@@ -191,7 +185,7 @@ export function useCheckoutReservation() {
         `${API_BASE_URL}${ORDERS_PATH}/${orderId}/participants`,
         {
           method: "PATCH",
-          headers: authHeaders(),
+          credentials: "include", headers: authHeaders(),
           body: JSON.stringify(payload),
         },
       );
@@ -215,7 +209,7 @@ export function useCheckoutReservation() {
         `${API_BASE_URL}${ORDERS_PATH}/${orderId}/participants/${slot}`,
         {
           method: "DELETE",
-          headers: authHeaders(),
+          credentials: "include", headers: authHeaders(),
         },
       );
       return handleOrderResponse(res);
@@ -233,7 +227,7 @@ export function useCheckoutReservation() {
         `${API_BASE_URL}${ORDERS_PATH}/${orderId}/products`,
         {
           method: "PATCH",
-          headers: authHeaders(),
+          credentials: "include", headers: authHeaders(),
           body: JSON.stringify(payload),
         },
       );
@@ -252,7 +246,7 @@ export function useCheckoutReservation() {
         `${API_BASE_URL}${ORDERS_PATH}/${orderId}/billing-address`,
         {
           method: "PATCH",
-          headers: authHeaders(),
+          credentials: "include", headers: authHeaders(),
           body: JSON.stringify(payload),
         },
       );
@@ -275,7 +269,7 @@ export function useCheckoutReservation() {
     ): Promise<OrderResponse> => {
       const res = await fetch(`${API_BASE_URL}${ORDERS_PATH}/${orderId}/pay`, {
         method: "POST",
-        headers: authHeaders({ "Idempotency-Key": idempotencyKey }),
+        credentials: "include", headers: authHeaders({ "Idempotency-Key": idempotencyKey }),
         body: JSON.stringify(payload),
       });
       return handleOrderResponse(res);
@@ -290,7 +284,7 @@ export function useCheckoutReservation() {
         `${API_BASE_URL}${ORDERS_PATH}/${orderId}/payment-status`,
         {
           method: "GET",
-          headers: authHeaders(),
+          credentials: "include", headers: authHeaders(),
         },
       );
       return handleResponse<OrderPaymentStatusResponse>(res);
@@ -303,7 +297,7 @@ export function useCheckoutReservation() {
     async (orderId: string, payload: PatchCouponRequest): Promise<OrderResponse> => {
       const res = await fetch(`${API_BASE_URL}${ORDERS_PATH}/${orderId}/coupon`, {
         method: "PATCH",
-        headers: authHeaders(),
+        credentials: "include", headers: authHeaders(),
         body: JSON.stringify(payload),
       });
       return handleOrderResponse(res);
@@ -315,7 +309,7 @@ export function useCheckoutReservation() {
   const cancelOrder = useCallback(async (orderId: string): Promise<void> => {
     const res = await fetch(`${API_BASE_URL}${ORDERS_PATH}/${orderId}`, {
       method: "DELETE",
-      headers: authHeaders(),
+      credentials: "include", headers: authHeaders(),
     });
     // 404 = já cancelado/não encontrado — tratar como sucesso
     if (!res.ok && res.status !== 404) {
