@@ -181,7 +181,9 @@
       "Bash(awk '/enum OrderStatus/{f=1} f{print} /}/{if\\(f\\)exit}' prisma/schema.prisma)",
       "Bash(grep -rln \"applyAuthCookiesFromResult\\\\|clearAuthCookies\\\\|setAuthCookies\\\\|ACCESS_TOKEN_COOKIE\\\\|resolveAuthSurface\\\\|access_token\\\\|pt_authed\\\\|loginAdmin\\\\|loginEmail\" src/app/auth/__tests__)",
       "Bash(ls src/app/auth/__tests__)",
-      "Bash(echo \"---exit $?---\")"
+      "Bash(echo \"---exit $?---\")",
+      "Bash(cat server/docker-entrypoint.sh)",
+      "Bash(sed -n '1,60p' server/prisma/reconcile-included-required-stock.ts)"
     ]
   },
   "disabledMcpjsonServers": [
