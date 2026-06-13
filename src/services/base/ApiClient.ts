@@ -76,10 +76,9 @@ export class ApiClient {
           if (csrfToken) {
             config.headers["x-csrf-token"] = csrfToken;
           } else {
-            console.warn(
-              "Token CSRF não encontrado para requisição protegida:",
-              config.url
-            );
+            if (process.env.NODE_ENV !== 'production') {
+              console.warn('Token CSRF não encontrado para requisição protegida:', config.url);
+            }
           }
         }
         const token = this.getAccessToken();
@@ -241,10 +240,12 @@ export class ApiClient {
   // front NÃO grava mais o token (js-cookie não faz httpOnly, então gravar aqui
   // recriaria um cookie legível por JS, reabrindo o vetor de roubo via XSS).
   // Mantidos como no-op para não quebrar os chamadores do fluxo de login.
+  // Autenticação via cookie httpOnly — token no body é ignorado.
   setAccessToken(_token: string): void {
     // intencionalmente vazio — ver comentário acima.
   }
 
+  // Autenticação via cookie httpOnly — token no body é ignorado.
   setRefreshToken(_token: string): void {
     // intencionalmente vazio — ver comentário acima.
   }

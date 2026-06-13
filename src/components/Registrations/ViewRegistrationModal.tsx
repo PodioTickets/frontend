@@ -243,7 +243,16 @@ export function ViewRegistrationModal() {
   // Telefone recebe a máscara via util i18n (libphonenumber por país).
   const formatPhone = (phone?: string | null) =>
     formatPersonPhone(phone, participantCountry);
-  const participantCPF = participantCPFRaw || "—";
+
+  // Máscara parcial de PII para CPF exibido em resumos/cabeçalhos compactos.
+  const maskCpf = (cpf: string | null | undefined): string => {
+    if (!cpf) return "—";
+    const digits = cpf.replace(/\D/g, "");
+    if (digits.length < 11) return cpf;
+    return `***.${digits.slice(3, 6)}.${digits.slice(6, 9)}-**`;
+  };
+
+  const participantCPF = participantIsBr ? maskCpf(participantCPFRaw) : (participantCPFRaw || "—");
 
   /* birthDate: o snapshot manda date-only "YYYY-MM-DD". `new Date(date-only)` é
    * interpretado como UTC meia-noite → em BRT (UTC-3) volta pro dia anterior.

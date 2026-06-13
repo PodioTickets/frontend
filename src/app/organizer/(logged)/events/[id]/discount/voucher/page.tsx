@@ -6,12 +6,14 @@ import { useEventPermissionGuard } from "@/hooks/useEventPermissionGuard";
 import { EventPageHeader } from "@/components/Organizer/EventPageHeader";
 import { EventMobileHeader } from "@/components/Organizer/EventMobileHeader";
 import { EventVouchersView } from "@/components/Event/EventVouchersView";
+import { Loading } from "@/components/Loading";
 
 export default function VouchersPage() {
   const orgNav = useOrganizerNavigate();
   const params = useParams();
   const eventId = params.id as string;
-  useEventPermissionGuard("coupons");
+  const { isChecking } = useEventPermissionGuard("coupons");
+  if (isChecking) return <div className="min-h-screen bg-gray-2 flex items-center justify-center"><Loading /></div>;
 
   return (
     <EventVouchersView

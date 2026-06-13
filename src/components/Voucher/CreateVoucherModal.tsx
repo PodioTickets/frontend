@@ -220,9 +220,9 @@ export function CreateVoucherModal() {
         name: name.trim(),
         ...(!isEditing && { quantity: quantityNum }),
         appliesTo: appliesTo === "all" ? "all" : selectedTicketIds.length > 0 ? selectedTicketIds : "all",
-        expiryDate: expiryStatus === "ENABLED" && expiryDate ? expiryDate : undefined,
+        expiryDate: expiryStatus === "ENABLED" && expiryDate ? expiryDate : null, // null é serializado, undefined não
         cpfListStatus,
-        cpfList: cpfListStatus === "ENABLED" ? cpfList : undefined,
+        cpfList: cpfListStatus === "ENABLED" ? cpfList : null,
         applyToProducts,
       };
 
@@ -812,7 +812,7 @@ export function CreateVoucherModal() {
                     onClick={handleSave}
                     variant="default"
                     className="h-11 px-5 max-md:flex-1"
-                    disabled={isSubmitting || (!isEditing && selectedTicketIds.length === 0)}
+                    disabled={isSubmitting || (!isEditing && appliesTo === 'specific' && selectedTicketIds.length === 0)}
                   >
                     {isSubmitting ? "Salvando..." : isEditing ? "Editar voucher" : "Criar voucher"}
                   </Button>

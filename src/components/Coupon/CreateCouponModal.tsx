@@ -374,9 +374,22 @@ export function CreateCouponModal() {
       }
     }
 
+    // Validade habilitada mas data não preenchida
+    if (expiryEnabled && !expiryDate) {
+      toast.error("Selecione uma data de validade ou desabilite a opção");
+      return;
+    }
+
     if (usageLimitEnabled && usageLimit) {
+      const parsedLimit = parseInt(usageLimit);
+      if (isNaN(parsedLimit) || parsedLimit < 1) {
+        const msg = "Limite mínimo é 1";
+        setUsageLimitError(msg);
+        toast.error(msg);
+        return;
+      }
       const currentUsageCount = data?.coupon?.usageCount ?? 0;
-      if (parseInt(usageLimit) < currentUsageCount) {
+      if (parsedLimit < currentUsageCount) {
         const msg = `O limite não pode ser menor que o uso atual (${currentUsageCount})`;
         setUsageLimitError(msg);
         toast.error(msg);
@@ -890,11 +903,14 @@ export function CreateCouponModal() {
                                     const num = val.replace(/[^0-9]/g, "");
                                     if (num === "" || parseInt(num) <= 100) setValue(num ? `${num}%` : "");
                                   } else {
+                                    // Permite apenas dígitos, uma vírgula e no máximo 2 casas decimais
                                     const raw = val.replace(/[^0-9,]/g, "");
-                                    if (!raw) {
+                                    const match = raw.match(/^(\d*)(,\d{0,2})?/);
+                                    const sanitized = match ? match[0] : "";
+                                    if (!sanitized) {
                                       setValue("");
                                     } else {
-                                      setValue(`R$ ${raw}`);
+                                      setValue(`R$ ${sanitized}`);
                                     }
                                   }
                                   if (valueError) setValueError("");
