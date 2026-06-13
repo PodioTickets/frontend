@@ -58,9 +58,10 @@ export function TopicRichContent({ html: rawHtml, className }: TopicRichContentP
         s.remove();
       });
 
-      // Replace the code block container with the actual embed HTML
+      // Replace the code block container with the actual embed HTML.
+      // Sanitiza antes de injetar no DOM real para prevenir XSS via embeds.
       const wrapper = document.createElement("div");
-      wrapper.innerHTML = embedDoc.body.innerHTML;
+      wrapper.innerHTML = sanitizeRichHtml(embedDoc.body.innerHTML);
       container.replaceWith(...Array.from(wrapper.childNodes));
     });
 
@@ -101,6 +102,8 @@ export function TopicRichContent({ html: rawHtml, className }: TopicRichContentP
     const scriptSrcs = pendingScriptSrcsRef.current;
     if (scriptSrcs.length === 0) return;
 
+    const injectedScripts: HTMLScriptElement[] = [];
+
     scriptSrcs.forEach((src) => {
       // Strava embed não expõe API de reprocessamento (diferente do Instagram).
       // Cada carga do embed.js itera os `.strava-embed-placeholder` restantes
@@ -125,9 +128,21 @@ export function TopicRichContent({ html: rawHtml, className }: TopicRichContentP
       script.src = src.startsWith("//") ? `https:${src}` : src;
       script.onload = () => injectedScriptSrcs.add(src);
       document.head.appendChild(script);
+      injectedScripts.push(script);
     });
 
     pendingScriptSrcsRef.current = [];
+
+    return () => {
+      injectedScripts.forEach((s) => {
+        if (document.head.contains(s)) {
+          document.head.removeChild(s);
+        }
+        // Remove a src do Set para que a próxima montagem possa re-injetar.
+        injectedScriptSrcs.delete(s.src);
+      });
+      injectedScripts.length = 0;
+    };
   }, [renderedHtml]);
 
   return (

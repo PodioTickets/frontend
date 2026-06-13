@@ -1,7 +1,7 @@
 "use client";
 import { Button } from "../Button";
 import { motion, AnimatePresence } from "framer-motion";
-import { useEffect, useState, useRef, useMemo } from "react";
+import { useEffect, useState, useMemo } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useOrganizerAppSurface } from "@/contexts/OrganizerAppSurfaceContext";
@@ -49,18 +49,17 @@ export function Header() {
   }, [user]);
 
   const [searchResults, setSearchResults] = useState<Array<{ id: string; title: string; href: string; logoUrl?: string; location?: string; date?: string }>>([]);
-  const searchDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
   useEffect(() => {
+    let cancelled = false;
     const q = search.trim();
     if (q.length === 0) {
       setSearchResults([]);
-      return;
+      return () => { cancelled = true; };
     }
-    if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current);
-    searchDebounceRef.current = setTimeout(async () => {
+    const timer = setTimeout(async () => {
       try {
         const res = await eventService.searchEvents({ q, limit: 5, status: "PUBLISHED" } as any);
+        if (cancelled) return;
         setSearchResults(
           (res.events || []).map((e: any) => {
             const city: string = e.city || "";
@@ -89,11 +88,12 @@ export function Header() {
           })
         );
       } catch {
-        setSearchResults([]);
+        if (!cancelled) setSearchResults([]);
       }
     }, 300);
     return () => {
-      if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current);
+      cancelled = true;
+      clearTimeout(timer);
     };
   }, [search]);
 

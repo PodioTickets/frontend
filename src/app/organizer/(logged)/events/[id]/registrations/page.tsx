@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useParams } from "next/navigation";
 import { useOrganizerNavigate } from "@/hooks/useOrganizerNavigate";
 import { useAuth } from "@/hooks/useAuth";
@@ -29,8 +29,10 @@ export default function EventRegistrationsPage() {
   const [authChecked, setAuthChecked] = useState(false);
   const [loading, setLoading] = useState(true);
   const [loadingList, setLoadingList] = useState(false);
+  const [pageError, setPageError] = useState<string | null>(null);
   const [event, setEvent] = useState<Pick<Event, "id" | "name"> & { slug?: string } | null>(null);
   const [registrations, setRegistrations] = useState<RegistrationListRow[]>([]);
+  const abortControllerRef = useRef<AbortController | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [selectedTicketIds, setSelectedTicketIds] = useState<string[]>([]);
@@ -74,18 +76,21 @@ export default function EventRegistrationsPage() {
   const loadInitialData = useCallback(async () => {
     try {
       setLoading(true);
+      setPageError(null);
       const [eventData] = await Promise.all([
         organizerService.getEventById(eventId),
       ]);
-      setEvent(eventData || { id: eventId, name: "Evento de Exemplo" });
+      setEvent(eventData);
     } catch {
-      setEvent({ id: eventId, name: "Evento de Exemplo" });
+      setPageError("Erro ao carregar dados do evento");
     } finally {
       setLoading(false);
     }
   }, [eventId]);
 
   const loadRegistrations = useCallback(async () => {
+    abortControllerRef.current?.abort();
+    abortControllerRef.current = new AbortController();
     try {
       setLoadingList(true);
       try {
@@ -173,7 +178,28 @@ export default function EventRegistrationsPage() {
     setPagination((prev) => ({ ...prev, page: 1 }));
   };
 
+  const handleSearchChange = (value: string) => {
+    setSearchTerm(value);
+    setPagination((prev) => ({ ...prev, page: 1 }));
+  };
+
   // Full-page loading só na carga inicial (ainda sem dados). Refetch (filtros, data etc.) mostra loading só na lista.
+  if (pageError) {
+    return (
+      <div className="min-h-screen bg-gray-2 flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-gray-11 text-lg mb-4">{pageError}</p>
+          <button
+            onClick={() => void loadInitialData()}
+            className="px-4 py-2 rounded-lg bg-primary-11 text-primary-2 font-semibold"
+          >
+            Tentar novamente
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   if (loading && registrations.length === 0) {
     return (
       <div className="min-h-screen bg-gray-2 flex items-center justify-center">
@@ -205,7 +231,7 @@ export default function EventRegistrationsPage() {
       pagination={pagination}
       setPagination={setPagination}
       searchTerm={searchTerm}
-      setSearchTerm={setSearchTerm}
+      setSearchTerm={handleSearchChange}
       statusFilter={statusFilter}
       setStatusFilter={setStatusFilter}
       selectedTicketIds={selectedTicketIds}

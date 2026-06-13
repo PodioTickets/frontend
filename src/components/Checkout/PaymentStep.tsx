@@ -2905,6 +2905,7 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
         pixData={pixData}
         orderId={orderId}
         onPaymentConfirmed={() => {
+          clearTimer();
           setIsPixModalOpen(false);
           if (onSuccess && orderId) {
             onSuccess(orderId);

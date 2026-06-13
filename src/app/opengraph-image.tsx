@@ -24,7 +24,7 @@ export default async function OpengraphImage() {
   const logo = await readFile(
     join(process.cwd(), "public/images/logo_graph.jpeg"),
   );
-  const logoSrc = `data:image/png;base64,${logo.toString("base64")}`;
+  const logoSrc = `data:image/jpeg;base64,${logo.toString("base64")}`;
 
   // 1400×240 ⇒ proporção ~5.83. Largura 760 → altura ~130. O padding do
   // container (140px) garante a margem ("respiro") pedida ao redor da logo.

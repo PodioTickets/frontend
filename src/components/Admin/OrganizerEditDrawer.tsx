@@ -411,6 +411,7 @@ export function OrganizerEditDrawer({ isOpen, onClose, org, onUpdated, mode = "e
   const isCreate = mode === "create";
   const [detail, setDetail] = useState<OrgDetail | null>(null);
   const [loading, setLoading] = useState(false);
+  const [loadError, setLoadError] = useState(false);
   const [saving, setSaving] = useState(false);
   const [deactivating, setDeactivating] = useState(false);
   const [reactivating, setReactivating] = useState(false);
@@ -481,6 +482,7 @@ export function OrganizerEditDrawer({ isOpen, onClose, org, onUpdated, mode = "e
     let cancelled = false;
 
     setDetail(null);
+    setLoadError(false);
     setLoading(true);
 
     (async () => {
@@ -517,11 +519,7 @@ export function OrganizerEditDrawer({ isOpen, onClose, org, onUpdated, mode = "e
         setPixKeys(loadedPix);
       } catch {
         if (cancelled) return;
-        setName(org.name ?? "");
-        setEmail(org.email ?? "");
-        setPhone(formatPhone(org.phone));
-        setState(org.state ?? "");
-        setCity(org.city ?? "");
+        setLoadError(true);
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -545,6 +543,7 @@ export function OrganizerEditDrawer({ isOpen, onClose, org, onUpdated, mode = "e
 
   const handleSave = async () => {
     if (!isCreate && !org) return;
+    if (loadError) return; // Bloqueia salvar quando o GET falhou para evitar apagar dados reais
     setSaving(true);
     setEmailError("");
     setCnpjError("");
@@ -1002,10 +1001,15 @@ export function OrganizerEditDrawer({ isOpen, onClose, org, onUpdated, mode = "e
               {reactivating ? "Reativando..." : "Reativar organização"}
             </Button>
           ))}
+          {loadError && (
+            <span className="text-sm text-red-11 mr-auto">
+              Erro ao carregar dados. Feche e tente novamente.
+            </span>
+          )}
           <Button
             type="button"
             onClick={() => void handleSave()}
-            disabled={saving || deactivating || reactivating}
+            disabled={saving || deactivating || reactivating || loadError}
             className="disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {saving

@@ -106,14 +106,20 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       } catch (profileError: any) {
         console.error("Profile fetch failed:", profileError);
 
+        const CACHE_TTL_MS = 24 * 60 * 60 * 1000; // 24h
+
         // Se o erro não for 401/403, tenta usar cache
         if (profileError?.response?.status !== 401 && profileError?.response?.status !== 403) {
           try {
             const cachedUser = localStorage.getItem(userCacheKey());
             if (cachedUser) {
               const user = JSON.parse(cachedUser);
-              setUser(user);
-              return;
+              if (user._cachedAt && Date.now() - user._cachedAt > CACHE_TTL_MS) {
+                localStorage.removeItem(userCacheKey());
+              } else {
+                setUser(user);
+                return;
+              }
             }
           } catch (parseError) {
             console.warn("Failed to restore from cache after profile error");
@@ -130,7 +136,12 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
             try {
               const cachedUser = localStorage.getItem(userCacheKey());
               if (cachedUser) {
-                setUser(JSON.parse(cachedUser));
+                const parsed = JSON.parse(cachedUser);
+                if (parsed._cachedAt && Date.now() - parsed._cachedAt > CACHE_TTL_MS) {
+                  localStorage.removeItem(userCacheKey());
+                } else {
+                  setUser(parsed);
+                }
               }
             } catch {
               /* ignore */
@@ -218,15 +229,6 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 
       if (response.success && response.data?.user) {
         const user = response.data.user;
-        if (response.data.access_token) {
-          const apiClient = (userService as any).apiClient;
-          if (apiClient && apiClient.setAccessToken) {
-            apiClient.setAccessToken(response.data.access_token);
-            if (response.data.refresh_token) {
-              apiClient.setRefreshToken(response.data.refresh_token);
-            }
-          }
-        }
         const userWithCache = { ...user, _cachedAt: Date.now() };
         localStorage.setItem(userCacheKey(), JSON.stringify(userWithCache));
         // JWT de organizador não deve chamar /auth/profile (participante): 401/403 limpa sessão em refetchUser.
@@ -258,13 +260,6 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       const response = await userService.verifyLoginMfa(mfaToken, code);
       if (response.success && response.data?.user) {
         const user = response.data.user;
-        const apiClient = (userService as any).apiClient;
-        if (apiClient && apiClient.setAccessToken) {
-          apiClient.setAccessToken(response.data.access_token!);
-          if (response.data.refresh_token) {
-            apiClient.setRefreshToken(response.data.refresh_token);
-          }
-        }
         const userWithCache = { ...user, _cachedAt: Date.now() };
         localStorage.setItem(userCacheKey(), JSON.stringify(userWithCache));
         if (accountType === "ORGANIZER") {

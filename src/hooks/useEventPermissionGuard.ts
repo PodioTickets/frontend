@@ -3,12 +3,21 @@ import { useParams } from "next/navigation";
 import { useOrganizerPermissions } from "@/contexts/OrganizerPermissionsContext";
 import { useOrganizerNavigate } from "@/hooks/useOrganizerNavigate";
 
+export interface EventPermissionGuardResult {
+  /** `true` enquanto as permissões ainda estão sendo carregadas. */
+  isChecking: boolean;
+  /** `true` quando o usuário tem ao menos uma das permissões pedidas (e não está mais carregando). */
+  hasPermission: boolean;
+}
+
 /**
  * Redireciona para o dashboard do evento se o usuário não tiver nenhuma das permissões.
  * Aceita uma chave única ou um array (OR — basta ter uma).
- * Retorna `true` enquanto ainda está verificando (loading).
+ *
+ * Retorna `{ isChecking, hasPermission }`. Use `isChecking` para bloquear a
+ * renderização enquanto as permissões estão sendo verificadas.
  */
-export function useEventPermissionGuard(permissionKey: string | string[]): boolean {
+export function useEventPermissionGuard(permissionKey: string | string[]): EventPermissionGuardResult {
   const { hasPermission, loading } = useOrganizerPermissions();
   const orgNav = useOrganizerNavigate();
   const params = useParams();
@@ -29,5 +38,8 @@ export function useEventPermissionGuard(permissionKey: string | string[]): boole
     }
   }, [loading, hasPermission, permissionKey, eventId, orgNav]);
 
-  return loading;
+  const keys = Array.isArray(permissionKey) ? permissionKey : [permissionKey];
+  const allowed = !loading && keys.some((k) => hasPermission(k));
+
+  return { isChecking: loading, hasPermission: allowed };
 }
