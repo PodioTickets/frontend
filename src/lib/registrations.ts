@@ -4,6 +4,7 @@ import type {
   Registration,
   RegistrationStats,
 } from "@/services/organizer/OrganizerService";
+import { dashboardWeekOverWeekPercent } from "./dashboard";
 
 /**
  * Lógica pura compartilhada das páginas de inscrições (registrations).
@@ -107,16 +108,14 @@ export function mergeRegistrationStatsWithTrendFallback(
 }
 
 /**
- * Valor já em % (ex.: 12,3). Variações entre 0 e 0,5 arredondavam a 0 e sumiam — usa mínimo 1%.
- * Não trata fração 0–1 (ex.: 0,15 = 15%); nesse caso o backend deve enviar 15 ou o endpoint /stats.
+ * Variação semana-a-semana em % (valor já em %, ex.: 12,3). Delegado ao helper
+ * canônico (`dashboardWeekOverWeekPercent`) pra dashboard e inscrições tratarem o
+ * número EXATAMENTE igual: guarda contra não-finito e arredonda o valor absoluto;
+ * variações que arredondam a 0 somem (não inflamos 0,2% → 1% — seria valor falso).
+ * Não trata fração 0–1 (ex.: 0,15 = 15%); nesse caso o backend deve enviar 15.
  */
 export function registrationsWeekOverWeekPercent(change: number): number {
-  const n = Number(change);
-  if (!Number.isFinite(n) || Math.abs(n) < 1e-12) return 0;
-  const a = Math.abs(n);
-  const rounded = Math.round(a);
-  if (rounded !== 0) return rounded;
-  return 1;
+  return dashboardWeekOverWeekPercent(change);
 }
 
 /** Status final de um registro (resolve estorno/chargeback sobre o status base). */

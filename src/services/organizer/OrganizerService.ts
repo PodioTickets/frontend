@@ -577,13 +577,15 @@ export interface EventStats {
 }
 
 // Dashboard interfaces
+// `*Change`: variação % vs período anterior. `null` = SEM baseline (período
+// anterior = 0) → o front exibe "novo" em vez de um percentual inventado.
 export interface DashboardMetrics {
   netRevenue: number;
-  netRevenueChange: number;
+  netRevenueChange: number | null;
   averageTicket: number;
-  averageTicketChange: number;
+  averageTicketChange: number | null;
   totalRegistrations: number;
-  totalRegistrationsChange: number;
+  totalRegistrationsChange: number | null;
   cancellations: number;
   cancellationsStatus: "Normal" | "Atenção" | "Crítico";
   refunds: number;
@@ -592,7 +594,7 @@ export interface DashboardMetrics {
 
 export interface RegistrationsTrend {
   amount: number;
-  change: number;
+  change: number | null;
   confirmed: number;
   canceled: number;
   refunded: number;

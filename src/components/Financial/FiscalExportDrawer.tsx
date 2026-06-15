@@ -48,10 +48,10 @@ const buildPaymentItem = (order: FiscalOrder): PaymentDetailsItem => {
   const formattedDate = Number.isNaN(date.getTime())
     ? order.purchaseDate
     : formatDateBR(order.purchaseDate, {
-        day: "2-digit",
-        month: "short",
-        year: "numeric",
-      });
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+    });
   return {
     orderId: order.paymentId || order.id,
     transactionId: order.displayId || order.id,
@@ -239,137 +239,217 @@ export function FiscalExportDrawer({
 
   return (
     <>
-    <Drawer open={isOpen} onOpenChange={onClose} direction="right">
-      <DrawerContent className="bg-gray-1 h-full border-l border-gray-6 w-full max-w-[760px]">
-        <DrawerTitle className="sr-only">Exportar dados fiscais</DrawerTitle>
+      <Drawer open={isOpen} onOpenChange={onClose} direction="right">
+        <DrawerContent className="bg-gray-1 h-full border-l border-gray-6 w-full max-w-[760px]">
+          <DrawerTitle className="sr-only">Exportar dados fiscais</DrawerTitle>
 
-        {/* ===== MOBILE Header ===== */}
-        <DrawerHeader className="md:hidden border-b border-gray-6 p-0">
-          <div className="flex flex-col">
-            <div className="flex items-center gap-1 h-[52px] px-4">
-              <button
-                type="button"
-                onClick={onClose}
-                className="size-8 flex items-center justify-center shrink-0 rounded-lg hover:bg-gray-3 transition-colors rotate-180"
-                aria-label="Voltar"
-              >
-                <ArrowButton isOpen={false} />
-              </button>
-              <p className="font-manrope font-extrabold text-base leading-[1.1] text-gray-12 truncate flex-1 min-w-0">
-                Exportar dados fiscais
-              </p>
+          {/* ===== MOBILE Header ===== */}
+          <DrawerHeader className="md:hidden border-b border-gray-6 p-0">
+            <div className="flex flex-col">
+              <div className="flex items-center gap-1 h-[52px] px-4">
+                <button
+                  type="button"
+                  onClick={onClose}
+                  className="size-8 flex items-center justify-center shrink-0 rounded-lg hover:bg-gray-3 transition-colors rotate-180"
+                  aria-label="Voltar"
+                >
+                  <ArrowButton isOpen={false} />
+                </button>
+                <p className="font-manrope font-extrabold text-base leading-[1.1] text-gray-12 truncate flex-1 min-w-0">
+                  Exportar dados fiscais
+                </p>
+              </div>
+              {eventName && (
+                <p className="px-4 pb-3 font-family-dm-sans font-normal text-sm text-gray-11 leading-[1.3]">
+                  Evento: <span className="text-gray-12">{eventName}</span>
+                </p>
+              )}
             </div>
-            {eventName && (
-              <p className="px-4 pb-3 font-family-dm-sans font-normal text-sm text-gray-11 leading-[1.3]">
-                Evento: <span className="text-gray-12">{eventName}</span>
-              </p>
-            )}
-          </div>
-        </DrawerHeader>
+          </DrawerHeader>
 
-        {/* ===== DESKTOP Header ===== */}
-        <DrawerHeader className="hidden md:block border-b border-gray-6 px-5 py-4">
-          <div className="flex items-start justify-between gap-4">
-            <div className="flex flex-col gap-2 min-w-0">
-              <h2 className="font-manrope font-extrabold text-xl leading-[1.1] text-gray-12">
-                Exportar dados fiscais
-              </h2>
-              <p className="font-family-dm-sans font-normal text-sm text-gray-11 leading-[1.3]">
-                Consulte pedidos, visualize detalhes e exporte os dados para nota
-                fiscal.
-              </p>
+          {/* ===== DESKTOP Header ===== */}
+          <DrawerHeader className="hidden md:block border-b border-gray-6 px-5 py-4">
+            <div className="flex items-start justify-between gap-4">
+              <div className="flex flex-col gap-2 min-w-0">
+                <h2 className="font-manrope font-extrabold text-xl leading-[1.1] text-gray-12">
+                  Exportar dados fiscais
+                </h2>
+                <p className="font-family-dm-sans font-normal text-sm text-gray-11 leading-[1.3]">
+                  Consulte pedidos, visualize detalhes e exporte os dados para nota
+                  fiscal.
+                </p>
+              </div>
+              <DrawerClose asChild>
+                <button
+                  type="button"
+                  className="size-8 flex items-center justify-center shrink-0 rounded-lg hover:bg-gray-3 transition-colors cursor-pointer"
+                  aria-label="Fechar"
+                >
+                  <X className="size-6 text-gray-12" />
+                </button>
+              </DrawerClose>
             </div>
-            <DrawerClose asChild>
-              <button
-                type="button"
-                className="size-8 flex items-center justify-center shrink-0 rounded-lg hover:bg-gray-3 transition-colors cursor-pointer"
-                aria-label="Fechar"
-              >
-                <X className="size-6 text-gray-12" />
-              </button>
-            </DrawerClose>
-          </div>
-        </DrawerHeader>
+          </DrawerHeader>
 
-        <div className="flex-1 overflow-y-auto px-4 md:px-5 py-4 flex flex-col gap-4">
-          {/* Busca */}
-          <div className="border border-gray-6 rounded-lg h-10 flex items-center gap-2 px-3 bg-gray-1">
-            <Search className="size-5 text-gray-11 shrink-0" />
-            <input
-              type="text"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Buscar por ID do pedido, nome ou cpf"
-              className="flex-1 h-10 min-w-0 bg-transparent font-family-dm-sans font-normal text-sm text-gray-12 placeholder:text-gray-11 outline-none"
-            />
-          </div>
-
-          {/* Filtros + contador */}
-          <div className="flex items-center justify-between gap-3 flex-wrap">
-            <div className="flex items-center gap-2 flex-wrap">
-              <FilterDropdown
-                label="Período"
-                value={periodLabel}
-                options={PERIOD_OPTIONS}
-                onChange={(v) => setPeriod(v as PeriodValue)}
-                selected={period}
-              />
-              <FilterDropdown
-                label="Valor"
-                value={valueLabel}
-                options={VALUE_OPTIONS}
-                onChange={(v) => setValueRange(v as ValueRange)}
-                selected={valueRange}
+          <div className="flex-1 overflow-y-auto px-4 md:px-5 py-4 flex flex-col gap-4">
+            {/* Busca */}
+            <div className="border border-gray-6 rounded-lg h-10 flex items-center gap-2 px-3 bg-gray-1">
+              <Search className="size-5 text-gray-11 shrink-0" />
+              <input
+                type="text"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Buscar por ID do pedido, nome ou cpf"
+                className="flex-1 h-10 min-w-0 bg-transparent font-family-dm-sans font-normal text-sm text-gray-12 placeholder:text-gray-11 outline-none"
               />
             </div>
-            <p className="font-family-dm-sans font-normal text-sm text-gray-11">
-              {total} {total === 1 ? "pedido" : "pedidos"}
-            </p>
-          </div>
 
-          {/* ===== Desktop: tabela ===== */}
-          <div className="hidden md:flex flex-col border border-gray-6 rounded-lg overflow-hidden">
-            <div className="bg-gray-4 grid grid-cols-[1fr_1.6fr_1fr_1fr_60px] h-11 items-center">
-              <HeaderCell>ID pedido</HeaderCell>
-              <HeaderCell>Comprador</HeaderCell>
-              <HeaderCell>Data da compra</HeaderCell>
-              <HeaderCell>Valor</HeaderCell>
-              <HeaderCell className="text-right pr-4">Ações</HeaderCell>
+            {/* Filtros + contador */}
+            <div className="flex items-center justify-between gap-3 flex-wrap">
+              <div className="flex items-center gap-2 flex-wrap">
+                <FilterDropdown
+                  label="Período"
+                  value={periodLabel}
+                  options={PERIOD_OPTIONS}
+                  onChange={(v) => setPeriod(v as PeriodValue)}
+                  selected={period}
+                />
+                <FilterDropdown
+                  label="Valor"
+                  value={valueLabel}
+                  options={VALUE_OPTIONS}
+                  onChange={(v) => setValueRange(v as ValueRange)}
+                  selected={valueRange}
+                />
+              </div>
+              <Button
+                className="md:w-auto w-full md:hidden"
+                disabled={!loading && total === 0}
+                onClick={() => setShowFormatModal(true)}
+              >
+                <FileText className="size-4" />
+                Exportar dados fiscais
+              </Button>
+              <p className="font-family-dm-sans font-normal text-sm text-gray-11">
+                {total} {total === 1 ? "pedido" : "pedidos"}
+              </p>
             </div>
-            {loading ? (
-              <EmptyState text="Carregando..." />
-            ) : orders.length === 0 ? (
-              <EmptyState text="Nenhum pedido encontrado" />
-            ) : (
-              orders.map((order) => {
-                const date = formatPurchaseDate(order.purchaseDate);
-                return (
-                  <div
-                    key={order.id}
-                    className="grid grid-cols-[1fr_1.6fr_1fr_1fr_60px] min-h-[56px] items-center border-t border-gray-6 hover:bg-gray-2 transition-colors"
-                  >
-                    <Cell>
-                      <Tooltip
-                        position="topRight"
-                        trigger="hover"
-                        content={<p className="font-family-dm-sans font-normal text-sm leading-[1.3] text-gray-12 text-left break-all">{order.id}</p>}
-                        contentClassName="max-w-[min(320px,calc(100vw-2rem))] w-max min-w-0 px-3 py-2 gap-0 !items-stretch"
-                        className="block min-w-0 max-w-full"
-                      >
-                        <p className="font-inter font-semibold leading-[1.3] text-sm text-gray-12 truncate cursor-help">
-                          #{order.id.slice(0, 6)}...{order.id.slice(-4)}
-                        </p>
-                      </Tooltip>
-                    </Cell>
-                    <Cell>
+
+            {/* ===== Desktop: tabela ===== */}
+            <div className="hidden md:flex flex-col border border-gray-6 rounded-lg overflow-hidden">
+              <div className="bg-gray-4 grid grid-cols-[1fr_1.6fr_1fr_1fr_60px] h-11 items-center">
+                <HeaderCell>ID pedido</HeaderCell>
+                <HeaderCell>Comprador</HeaderCell>
+                <HeaderCell>Data da compra</HeaderCell>
+                <HeaderCell>Valor</HeaderCell>
+                <HeaderCell className="text-right pr-4">Ações</HeaderCell>
+              </div>
+              {loading ? (
+                <EmptyState text="Carregando..." />
+              ) : orders.length === 0 ? (
+                <EmptyState text="Nenhum pedido encontrado" />
+              ) : (
+                orders.map((order) => {
+                  const date = formatPurchaseDate(order.purchaseDate);
+                  return (
+                    <div
+                      key={order.id}
+                      className="grid grid-cols-[1fr_1.6fr_1fr_1fr_60px] min-h-[56px] items-center border-t border-gray-6 hover:bg-gray-2 transition-colors"
+                    >
+                      <Cell>
+                        <Tooltip
+                          position="topRight"
+                          trigger="hover"
+                          content={<p className="font-family-dm-sans font-normal text-sm leading-[1.3] text-gray-12 text-left break-all">{order.id}</p>}
+                          contentClassName="max-w-[min(320px,calc(100vw-2rem))] w-max min-w-0 px-3 py-2 gap-0 !items-stretch"
+                          className="block min-w-0 max-w-full"
+                        >
+                          <p className="font-inter font-semibold leading-[1.3] text-sm text-gray-12 truncate cursor-help">
+                            #{order.id.slice(0, 6)}...{order.id.slice(-4)}
+                          </p>
+                        </Tooltip>
+                      </Cell>
+                      <Cell>
+                        <div className="flex items-center gap-2 min-w-0">
+                          <ImageWithInitialFallback
+                            src={getAvatarUrl(order.buyer.avatarUrl)}
+                            alt={order.buyer.name}
+                            width={32}
+                            height={32}
+                            name={order.buyer.name}
+                            className="size-8 rounded-full object-cover shrink-0"
+                          />
+                          <div className="flex flex-col min-w-0">
+                            <span className="font-family-dm-sans font-medium text-sm text-gray-12 truncate">
+                              {order.buyer.name}
+                            </span>
+                            <span className="font-family-dm-sans font-normal text-xs text-gray-11 truncate">
+                              {formatDocumentDisplay(order.buyer.cpf, isPersonBr({ document: order.buyer.cpf }))}
+                            </span>
+                          </div>
+                        </div>
+                      </Cell>
+                      <Cell>
+                        <div className="flex flex-col">
+                          <span className="font-family-dm-sans font-medium text-sm text-gray-12">
+                            {date.day}
+                          </span>
+                          <span className="font-family-dm-sans font-normal text-xs text-gray-11">
+                            {date.time}
+                          </span>
+                        </div>
+                      </Cell>
+                      <Cell>
+                        <span className="font-family-dm-sans font-medium text-sm text-gray-12">
+                          {formatCurrency(order.amount)}
+                        </span>
+                      </Cell>
+                      <Cell className="justify-end pr-4">
+                        <button
+                          type="button"
+                          title="Ver comprovante"
+                          onClick={() => openPaymentDetails(order)}
+                          className="bg-gray-2 border border-gray-6 rounded-lg size-8 flex items-center justify-center hover:bg-gray-3 transition-colors cursor-pointer"
+                        >
+                          <FileText className="size-4 text-gray-11" />
+                        </button>
+                      </Cell>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+
+            {/* ===== Mobile: cards ===== */}
+            <div className="md:hidden flex flex-col gap-2">
+              {loading ? (
+                <EmptyState text="Carregando..." />
+              ) : orders.length === 0 ? (
+                <EmptyState text="Nenhum pedido encontrado" />
+              ) : (
+                orders.map((order) => {
+                  const date = formatPurchaseDate(order.purchaseDate);
+                  return (
+                    <div
+                      key={order.id}
+                      className="border border-gray-6 rounded-lg p-3 flex flex-col gap-3 bg-gray-1"
+                    >
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="font-family-dm-sans font-semibold text-sm text-gray-12">
+                          #{order.displayId}
+                        </span>
+                        <span className="font-family-dm-sans font-normal text-xs text-gray-11">
+                          {date.day} · {date.time}
+                        </span>
+                      </div>
                       <div className="flex items-center gap-2 min-w-0">
                         <ImageWithInitialFallback
                           src={getAvatarUrl(order.buyer.avatarUrl)}
                           alt={order.buyer.name}
-                          width={32}
-                          height={32}
                           name={order.buyer.name}
-                          className="size-8 rounded-full object-cover shrink-0"
+                          width={36}
+                          height={36}
+                          className="size-9 rounded-full object-cover shrink-0"
                         />
                         <div className="flex flex-col min-w-0">
                           <span className="font-family-dm-sans font-medium text-sm text-gray-12 truncate">
@@ -380,140 +460,68 @@ export function FiscalExportDrawer({
                           </span>
                         </div>
                       </div>
-                    </Cell>
-                    <Cell>
-                      <div className="flex flex-col">
-                        <span className="font-family-dm-sans font-medium text-sm text-gray-12">
-                          {date.day}
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="font-manrope font-extrabold text-base text-gray-12">
+                          {formatCurrency(order.amount)}
                         </span>
-                        <span className="font-family-dm-sans font-normal text-xs text-gray-11">
-                          {date.time}
-                        </span>
-                      </div>
-                    </Cell>
-                    <Cell>
-                      <span className="font-family-dm-sans font-medium text-sm text-gray-12">
-                        {formatCurrency(order.amount)}
-                      </span>
-                    </Cell>
-                    <Cell className="justify-end pr-4">
-                      <button
-                        type="button"
-                        title="Ver comprovante"
-                        onClick={() => openPaymentDetails(order)}
-                        className="bg-gray-2 border border-gray-6 rounded-lg size-8 flex items-center justify-center hover:bg-gray-3 transition-colors cursor-pointer"
-                      >
-                        <FileText className="size-4 text-gray-11" />
-                      </button>
-                    </Cell>
-                  </div>
-                );
-              })
-            )}
-          </div>
-
-          {/* ===== Mobile: cards ===== */}
-          <div className="md:hidden flex flex-col gap-2">
-            {loading ? (
-              <EmptyState text="Carregando..." />
-            ) : orders.length === 0 ? (
-              <EmptyState text="Nenhum pedido encontrado" />
-            ) : (
-              orders.map((order) => {
-                const date = formatPurchaseDate(order.purchaseDate);
-                return (
-                  <div
-                    key={order.id}
-                    className="border border-gray-6 rounded-lg p-3 flex flex-col gap-3 bg-gray-1"
-                  >
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="font-family-dm-sans font-semibold text-sm text-gray-12">
-                        #{order.displayId}
-                      </span>
-                      <span className="font-family-dm-sans font-normal text-xs text-gray-11">
-                        {date.day} · {date.time}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-2 min-w-0">
-                      <ImageWithInitialFallback
-                        src={getAvatarUrl(order.buyer.avatarUrl)}
-                        alt={order.buyer.name}
-                        name={order.buyer.name}
-                        width={36}
-                        height={36}
-                        className="size-9 rounded-full object-cover shrink-0"
-                      />
-                      <div className="flex flex-col min-w-0">
-                        <span className="font-family-dm-sans font-medium text-sm text-gray-12 truncate">
-                          {order.buyer.name}
-                        </span>
-                        <span className="font-family-dm-sans font-normal text-xs text-gray-11 truncate">
-                          {formatDocumentDisplay(order.buyer.cpf, isPersonBr({ document: order.buyer.cpf }))}
-                        </span>
+                        <button
+                          type="button"
+                          title="Ver comprovante"
+                          onClick={() => openPaymentDetails(order)}
+                          className="size-9 flex items-center justify-center rounded-lg border border-gray-6 hover:bg-gray-3 transition-colors cursor-pointer"
+                        >
+                          <FileText className="size-5 text-gray-12" />
+                        </button>
                       </div>
                     </div>
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="font-manrope font-extrabold text-base text-gray-12">
-                        {formatCurrency(order.amount)}
-                      </span>
-                      <button
-                        type="button"
-                        title="Ver comprovante"
-                        onClick={() => openPaymentDetails(order)}
-                        className="size-9 flex items-center justify-center rounded-lg border border-gray-6 hover:bg-gray-3 transition-colors cursor-pointer"
-                      >
-                        <FileText className="size-5 text-gray-12" />
-                      </button>
-                    </div>
-                  </div>
-                );
-              })
-            )}
+                  );
+                })
+              )}
+            </div>
+
+            {/* Footer: botão + paginação */}
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mt-auto pt-2">
+              <Button
+                className="md:w-auto w-full hidden md:flex"
+                disabled={!loading && total === 0}
+                onClick={() => setShowFormatModal(true)}
+              >
+                <FileText className="size-4" />
+                Exportar dados fiscais
+              </Button>
+              <Pagination
+                currentPage={page}
+                totalPages={totalPages}
+                onPageChange={setPage}
+                disabled={loading}
+                className="bg-transparent! md:w-auto!"
+              />
+            </div>
           </div>
+        </DrawerContent>
+      </Drawer>
 
-          {/* Footer: botão + paginação */}
-          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mt-auto pt-2">
-            <Button
-              className="md:w-auto w-full"
-              disabled={!loading && total === 0}
-              onClick={() => setShowFormatModal(true)}
-            >
-              <FileText className="size-4" />
-              Exporta dados fiscais
-            </Button>
-            <Pagination
-              currentPage={page}
-              totalPages={totalPages}
-              onPageChange={setPage}
-              disabled={loading}
-              className="bg-transparent! md:w-auto!"
-            />
-          </div>
-        </div>
-      </DrawerContent>
-    </Drawer>
-
-    <FiscalExportFormatModal
-      isOpen={showFormatModal}
-      onClose={() => {
-        if (!exporting) setShowFormatModal(false);
-      }}
-      onConfirm={handleConfirmExport}
-      isExporting={exporting}
-    />
-
-    {selectedPayment && (
-      <PaymentItemDetailsDrawer
-        isOpen={isDetailsOpen}
+      <FiscalExportFormatModal
+        isOpen={showFormatModal}
         onClose={() => {
-          setIsDetailsOpen(false);
-          setSelectedPayment(null);
+          if (!exporting) setShowFormatModal(false);
         }}
-        paymentItem={selectedPayment}
-        eventName={eventName}
-        type="awaiting"
+        onConfirm={handleConfirmExport}
+        isExporting={exporting}
       />
-    )}
+
+      {selectedPayment && (
+        <PaymentItemDetailsDrawer
+          isOpen={isDetailsOpen}
+          onClose={() => {
+            setIsDetailsOpen(false);
+            setSelectedPayment(null);
+          }}
+          paymentItem={selectedPayment}
+          eventName={eventName}
+          type="awaiting"
+        />
+      )}
     </>
   );
 }

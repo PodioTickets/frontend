@@ -817,16 +817,19 @@ export function PaymentDetailsModal() {
                     </div>
                   </div>
 
-                  {/* Ações do pedido (mobile) — espelha o desktop. */}
+                  {/* Ações do pedido (mobile) — espelha o desktop. Comprovante
+                   * só faz sentido em pedido com pagamento (gratuito não gera recibo). */}
                   <div className="flex flex-col gap-2 pb-2">
-                    <Button
-                      variant="outline"
-                      onClick={handleDownloadReceipt}
-                      isLoading={downloadingReceipt}
-                      className="w-full border-gray-6 text-gray-12"
-                    >
-                      Baixar comprovante
-                    </Button>
+                    {!isFreeOrder && (
+                      <Button
+                        variant="outline"
+                        onClick={handleDownloadReceipt}
+                        isLoading={downloadingReceipt}
+                        className="w-full border-gray-6 text-gray-12"
+                      >
+                        Baixar comprovante
+                      </Button>
+                    )}
                     {canRefundOrder && (
                       <Button
                         variant="destructive"
@@ -1283,14 +1286,16 @@ export function PaymentDetailsModal() {
                       </div>
 
                       <div className='flex items-center gap-2'>
-                        <Button
-                          variant={"outline"}
-                          onClick={handleDownloadReceipt}
-                          isLoading={downloadingReceipt}
-                          className='border-gray-6 text-gray-12'
-                        >
-                          Baixar comprovante
-                        </Button>
+                        {!isFreeOrder && (
+                          <Button
+                            variant={"outline"}
+                            onClick={handleDownloadReceipt}
+                            isLoading={downloadingReceipt}
+                            className='border-gray-6 text-gray-12'
+                          >
+                            Baixar comprovante
+                          </Button>
+                        )}
                         {canRefundOrder && (
                           <Button
                             variant={"destructive"}

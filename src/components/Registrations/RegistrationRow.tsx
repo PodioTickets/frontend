@@ -103,7 +103,7 @@ export function RegistrationRow({
       <div className="flex flex-1 h-full items-center min-w-0 p-4">
         <div className="flex flex-col min-w-0 w-full">
           <span className="text-gray-11 text-xs truncate font-inter font-normal leading-[1.3]">
-            {registration.ticket?.category?.name ?? ""}
+            {registration.ticket?.category?.name || "Ingresso avulso"}
           </span>
           <span className="truncate font-family-dm-sans text-sm font-semibold leading-[1.3] text-gray-12">
             {registration.ticket?.name ?? ""}
