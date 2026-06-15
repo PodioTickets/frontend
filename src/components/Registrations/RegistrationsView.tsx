@@ -60,6 +60,26 @@ interface ExportTarget {
   };
 }
 
+function getPageNumbers(currentPage: number, totalPages: number): (number | '...')[] {
+  const delta = 2;
+  const range: number[] = [];
+  const rangeWithDots: (number | '...')[] = [];
+
+  for (let i = Math.max(2, currentPage - delta); i <= Math.min(totalPages - 1, currentPage + delta); i++) {
+    range.push(i);
+  }
+
+  if (currentPage - delta > 2) rangeWithDots.push(1, '...');
+  else rangeWithDots.push(1);
+
+  rangeWithDots.push(...range);
+
+  if (currentPage + delta < totalPages - 1) rangeWithDots.push('...', totalPages);
+  else if (totalPages > 1) rangeWithDots.push(totalPages);
+
+  return rangeWithDots;
+}
+
 export interface RegistrationsViewProps {
   header: ReactNode;
   event: (Pick<Event, "id" | "name"> & { slug?: string }) | null;
@@ -520,20 +540,20 @@ export function RegistrationsView({
                     >
                       <ChevronLeft className="size-4" />
                     </button>
-                    {Array.from({ length: Math.min(pagination.totalPages, 8) }, (_, i) => {
-                      const pageNum = i + 1;
-                      const isActive = pageNum === pagination.page;
-                      return (
-                        <button
-                          key={pageNum}
-                          type="button"
-                          onClick={() => setPagination((p) => ({ ...p, page: pageNum }))}
-                          className={`size-8 flex items-center justify-center rounded-lg text-sm font-family-dm-sans font-medium transition-colors ${isActive ? "bg-primary-11 border-primary-11 text-primary-2" : "border border-gray-6 bg-gray-4 text-gray-12"}`}
-                        >
-                          {pageNum}
-                        </button>
-                      );
-                    })}
+                    {getPageNumbers(pagination.page, pagination.totalPages).map((pageNum, idx) =>
+                      pageNum === '...'
+                        ? <span key={`dots-${idx}`} className="size-8 flex items-center justify-center text-gray-11 text-sm">…</span>
+                        : (
+                          <button
+                            key={pageNum}
+                            type="button"
+                            onClick={() => setPagination((p) => ({ ...p, page: pageNum as number }))}
+                            className={`size-8 flex items-center justify-center rounded-lg text-sm font-family-dm-sans font-medium transition-colors ${pageNum === pagination.page ? "bg-primary-11 border-primary-11 text-primary-2" : "border border-gray-6 bg-gray-4 text-gray-12"}`}
+                          >
+                            {pageNum}
+                          </button>
+                        )
+                    )}
                     <button
                       type="button"
                       onClick={() => setPagination((p) => ({ ...p, page: Math.min(pagination.totalPages, p.page + 1) }))}
@@ -639,27 +659,22 @@ export function RegistrationsView({
                     >
                       <ChevronLeft className="size-4" />
                     </button>
-                    {Array.from({ length: Math.min(pagination.totalPages, 8) }, (_, i) => {
-                      const pageNum = i + 1;
-                      const isActive = pageNum === pagination.page;
-                      return (
-                        <button
-                          key={pageNum}
-                          onClick={() =>
-                            setPagination((prev) => ({
-                              ...prev,
-                              page: pageNum,
-                            }))
-                          }
-                          className={`size-8 flex items-center justify-center border rounded-lg cursor-pointer ${isActive
-                            ? "bg-primary-11 border-primary-11 text-gray-1"
-                            : "border-gray-6 hover:bg-gray-3"
-                            }`}
-                        >
-                          {pageNum}
-                        </button>
-                      );
-                    })}
+                    {getPageNumbers(pagination.page, pagination.totalPages).map((pageNum, idx) =>
+                      pageNum === '...'
+                        ? <span key={`dots-${idx}`} className="size-8 flex items-center justify-center text-gray-11 text-sm">…</span>
+                        : (
+                          <button
+                            key={pageNum}
+                            onClick={() => setPagination((prev) => ({ ...prev, page: pageNum as number }))}
+                            className={`size-8 flex items-center justify-center border rounded-lg cursor-pointer ${pageNum === pagination.page
+                              ? "bg-primary-11 border-primary-11 text-gray-1"
+                              : "border-gray-6 hover:bg-gray-3"
+                              }`}
+                          >
+                            {pageNum}
+                          </button>
+                        )
+                    )}
                     <button
                       onClick={() =>
                         setPagination((prev) => ({

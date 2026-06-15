@@ -297,6 +297,13 @@ export function useEventDashboard(
     );
   }, [lotsNearDepletionTotalPages]);
 
+  // Reset das páginas de ranking server-side quando o filtro de período ou
+  // ingressos muda — sem isso a paginação fica numa página inexistente.
+  useEffect(() => {
+    setTicketRankingPage(1);
+    setTicketsWithLotsPage(1);
+  }, [periodFilter, selectedTicketIds]);
+
   const lotsNearDepletionSliceStart =
     (lotsNearDepletionPage - 1) * LOTS_NEAR_DEPLETION_PAGE_SIZE;
   const paginatedLotsNearDepletion = useMemo(() => {

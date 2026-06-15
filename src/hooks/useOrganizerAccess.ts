@@ -20,6 +20,7 @@ export function useOrganizerAccess() {
   const [access, setAccess] = useState<OrganizerAccess | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [accessError, setAccessError] = useState(false);
 
   useEffect(() => {
     if (authLoading) return;
@@ -45,6 +46,10 @@ export function useOrganizerAccess() {
 
       if (error.response?.status === 404 || error.response?.status === 401) {
         orgNav.push("/organizer/login");
+      } else {
+        // Erro de rede ou server error — não redireciona, expõe accessError
+        // para o layout exibir mensagem de erro em vez de tela branca.
+        setAccessError(true);
       }
     } finally {
       setLoading(false);
@@ -55,6 +60,7 @@ export function useOrganizerAccess() {
     access,
     loading,
     error,
+    accessError,
     isMember: access?.isMember || false,
     role: access?.role,
     organizationId: access?.organizationId,

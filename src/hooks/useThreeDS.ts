@@ -163,6 +163,8 @@ interface AuthParams {
     name: string;
     expiry: string; // "MM/YY"
   };
+  /** Método de pagamento 3DS. Default: 'debit' (mantém comportamento anterior). */
+  paymentMethod?: 'credit' | 'debit';
 }
 
 // ─── Hook ─────────────────────────────────────────────────────────────────────
@@ -201,8 +203,8 @@ export function useThreeDS() {
       setBpmpiField("bpmpi_currency", "986");
       setBpmpiField("bpmpi_totalamount", String(params.totalAmountCents));
       setBpmpiField("bpmpi_installments", "1");
-      // Doc Cielo exige lowercase: "credit" ou "debit".
-      setBpmpiField("bpmpi_paymentmethod", "debit");
+      // Doc Cielo exige lowercase: "credit" ou "debit". Default: "debit".
+      setBpmpiField("bpmpi_paymentmethod", params.paymentMethod ?? "debit");
       setBpmpiField("bpmpi_cardnumber", params.card.number.replace(/\D/g, ""));
       setBpmpiField("bpmpi_cardexpirationmonth", month);
       setBpmpiField("bpmpi_cardexpirationyear", year);

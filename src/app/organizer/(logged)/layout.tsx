@@ -38,12 +38,28 @@ export default function OrganizerLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const { loading, isMember } = useOrganizerAccess();
+  const { loading, isMember, accessError, refetch } = useOrganizerAccess();
 
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-2 flex items-center justify-center">
         <Loading />
+      </div>
+    );
+  }
+
+  if (accessError) {
+    return (
+      <div className="min-h-screen bg-gray-2 flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-gray-11 text-lg mb-4">Erro ao verificar acesso.</p>
+          <button
+            onClick={() => refetch()}
+            className="px-4 py-2 rounded-lg bg-primary-11 text-primary-2 font-semibold"
+          >
+            Tentar novamente
+          </button>
+        </div>
       </div>
     );
   }

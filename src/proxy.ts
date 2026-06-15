@@ -282,13 +282,13 @@ function applyAdminHostRouting(request: NextRequest): NextResponse | null {
         pathname === "/login" || pathname.startsWith("/login/");
       const token = request.cookies.get("pt_at_admin")?.value;
 
-      if (isLoginPath && token) {
+      if (isLoginPath && token && token.length >= 10) {
         const dest = request.nextUrl.clone();
         dest.pathname = "/events";
         return NextResponse.redirect(dest, 307);
       }
 
-      if (!isLoginPath && !token) {
+      if (!isLoginPath && (!token || token.length < 10)) {
         const dest = request.nextUrl.clone();
         dest.pathname = "/login";
         if (pathname !== "/") dest.searchParams.set("next", pathname);
@@ -335,13 +335,13 @@ function applyAdminAuthGuard(request: NextRequest): NextResponse | null {
   const token = request.cookies.get("pt_at_admin")?.value;
 
   if (isPublic) {
-    if (token) {
+    if (token && token.length >= 10) {
       return NextResponse.redirect(new URL("/admin/events", request.url));
     }
     return null;
   }
 
-  if (!token) {
+  if (!token || token.length < 10) {
     const loginUrl = new URL("/admin/login", request.url);
     loginUrl.searchParams.set("next", pathname);
     return NextResponse.redirect(loginUrl);
@@ -380,10 +380,13 @@ export async function proxy(request: NextRequest) {
   }
 
   if (request.method === "OPTIONS" && pathname.startsWith("/api/")) {
+    if (!origin || !isValidOrigin(origin, host)) {
+      return new NextResponse(null, { status: 403 });
+    }
     return new NextResponse(null, {
       status: 204,
       headers: {
-        "Access-Control-Allow-Origin": origin || "*",
+        "Access-Control-Allow-Origin": origin,
         "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
         "Access-Control-Allow-Headers":
           "Content-Type, Authorization, X-Admin-Secret",
@@ -465,7 +468,7 @@ export async function proxy(request: NextRequest) {
 
   const cspDirectives = [
     `default-src ${trustedDomains.join(" ")}`,
-    `script-src ${trustedDomains.join(" ")} ${isDev ? "'unsafe-eval'" : ""
+    /* TODO: migrar para nonce */ `script-src ${trustedDomains.join(" ")} ${isDev ? "'unsafe-eval'" : ""
     } 'unsafe-inline' blob: https://www.google.com https://maps.googleapis.com https://*.googleapis.com https://*.google.com https://challenges.cloudflare.com https://www.instagram.com https://connect.facebook.net https://platform.twitter.com https://www.tiktok.com https://strava-embeds.com ${braspag3DSCsp}`,
     `style-src ${trustedDomains.join(
       " "
@@ -475,9 +478,9 @@ export async function proxy(request: NextRequest) {
       " "
     )} wss: ws: https://www.google.com https://maps.googleapis.com https://*.googleapis.com https://*.google.com https://www.google-analytics.com https://*.google-analytics.com https://challenges.cloudflare.com https://www.facebook.com https://connect.facebook.net ${braspag3DSCsp} ${braspag3DSConnectExtras}`,
     // 3DS challenge abre iframe do ACS do banco emissor (Itaú, Bradesco, Nubank, etc).
-    // Cada banco usa seu próprio domínio — `https:` é a recomendação prática
-    // p/ 3DS, evita ter que manter allowlist de cada emissor.
-    `frame-src 'self' https: https://www.youtube.com https://www.google.com https://maps.google.com https://*.google.com https://*.googleapis.com https://www.strava.com https://*.strava.com https://strava-embeds.com https://challenges.cloudflare.com https://www.instagram.com https://www.facebook.com https://platform.twitter.com https://www.tiktok.com ${braspag3DSCsp}`,
+    // Cada banco usa seu próprio domínio — domínios Braspag/Cardinal cobrem o fluxo 3DS;
+    // origens adicionais de embeds listadas explicitamente (sem https: genérico).
+    `frame-src 'self' https://www.youtube.com https://www.google.com https://maps.google.com https://*.google.com https://*.googleapis.com https://www.strava.com https://*.strava.com https://strava-embeds.com https://challenges.cloudflare.com https://www.instagram.com https://www.facebook.com https://platform.twitter.com https://www.tiktok.com ${braspag3DSCsp}`,
     `img-src ${trustedDomains.join(" ")} data: blob: https://cdn.podioticket.com.br https://*.google.com https://*.googleapis.com https://*.gstatic.com https://*.googleusercontent.com https://www.instagram.com https://*.cdninstagram.com https://*.fbcdn.net https://www.facebook.com https://*.strava.com https://strava-embeds.com`,
     `media-src ${trustedDomains.join(" ")} data: blob:`,
     // worker-src e child-src: workers internos do Turnstile usam blob URLs

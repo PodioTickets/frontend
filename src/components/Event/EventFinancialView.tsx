@@ -52,7 +52,7 @@ export function EventFinancialView({
   const { openRequestTransferModal } = useRequestTransferModal();
 
   // Financial data
-  const [financialData, setFinancialData] = useState<{
+  type FinancialData = {
     availableBalance: number;
     installmentsToReceive: number;
     awaitingRelease: number;
@@ -66,20 +66,9 @@ export function EventFinancialView({
       revenue: number[];
     };
     paymentMethodStats?: PaymentMethodStats;
-  }>({
-    availableBalance: 1240,
-    installmentsToReceive: 1240,
-    awaitingRelease: 1240,
-    totalTransferred: 1240,
-    refunded: 1240,
-    chargebacks: 1240,
-    grossRevenue: 10000,
-    revenueChange: 12,
-    revenueChart: {
-      labels: [],
-      revenue: [],
-    },
-  });
+  };
+  const [financialData, setFinancialData] = useState<FinancialData | null>(null);
+  const [financialError, setFinancialError] = useState(false);
 
   // Data for tickets/lots (paginação server-side; consumida pelo backend financeiro)
   const [, setTicketsData] = useState<FinancialTicket[]>([]);
@@ -142,6 +131,7 @@ export function EventFinancialView({
     } catch (error: any) {
       console.error("Error loading event:", error);
       toast.error("Erro ao carregar dados do evento");
+      setFinancialError(true);
     } finally {
       setLoading(false);
     }
@@ -151,6 +141,22 @@ export function EventFinancialView({
     return (
       <div className="min-h-screen bg-gray-2 flex items-center justify-center">
         <Loading />
+      </div>
+    );
+  }
+
+  if (financialError || !financialData) {
+    return (
+      <div className="min-h-screen bg-gray-2">
+        {renderHeader(event)}
+        <div className="max-w-7xl mx-auto px-4 lg:px-6 2xl:px-0 flex items-center justify-center min-h-[50vh]">
+          <div className="text-center">
+            <p className="text-gray-11 text-lg mb-4">Erro ao carregar dados financeiros</p>
+            <Button onClick={() => { setFinancialError(false); loadData(); }}>
+              Tentar novamente
+            </Button>
+          </div>
+        </div>
       </div>
     );
   }

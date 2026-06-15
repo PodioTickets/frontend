@@ -32,6 +32,26 @@ interface VoucherGroup {
  * byte a byte. Header via `renderHeader(event)`; redirect de não-autenticado via
  * `onUnauthenticated`. A permissão (`vouchers`) é checada na página do organizer.
  */
+function getPageNumbers(currentPage: number, totalPages: number): (number | '...')[] {
+  const delta = 2;
+  const range: number[] = [];
+  const rangeWithDots: (number | '...')[] = [];
+
+  for (let i = Math.max(2, currentPage - delta); i <= Math.min(totalPages - 1, currentPage + delta); i++) {
+    range.push(i);
+  }
+
+  if (currentPage - delta > 2) rangeWithDots.push(1, '...');
+  else rangeWithDots.push(1);
+
+  rangeWithDots.push(...range);
+
+  if (currentPage + delta < totalPages - 1) rangeWithDots.push('...', totalPages);
+  else if (totalPages > 1) rangeWithDots.push(totalPages);
+
+  return rangeWithDots;
+}
+
 export function EventVouchersView({
   eventId,
   onUnauthenticated,
@@ -350,21 +370,21 @@ export function EventVouchersView({
               >
                 <ChevronLeft className="size-4 text-gray-11" />
               </button>
-              {Array.from({ length: Math.min(pagination.totalPages, 8) }, (_, i) => i + 1).map(
-                (page) => (
-                  <button
-                    key={page}
-                    onClick={() =>
-                      setPagination((prev) => ({ ...prev, page }))
-                    }
-                    className={`size-8 rounded-lg border transition-colors font-family-dm-sans text-sm flex items-center justify-center ${pagination.page === page
-                      ? "bg-primary-11 text-primary-2 border-primary-11"
-                      : "bg-gray-4 border-gray-6 text-gray-12 hover:bg-gray-3"
-                      }`}
-                  >
-                    {page}
-                  </button>
-                )
+              {getPageNumbers(pagination.page, pagination.totalPages).map((page, idx) =>
+                page === '...'
+                  ? <span key={`dots-${idx}`} className="size-8 flex items-center justify-center text-gray-11 text-sm">…</span>
+                  : (
+                    <button
+                      key={page}
+                      onClick={() => setPagination((prev) => ({ ...prev, page: page as number }))}
+                      className={`size-8 rounded-lg border transition-colors font-family-dm-sans text-sm flex items-center justify-center ${pagination.page === page
+                        ? "bg-primary-11 text-primary-2 border-primary-11"
+                        : "bg-gray-4 border-gray-6 text-gray-12 hover:bg-gray-3"
+                        }`}
+                    >
+                      {page}
+                    </button>
+                  )
               )}
               <button
                 onClick={() =>
