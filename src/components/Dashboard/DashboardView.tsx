@@ -1,13 +1,12 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { ArrowDown, XCircle } from "lucide-react";
+import { XCircle } from "lucide-react";
 import { Loading } from "@/components/Loading";
 import { RevenueChart } from "@/components/Organizer/RevenueChart";
 import { SalesHeatmap } from "@/components/Organizer/SalesHeatmap";
 import { ArrowButton } from "@/components/ArrowButton";
 import { SelectTicketsFilterModal } from "@/components/Registrations/SelectTicketsFilterModal";
-import { ArrowUpIcon } from "@/components/Icons/ArrowUpIcon";
 import { CartIcon } from "@/components/Icons/CartIcon";
 import { CheckIcon } from "@/components/Icons/Organizer/CheckIcon";
 import { DolarIcon } from "@/components/Icons/Organizer/DolarIcon";
@@ -16,11 +15,7 @@ import { QuestionsListing } from "@/components/Organizer/QuestionsListing";
 import { QuestionDetailsDrawer } from "@/components/Organizer/QuestionDetailsDrawer";
 import { ProductDetailsDrawer } from "@/components/Organizer/ProductDetailsDrawer";
 import { TicketsWithLotsList } from "@/components/Financial/TicketsWithLotsList";
-import {
-  dashboardWeekOverWeekPercent,
-  showDashboardWeekOverWeek,
-  periodComparisonLabel,
-} from "@/lib/dashboard";
+import { DashboardWeekTrend } from "./DashboardWeekTrend";
 import { LotsNearDepletionPaginationBar } from "./LotsNearDepletionPaginationBar";
 import {
   DashboardRankingCategoryLabel,
@@ -180,18 +175,11 @@ export function DashboardView({
                 R$ {(dashboardData.netRevenue / 100).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </p>
             </div>
-            {showDashboardWeekOverWeek(dashboardData.netRevenueChange) && periodComparisonLabel(periodFilter) ? (
-              <div className="px-4 pb-3 pt-1 h-[40px] flex items-center gap-2">
-                {dashboardData.netRevenueChange >= 0 ? (
-                  <ArrowUpIcon className="size-3 text-primary-11" />
-                ) : (
-                  <ArrowDown className="size-6 text-red-11" />
-                )}
-                <span className="font-family-dm-sans font-normal text-[16px] leading-[1.3] text-primary-11">
-                  {dashboardWeekOverWeekPercent(dashboardData.netRevenueChange)}% {periodComparisonLabel(periodFilter)}
-                </span>
-              </div>
-            ) : null}
+            <DashboardWeekTrend
+              change={dashboardData.netRevenueChange}
+              period={periodFilter}
+              wrapperClassName="px-4 pb-3 pt-1 h-[40px] flex items-center gap-2"
+            />
           </div>
 
           {/* Ticket Médio */}
@@ -207,18 +195,11 @@ export function DashboardView({
                 R$ {(dashboardData.averageTicket / 100).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </p>
             </div>
-            {showDashboardWeekOverWeek(dashboardData.averageTicketChange) && periodComparisonLabel(periodFilter) ? (
-              <div className="px-4 pb-3 pt-1 h-[40px] flex items-center gap-2">
-                {dashboardData.averageTicketChange >= 0 ? (
-                  <ArrowUpIcon className="size-3 text-primary-11" />
-                ) : (
-                  <ArrowDown className="size-6 text-red-11" />
-                )}
-                <span className="font-family-dm-sans font-normal text-[16px] leading-[1.3] text-primary-11">
-                  {dashboardWeekOverWeekPercent(dashboardData.averageTicketChange)}% {periodComparisonLabel(periodFilter)}
-                </span>
-              </div>
-            ) : null}
+            <DashboardWeekTrend
+              change={dashboardData.averageTicketChange}
+              period={periodFilter}
+              wrapperClassName="px-4 pb-3 pt-1 h-[40px] flex items-center gap-2"
+            />
           </div>
 
           {/* Inscrições Confirmadas */}
@@ -234,18 +215,11 @@ export function DashboardView({
                 {dashboardData.totalRegistrations.toLocaleString("pt-BR")}
               </p>
             </div>
-            {showDashboardWeekOverWeek(dashboardData.totalRegistrationsChange) && periodComparisonLabel(periodFilter) ? (
-              <div className="px-4 pb-3 pt-1 h-[40px] flex items-center gap-2">
-                {dashboardData.totalRegistrationsChange >= 0 ? (
-                  <ArrowUpIcon className="size-3 text-primary-11" />
-                ) : (
-                  <ArrowDown className="size-6 text-red-11" />
-                )}
-                <span className="font-family-dm-sans font-normal text-[16px] leading-[1.3] text-primary-11">
-                  {dashboardWeekOverWeekPercent(dashboardData.totalRegistrationsChange)}% {periodComparisonLabel(periodFilter)}
-                </span>
-              </div>
-            ) : null}
+            <DashboardWeekTrend
+              change={dashboardData.totalRegistrationsChange}
+              period={periodFilter}
+              wrapperClassName="px-4 pb-3 pt-1 h-[40px] flex items-center gap-2"
+            />
           </div>
 
           {/* Cancelamentos */}
@@ -284,18 +258,10 @@ export function DashboardView({
               <p className="font-manrope font-bold text-[24px] leading-[1.1] text-gray-12">
                 R$ {(dashboardData.registrationsTrend.amount / 100).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </p>
-              {showDashboardWeekOverWeek(dashboardData.registrationsTrend.change) ? (
-                <div className="flex items-center gap-1">
-                  {dashboardData.registrationsTrend.change >= 0 ? (
-                    <ArrowUpIcon className="size-3 text-primary-11" />
-                  ) : (
-                    <ArrowDown className="size-6 text-red-11" />
-                  )}
-                  <span className="font-family-dm-sans font-normal text-[16px] leading-[1.3] text-primary-11">
-                    {dashboardWeekOverWeekPercent(dashboardData.registrationsTrend.change)}% {periodComparisonLabel(periodFilter)}
-                  </span>
-                </div>
-              ) : null}
+              <DashboardWeekTrend
+                change={dashboardData.registrationsTrend.change}
+                period={periodFilter}
+              />
             </div>
             <RevenueChart
               data={{
@@ -570,14 +536,12 @@ export function DashboardView({
                 R$ {(dashboardData.netRevenue / 100).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </p>
             </div>
-            {showDashboardWeekOverWeek(dashboardData.netRevenueChange) && periodComparisonLabel(periodFilter) ? (
-              <div className="px-3 pb-3 pt-1 flex items-center gap-2">
-                {dashboardData.netRevenueChange >= 0 ? <ArrowUpIcon className="size-3 text-primary-11" /> : <ArrowDown className="size-4 text-red-11" />}
-                <span className="font-family-dm-sans font-normal text-sm text-primary-11">
-                  {dashboardWeekOverWeekPercent(dashboardData.netRevenueChange)}% {periodComparisonLabel(periodFilter)}
-                </span>
-              </div>
-            ) : null}
+            <DashboardWeekTrend
+              change={dashboardData.netRevenueChange}
+              period={periodFilter}
+              variant="mobile"
+              wrapperClassName="px-3 pb-3 pt-1 flex items-center gap-2"
+            />
           </div>
           <div className="bg-gray-1 border border-gray-6 rounded-xl flex flex-col min-h-[143px]">
             <div className="flex items-center justify-between px-3 pt-3 pb-2">
@@ -591,14 +555,12 @@ export function DashboardView({
                 R$ {(dashboardData.averageTicket / 100).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </p>
             </div>
-            {showDashboardWeekOverWeek(dashboardData.averageTicketChange) && periodComparisonLabel(periodFilter) ? (
-              <div className="px-3 pb-3 pt-1 flex items-center gap-2">
-                {dashboardData.averageTicketChange >= 0 ? <ArrowUpIcon className="size-3 text-primary-11" /> : <ArrowDown className="size-4 text-red-11" />}
-                <span className="font-family-dm-sans font-normal text-sm text-primary-11">
-                  {dashboardWeekOverWeekPercent(dashboardData.averageTicketChange)}% {periodComparisonLabel(periodFilter)}
-                </span>
-              </div>
-            ) : null}
+            <DashboardWeekTrend
+              change={dashboardData.averageTicketChange}
+              period={periodFilter}
+              variant="mobile"
+              wrapperClassName="px-3 pb-3 pt-1 flex items-center gap-2"
+            />
           </div>
           <div className="bg-gray-1 border border-gray-6 rounded-xl flex flex-col min-h-[143px]">
             <div className="flex items-center justify-between px-3 pt-3 pb-2">
@@ -612,14 +574,12 @@ export function DashboardView({
                 {dashboardData.totalRegistrations.toLocaleString("pt-BR")}
               </p>
             </div>
-            {showDashboardWeekOverWeek(dashboardData.totalRegistrationsChange) && periodComparisonLabel(periodFilter) ? (
-              <div className="px-3 pb-3 pt-1 flex items-center gap-2">
-                {dashboardData.totalRegistrationsChange >= 0 ? <ArrowUpIcon className="size-3 text-primary-11" /> : <ArrowDown className="size-4 text-red-11" />}
-                <span className="font-family-dm-sans font-normal text-sm text-primary-11">
-                  {dashboardWeekOverWeekPercent(dashboardData.totalRegistrationsChange)}% {periodComparisonLabel(periodFilter)}
-                </span>
-              </div>
-            ) : null}
+            <DashboardWeekTrend
+              change={dashboardData.totalRegistrationsChange}
+              period={periodFilter}
+              variant="mobile"
+              wrapperClassName="px-3 pb-3 pt-1 flex items-center gap-2"
+            />
           </div>
           <div className="bg-gray-1 border border-gray-6 rounded-xl flex flex-col min-h-[171px]">
             <div className="flex items-center justify-between px-3 pt-3 pb-2">
@@ -644,14 +604,11 @@ export function DashboardView({
             <p className="font-manrope font-bold text-xl leading-[1.1] text-gray-12">
               R$ {(dashboardData.registrationsTrend.amount / 100).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </p>
-            {showDashboardWeekOverWeek(dashboardData.registrationsTrend.change) ? (
-              <div className="flex items-center gap-1">
-                {dashboardData.registrationsTrend.change >= 0 ? <ArrowUpIcon className="size-3 text-primary-11" /> : <ArrowDown className="size-4 text-red-11" />}
-                <span className="font-family-dm-sans font-normal text-sm text-primary-11">
-                  {dashboardWeekOverWeekPercent(dashboardData.registrationsTrend.change)}% {periodComparisonLabel(periodFilter)}
-                </span>
-              </div>
-            ) : null}
+            <DashboardWeekTrend
+              change={dashboardData.registrationsTrend.change}
+              period={periodFilter}
+              variant="mobile"
+            />
           </div>
           <div className="min-h-0 w-full">
             <RevenueChart

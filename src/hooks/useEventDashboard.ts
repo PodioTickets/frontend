@@ -174,18 +174,20 @@ export function useEventDashboard(
 
     return {
       netRevenue: overview?.metrics.netRevenue ?? 0,
-      netRevenueChange: overview?.metrics.netRevenueChange ?? 0,
+      // `null` (sem baseline) preservado de propósito → o card exibe "novo".
+      // Só vira 0 quando o campo está ausente (`undefined`).
+      netRevenueChange: overview?.metrics.netRevenueChange ?? null,
       averageTicket: overview?.metrics.averageTicket ?? 0,
-      averageTicketChange: overview?.metrics.averageTicketChange ?? 0,
+      averageTicketChange: overview?.metrics.averageTicketChange ?? null,
       totalRegistrations: overview?.metrics.totalRegistrations ?? 0,
-      totalRegistrationsChange: overview?.metrics.totalRegistrationsChange ?? 0,
+      totalRegistrationsChange: overview?.metrics.totalRegistrationsChange ?? null,
       cancellations: overview?.metrics.cancellations ?? 0,
       cancellationsStatus: overview?.metrics.cancellationsStatus ?? "Normal",
       refunds: overview?.metrics.refunds ?? 0,
       refundsStatus: overview?.metrics.refundsStatus ?? "Normal",
       registrationsTrend: {
         amount: overview?.registrationsTrend.amount ?? 0,
-        change: overview?.registrationsTrend.change ?? 0,
+        change: overview?.registrationsTrend.change ?? null,
         confirmed: overview?.registrationsTrend.confirmed ?? 0,
         canceled: overview?.registrationsTrend.canceled ?? 0,
         refunded: overview?.registrationsTrend.refunded ?? 0,

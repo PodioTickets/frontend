@@ -186,7 +186,11 @@
       "Bash(sed -n '1,60p' server/prisma/reconcile-included-required-stock.ts)",
       "PowerShell(npx vitest run src/components/Checkout/__tests__/SubscriptionStep.utils.test.ts)",
       "PowerShell(npx vitest run 2>&1 | Select-Object -Last 15)",
-      "PowerShell(npx vitest run src/lib/__tests__/authSurface.test.ts 2>&1 | Select-Object -Last 20)"
+      "PowerShell(npx vitest run src/lib/__tests__/authSurface.test.ts 2>&1 | Select-Object -Last 20)",
+      "Bash(awk 'NR>=583 && NR<=760' \"/c/Users/muril/Projects/PodioTickets/frontend/src/components/Registrations/PaymentDetailsModal.tsx\")",
+      "Bash(awk 'NR>=1000 && NR<=1115' src/app/payments/payments.service.ts)",
+      "Bash(awk '/model Coupon /,/^}/' prisma/schema.prisma)",
+      "Bash(awk '/model Voucher /,/^}/' prisma/schema.prisma)"
     ]
   },
   "disabledMcpjsonServers": [

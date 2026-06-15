@@ -284,38 +284,38 @@ export function CreateProductModal() {
   );
 
   /**
-   * Prévia do dropdown: sem nenhum preço específico (> 0), não exibe preço nas linhas.
-   * Com pelo menos um: nas demais variações mostra o preço base; onde há preço
-   * específico o rótulo reflete o que é cobrado no checkout
-   * (`billableReaisForProductSelection`):
-   *  - não incluso: o preço da variação é o TOTAL → exibe o valor cheio;
-   *  - incluso no ingresso: base já paga no ingresso → exibe só o acréscimo sobre a base.
+   * Prévia do dropdown:
+   *  - Produto INCLUSO no ingresso: nunca exibe preço (a base já está paga no
+   *    ingresso e cada variação aparece como "Incluso"). Curto-circuito no topo
+   *    porque `variation.price` pode permanecer preenchido no state mesmo com o
+   *    input escondido (produto carregado p/ edição ou toggle incluso→não), o que
+   *    faria `anyVariationHasSpecificPrice` vazar o preço indevidamente.
+   *  - Produto NÃO incluso, sem nenhum preço específico (> 0): não exibe preço.
+   *  - Produto NÃO incluso, com ao menos um preço específico: nas demais variações
+   *    mostra o preço base; onde há preço específico mostra o valor cheio (o preço
+   *    da variação é o TOTAL cobrado no checkout — `billableReaisForProductSelection`).
    */
   const previewVariationListPriceLabel = useCallback(
     (variationPriceStr: string): string | undefined => {
+      if (isIncludedInTicket) {
+        return undefined;
+      }
+      if (!anyVariationHasSpecificPrice) {
+        return undefined;
+      }
       const fmt = (n: number) =>
         n.toLocaleString("pt-BR", {
           minimumFractionDigits: 2,
           maximumFractionDigits: 2,
         });
-      if (!anyVariationHasSpecificPrice) {
-        return undefined;
-      }
       const base = parseFloat(String(basePrice || "0").replace(",", ".")) || 0;
       if (!variationHasMeaningfulSpecificPrice(variationPriceStr)) {
         return `R$ ${fmt(base)}`;
       }
+      // Não incluso: preço da variação = total (não subtrai a base).
       const v =
         parseFloat(String(variationPriceStr || "0").replace(",", ".")) || 0;
-      // Não incluso: preço da variação = total (não subtrai a base).
-      if (!isIncludedInTicket) {
-        return `R$ ${fmt(v)}`;
-      }
-      // Incluso no ingresso: mostra só o acréscimo sobre a base já inclusa.
-      if (v < base) {
-        return `R$ ${fmt(v)}`;
-      }
-      return `R$ ${fmt(Math.max(0, v - base))}`;
+      return `R$ ${fmt(v)}`;
     },
     [anyVariationHasSpecificPrice, basePrice, isIncludedInTicket],
   );

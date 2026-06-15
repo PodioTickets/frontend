@@ -263,6 +263,10 @@ export default function TicketDetailsPage() {
   const payment = orderData.payment || {};
   const pricing = order.pricing || {};
 
+  // Pedido gratuito: sem forma de pagamento real (backend pode default p/ PIX) →
+  // não exibe a linha "Forma de pagamento". `pricing.total` é em centavos.
+  const isFreeOrder = (pricing.total ?? 0) <= 0;
+
   return (
     <div className="min-h-screen bg-gray-2">
       {/* Mobile header — fixo no padrão do Figma: back à esquerda, título centralizado, border-bottom */}
@@ -593,22 +597,24 @@ export default function TicketDetailsPage() {
                   </p>
                 </div>
 
-                <div className="border border-gray-6 rounded-lg p-4 flex items-center justify-between gap-3">
-                  <p className="text-base font-semibold text-gray-12 font-manrope leading-[1.1]">
-                    Forma de pagamento:
-                  </p>
-                  <p className="text-base font-bold text-gray-12 font-manrope leading-[1.1] text-right">
-                    {payment.method === "CREDIT_CARD"
-                      ? "Cartão de crédito"
-                      : payment.method === "DEBIT_CARD"
-                        ? "Cartão de débito"
-                        : payment.method === "PIX"
-                          ? "PIX"
-                          : payment.method === "BOLETO"
-                            ? "Boleto"
-                            : payment.method || "N/A"}
-                  </p>
-                </div>
+                {!isFreeOrder && (
+                  <div className="border border-gray-6 rounded-lg p-4 flex items-center justify-between gap-3">
+                    <p className="text-base font-semibold text-gray-12 font-manrope leading-[1.1]">
+                      Forma de pagamento:
+                    </p>
+                    <p className="text-base font-bold text-gray-12 font-manrope leading-[1.1] text-right">
+                      {payment.method === "CREDIT_CARD"
+                        ? "Cartão de crédito"
+                        : payment.method === "DEBIT_CARD"
+                          ? "Cartão de débito"
+                          : payment.method === "PIX"
+                            ? "PIX"
+                            : payment.method === "BOLETO"
+                              ? "Boleto"
+                              : payment.method || "N/A"}
+                    </p>
+                  </div>
+                )}
 
                 <div className="border border-gray-6 rounded-lg p-4 flex items-center justify-between gap-3">
                   <p className="text-base font-semibold text-gray-12 font-manrope leading-[1.1]">

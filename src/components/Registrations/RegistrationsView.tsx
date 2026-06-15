@@ -460,7 +460,7 @@ export function RegistrationsView({
                             <span className={`shrink-0 px-3 py-2 rounded text-xs font-family-dm-sans font-normal ${statusClass}`}>{statusLabel}</span>
                           </div>
                           <div className="flex flex-col gap-2">
-                            <p className="font-family-dm-sans font-normal text-xs text-gray-11">{registration.ticket?.category?.name}</p>
+                            <p className="font-family-dm-sans font-normal text-xs text-gray-11">{registration.ticket?.category?.name || "Ingresso avulso"}</p>
                             <p className="font-manrope font-semibold text-base text-gray-12">{registration.ticket?.name || "—"}</p>
                           </div>
                           <div className="flex items-center justify-between">

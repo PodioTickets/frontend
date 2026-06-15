@@ -93,9 +93,10 @@ describe("registrationsWeekOverWeekPercent", () => {
     expect(registrationsWeekOverWeekPercent(12.3)).toBe(12);
     expect(registrationsWeekOverWeekPercent(-12.7)).toBe(13);
   });
-  it("variação pequena (0<|x|<0.5) usa mínimo 1%", () => {
-    expect(registrationsWeekOverWeekPercent(0.2)).toBe(1);
-    expect(registrationsWeekOverWeekPercent(-0.3)).toBe(1);
+  it("variação que arredonda a 0 some (não infla p/ 1% — consistente c/ dashboard)", () => {
+    expect(registrationsWeekOverWeekPercent(0.2)).toBe(0);
+    expect(registrationsWeekOverWeekPercent(-0.3)).toBe(0);
+    expect(registrationsWeekOverWeekPercent(0.5)).toBe(1); // round(0.5)=1
   });
 });
 
