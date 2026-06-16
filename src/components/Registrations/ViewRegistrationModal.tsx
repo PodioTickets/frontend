@@ -324,15 +324,23 @@ export function ViewRegistrationModal() {
       const images = Array.isArray(item.images) ? item.images : [];
       const image = images[item.primaryImageIndex ?? 0] ?? images[0];
       const unitPrice = item.unitPrice ?? item.basePrice ?? 0;
+      // Incluso no ingresso → mostra só "Incluído". Caso o snapshot não traga o
+      // flag, cai no proxy `unitPrice === 0` (incluso é cobrado 0).
+      const isIncluded = item.isIncludedInTicket ?? unitPrice === 0;
+      // Preço da variação selecionada é o TOTAL absoluto cobrado (ex.: 5555 =
+      // R$55,55). Sem preço específico (>0), usa o unitPrice/base.
+      const variationPrice = item.selectedVariation?.price;
+      const price =
+        variationPrice != null && variationPrice > 0 ? variationPrice : unitPrice;
       return {
         id: item.id,
         productName: item.name || "Produto",
         productImage: image || null,
         variationType: item.variationType || null,
         variationName: item.selectedVariation?.name || null,
-        price: unitPrice,
+        price: isIncluded ? 0 : price,
         quantity: item.quantity || 1,
-        isIncluded: unitPrice === 0,
+        isIncluded,
         // Backend sinaliza quando o organizador trocou a variação do participante.
         variationEdited: item.variationEdited === true,
       };
