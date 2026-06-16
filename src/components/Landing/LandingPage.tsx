@@ -15,7 +15,7 @@ import { cn } from "@/utils/cn";
  */
 
 // Destino dos CTAs "Falar com um especialista". Troque pelo WhatsApp/contato real.
-const SPECIALIST_HREF = "#falar-com-especialista";
+const SPECIALIST_HREF = "https://www.huggy.chat/b7cff6c8-d928-4aa2-b825-9395b36c590b";
 
 const IMG = {
   heroDashboards: "/images/landing/hero-dashboards.png",
@@ -402,7 +402,7 @@ function CtaSection() {
               src={IMG.ctaTeam}
               alt="Organizadores de eventos esportivos"
               fill
-              className="object-cover"
+              className="object-cover object-top"
             />
           </div>
         </div>
