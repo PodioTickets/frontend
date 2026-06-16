@@ -48,7 +48,7 @@ export function Footer() {
     <footer
       className={`w-full relative flex flex-col items-center justify-start overflow-hidden bg-linear-to-b from-[#191919] to-[#222222] md:p-20 md:pt-[52px] ${isCheckoutStep
         ? "max-md:hidden md:border-t md:border-gray-6"
-        : "border-t border-gray-6 px-4 py-6"
+        : "px-4 py-6"
         }`}
     >
       {/* Mobile Layout */}

@@ -126,7 +126,10 @@ export function Header() {
     };
   }, [mobileMenuOpen]);
 
-  if (isOrganizer || isAdmin) {
+  // A landing institucional (/lp) tem seu próprio topo (hero) — sem o header do site.
+  const isLanding = pathname === "/lp" || pathname.startsWith("/lp/");
+
+  if (isOrganizer || isAdmin || isLanding) {
     return null;
   }
 
