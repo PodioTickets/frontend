@@ -14,6 +14,7 @@ import { Tooltip } from "@/components/Tooltip";
 import { formatPhoneForCountry } from "@/utils/phone";
 import { isBrazilianCountry } from "@/validators/Auth.validator";
 import { formatDateBR } from "@/utils/datetimeBR";
+import { formatAnswer } from "@/utils/questionAnswer";
 
 interface PaymentSuccessStepProps {
   event: Event;
@@ -64,18 +65,6 @@ interface PaymentSuccessStepProps {
   voucherDiscount?: number;
   voucherName?: string;
   date?: string;
-}
-
-function formatAnswer(answer: unknown): string {
-  if (answer == null) return "—";
-  if (Array.isArray(answer)) return answer.join(", ");
-  if (typeof answer === "string") {
-    try {
-      const parsed: unknown = JSON.parse(answer);
-      if (Array.isArray(parsed)) return parsed.join(", ");
-    } catch { }
-  }
-  return String(answer) || "—";
 }
 
 /** Extrai o texto da pergunta — aceita string direta ou objeto `{ question }`. */

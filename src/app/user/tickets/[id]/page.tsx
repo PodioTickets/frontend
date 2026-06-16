@@ -17,6 +17,7 @@ import { ParticipantProductsTab } from "@/components/Checkout/ParticipantProduct
 import { Tooltip } from "@/components/Tooltip";
 import { formatPhoneForCountry } from "@/utils/phone";
 import { isBrazilianCountry } from "@/validators/Auth.validator";
+import { formatAnswer } from "@/utils/questionAnswer";
 
 export default function TicketDetailsPage() {
   const params = useParams();
@@ -537,7 +538,7 @@ export default function TicketDetailsPage() {
                                         {qa.question?.question || "Pergunta"}
                                       </label>
                                       <p className="text-base font-medium text-gray-12 font-family-dm-sans">
-                                        {qa.answer || "-"}
+                                        {formatAnswer(qa.answer)}
                                       </p>
                                     </div>
                                   ))}

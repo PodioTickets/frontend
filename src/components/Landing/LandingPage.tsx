@@ -321,13 +321,13 @@ function CommunicationSection() {
           </div>
           <SpecialistButton />
         </div>
-        <div className="relative mt-10 mb-20">
+        <div className="relative  mt-10 mb-20 max-md:flex items-center justify-center">
           <Image
             src={IMG.communication}
             alt="Comunicação com participantes na PódioTicket"
             width={792}
             height={656}
-            className="h-auto w-full max-w-none lg:w-[150%]"
+            className="h-auto max-md:ml-[25%] w-[150%] max-w-none lg:w-[150%]"
           />
         </div>
       </div>

@@ -27,6 +27,7 @@ import {
 } from "@/utils/documentDisplay";
 import { ImageWithInitialFallback } from "../ImageWithInitialFallback";
 import { Button } from "../Button";
+import { formatAnswer } from "@/utils/questionAnswer";
 
 /** Badge exibido quando o organizador trocou a variação do produto do
  *  participante (snapshot `variationEdited: true`). */
@@ -38,17 +39,6 @@ function VariationEditedBadge() {
   );
 }
 
-function formatAnswer(answer: any): string {
-  if (answer == null) return "—";
-  if (Array.isArray(answer)) return answer.join(", ");
-  if (typeof answer === "string") {
-    try {
-      const parsed = JSON.parse(answer);
-      if (Array.isArray(parsed)) return parsed.join(", ");
-    } catch { }
-  }
-  return String(answer) || "—";
-}
 
 export function ViewRegistrationModal() {
   const { isOpen, closeViewRegistrationModal, data } = useViewRegistrationModal();

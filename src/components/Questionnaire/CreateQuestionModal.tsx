@@ -427,8 +427,8 @@ export function CreateQuestionModal() {
                               </h3>
                               <p className="text-gray-11 text-base font-normal font-family-dm-sans leading-[1.3]">
                                 {type === "select"
-                                  ? "O participante pode marcar mais de uma opção entre as que você cadastrar. Adicione pelo menos 1 opção."
-                                  : "O participante escolhe apenas uma opção entre as listadas. Adicione pelo menos 1 opção."}
+                                  ? "O participante escolhe apenas uma opção entre as listadas. Adicione pelo menos 1 opção."
+                                  : "O participante pode marcar mais de uma opção entre as que você cadastrar. Adicione pelo menos 1 opção."}
                               </p>
                             </div>
                           </div>

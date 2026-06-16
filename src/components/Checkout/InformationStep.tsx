@@ -1641,7 +1641,54 @@ export function InformationStep({
         );
       }
 
+      // "Lista" (select): escolha ÚNICA, mas com o MESMO visual quadrado de
+      // checkbox da múltipla escolha. Marcar uma opção substitui a anterior
+      // (single-select); desmarcar limpa a resposta. Armazenado como string.
       case "select": {
+        const questionError = fieldErrors[participantIndex]?.[`question_${question.id}`];
+        return (
+          <div className="flex flex-col gap-2">
+            <label className="text-base font-normal text-gray-12 font-family-dm-sans">
+              {question.question}
+              {isRequired && <span className="text-red-9 ml-1">*</span>}
+            </label>
+            {question.description && (
+              <label className="text-sm font-normal text-gray-11 font-family-dm-sans mb-2 -mt-2">
+                {question.description ?? ""}
+              </label>
+            )}
+            <div className="flex flex-col gap-3">
+              {question.options?.map((option) => {
+                const isSelected =
+                  typeof answer === "string" && answer === option;
+                return (
+                  <label
+                    key={option}
+                    className="flex items-center gap-2 cursor-pointer"
+                  >
+                    <Checkbox
+                      checked={isSelected}
+                      onCheckedChange={(checked) => {
+                        clearParticipantFieldError(participantIndex, `question_${question.id}`);
+                        // Single-select: marcar define a opção; desmarcar a atual limpa.
+                        updateQuestionAnswer(participantIndex, question.id, checked ? option : "");
+                      }}
+                    />
+                    <span className="text-sm text-gray-12 font-family-dm-sans">
+                      {option}
+                    </span>
+                  </label>
+                );
+              })}
+            </div>
+            {questionError && <p className="text-sm text-red-11">{questionError}</p>}
+          </div>
+        );
+      }
+
+      // "Múltipla escolha" (multiple_choice): pode marcar MAIS DE UMA → checkbox.
+      // O valor é armazenado como array de opções selecionadas.
+      case "multiple_choice": {
         const questionError = fieldErrors[participantIndex]?.[`question_${question.id}`];
         const selectedOptions: string[] = Array.isArray(answer)
           ? answer
@@ -1676,61 +1723,6 @@ export function InformationStep({
                           : selectedOptions.filter((o) => o !== option);
                         updateQuestionAnswer(participantIndex, question.id, next);
                       }}
-                    />
-                    <span className="text-sm text-gray-12 font-family-dm-sans">
-                      {option}
-                    </span>
-                  </label>
-                );
-              })}
-            </div>
-            {questionError && <p className="text-sm text-red-11">{questionError}</p>}
-          </div>
-        );
-      }
-
-      case "multiple_choice": {
-        const questionError = fieldErrors[participantIndex]?.[`question_${question.id}`];
-        return (
-          <div className="flex flex-col gap-2">
-            <label className="text-base font-normal text-gray-12 font-family-dm-sans">
-              {question.question}
-              {isRequired && <span className="text-red-9 ml-1">*</span>}
-            </label>
-            {question.description && (
-              <label className="text-sm font-normal text-gray-11 font-family-dm-sans mb-2 -mt-2">
-                {question.description ?? ""}
-              </label>
-            )}
-            <div className="flex flex-col gap-3">
-              {question.options?.map((option) => {
-                const isSelected =
-                  typeof answer === "string" && answer === option;
-                return (
-                  <label
-                    key={option}
-                    className="flex items-center gap-2 cursor-pointer"
-                  >
-                    <div
-                      className={`size-6 rounded-full border-[1.5px] flex items-center justify-center transition-colors ${isSelected
-                        ? "bg-primary-11 border-primary-11"
-                        : "bg-transparent border-gray-6"
-                        }`}
-                    >
-                      {isSelected && (
-                        <div className="size-2.5 rounded-full bg-primary-2" />
-                      )}
-                    </div>
-                    <input
-                      type="radio"
-                      name={`question-${question.id}-${participantIndex}`}
-                      value={option}
-                      checked={isSelected}
-                      onChange={() => {
-                        clearParticipantFieldError(participantIndex, `question_${question.id}`);
-                        updateQuestionAnswer(participantIndex, question.id, option);
-                      }}
-                      className="sr-only"
                     />
                     <span className="text-sm text-gray-12 font-family-dm-sans">
                       {option}

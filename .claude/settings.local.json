@@ -196,7 +196,8 @@
       "Bash(cp /tmp/_a_sports-photo public/images/landing/sports-photo.png)",
       "Bash(cp /tmp/_a_cta-team public/images/landing/cta-team.jpg)",
       "Bash(cp /tmp/_a_rect5 public/images/landing/feature-checkout.jpg)",
-      "Bash(timeout 180 npx --yes sharp-cli --version)"
+      "Bash(timeout 180 npx --yes sharp-cli --version)",
+      "Bash(echo \"---done exit:$?---\")"
     ]
   },
   "disabledMcpjsonServers": [

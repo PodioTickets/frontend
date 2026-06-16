@@ -446,13 +446,6 @@ export function Header() {
                     </Link>
                     <Link
                       target="_blank"
-                      href="https://x.com/podiotickets"
-                      className="size-12 border border-[#3A3A3A] p-3 rounded-full flex items-center justify-center"
-                    >
-                      <TwitterIcon className="w-full h-full text-gray-2" />
-                    </Link>
-                    <Link
-                      target="_blank"
                       href="https://www.youtube.com/channel/UCqBDBJJiUulbW2iplU_8SvQ"
                       className="size-12 border border-[#3A3A3A] p-3 rounded-full flex items-center justify-center"
                     >
