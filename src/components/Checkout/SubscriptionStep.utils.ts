@@ -100,23 +100,18 @@ export const previewVariationListPriceLabelForProduct = (
   ) {
     return undefined;
   }
+  // Produto incluso → não exibe preço (a base já está paga no ingresso).
+  if (product.isIncludedInTicket) {
+    return undefined;
+  }
   if (!productAnyVariationHasSpecificPrice(product)) {
     return undefined;
   }
-  const base = product.basePrice;
   if (!variationHasMeaningfulSpecificPriceReais(variationPriceReais)) {
-    return formatPrice(base);
+    return formatPrice(product.basePrice);
   }
-  const v = variationPriceReais;
-  // Não incluso: preço da variação = total cobrado (não subtrai a base).
-  if (!product.isIncludedInTicket) {
-    return formatPrice(v);
-  }
-  // Incluso no ingresso: cobra/mostra só o acréscimo sobre a base já inclusa.
-  if (v < base) {
-    return formatPrice(v);
-  }
-  return formatPrice(Math.max(0, v - base));
+  // Não incluso, variação com preço específico → total absoluto (não subtrai a base).
+  return formatPrice(variationPriceReais);
 };
 
 /** Preço exibido no card do produto (preço geral / base), alinhado à prévia do modal. */
@@ -135,42 +130,30 @@ export const variationSectionTitle = (product: Product) =>
 
 /**
  * Valor em reais a somar no total do pedido.
- * Incluso no ingresso: cobra só upgrade (v - base) quando v ≥ base;
- * fora do ingresso: paga v se v < base, senão v (equiv. base + acréscimo).
+ * Produto INCLUSO no ingresso → NUNCA cobra nada (0), mesmo com preço na variação.
+ * NÃO incluso: o preço específico da variação é o TOTAL ABSOLUTO cobrado (não
+ * soma/subtrai a base) — variação 30 cobra 30; sem preço específico cobra a base.
  */
 export function billableReaisForProductSelection(
   product: Product,
   selectedVariation: Product["variations"][number] | null,
 ): number {
+  // Incluso é sempre grátis (já pago no ingresso).
+  if (product.isIncludedInTicket) return 0;
+
   const base = product.basePrice;
 
-  if (!selectedVariation) {
-    if (product.isIncludedInTicket) return 0;
-    return base;
-  }
+  if (!selectedVariation) return base;
 
-  if (isSemInteresseVariation(selectedVariation)) {
-    return 0;
-  }
+  if (isSemInteresseVariation(selectedVariation)) return 0;
 
   const v = selectedVariation.price;
 
-  if (!productAnyVariationHasSpecificPrice(product)) {
-    if (product.isIncludedInTicket) return 0;
-    return base;
-  }
+  if (!productAnyVariationHasSpecificPrice(product)) return base;
 
-  if (!variationHasMeaningfulSpecificPriceReais(v)) {
-    if (product.isIncludedInTicket) return 0;
-    return base;
-  }
+  if (!variationHasMeaningfulSpecificPriceReais(v)) return base;
 
-  if (product.isIncludedInTicket) {
-    if (v < base) return 0;
-    return Math.max(0, v - base);
-  }
-
-  if (v < base) return v;
+  // Variação com preço específico → total absoluto (não subtrai a base).
   return v;
 }
 

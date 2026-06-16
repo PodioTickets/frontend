@@ -455,7 +455,9 @@ export function SubscriptionStep({
     );
     if (!participantTicket) return [];
     const ticketProducts = getProductsForTicket(participantTicket.ticketId);
-    return ticketProducts.filter((p) => !p.isRequired);
+    // Produtos adicionais = opcionais E NÃO inclusos. Produto incluso é grátis
+    // (não cobra) e não deve aparecer como item adicional, mesmo sendo opcional.
+    return ticketProducts.filter((p) => !p.isRequired && !p.isIncludedInTicket);
   };
 
   useEffect(() => {

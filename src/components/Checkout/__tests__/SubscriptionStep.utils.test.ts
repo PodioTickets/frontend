@@ -85,9 +85,10 @@ describe("SubscriptionStep.utils — preço de variação (total, não acréscim
       expect(norm(previewVariationListPriceLabelForProduct(product, 0))).toBe("R$10,00");
     });
 
-    it("incluso no ingresso: ainda mostra só o acréscimo sobre a base (32 - 10 = 22)", () => {
+    it("incluso no ingresso: nunca exibe preço (grátis), mesmo com preço na variação", () => {
       const product = makeProduct({ isIncludedInTicket: true });
-      expect(norm(previewVariationListPriceLabelForProduct(product, 32))).toBe("R$22,00");
+      expect(previewVariationListPriceLabelForProduct(product, 32)).toBeUndefined();
+      expect(previewVariationListPriceLabelForProduct(product, 0)).toBeUndefined();
     });
 
     it('"Sem interesse" não exibe preço', () => {
@@ -104,9 +105,9 @@ describe("SubscriptionStep.utils — preço de variação (total, não acréscim
       expect(billableReaisForProductSelection(product, product.variations[1])).toBe(32);
     });
 
-    it("incluso no ingresso: cobra só o acréscimo (22)", () => {
+    it("incluso no ingresso: não cobra nada (0), mesmo com preço na variação", () => {
       const product = makeProduct({ isIncludedInTicket: true });
-      expect(billableReaisForProductSelection(product, product.variations[1])).toBe(22);
+      expect(billableReaisForProductSelection(product, product.variations[1])).toBe(0);
     });
   });
 });
