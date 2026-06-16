@@ -284,19 +284,16 @@ export function CreateProductModal() {
   );
 
   /**
-   * Prévia do dropdown:
-   *  - Produto INCLUSO no ingresso: nunca exibe preço (a base já está paga no
-   *    ingresso e cada variação aparece como "Incluso"). Curto-circuito no topo
-   *    porque `variation.price` pode permanecer preenchido no state mesmo com o
-   *    input escondido (produto carregado p/ edição ou toggle incluso→não), o que
-   *    faria `anyVariationHasSpecificPrice` vazar o preço indevidamente.
-   *  - Produto NÃO incluso, sem nenhum preço específico (> 0): não exibe preço.
-   *  - Produto NÃO incluso, com ao menos um preço específico: nas demais variações
-   *    mostra o preço base; onde há preço específico mostra o valor cheio (o preço
-   *    da variação é o TOTAL cobrado no checkout — `billableReaisForProductSelection`).
+   * Prévia do dropdown (espelha `previewVariationListPriceLabelForProduct` do checkout):
+   *  - Sem nenhum preço específico (> 0): não exibe preço.
+   *  - Variação COM preço específico: mostra o valor cheio (TOTAL absoluto, não
+   *    subtrai a base) — variação 30 → mostra 30, tanto incluso quanto não.
+   *  - Variação SEM preço específico (mas outras têm): incluso não mostra preço
+   *    (base já paga no ingresso); não incluso mostra a base.
    */
   const previewVariationListPriceLabel = useCallback(
     (variationPriceStr: string): string | undefined => {
+      // Produto incluso → nunca exibe preço (grátis no ingresso).
       if (isIncludedInTicket) {
         return undefined;
       }
@@ -308,11 +305,10 @@ export function CreateProductModal() {
           minimumFractionDigits: 2,
           maximumFractionDigits: 2,
         });
-      const base = parseFloat(String(basePrice || "0").replace(",", ".")) || 0;
       if (!variationHasMeaningfulSpecificPrice(variationPriceStr)) {
+        const base = parseFloat(String(basePrice || "0").replace(",", ".")) || 0;
         return `R$ ${fmt(base)}`;
       }
-      // Não incluso: preço da variação = total (não subtrai a base).
       const v =
         parseFloat(String(variationPriceStr || "0").replace(",", ".")) || 0;
       return `R$ ${fmt(v)}`;
