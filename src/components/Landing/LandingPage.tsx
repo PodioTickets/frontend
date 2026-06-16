@@ -33,7 +33,7 @@ const IMG = {
 
 function SpecialistButton({ className = "" }: { className?: string }) {
   return (
-    <Button asChild className={cn("h-14 gap-3 px-8 has-[>svg]:px-8 text-[20px] font-bold", className)}>
+    <Button asChild className={cn("h-[52px] w-full gap-3 px-8 has-[>svg]:px-8 text-[16px] font-bold md:h-14 md:w-auto md:text-[20px]", className)}>
       <Link href={SPECIALIST_HREF}>
         Falar com um especialista
         <ArrowRight className="size-5" />
@@ -46,7 +46,7 @@ function CheckItem({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex items-center gap-3">
       <CheckCircle2 className="size-6 shrink-0 text-primary-11" />
-      <span className="font-family-dm-sans text-[18px] font-medium leading-[1.3] text-gray-12">
+      <span className="font-family-dm-sans text-[16px] font-medium leading-[1.3] text-gray-12 md:text-[18px]">
         {children}
       </span>
     </div>
@@ -70,7 +70,7 @@ function SectionHeading({
         {title}
       </h2>
       <p
-        className={`font-family-dm-sans text-[18px] leading-[1.4] ${dark ? "text-[#b4b4b4]" : "text-gray-11"}`}
+        className={`font-family-dm-sans text-[16px] leading-[1.4] md:text-[18px] ${dark ? "text-[#b4b4b4]" : "text-gray-11"}`}
       >
         {subtitle}
       </p>
@@ -85,12 +85,12 @@ function SectionHeading({
 function Hero() {
   return (
     <section className="relative overflow-hidden bg-gradient-to-b from-primary-2 to-gray-2">
-      <div className="relative mx-auto max-w-[1280px] px-5 md:px-0">
+      <div className="relative mx-auto max-w-[1280px] px-4 md:px-0">
         <div className="mx-auto flex max-w-[900px] flex-col items-center gap-6 text-center">
           <span className="inline-flex items-center justify-center rounded-[32px] border border-primary-6 bg-primary-3 px-6 py-3 font-manrope text-[16px] font-semibold leading-[1.1] text-primary-12">
             Plataforma feita para o esporte
           </span>
-          <h1 className="font-manrope text-[40px] font-extrabold leading-[1.1] text-gray-12 md:text-[48px]">
+          <h1 className="font-manrope text-[28px] font-extrabold leading-[1.1] text-gray-12 md:text-[48px]">
             Venda mais inscrições e reduza o trabalho da sua equipe
           </h1>
           <p className="w-full font-family-dm-sans text-[16px] leading-[1.4] text-gray-11 md:text-[20px]">
@@ -123,22 +123,34 @@ function Hero() {
 function SalesSection() {
   return (
     <section className="bg-gray-2 py-20 md:py-28">
-      <div className="mx-auto flex flex-col md:flex-row max-w-[1280px] items-center gap-16 px-5 md:px-0">
+      <div className="mx-auto flex flex-col-reverse md:flex-row max-w-[1280px] items-center gap-16 px-4 md:px-0">
         <div className="flex justify-center lg:justify-start">
           <Image
             src="/landing/vendas-por-pagamento.png"
             alt="Vendas por forma de pagamento"
-            width={758}
-            height={432}
-            className="h-auto w-full max-w-[758px]"
+            width={3192}
+            height={1888}
+            quality={100}
+            sizes="(min-width: 768px) 758px, 100vw"
+            className="h-auto w-full max-w-[758px] hidden md:block"
+          />
+
+          <Image
+            src="/landing/vendas-por-pagamento_mobile.png"
+            alt="Vendas por forma de pagamento"
+            width={1445}
+            height={900}
+            quality={100}
+            sizes="100vw"
+            className="h-auto w-full md:hidden"
           />
         </div>
         <div className="flex flex-col gap-6">
-          <div className="flex flex-col gap-3">
+          <div className="flex flex-col gap-3 text-center md:text-start">
             <h2 className="font-manrope text-[28px] font-extrabold leading-[1.3] text-gray-12 md:text-[36px]">
               Acompanhe suas vendas em tempo real
             </h2>
-            <p className="font-family-dm-sans text-[18px] leading-[1.4] text-gray-11">
+            <p className="font-family-dm-sans text-[16px] leading-[1.4] text-gray-11 md:text-[18px]">
               Saiba exatamente como seu evento está performando
             </p>
           </div>
@@ -184,8 +196,8 @@ function FeatureCard({
       {/* gradiente para legibilidade do texto */}
       <div className="absolute inset-0 bg-gradient-to-t from-[#0e1512] via-[#0e1512]/70 to-transparent" />
       <div className="relative z-10 flex flex-col gap-3 p-6">
-        <h3 className="font-manrope text-[20px] font-bold leading-[1.1] text-white">{title}</h3>
-        <p className="font-family-dm-sans text-[18px] leading-[1.3] text-[#d9d9d9]">
+        <h3 className="font-manrope text-[18px] font-bold leading-[1.1] text-white md:text-[20px]">{title}</h3>
+        <p className="font-family-dm-sans text-[14px] leading-[1.3] text-[#d9d9d9] md:text-[18px]">
           {description}
         </p>
       </div>
@@ -196,7 +208,7 @@ function FeatureCard({
 function FeaturesSection() {
   return (
     <section className="bg-gray-2 py-20 md:py-28">
-      <div className="mx-auto max-w-[1280px] px-5 md:px-0">
+      <div className="mx-auto max-w-[1280px] px-4 md:px-0">
         <SectionHeading
           title="Tudo que você precisa para operar seu evento"
           subtitle="Ferramentas pensadas para quem organiza evento esportivo de verdade"
@@ -251,8 +263,8 @@ function SupportCard({
         </span>
       </div>
       <div className="flex flex-col gap-3">
-        <h3 className="font-manrope text-[20px] font-bold leading-[1.1] text-white">{title}</h3>
-        <p className="font-family-dm-sans text-[18px] leading-[1.3] text-[#b4b4b4]">
+        <h3 className="font-manrope text-[18px] font-bold leading-[1.1] text-white md:text-[20px]">{title}</h3>
+        <p className="font-family-dm-sans text-[16px] leading-[1.3] text-[#b4b4b4] md:text-[18px]">
           {description}
         </p>
       </div>
@@ -263,7 +275,7 @@ function SupportCard({
 function SupportSection() {
   return (
     <section className="bg-gradient-to-b from-[#191919] to-[#222222] py-20 md:py-28">
-      <div className="mx-auto max-w-[1280px] w-full px-5 md:px-0">
+      <div className="mx-auto max-w-[1280px] w-full px-4 md:px-0">
         <SectionHeading
           dark
           title="Você organiza. A gente te apoia do início ao fim!"
@@ -296,20 +308,20 @@ function SupportSection() {
 function CommunicationSection() {
   return (
     <section className="overflow-hidden bg-gray-2 pt-20 md:pt-28">
-      <div className="mx-auto flex flex-col md:flex-row max-w-[1280px] items-center gap-4 px-5 md:px-0">
+      <div className="mx-auto flex flex-col md:flex-row max-w-[1280px] items-center gap-4 px-4 md:px-0">
         <div className="flex flex-col gap-6 max-w-[410px] w-full">
-          <div className="flex flex-col gap-4">
+          <div className="flex flex-col gap-4 text-center md:text-left">
             <h2 className="font-manrope text-[28px] font-extrabold leading-[1.3] text-gray-12 md:text-[36px]">
               Comunique-se com seus participantes
             </h2>
-            <p className=" font-family-dm-sans text-[18px] leading-[1.4] text-gray-11">
+            <p className=" font-family-dm-sans text-[16px] leading-[1.4] text-gray-11 md:text-[18px]">
               Envie avisos importantes para todos os inscritos. Mantenha os
               atletas informados antes, durante e após o evento.
             </p>
           </div>
           <SpecialistButton />
         </div>
-        <div className="relative">
+        <div className="relative mt-10 mb-20">
           <Image
             src={IMG.communication}
             alt="Comunicação com participantes na PódioTicket"
@@ -330,8 +342,8 @@ function CommunicationSection() {
 function SportsSection() {
   return (
     <section className="bg-gray-2 py-20 md:py-28">
-      <div className="mx-auto grid max-w-[1280px] grid-cols-1 items-center gap-12 px-5 md:px-0 lg:grid-cols-2">
-        <div className="overflow-hidden rounded-2xl">
+      <div className="mx-auto flex flex-col-reverse max-w-[1280px] items-center gap-12 px-4 md:px-0 lg:grid lg:grid-cols-2">
+        <div className="w-full overflow-hidden rounded-2xl">
           <Image
             src={IMG.sports}
             alt="Eventos esportivos"
@@ -341,20 +353,21 @@ function SportsSection() {
           />
         </div>
         <div className="flex flex-col gap-12 justify-between py-10 h-full">
-          <div className="flex flex-col gap-4 text-end">
+          <div className="flex flex-col gap-4 text-center md:text-end">
             <h2 className="font-manrope text-[28px] font-extrabold leading-[1.3] text-gray-12 md:text-[36px]">
               Feita para eventos esportivos
             </h2>
-            <p className="font-family-dm-sans text-[18px] leading-[1.4] text-gray-11">
+            <p className="font-family-dm-sans text-[16px] leading-[1.4] text-gray-11 md:text-[18px]">
               Uma plataforma criada para quem vive o esporte. A PódioTicket foi
               desenvolvida pensando nas necessidades de corridas, ciclismo,
               triathlon, caminhadas e outras modalidades.
             </p>
           </div>
           {/* indicadores (estático, fiel ao Figma) */}
-          <div className="flex items-center justify-end gap-2">
+          <div className="flex items-center justify-between md:justify-end gap-2">
+            <span className="h-1 w-14 rounded-full bg-[#d9d9d9] md:hidden" />
             <span className="h-1 w-[151px] rounded-full bg-[#d9d9d9]" />
-            <span className="h-1 w-14 rounded-full bg-[#d9d9d9]" />
+            <span className="h-1 w-14 rounded-full bg-[#d9d9d9] hidden md:block" />
             <span className="h-1 w-14 rounded-full bg-[#d9d9d9]" />
           </div>
         </div>
@@ -370,19 +383,19 @@ function SportsSection() {
 function CtaSection() {
   return (
     <section className="bg-gray-2 py-16 md:py-24">
-      <div className="mx-auto max-w-[1280px] px-5 md:px-0">
+      <div className="mx-auto max-w-[1280px] px-4 md:px-0">
         <div className="grid grid-cols-1 overflow-hidden rounded-2xl shadow-md border border-gray-6 bg-gray-1 lg:grid-cols-[534px_1fr]">
           <div className="flex flex-col gap-7 p-8 md:p-10">
             <div className="flex flex-col gap-5">
               <h2 className="font-manrope text-[24px] font-extrabold leading-[1.1] text-gray-12 md:text-[28px]">
                 Pronto para organizar seu próximo evento?
               </h2>
-              <p className="max-w-[373px] font-family-dm-sans text-[18px] leading-[1.4] text-gray-11">
+              <p className="max-w-[373px] font-family-dm-sans text-[16px] leading-[1.4] text-gray-11 md:text-[18px]">
                 Conheça a plataforma e descubra como a PódioTicket pode
                 simplificar sua operação.
               </p>
             </div>
-            <SpecialistButton className="w-fit" />
+            <SpecialistButton className="md:w-fit" />
           </div>
           <div className="relative min-h-[240px] lg:min-h-[295px]">
             <Image
