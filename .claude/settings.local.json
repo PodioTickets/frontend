@@ -190,7 +190,13 @@
       "Bash(awk 'NR>=583 && NR<=760' \"/c/Users/muril/Projects/PodioTickets/frontend/src/components/Registrations/PaymentDetailsModal.tsx\")",
       "Bash(awk 'NR>=1000 && NR<=1115' src/app/payments/payments.service.ts)",
       "Bash(awk '/model Coupon /,/^}/' prisma/schema.prisma)",
-      "Bash(awk '/model Voucher /,/^}/' prisma/schema.prisma)"
+      "Bash(awk '/model Voucher /,/^}/' prisma/schema.prisma)",
+      "Bash(cp /tmp/_a_hero-dashboards public/images/landing/hero-dashboards.png)",
+      "Bash(cp /tmp/_a_communication-dashboard public/images/landing/communication-dashboard.png)",
+      "Bash(cp /tmp/_a_sports-photo public/images/landing/sports-photo.png)",
+      "Bash(cp /tmp/_a_cta-team public/images/landing/cta-team.jpg)",
+      "Bash(cp /tmp/_a_rect5 public/images/landing/feature-checkout.jpg)",
+      "Bash(timeout 180 npx --yes sharp-cli --version)"
     ]
   },
   "disabledMcpjsonServers": [
