@@ -12,7 +12,7 @@ import { LandingPage } from "@/components/Landing/LandingPage";
  */
 const OG_TITLE = "PódioTicket — Plataforma feita para o esporte";
 const OG_DESCRIPTION =
-  "Venda mais inscrições e reduza o trabalho da sua equipe. Inscrições, participantes, financeiro e comunicação em uma única plataforma para eventos esportivos.";
+  "Venda mais inscrições e reduza o trabalho da sua equipe. Inscrições, participantes, financeiro e comunicação em uma única plataforma.";
 const OG_IMAGE = "/images/logo_graph.jpeg";
 
 export const metadata: Metadata = {
