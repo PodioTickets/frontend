@@ -293,9 +293,6 @@ function SupportSection() {
             description="Nossa equipe de design ajuda a criar banners, cards e materiais de divulgação para promover seu evento. Tudo com qualidade profissional e sem custo adicional"
           />
         </div>
-        <div className="mt-12 flex justify-center">
-          <SpecialistButton />
-        </div>
       </div>
     </section>
   );
