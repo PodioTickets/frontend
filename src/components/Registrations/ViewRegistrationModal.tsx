@@ -28,6 +28,7 @@ import {
 import { ImageWithInitialFallback } from "../ImageWithInitialFallback";
 import { Button } from "../Button";
 import { formatAnswer } from "@/utils/questionAnswer";
+import { isSemInteresseVariation } from "@/utils/semInteresseVariation";
 
 /** Badge exibido quando o organizador trocou a variação do produto do
  *  participante (snapshot `variationEdited: true`). */
@@ -380,11 +381,18 @@ export function ViewRegistrationModal() {
   });
 
   // Priorizar: registration.products > kitItems > includedProducts
-  const products = mappedRegistrationProducts.length > 0
+  const rawProducts = mappedRegistrationProducts.length > 0
     ? mappedRegistrationProducts
     : kitItems.length > 0
       ? mappedKitItems
       : mappedIncludedProducts;
+
+  // Variação "Sem interesse" = opt-out do kit: o participante recusou o produto.
+  // Não deve aparecer na listagem de produtos da inscrição.
+  const products = rawProducts.filter(
+    (product: any) =>
+      !(product.variationName && isSemInteresseVariation({ name: product.variationName })),
+  );
 
   // Formatar telefone
 
