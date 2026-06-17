@@ -319,7 +319,7 @@ function CommunicationSection() {
               atletas informados antes, durante e após o evento.
             </p>
           </div>
-          <SpecialistButton />
+          <SpecialistButton className="max-md:hidden" />
         </div>
         <div className="relative  mt-10 mb-20 max-md:flex items-center justify-center">
           <Image
