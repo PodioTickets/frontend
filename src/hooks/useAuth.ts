@@ -217,7 +217,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     try {
       let response = null;
       if (data.accountType === "ADMIN_PODIO_STAFF") {
-        response = await adminService.login({ emailOrCpf: data.emailOrCpf, password: data.password });
+        response = await adminService.login({ emailOrCpf: data.emailOrCpf, password: data.password, turnstileToken: data.turnstileToken });
       } else {
         response = await userService.login({ emailOrCpf: data.emailOrCpf, password: data.password, accountType: data.accountType as any, turnstileToken: data.turnstileToken });
       }

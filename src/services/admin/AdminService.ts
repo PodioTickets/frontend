@@ -417,7 +417,7 @@ export class AdminService {
   constructor(private apiClient: ApiClient) { }
 
 
-  async login(data: { emailOrCpf: string; password: string; }): Promise<{
+  async login(data: { emailOrCpf: string; password: string; turnstileToken?: string }): Promise<{
     success: boolean;
     data?: {
       access_token: string;
@@ -438,6 +438,9 @@ export class AdminService {
       const payload = {
         emailOrCpf: data.emailOrCpf,
         password: data.password,
+        // Token do Cloudflare Turnstile — só vai no body quando presente, para
+        // não enviar `undefined` em ambientes sem captcha configurado.
+        ...(data.turnstileToken ? { turnstileToken: data.turnstileToken } : {}),
       };
       const response = await this.apiClient.post<LoginResponse>(
         endpoint,
