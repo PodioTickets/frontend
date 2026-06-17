@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter, useParams } from "next/navigation";
+import { sanitizeRichHtml } from "@/lib/richContent";
 import { userService, organizerService } from "@/services";
 import { Button } from "@/components/Button";
 import { ArrowButton } from "@/components/ArrowButton";
@@ -139,7 +140,7 @@ export default function ReviewTopicsPreviewPage() {
                 <div className="w-full border-b border-gray-8 py-10">
                   <div className="flex flex-col items-start gap-6">
                     <h2 className="font-manrope text-2xl font-bold leading-[1.1] text-gray-12">Kits</h2>
-                    <div className="max-w-none font-family-dm-sans text-base leading-[1.3] text-gray-11 prose prose-sm" dangerouslySetInnerHTML={{ __html: kits.map((kit) => String(kit.description || "")).filter(Boolean).join(" ") || "Informações sobre os kits do evento." }} />
+                    <div className="max-w-none font-family-dm-sans text-base leading-[1.3] text-gray-11 prose prose-sm" dangerouslySetInnerHTML={{ __html: sanitizeRichHtml(kits.map((kit) => String(kit.description || "")).filter(Boolean).join(" ")) || "Informações sobre os kits do evento." }} />
                     {kits[0] && (
                       <div className="flex w-full items-start">
                         <div className="relative aspect-192/184 w-[192px] overflow-hidden rounded-lg border border-gray-6">

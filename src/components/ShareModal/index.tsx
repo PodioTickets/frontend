@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { X, MessageCircle } from "lucide-react";
 import { FacebookIcon } from "@/components/Icons/FacebookIcon";
 import { TwitterIcon } from "@/components/Icons/TwitterIcon";
@@ -23,12 +24,15 @@ export function ShareModal({
   eventName,
   eventUrl,
 }: ShareModalProps) {
-  if (!isOpen) return null;
+  const [fullUrl, setFullUrl] = useState('');
 
-  const fullUrl =
-    typeof window !== "undefined"
-      ? `${window.location.origin}${eventUrl}`
-      : eventUrl;
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      setFullUrl(`${window.location.origin}${eventUrl}`);
+    }
+  }, [eventUrl]);
+
+  if (!isOpen) return null;
 
   const handleCopyLink = async () => {
     try {
@@ -118,7 +122,8 @@ export function ShareModal({
               <button
                 key={option.id}
                 onClick={option.onClick}
-                className="flex flex-col gap-2 size-12 cursor-pointer rounded-full border border-gray-6 hover:border-primary-10 hover:bg-gray-2 transition-colors justify-center items-center"
+                disabled={!fullUrl}
+                className="flex flex-col gap-2 size-12 cursor-pointer rounded-full border border-gray-6 hover:border-primary-10 hover:bg-gray-2 transition-colors justify-center items-center disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <Icon className="size-5" outline={option.outline} />
               </button>
@@ -129,8 +134,8 @@ export function ShareModal({
         <div className="flex-1 relative flex items-center gap-2 px-4 mb-4">
           <Input className="text-gray-11 pr-10" value={fullUrl} readOnly />
           <CopyIcon
-            className="size-6 absolute right-6 top-1/2 -translate-y-1/2 bg-gray-2 p-1 cursor-pointer"
-            onClick={handleCopyLink}
+            className={`size-6 absolute right-6 top-1/2 -translate-y-1/2 bg-gray-2 p-1 ${fullUrl ? 'cursor-pointer' : 'opacity-50 cursor-not-allowed'}`}
+            onClick={fullUrl ? handleCopyLink : undefined}
           />
         </div>
       </div>

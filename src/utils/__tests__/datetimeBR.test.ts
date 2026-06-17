@@ -1,5 +1,13 @@
 import { describe, it, expect } from "vitest";
-import { toUtcDate, formatDateBR, formatTimeBR, formatDateTimeBR } from "../datetimeBR";
+import {
+  toUtcDate,
+  formatDateBR,
+  formatTimeBR,
+  formatDateTimeBR,
+  formatInstantBRT,
+  formatDateBRT,
+  formatTimeBRT,
+} from "../datetimeBR";
 
 /**
  * Garante que a formatação preserva o horário do servidor (UTC), sem reaplicar
@@ -42,5 +50,29 @@ describe("datetimeBR", () => {
     const ms = Date.UTC(2026, 5, 1, 12, 0, 0);
     expect(toUtcDate(ms)?.toISOString()).toBe("2026-06-01T12:00:00.000Z");
     expect(toUtcDate(new Date(ms))?.toISOString()).toBe("2026-06-01T12:00:00.000Z");
+  });
+
+  // ── Instante REAL (compra/pagamento) → fuso de Brasília (UTC-3) ──────────────
+  describe("instante real em Brasília (formatInstantBRT)", () => {
+    it("converte hora UTC para Brasília (-3h)", () => {
+      // 23:30Z → 20:30 em Brasília, e o dia volta pro 01/06.
+      expect(formatTimeBRT("2026-06-01T23:30:00.000Z")).toBe("20:30");
+      expect(formatDateBRT("2026-06-01T23:30:00.000Z")).toBe("01/06/2026");
+    });
+
+    it("vira o dia anterior quando a hora UTC é de madrugada", () => {
+      // 02:00Z do dia 02 → 23:00 do dia 01 em Brasília.
+      expect(formatDateBRT("2026-06-02T02:00:00.000Z")).toBe("01/06/2026");
+      expect(formatTimeBRT("2026-06-02T02:00:00.000Z")).toBe("23:00");
+    });
+
+    it("formatInstantBRT junta data + hora de Brasília por padrão", () => {
+      expect(formatInstantBRT("2026-06-01T23:30:00.000Z")).toBe("01/06/2026, 20:30");
+    });
+
+    it("retorna '' para valor ausente/ inválido", () => {
+      expect(formatInstantBRT(null)).toBe("");
+      expect(formatInstantBRT("not-a-date")).toBe("");
+    });
   });
 });

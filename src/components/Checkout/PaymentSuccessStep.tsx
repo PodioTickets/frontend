@@ -14,6 +14,7 @@ import { Tooltip } from "@/components/Tooltip";
 import { formatPhoneForCountry } from "@/utils/phone";
 import { isBrazilianCountry } from "@/validators/Auth.validator";
 import { formatDateBR } from "@/utils/datetimeBR";
+import { formatAnswer } from "@/utils/questionAnswer";
 
 interface PaymentSuccessStepProps {
   event: Event;
@@ -66,18 +67,6 @@ interface PaymentSuccessStepProps {
   date?: string;
 }
 
-function formatAnswer(answer: unknown): string {
-  if (answer == null) return "—";
-  if (Array.isArray(answer)) return answer.join(", ");
-  if (typeof answer === "string") {
-    try {
-      const parsed: unknown = JSON.parse(answer);
-      if (Array.isArray(parsed)) return parsed.join(", ");
-    } catch { }
-  }
-  return String(answer) || "—";
-}
-
 /** Extrai o texto da pergunta — aceita string direta ou objeto `{ question }`. */
 function getQuestionLabel(
   question: string | { question?: string } | null | undefined,
@@ -107,6 +96,10 @@ export function PaymentSuccessStep({
   voucherName,
   date: paymentDate,
 }: PaymentSuccessStepProps) {
+  // Pedido gratuito (coberto por cupom/voucher ou ingresso grátis): não há forma
+  // de pagamento real — o backend pode mandar um método default (ex.: PIX), então
+  // escondemos a linha "Forma de pagamento" em vez de exibir um método inexistente.
+  const isFreeOrder = (totalPaid ?? 0) <= 0;
   const isAutomaticCoupon = couponType === "QUANTITY" || couponType === "AGE";
   const couponLabel = `${isAutomaticCoupon
     ? "Cupom automático"
@@ -336,15 +329,17 @@ export function PaymentSuccessStep({
                       </p>
                     </div>
 
-                    {/* Payment Method */}
-                    <div className="border border-gray-6 flex items-center justify-between p-4 rounded-lg w-full">
-                      <p className="font-semibold text-base leading-[1.1] text-gray-12 font-manrope">
-                        Forma de pagamento:
-                      </p>
-                      <p className="font-bold text-base leading-[1.1] text-gray-12 font-manrope text-end">
-                        {paymentMethod}
-                      </p>
-                    </div>
+                    {/* Payment Method — omitido em pedido gratuito */}
+                    {!isFreeOrder && (
+                      <div className="border border-gray-6 flex items-center justify-between p-4 rounded-lg w-full">
+                        <p className="font-semibold text-base leading-[1.1] text-gray-12 font-manrope">
+                          Forma de pagamento:
+                        </p>
+                        <p className="font-bold text-base leading-[1.1] text-gray-12 font-manrope text-end">
+                          {paymentMethod}
+                        </p>
+                      </div>
+                    )}
 
                     {/* Participants */}
                     <div className="border border-gray-6 flex items-center justify-between p-4 rounded-lg w-full">
@@ -789,15 +784,17 @@ export function PaymentSuccessStep({
                       </p>
                     </div>
 
-                    {/* Payment Method */}
-                    <div className="border border-gray-6 flex items-center justify-between p-[16px] rounded-[8px] w-full">
-                      <p className="font-semibold text-[16px] leading-[1.1] text-gray-12 font-manrope">
-                        Forma de pagamento:
-                      </p>
-                      <p className="font-bold text-[16px] leading-[1.1] text-gray-12 font-manrope text-end">
-                        {paymentMethod}
-                      </p>
-                    </div>
+                    {/* Payment Method — omitido em pedido gratuito */}
+                    {!isFreeOrder && (
+                      <div className="border border-gray-6 flex items-center justify-between p-[16px] rounded-[8px] w-full">
+                        <p className="font-semibold text-[16px] leading-[1.1] text-gray-12 font-manrope">
+                          Forma de pagamento:
+                        </p>
+                        <p className="font-bold text-[16px] leading-[1.1] text-gray-12 font-manrope text-end">
+                          {paymentMethod}
+                        </p>
+                      </div>
+                    )}
 
                     {/* Participants */}
                     <div className="border border-gray-6 flex items-center justify-between p-[16px] rounded-[8px] w-full">

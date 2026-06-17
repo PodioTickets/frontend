@@ -26,7 +26,7 @@ import {
   formatPersonPhone,
 } from "@/utils/documentDisplay";
 import { Pagination } from '../Pagination';
-import { formatDateBR, formatTimeBR } from "@/utils/datetimeBR";
+import { formatDateBR, formatDateBRT, formatTimeBRT } from "@/utils/datetimeBR";
 import { CancelOrderModal } from './CancelOrderModal';
 import { OrderApiError } from '@/interfaces/order';
 
@@ -40,6 +40,7 @@ export function PaymentDetailsModal() {
   // Modal de confirmação de cancelamento/estorno (overlay local, z-60).
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [refunding, setRefunding] = useState(false);
+  const [downloadingReceipt, setDownloadingReceipt] = useState(false);
 
   const eventId = data?.eventId as string | undefined;
   const eventName = (data?.eventName as string) || "Evento";
@@ -58,6 +59,29 @@ export function PaymentDetailsModal() {
       minimumFractionDigits: 2,
       maximumFractionDigits: 2,
     }).format(price);
+  };
+
+  /* Baixa o PDF do comprovante (recibo) do pedido. O backend gera o documento a
+   * partir do pedido (mesmo anexo do e-mail) e aplica o controle de acesso. */
+  const handleDownloadReceipt = async () => {
+    if (!registrationId || downloadingReceipt) return;
+    setDownloadingReceipt(true);
+    try {
+      const { blob, filename } =
+        await organizerService.downloadRegistrationReceiptPdf(registrationId);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    } catch {
+      toast.error("Erro ao baixar o comprovante. Tente novamente.");
+    } finally {
+      setDownloadingReceipt(false);
+    }
   };
 
   // Buscar dados quando o modal abrir
@@ -297,10 +321,12 @@ export function PaymentDetailsModal() {
       category: registration?.ticket?.category?.name || "Ingresso avulso",
     })) || [];
 
+  // "Data da compra": é um INSTANTE REAL (timestamp do pagamento) → exibe no
+  // horário de Brasília, não em UTC (datas do EVENTO seguem UTC via formatDateBR).
   const formatDate = (dateString?: string) => {
     if (!dateString) return "";
     try {
-      return `${formatDateBR(dateString)} - ${formatTimeBR(dateString)}`;
+      return `${formatDateBRT(dateString)} - ${formatTimeBRT(dateString)}`;
     } catch {
       return "";
     }
@@ -791,14 +817,19 @@ export function PaymentDetailsModal() {
                     </div>
                   </div>
 
-                  {/* Ações do pedido (mobile) — espelha o desktop. */}
+                  {/* Ações do pedido (mobile) — espelha o desktop. Comprovante
+                   * só faz sentido em pedido com pagamento (gratuito não gera recibo). */}
                   <div className="flex flex-col gap-2 pb-2">
-                    <Button
-                      variant="outline"
-                      className="w-full border-gray-6 text-gray-12"
-                    >
-                      Baixar comprovante
-                    </Button>
+                    {!isFreeOrder && (
+                      <Button
+                        variant="outline"
+                        onClick={handleDownloadReceipt}
+                        isLoading={downloadingReceipt}
+                        className="w-full border-gray-6 text-gray-12"
+                      >
+                        Baixar comprovante
+                      </Button>
+                    )}
                     {canRefundOrder && (
                       <Button
                         variant="destructive"
@@ -1255,7 +1286,16 @@ export function PaymentDetailsModal() {
                       </div>
 
                       <div className='flex items-center gap-2'>
-                        <Button variant={"outline"} className='border-gray-6 text-gray-12'>Baixar comprovante</Button>
+                        {!isFreeOrder && (
+                          <Button
+                            variant={"outline"}
+                            onClick={handleDownloadReceipt}
+                            isLoading={downloadingReceipt}
+                            className='border-gray-6 text-gray-12'
+                          >
+                            Baixar comprovante
+                          </Button>
+                        )}
                         {canRefundOrder && (
                           <Button
                             variant={"destructive"}

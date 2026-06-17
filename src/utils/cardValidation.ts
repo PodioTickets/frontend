@@ -26,7 +26,8 @@ export const getCardBrand = (cardNumber: string): string => {
   const number = cardNumber.replace(/\D/g, '');
   
   if (/^4/.test(number)) return 'VISA';
-  if (/^5[1-5]/.test(number)) return 'MASTERCARD';
+  // Mastercard: série 5 (51-55) e série 2 (BIN 2221-2720)
+  if (/^(5[1-5]|222[1-9]|22[3-9]\d|2[3-6]\d{2}|27[01]\d|2720)/.test(number)) return 'MASTERCARD';
   if (/^3[47]/.test(number)) return 'AMEX';
   if (/^6(?:011|5)/.test(number)) return 'DISCOVER';
   
@@ -51,17 +52,17 @@ export const validateExpiry = (expiry: string): boolean => {
     return false;
   }
 
-  // Válido até o fim do mês de expiração (não só o dia 1).
-  const endOfExpiryMonth = new Date(
+  // Válido até o fim do mês de expiração em UTC (dia 0 = último dia do mês anterior → último dia do mês expiryMonth).
+  const endOfExpiryMonth = new Date(Date.UTC(
     expiryYear,
-    expiryMonth,
+    expiryMonth, // Date.UTC normaliza: mês 12 = dezembro, dia 0 = último dia de dezembro
     0,
     23,
     59,
     59,
     999,
-  );
-  return endOfExpiryMonth.getTime() >= Date.now();
+  ));
+  return Date.now() <= endOfExpiryMonth.getTime();
 };
 
 /**

@@ -1,5 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
-import { apiClient } from '@/services';
+import { useState, useEffect, useCallback, useRef } from 'react';
 
 const API_BASE_URL = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3333').replace(/\/$/, '');
 
@@ -23,18 +22,11 @@ export const usePaymentStatus = (registrationId: string | null) => {
     setError(null);
 
     try {
-      const token = apiClient.getAccessToken();
-      
-      if (!token) {
-        throw new Error('Você precisa estar autenticado');
-      }
-
+      // Auth por cookie httpOnly: cookie enviado via `credentials: 'include'`.
       const response = await fetch(
         `${API_BASE_URL}/api/v1/payments/registration/${registrationId}/summary`,
         {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-          },
+          credentials: 'include',
         }
       );
 
@@ -64,17 +56,25 @@ export const usePaymentStatusPolling = (
 ) => {
   const { status, checkStatus } = usePaymentStatus(registrationId);
 
+  // Refs estabilizam as funções nas deps do effect, evitando que o interval
+  // seja desmontado/remontado a cada render quando checkStatus ou onStatusChange mudam.
+  const checkStatusRef = useRef(checkStatus);
+  useEffect(() => { checkStatusRef.current = checkStatus; }, [checkStatus]);
+
+  const onStatusChangeRef = useRef(onStatusChange);
+  useEffect(() => { onStatusChangeRef.current = onStatusChange; }, [onStatusChange]);
+
   useEffect(() => {
     if (!registrationId) return;
 
     const interval = setInterval(async () => {
       try {
-        const currentStatus = await checkStatus();
-        
+        const currentStatus = await checkStatusRef.current();
+
         if (currentStatus === 'PAID' || currentStatus === 'FAILED') {
           clearInterval(interval);
-          if (onStatusChange) {
-            onStatusChange(currentStatus);
+          if (onStatusChangeRef.current) {
+            onStatusChangeRef.current(currentStatus);
           }
         }
       } catch (error) {
@@ -91,7 +91,7 @@ export const usePaymentStatusPolling = (
       clearInterval(interval);
       clearTimeout(timeout);
     };
-  }, [registrationId, checkStatus, onStatusChange]);
+  }, [registrationId]); // deps: apenas registrationId — checkStatus/onStatusChange via ref
 
   return { status };
 };

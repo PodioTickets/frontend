@@ -48,7 +48,7 @@ export function Footer() {
     <footer
       className={`w-full relative flex flex-col items-center justify-start overflow-hidden bg-linear-to-b from-[#191919] to-[#222222] md:p-20 md:pt-[52px] ${isCheckoutStep
         ? "max-md:hidden md:border-t md:border-gray-6"
-        : "border-t border-gray-6 px-4 py-6"
+        : "px-4 py-6"
         }`}
     >
       {/* Mobile Layout */}
@@ -93,13 +93,6 @@ export function Footer() {
             className="size-12 border border-[#3A3A3A] p-3 rounded-full flex items-center justify-center"
           >
             <InstagramIcon className="w-full h-full text-gray-2" />
-          </Link>
-          <Link
-            target="_blank"
-            href="https://x.com/podiotickets"
-            className="size-12 border border-[#3A3A3A] p-3 rounded-full flex items-center justify-center"
-          >
-            <TwitterIcon className="w-full h-full text-gray-2" />
           </Link>
           <Link
             target="_blank"
@@ -163,13 +156,6 @@ export function Footer() {
               className="w-8 h-8 border border-[#3A3A3A] p-2 rounded-full flex items-center justify-center"
             >
               <InstagramIcon className="w-full h-full text-gray-2" />
-            </Link>
-            <Link
-              target="_blank"
-              href="https://x.com/podiotickets"
-              className="w-8 h-8 border border-[#3A3A3A] p-2 rounded-full flex items-center justify-center"
-            >
-              <TwitterIcon className="w-full h-full text-gray-2" />
             </Link>
             <Link
               target="_blank"

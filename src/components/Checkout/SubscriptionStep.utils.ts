@@ -25,13 +25,13 @@ export interface Product {
 }
 
 /**
- * Um produto SEGURA estoque próprio quando NÃO é incluso-E-obrigatório ao mesmo
- * tempo. Incluso + obrigatório já é gated pela vaga do ingresso → não consome
- * estoque da variação. Espelha `holdsStock` do backend (product-stock.util.ts):
- * fonte única de verdade da regra de estoque.
+ * Política atual (espelha `holdsStock` do backend, product-stock.util.ts): TODO
+ * produto segura o próprio estoque da variação — inclusive incluso+obrigatório.
+ * Assim uma variação esgotada de item incluso+obrigatório também bloqueia a
+ * seleção no checkout. `stock = 0` segue ilimitado (ver `isVariationSoldOut`).
  */
-export function variationHoldsStock(product: Pick<Product, "isIncludedInTicket" | "isRequired">): boolean {
-  return !(product.isIncludedInTicket === true && product.isRequired === true);
+export function variationHoldsStock(_product: Pick<Product, "isIncludedInTicket" | "isRequired">): boolean {
+  return true;
 }
 
 /**
@@ -83,8 +83,11 @@ export const productAnyVariationHasSpecificPrice = (product: Product): boolean =
 
 /**
  * Mesma regra da prévia do CreateProductModal: sem preço específico em nenhuma variação,
- * não mostra valores à direita; com pelo menos um, linhas sem preço específico mostram a base;
- * com preço específico: total se variação < base, senão acréscimo sobre a base.
+ * não mostra valores à direita; com pelo menos um, linhas sem preço específico mostram a base.
+ * Com preço específico o rótulo deve refletir o que é efetivamente cobrado
+ * (`billableReaisForProductSelection` / PaymentStep):
+ *  - não incluso: o preço da variação é o TOTAL daquela variação → exibe o valor cheio;
+ *  - incluso no ingresso: a base já está paga no ingresso → exibe só o upgrade sobre a base.
  */
 export const previewVariationListPriceLabelForProduct = (
   product: Product,
@@ -97,18 +100,18 @@ export const previewVariationListPriceLabelForProduct = (
   ) {
     return undefined;
   }
+  // Produto incluso → não exibe preço (a base já está paga no ingresso).
+  if (product.isIncludedInTicket) {
+    return undefined;
+  }
   if (!productAnyVariationHasSpecificPrice(product)) {
     return undefined;
   }
-  const base = product.basePrice;
   if (!variationHasMeaningfulSpecificPriceReais(variationPriceReais)) {
-    return formatPrice(base);
+    return formatPrice(product.basePrice);
   }
-  const v = variationPriceReais;
-  if (v < base) {
-    return formatPrice(v);
-  }
-  return formatPrice(Math.max(0, v - base));
+  // Não incluso, variação com preço específico → total absoluto (não subtrai a base).
+  return formatPrice(variationPriceReais);
 };
 
 /** Preço exibido no card do produto (preço geral / base), alinhado à prévia do modal. */
@@ -127,42 +130,30 @@ export const variationSectionTitle = (product: Product) =>
 
 /**
  * Valor em reais a somar no total do pedido.
- * Incluso no ingresso: cobra só upgrade (v - base) quando v ≥ base;
- * fora do ingresso: paga v se v < base, senão v (equiv. base + acréscimo).
+ * Produto INCLUSO no ingresso → NUNCA cobra nada (0), mesmo com preço na variação.
+ * NÃO incluso: o preço específico da variação é o TOTAL ABSOLUTO cobrado (não
+ * soma/subtrai a base) — variação 30 cobra 30; sem preço específico cobra a base.
  */
 export function billableReaisForProductSelection(
   product: Product,
   selectedVariation: Product["variations"][number] | null,
 ): number {
+  // Incluso é sempre grátis (já pago no ingresso).
+  if (product.isIncludedInTicket) return 0;
+
   const base = product.basePrice;
 
-  if (!selectedVariation) {
-    if (product.isIncludedInTicket) return 0;
-    return base;
-  }
+  if (!selectedVariation) return base;
 
-  if (isSemInteresseVariation(selectedVariation)) {
-    return 0;
-  }
+  if (isSemInteresseVariation(selectedVariation)) return 0;
 
   const v = selectedVariation.price;
 
-  if (!productAnyVariationHasSpecificPrice(product)) {
-    if (product.isIncludedInTicket) return 0;
-    return base;
-  }
+  if (!productAnyVariationHasSpecificPrice(product)) return base;
 
-  if (!variationHasMeaningfulSpecificPriceReais(v)) {
-    if (product.isIncludedInTicket) return 0;
-    return base;
-  }
+  if (!variationHasMeaningfulSpecificPriceReais(v)) return base;
 
-  if (product.isIncludedInTicket) {
-    if (v < base) return 0;
-    return Math.max(0, v - base);
-  }
-
-  if (v < base) return v;
+  // Variação com preço específico → total absoluto (não subtrai a base).
   return v;
 }
 

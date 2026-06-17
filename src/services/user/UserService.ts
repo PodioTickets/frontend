@@ -2,6 +2,7 @@ import type { ApiClient } from "../base/ApiClient";
 import type { CouponPreviewResult } from "@/lib/orderCouponDiscount";
 import type { AgeCouponEligibility } from "@/lib/ageCoupon";
 import { normalizeNationality } from "@/utils/nationality";
+import { userCacheKey, LEGACY_USER_CACHE_KEY } from "@/lib/authSurface";
 
 export interface LoginResponse {
   message?: string;
@@ -432,11 +433,13 @@ export class UserService {
     }
   }
 
-  async refreshToken(refreshToken: string): Promise<RefreshTokenResponse> {
+  async refreshToken(refreshToken?: string): Promise<RefreshTokenResponse> {
     try {
+      // Auth por cookie httpOnly: sem `refreshToken` explícito, o backend lê o
+      // refresh_token do cookie. Token no body é só fallback legado.
       const response = await this.apiClient.post<any>(
         "/api/v1/auth/refresh",
-        { refresh_token: refreshToken }
+        refreshToken ? { refresh_token: refreshToken } : {}
       );
       // Backend: { message, data: { access_token, refresh_token } }. Desembrulha
       // o `data` (com fallback plano) — antes retornava o wrapper e o caller lia
@@ -815,7 +818,8 @@ export class UserService {
   }
 
   isAuthenticated(): boolean {
-    return !!this.apiClient.getAccessToken();
+    // Lê o cookie-dica (não o token, que é httpOnly e invisível ao JS).
+    return this.apiClient.hasSessionHint();
   }
 
   /**
@@ -825,7 +829,8 @@ export class UserService {
    */
   clearLocalSession(): void {
     try {
-      localStorage.removeItem("user");
+      localStorage.removeItem(userCacheKey());
+      localStorage.removeItem(LEGACY_USER_CACHE_KEY); // chave global pré-isolamento
     } catch {
       /* ignore */
     }

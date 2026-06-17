@@ -3,6 +3,7 @@ import { Suspense } from "react";
 import { HomeFilters } from "@/components/HomeFilters";
 import { EventCarousel } from "@/components/EventCarousel";
 import { Button } from "@/components/Button";
+import Link from "next/link";
 
 /**
  * Metadata Open Graph / Twitter da HOME. Diferente da página do evento (que
@@ -71,9 +72,11 @@ export default function Home() {
               Venda ingressos online, acompanhe inscrições e simplifique <br className="hidden md:block" /> a gestão do seu evento esportivo
             </p>
           </div>
-          <Button className="w-max px-8 py-5 font-bold mt-10 md:mt-0">
-            Saiba mais
-          </Button>
+          <Link href={"/lp"}>
+            <Button className="w-max px-8 py-5 font-bold mt-10 md:mt-0">
+              Saiba mais
+            </Button>
+          </Link>
         </div>
 
       </div>

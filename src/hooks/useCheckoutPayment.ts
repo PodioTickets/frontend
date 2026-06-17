@@ -1,5 +1,4 @@
 import { useState, useCallback } from 'react';
-import { apiClient } from '@/services';
 import type {
   CheckoutRequest,
   CheckoutResponse,
@@ -23,17 +22,13 @@ export const useCheckout = (): UseCheckoutReturn => {
     setError(null);
 
     try {
-      const token = apiClient.getAccessToken();
-      
-      if (!token) {
-        throw new Error('Você precisa estar autenticado para finalizar a compra');
-      }
-
+      // Auth por cookie httpOnly: `credentials: 'include'` envia o cookie; o
+      // backend lê do cookie (sem Bearer manual). 401 é tratado abaixo.
       const response = await fetch(`${API_BASE_URL}/api/v1/checkout/process`, {
         method: 'POST',
+        credentials: 'include',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
         },
         body: JSON.stringify(data),
       });

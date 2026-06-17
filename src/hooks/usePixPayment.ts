@@ -1,5 +1,4 @@
 import { useState, useCallback } from 'react';
-import { apiClient } from '@/services';
 import type { PixPayment } from '@/interfaces/checkout';
 
 const API_BASE_URL = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3333').replace(/\/$/, '');
@@ -28,18 +27,11 @@ export const usePixPayment = () => {
     setError(null);
 
     try {
-      const token = apiClient.getAccessToken();
-      
-      if (!token) {
-        throw new Error('Você precisa estar autenticado');
-      }
-
+      // Auth por cookie httpOnly: cookie enviado via `credentials: 'include'`.
       const response = await fetch(
         `${API_BASE_URL}/api/v1/payments/registration/${registrationId}/summary`,
         {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-          },
+          credentials: 'include',
         }
       );
 

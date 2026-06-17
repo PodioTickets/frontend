@@ -15,7 +15,8 @@ import { organizerService } from "@/services";
 import { ArrowButton } from "../ArrowButton";
 import { SelectTicketsModal } from "./SelectTicketsModal";
 import { cn } from "@/utils/cn";
-import { isValidCPF } from "@/utils/cpf";
+import { useCpfList } from "@/hooks/useCpfList";
+import { formatCpf as formatCPF } from "@/lib/cpfList";
 
 type CouponType = "DISCOUNT" | "QUANTITY" | "AGE";
 type DiscountType = "PERCENTAGE" | "FIXED";
@@ -40,9 +41,6 @@ export function CreateCouponModal() {
   const [codeError, setCodeError] = useState("");
   const [valueError, setValueError] = useState("");
   const [apiError, setApiError] = useState("");
-  const [cpfListStatus, setCpfListStatus] = useState<CPFListStatus>("DISABLED");
-  const [cpfList, setCpfList] = useState<string[]>([]);
-  const [cpfSearch, setCpfSearch] = useState("");
   const [applyToProducts, setApplyToProducts] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isMdUp, setIsMdUp] = useState(true);
@@ -64,13 +62,23 @@ export function CreateCouponModal() {
   // Sem isso, a abertura automática em modo de edição (data sync) dispararia
   // o scroll-into-view e o modal abriria já rolado pra baixo.
   const userToggledAdvancedRef = useRef(false);
-  const csvInputRef = useRef<HTMLInputElement>(null);
-  const [isAddingCpf, setIsAddingCpf] = useState(false);
-  const [newCpfInput, setNewCpfInput] = useState("");
-  const [newCpfError, setNewCpfError] = useState("");
-  const [showImportModal, setShowImportModal] = useState(false);
-  const [isDraggingCsv, setIsDraggingCsv] = useState(false);
-  const [cpfListError, setCpfListError] = useState("");
+
+  // Estado + handlers da lista de CPF (compartilhado com o modal de Voucher).
+  const {
+    cpfListStatus, setCpfListStatus,
+    cpfList, setCpfList,
+    cpfSearch, setCpfSearch,
+    isAddingCpf, setIsAddingCpf,
+    newCpfInput, setNewCpfInput,
+    newCpfError, setNewCpfError,
+    isDraggingCsv, setIsDraggingCsv,
+    cpfListError, setCpfListError,
+    showImportModal, setShowImportModal,
+    csvInputRef,
+    handleAddCPF, handleConfirmAddCPF, handleNewCpfInputChange,
+    handleImportCSV, handleCSVFileChange, handleDropzoneDrop,
+    handleRemoveCPF, handleClearList,
+  } = useCpfList();
 
   const minSelectableExpiryDate = useMemo(() => {
     const d = new Date();
@@ -295,102 +303,6 @@ export function CreateCouponModal() {
     };
   }, [showAdvanced]);
 
-  const handleAddCPF = () => {
-    setIsAddingCpf(true);
-    setNewCpfInput("");
-  };
-
-  const handleConfirmAddCPF = () => {
-    const digits = newCpfInput.replace(/\D/g, "");
-    if (digits.length !== 11 || !isValidCPF(digits)) {
-      setNewCpfError("CPF inválido.");
-      return;
-    }
-    if (cpfList.includes(digits)) {
-      setNewCpfError("CPF já está na lista.");
-      return;
-    }
-    setCpfList([...cpfList, digits]);
-    setIsAddingCpf(false);
-    setNewCpfInput("");
-    setNewCpfError("");
-  };
-
-  const handleNewCpfInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const raw = e.target.value.replace(/\D/g, "").slice(0, 11);
-    let formatted = raw;
-    if (raw.length > 9) formatted = `${raw.slice(0, 3)}.${raw.slice(3, 6)}.${raw.slice(6, 9)}-${raw.slice(9)}`;
-    else if (raw.length > 6) formatted = `${raw.slice(0, 3)}.${raw.slice(3, 6)}.${raw.slice(6)}`;
-    else if (raw.length > 3) formatted = `${raw.slice(0, 3)}.${raw.slice(3)}`;
-    setNewCpfInput(formatted);
-    if (newCpfError) setNewCpfError("");
-  };
-
-  const handleImportCSV = () => {
-    setShowImportModal(true);
-  };
-
-  const processCSVFile = (file: File) => {
-    const reader = new FileReader();
-    reader.onload = (ev) => {
-      const text = ev.target?.result as string;
-      const lines = text.split(/[\r\n,;]+/);
-      const newCpfs: string[] = [];
-      let duplicates = 0;
-      let invalid = 0;
-      for (const line of lines) {
-        const digits = line.replace(/\D/g, "");
-        if (digits.length !== 11 || !isValidCPF(digits)) { if (digits.length > 0) invalid++; continue; }
-        if (cpfList.includes(digits) || newCpfs.includes(digits)) { duplicates++; continue; }
-        newCpfs.push(digits);
-      }
-      if (newCpfs.length > 0) {
-        setCpfList((prev) => [...prev, ...newCpfs]);
-        setCpfListError("");
-      }
-      const parts: string[] = [];
-      if (newCpfs.length > 0) parts.push(`${newCpfs.length} CPF(s) importado(s)`);
-      if (duplicates > 0) parts.push(`${duplicates} duplicado(s) ignorado(s)`);
-      if (invalid > 0) parts.push(`${invalid} inválido(s) ignorado(s)`);
-      if (parts.length > 0) toast.success(parts.join(", "));
-      else toast.error("Nenhum CPF válido encontrado no arquivo.");
-      setShowImportModal(false);
-    };
-    reader.onerror = () => toast.error("Erro ao ler o arquivo.");
-    reader.readAsText(file);
-  };
-
-  const handleCSVFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    processCSVFile(file);
-    e.target.value = "";
-  };
-
-  const handleDropzoneDrop = (e: React.DragEvent<HTMLDivElement>) => {
-    e.preventDefault();
-    setIsDraggingCsv(false);
-    const file = e.dataTransfer.files?.[0];
-    if (!file) return;
-    processCSVFile(file);
-  };
-
-  const handleRemoveCPF = (index: number) => {
-    setCpfList(cpfList.filter((_, i) => i !== index));
-  };
-
-  const handleClearList = () => {
-    setCpfList([]);
-    setCpfSearch("");
-  };
-
-  const formatCPF = (cpf: string) => {
-    const numbers = cpf.replace(/\D/g, "");
-    if (numbers.length === 11) {
-      return `${numbers.slice(0, 3)}.${numbers.slice(3, 6)}.${numbers.slice(6, 9)}-${numbers.slice(9)}`;
-    }
-    return cpf;
-  };
 
   const handleSave = async () => {
     if (!couponType) {
@@ -462,9 +374,22 @@ export function CreateCouponModal() {
       }
     }
 
+    // Validade habilitada mas data não preenchida
+    if (expiryEnabled && !expiryDate) {
+      toast.error("Selecione uma data de validade ou desabilite a opção");
+      return;
+    }
+
     if (usageLimitEnabled && usageLimit) {
+      const parsedLimit = parseInt(usageLimit);
+      if (isNaN(parsedLimit) || parsedLimit < 1) {
+        const msg = "Limite mínimo é 1";
+        setUsageLimitError(msg);
+        toast.error(msg);
+        return;
+      }
       const currentUsageCount = data?.coupon?.usageCount ?? 0;
-      if (parseInt(usageLimit) < currentUsageCount) {
+      if (parsedLimit < currentUsageCount) {
         const msg = `O limite não pode ser menor que o uso atual (${currentUsageCount})`;
         setUsageLimitError(msg);
         toast.error(msg);
@@ -978,11 +903,14 @@ export function CreateCouponModal() {
                                     const num = val.replace(/[^0-9]/g, "");
                                     if (num === "" || parseInt(num) <= 100) setValue(num ? `${num}%` : "");
                                   } else {
+                                    // Permite apenas dígitos, uma vírgula e no máximo 2 casas decimais
                                     const raw = val.replace(/[^0-9,]/g, "");
-                                    if (!raw) {
+                                    const match = raw.match(/^(\d*)(,\d{0,2})?/);
+                                    const sanitized = match ? match[0] : "";
+                                    if (!sanitized) {
                                       setValue("");
                                     } else {
-                                      setValue(`R$ ${raw}`);
+                                      setValue(`R$ ${sanitized}`);
                                     }
                                   }
                                   if (valueError) setValueError("");

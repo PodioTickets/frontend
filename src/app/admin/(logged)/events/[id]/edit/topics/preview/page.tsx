@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter, useParams } from "next/navigation";
+import { sanitizeRichHtml } from "@/lib/richContent";
 import { userService, organizerService } from "@/services";
 import { Button } from "@/components/Button";
 import { ArrowButton } from "@/components/ArrowButton";
@@ -210,11 +211,12 @@ export default function EditFlowEventPreviewPage() {
                       className="max-w-none font-family-dm-sans text-base leading-[1.3] text-gray-11 prose prose-sm"
                       dangerouslySetInnerHTML={{
                         __html:
-                          kits
-                            .map((kit) => String(kit.description || ""))
-                            .filter(Boolean)
-                            .join(" ") ||
-                          "Informações sobre os kits do evento.",
+                          sanitizeRichHtml(
+                            kits
+                              .map((kit) => String(kit.description || ""))
+                              .filter(Boolean)
+                              .join(" "),
+                          ) || "Informações sobre os kits do evento.",
                       }}
                     />
                     {kits[0] && (

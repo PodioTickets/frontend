@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import Image from "next/image";
 import { userService, organizerService } from "@/services";
+import { surfaceHeader } from "@/lib/authSurface";
 import { Button } from "@/components/Button";
 import { ArrowButton } from "@/components/ArrowButton";
 import { CalendarIcon } from "@/components/Icons/CalendarIcon";
@@ -122,15 +123,15 @@ export function BannerSection({
 
   const uploadImageFile = useCallback(async (file: File): Promise<string> => {
     const apiUrl = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:3333").replace(/\/$/, "");
-    const apiClient = (userService as unknown as { apiClient?: { getAccessToken: () => string | null } }).apiClient;
-    const token = apiClient?.getAccessToken();
-    if (!token) throw new Error("Sessão expirada. Faça login novamente.");
 
     const fd = new FormData();
     fd.append("file", file);
+    // Auth por cookie httpOnly: `credentials: "include"`; 401 cai no !ok abaixo.
+    // `X-PT-Surface` declara a superfície (fetch cru não passa pelo ApiClient).
     const response = await fetch(`${apiUrl}/api/v1/upload/image`, {
       method: "POST",
-      headers: { Authorization: `Bearer ${token}` },
+      credentials: "include",
+      headers: surfaceHeader(),
       body: fd,
     });
 

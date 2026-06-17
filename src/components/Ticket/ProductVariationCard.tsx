@@ -271,11 +271,6 @@ export function ProductVariationCard({
               <span className="text-base font-medium leading-[1.3] text-gray-12 font-family-dm-sans">
                 {variation.name}
               </span>
-              {variation.price > 0 && (
-                <span className="text-sm text-gray-11 font-family-dm-sans ml-auto">
-                  +{formatPrice(variation.price)}
-                </span>
-              )}
               {variation.stock === 0 && variation.name !== localSelected?.name && (
                 <span className="text-xs text-gray-10 font-family-dm-sans ml-auto">
                   Esgotado

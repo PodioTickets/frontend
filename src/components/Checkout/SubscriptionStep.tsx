@@ -455,6 +455,9 @@ export function SubscriptionStep({
     );
     if (!participantTicket) return [];
     const ticketProducts = getProductsForTicket(participantTicket.ticketId);
+    // Opcionais (não obrigatórios). Os inclusos continuam aqui para SEREM
+    // EXIBIDOS, mas como cobram 0 (billableReaisForProductSelection), o resumo os
+    // classifica como "Incluso/grátis" (priceReais === 0), não como item adicional pago.
     return ticketProducts.filter((p) => !p.isRequired);
   };
 
@@ -743,6 +746,8 @@ export function SubscriptionStep({
   const getAdditionalProductsCount = (participantIndex: number): number => {
     const participantAdditionalProducts = getAdditionalProductsForParticipant(participantIndex);
     return participantAdditionalProducts.filter((product) => {
+      // Incluso é grátis → nunca conta como item adicional (mesmo selecionado).
+      if (product.isIncludedInTicket) return false;
       const variationKey = getVariationKey(participantIndex, product.id);
       const selectedId = selectedVariations[variationKey];
       if (selectedId === null || selectedId === undefined) return false;

@@ -219,13 +219,13 @@ export function CreateProductModal() {
   const showSoldColumn = variations.some((v) => (v.soldCount ?? 0) > 0);
 
   /**
-   * Produto SEGURA estoque próprio quando NÃO é incluso-E-obrigatório ao mesmo
-   * tempo (espelha `holdsStock` do backend). Incluso+obrigatório é gated pela
-   * vaga do ingresso → estoque da variação é irrelevante: a coluna de Estoque
-   * fica OCULTA. Quando segura estoque (opcional ou não-incluso), o estoque é
-   * exigido (> 0) na validação.
+   * Política atual (espelha `holdsStock` do backend): TODO produto segura o
+   * próprio estoque da variação — inclusive incluso+obrigatório. Por isso a
+   * coluna de Estoque aparece SEMPRE e o estoque é exigido (> 0) na validação.
+   * (Antes incluso+obrigatório era gated só pela vaga do ingresso e a coluna
+   * ficava oculta; agora o organizador pode limitar o item independentemente.)
    */
-  const productHoldsStock = !(isIncludedInTicket && isRequired);
+  const productHoldsStock = true;
 
   /**
    * Primeiro nome de variação duplicado (trim + case-insensitive pt-BR), ou
@@ -284,32 +284,36 @@ export function CreateProductModal() {
   );
 
   /**
-   * Prévia do dropdown: sem nenhum preço específico (> 0), não exibe preço nas linhas.
-   * Com pelo menos um: nas demais variações mostra o preço base;
-   * onde há preço específico, acréscimo sobre a base (≥ base) ou total (< base).
+   * Prévia do dropdown (espelha `previewVariationListPriceLabelForProduct` do checkout):
+   *  - Sem nenhum preço específico (> 0): não exibe preço.
+   *  - Variação COM preço específico: mostra o valor cheio (TOTAL absoluto, não
+   *    subtrai a base) — variação 30 → mostra 30, tanto incluso quanto não.
+   *  - Variação SEM preço específico (mas outras têm): incluso não mostra preço
+   *    (base já paga no ingresso); não incluso mostra a base.
    */
   const previewVariationListPriceLabel = useCallback(
     (variationPriceStr: string): string | undefined => {
+      // Produto incluso → nunca exibe preço (grátis no ingresso).
+      if (isIncludedInTicket) {
+        return undefined;
+      }
+      if (!anyVariationHasSpecificPrice) {
+        return undefined;
+      }
       const fmt = (n: number) =>
         n.toLocaleString("pt-BR", {
           minimumFractionDigits: 2,
           maximumFractionDigits: 2,
         });
-      if (!anyVariationHasSpecificPrice) {
-        return undefined;
-      }
-      const base = parseFloat(String(basePrice || "0").replace(",", ".")) || 0;
       if (!variationHasMeaningfulSpecificPrice(variationPriceStr)) {
+        const base = parseFloat(String(basePrice || "0").replace(",", ".")) || 0;
         return `R$ ${fmt(base)}`;
       }
       const v =
         parseFloat(String(variationPriceStr || "0").replace(",", ".")) || 0;
-      if (v < base) {
-        return `R$ ${fmt(v)}`;
-      }
-      return `R$ ${fmt(Math.max(0, v - base))}`;
+      return `R$ ${fmt(v)}`;
     },
-    [anyVariationHasSpecificPrice, basePrice],
+    [anyVariationHasSpecificPrice, basePrice, isIncludedInTicket],
   );
 
   /** Prévia do comprador: não lista opt-out «sem interesse» (existe só no fluxo interno/checkout). */
@@ -881,11 +885,10 @@ export function CreateProductModal() {
       return false;
     }
 
-    // Itens que SEGURAM estoque (opcionais ou não-inclusos): o campo é o estoque
-    // RESTANTE. O total (restante + vendidas) precisa ser > 0 — uma variação
-    // esgotada (restante 0, mas com vendas) é válida; restante 0 sem nenhuma
-    // venda significaria total 0, que não é permitido. Para incluso+obrigatório
-    // a coluna nem aparece (gated pela vaga do ingresso) → não validamos.
+    // Todo produto segura estoque (inclusive incluso+obrigatório): o campo é o
+    // estoque RESTANTE. O total (restante + vendidas) precisa ser > 0 — uma
+    // variação esgotada (restante 0, mas com vendas) é válida; restante 0 sem
+    // nenhuma venda significaria total 0, que não é permitido.
     if (productHoldsStock) {
       for (const v of variations) {
         if (!v.name.trim()) continue;

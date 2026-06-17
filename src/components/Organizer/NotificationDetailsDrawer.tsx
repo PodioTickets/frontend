@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Info, X } from "lucide-react";
 import { Drawer, DrawerContent, DrawerTitle } from "@/components/ui/drawer";
 import { cn } from "@/utils/cn";
+import { sanitizeRichHtml } from "@/lib/richContent";
 import type {
   EventNotificationRow,
   NotificationChannel,
@@ -205,7 +206,7 @@ export function NotificationDetailsDrawer({
                       "[&_strong]:font-bold"
                     )}
                     dangerouslySetInnerHTML={{
-                      __html: notification.messageHtml || "<p>—</p>",
+                      __html: sanitizeRichHtml(notification.messageHtml) || "<p>—</p>",
                     }}
                   />
                 </div>
