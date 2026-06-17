@@ -473,19 +473,10 @@ function PixModal({
       try {
         const res = await getPaymentStatus(orderId);
         if (cancelled || confirmedRef.current) return;
-        // O body real usa `orderStatus` (orders.service.getPaymentStatus) e
-        // Payment.status do Prisma é UPPERCASE ("PAID"); o tipo do front
-        // declara `status`/"approved" — normaliza e aceita qualquer um.
-        const raw = res as unknown as Record<string, unknown>;
-        const norm = (v: unknown) =>
-          typeof v === "string" ? v.toLowerCase() : "";
-        const orderStatus = norm(raw.orderStatus) || norm(raw.status);
-        const paymentStatus = norm(res.payment?.status);
-        if (
-          orderStatus === "paid" ||
-          paymentStatus === "paid" ||
-          paymentStatus === "approved"
-        ) {
+        // O endpoint pix-status reconsulta a Braspag e, se pago, já confirma+finaliza
+        // no backend, retornando { status, paid }. `paid: true` = confirmado;
+        // aceita status === "PAID" por robustez.
+        if (res.paid === true || String(res.status).toUpperCase() === "PAID") {
           handleConfirmed();
         }
       } catch {
