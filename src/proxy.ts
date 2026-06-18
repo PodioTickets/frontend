@@ -456,10 +456,15 @@ export async function proxy(request: NextRequest) {
 
   // Braspag MPI 3DS 2.0: SDK carrega script de mpi(sandbox).braspag.com.br,
   // faz fetch para Cardinal Commerce (backend do MPI) e abre iframe do ACS do banco.
+  // Apata (apata.io) é o provedor de device fingerprint / coleta do 3DS usado pelo
+  // fluxo Braspag/Cardinal — o desafio/coleta carrega recursos de apata.io; sem
+  // liberar, a CSP bloqueia e a autenticação 3DS não acontece.
   const braspag3DSDomains = [
     "https://mpi.braspag.com.br",
     "https://mpisandbox.braspag.com.br",
     "https://*.cardinalcommerce.com",
+    "https://apata.io",
+    "https://*.apata.io",
   ];
   const braspag3DSCsp = braspag3DSDomains.join(" ");
 
@@ -481,7 +486,7 @@ export async function proxy(request: NextRequest) {
     // Cada banco usa seu próprio domínio — domínios Braspag/Cardinal cobrem o fluxo 3DS;
     // origens adicionais de embeds listadas explicitamente (sem https: genérico).
     `frame-src 'self' https://www.youtube.com https://www.google.com https://maps.google.com https://*.google.com https://*.googleapis.com https://www.strava.com https://*.strava.com https://strava-embeds.com https://challenges.cloudflare.com https://www.instagram.com https://www.facebook.com https://platform.twitter.com https://www.tiktok.com ${braspag3DSCsp}`,
-    `img-src ${trustedDomains.join(" ")} data: blob: https://cdn.podioticket.com.br https://*.google.com https://*.googleapis.com https://*.gstatic.com https://*.googleusercontent.com https://www.instagram.com https://*.cdninstagram.com https://*.fbcdn.net https://www.facebook.com https://*.strava.com https://strava-embeds.com`,
+    `img-src ${trustedDomains.join(" ")} data: blob: https://cdn.podioticket.com.br https://*.google.com https://*.googleapis.com https://*.gstatic.com https://*.googleusercontent.com https://www.instagram.com https://*.cdninstagram.com https://*.fbcdn.net https://www.facebook.com https://*.strava.com https://strava-embeds.com https://apata.io https://*.apata.io`,
     `media-src ${trustedDomains.join(" ")} data: blob:`,
     // worker-src e child-src: workers internos do Turnstile usam blob URLs
     `worker-src 'self' blob: https://challenges.cloudflare.com`,
