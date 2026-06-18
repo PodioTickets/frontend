@@ -456,10 +456,15 @@ export async function proxy(request: NextRequest) {
 
   // Braspag MPI 3DS 2.0: SDK carrega script de mpi(sandbox).braspag.com.br,
   // faz fetch para Cardinal Commerce (backend do MPI) e abre iframe do ACS do banco.
+  // Apata (apata.io) é o provedor de device fingerprint / coleta do 3DS usado pelo
+  // fluxo Braspag/Cardinal — o desafio/coleta carrega recursos de apata.io; sem
+  // liberar, a CSP bloqueia e a autenticação 3DS não acontece.
   const braspag3DSDomains = [
     "https://mpi.braspag.com.br",
     "https://mpisandbox.braspag.com.br",
     "https://*.cardinalcommerce.com",
+    "https://apata.io",
+    "https://*.apata.io",
   ];
   const braspag3DSCsp = braspag3DSDomains.join(" ");
 
