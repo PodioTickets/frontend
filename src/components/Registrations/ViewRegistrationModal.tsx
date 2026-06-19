@@ -10,6 +10,7 @@ import { X, ChevronLeft, ChevronRight, ChevronDown } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { useState, useMemo, useEffect, useCallback } from "react";
+import toast from "react-hot-toast";
 import { RegistrationQRCode } from "../QRCode/RegistrationQRCode";
 import { getAvatarUrl } from "@/utils/avatar";
 import { organizerService } from "@/services";
@@ -25,6 +26,9 @@ import {
   formatPersonPhone,
 } from "@/utils/documentDisplay";
 import { ImageWithInitialFallback } from "../ImageWithInitialFallback";
+import { Button } from "../Button";
+import { formatAnswer } from "@/utils/questionAnswer";
+import { isSemInteresseVariation } from "@/utils/semInteresseVariation";
 
 /** Badge exibido quando o organizador trocou a variação do produto do
  *  participante (snapshot `variationEdited: true`). */
@@ -36,17 +40,6 @@ function VariationEditedBadge() {
   );
 }
 
-function formatAnswer(answer: any): string {
-  if (answer == null) return "—";
-  if (Array.isArray(answer)) return answer.join(", ");
-  if (typeof answer === "string") {
-    try {
-      const parsed = JSON.parse(answer);
-      if (Array.isArray(parsed)) return parsed.join(", ");
-    } catch { }
-  }
-  return String(answer) || "—";
-}
 
 export function ViewRegistrationModal() {
   const { isOpen, closeViewRegistrationModal, data } = useViewRegistrationModal();
@@ -56,6 +49,7 @@ export function ViewRegistrationModal() {
   const [productsPage, setProductsPage] = useState(1);
   const [loadingRegistration, setLoadingRegistration] = useState(false);
   const [registrationData, setRegistrationData] = useState<any>(null);
+  const [isDownloadingTicket, setIsDownloadingTicket] = useState(false);
 
   const registrationId = useMemo(() => {
     return data?.registrationId || data?.registration?.id || null;
@@ -92,6 +86,31 @@ export function ViewRegistrationModal() {
       });
     }
   }, [closeViewRegistrationModal, openPaymentDetailsModal]);
+
+  /* Baixa o PDF do ingresso. O backend gera o arquivo a partir do snapshot
+   * imutável da inscrição (QR Code + dados do participante/produtos) e aplica o
+   * mesmo controle de acesso da visualização. Disparado por ID — não depende do
+   * payload já carregado, mas o gate visual garante que só aparece com dados. */
+  const handleDownloadTicket = useCallback(async () => {
+    if (!registrationId || isDownloadingTicket) return;
+    setIsDownloadingTicket(true);
+    try {
+      const { blob, filename } =
+        await organizerService.downloadRegistrationTicketPdf(registrationId);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    } catch {
+      toast.error("Erro ao baixar o ingresso. Tente novamente.");
+    } finally {
+      setIsDownloadingTicket(false);
+    }
+  }, [registrationId, isDownloadingTicket]);
 
   useEffect(() => {
     if (!isOpen || !registrationId) {
@@ -215,7 +234,16 @@ export function ViewRegistrationModal() {
   // Telefone recebe a máscara via util i18n (libphonenumber por país).
   const formatPhone = (phone?: string | null) =>
     formatPersonPhone(phone, participantCountry);
-  const participantCPF = participantCPFRaw || "—";
+
+  // Máscara parcial de PII para CPF exibido em resumos/cabeçalhos compactos.
+  const maskCpf = (cpf: string | null | undefined): string => {
+    if (!cpf) return "—";
+    const digits = cpf.replace(/\D/g, "");
+    if (digits.length < 11) return cpf;
+    return `***.${digits.slice(3, 6)}.${digits.slice(6, 9)}-**`;
+  };
+
+  const participantCPF = participantIsBr ? maskCpf(participantCPFRaw) : (participantCPFRaw || "—");
 
   /* birthDate: o snapshot manda date-only "YYYY-MM-DD". `new Date(date-only)` é
    * interpretado como UTC meia-noite → em BRT (UTC-3) volta pro dia anterior.
@@ -287,15 +315,23 @@ export function ViewRegistrationModal() {
       const images = Array.isArray(item.images) ? item.images : [];
       const image = images[item.primaryImageIndex ?? 0] ?? images[0];
       const unitPrice = item.unitPrice ?? item.basePrice ?? 0;
+      // Incluso no ingresso → mostra só "Incluído". Caso o snapshot não traga o
+      // flag, cai no proxy `unitPrice === 0` (incluso é cobrado 0).
+      const isIncluded = item.isIncludedInTicket ?? unitPrice === 0;
+      // Preço da variação selecionada é o TOTAL absoluto cobrado (ex.: 5555 =
+      // R$55,55). Sem preço específico (>0), usa o unitPrice/base.
+      const variationPrice = item.selectedVariation?.price;
+      const price =
+        variationPrice != null && variationPrice > 0 ? variationPrice : unitPrice;
       return {
         id: item.id,
         productName: item.name || "Produto",
         productImage: image || null,
         variationType: item.variationType || null,
         variationName: item.selectedVariation?.name || null,
-        price: unitPrice,
+        price: isIncluded ? 0 : price,
         quantity: item.quantity || 1,
-        isIncluded: unitPrice === 0,
+        isIncluded,
         // Backend sinaliza quando o organizador trocou a variação do participante.
         variationEdited: item.variationEdited === true,
       };
@@ -345,14 +381,34 @@ export function ViewRegistrationModal() {
   });
 
   // Priorizar: registration.products > kitItems > includedProducts
-  const products = mappedRegistrationProducts.length > 0
+  const rawProducts = mappedRegistrationProducts.length > 0
     ? mappedRegistrationProducts
     : kitItems.length > 0
       ? mappedKitItems
       : mappedIncludedProducts;
 
+  // Variação "Sem interesse" = opt-out do kit: o participante recusou o produto.
+  // Não deve aparecer na listagem de produtos da inscrição.
+  const products = rawProducts.filter(
+    (product: any) =>
+      !(product.variationName && isSemInteresseVariation({ name: product.variationName })),
+  );
+
   // Formatar telefone
 
+  /* Botão de download do ingresso (PDF). Definido uma vez e reutilizado nos
+   * rodapés mobile e desktop — mesma ação/estado de loading nos dois layouts. */
+  const downloadTicketButton = (
+    <Button
+      type="button"
+      variant={"outline"}
+      onClick={handleDownloadTicket}
+      disabled={isDownloadingTicket}
+      className="flex w-full md:w-auto border-gray-6 text-gray-12 items-center justify-center gap-2 px-5 py-2.5 font-family-dm-sans disabled:cursor-not-allowed disabled:opacity-60 cursor-pointer"
+    >
+      {isDownloadingTicket ? "Gerando ingresso..." : "Baixar ingresso"}
+    </Button>
+  );
 
   return (
     <>
@@ -593,6 +649,11 @@ export function ViewRegistrationModal() {
                       </p>
                     )}
                   </div>
+                </div>
+
+                {/* Footer: baixar ingresso (PDF) */}
+                <div className="shrink-0 border-t border-gray-6 bg-gray-1 px-4 py-3">
+                  {downloadTicketButton}
                 </div>
               </div>
 
@@ -908,6 +969,11 @@ export function ViewRegistrationModal() {
                       </div>
                     </div>
                   </div>
+                </div>
+
+                {/* Footer: baixar ingresso (PDF) */}
+                <div className="flex items-center justify-start px-5 py-3 border-t border-gray-6">
+                  {downloadTicketButton}
                 </div>
               </div>
             </motion.div>

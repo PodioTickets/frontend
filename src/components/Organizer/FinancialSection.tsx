@@ -1,10 +1,16 @@
 "use client";
 
 import { useRef, useCallback } from "react";
+import toast from "react-hot-toast";
 import { cn } from "@/utils/cn";
+import { Checkbox } from "@/components/CheckBox";
 import { PixIcon } from "@/components/Icons/PixIcon";
 import { CardIcon } from "@/components/Icons/CardIcon";
 import { InfoIcon } from "@/components/Icons/InfoIcon";
+import {
+  ACCEPTED_PAYMENT_METHODS,
+  type AcceptedPaymentMethod,
+} from "@/interfaces/event";
 
 const DEFAULT_TOTAL_FEE = 6;
 const BASE_SIMULATION = 100;
@@ -16,9 +22,18 @@ interface FinancialSectionProps {
   onMaxInstallmentsChange: (value: 1 | 2 | 3) => void;
   /** When true, slider and installment buttons are read-only */
   readOnly?: boolean;
+  /**
+   * Readonly só do card "Formas de pagamento aceitas" (checkboxes + parcelamento).
+   * Default: acompanha `readOnly`. Permite taxa travada + pagamento editável
+   * (organizador pós-publicação).
+   */
+  paymentMethodsReadOnly?: boolean;
   /** Total platform fee — editable when onTotalFeeChange is provided (admin only) */
   totalFee?: number;
   onTotalFeeChange?: (value: number) => void;
+  /** Formas de pagamento aceitas no checkout (default: todas). */
+  acceptedPaymentMethods?: AcceptedPaymentMethod[];
+  onAcceptedPaymentMethodsChange?: (value: AcceptedPaymentMethod[]) => void;
 }
 
 export function FinancialSection({
@@ -27,10 +42,37 @@ export function FinancialSection({
   onOrganizerPercentChange,
   onMaxInstallmentsChange,
   readOnly = false,
+  paymentMethodsReadOnly,
   totalFee,
   onTotalFeeChange,
+  acceptedPaymentMethods,
+  onAcceptedPaymentMethodsChange,
 }: FinancialSectionProps) {
   const trackRef = useRef<HTMLDivElement>(null);
+
+  // Card de pagamento herda o readOnly geral quando não especificado
+  const pmReadOnly = paymentMethodsReadOnly ?? readOnly;
+
+  const accepted = acceptedPaymentMethods ?? [...ACCEPTED_PAYMENT_METHODS];
+  const isAccepted = (method: AcceptedPaymentMethod) => accepted.includes(method);
+
+  const toggleMethod = useCallback(
+    (method: AcceptedPaymentMethod) => {
+      if (pmReadOnly || !onAcceptedPaymentMethodsChange) return;
+      const current = acceptedPaymentMethods ?? [...ACCEPTED_PAYMENT_METHODS];
+      // O checkout exige ao menos uma forma de pagamento — bloqueia desmarcar a última
+      if (current.includes(method) && current.length === 1) {
+        toast.error("Pelo menos uma forma de pagamento deve ficar ativa");
+        return;
+      }
+      // Deriva da ordem canônica → array estável pra comparação no dirty-check
+      const next = ACCEPTED_PAYMENT_METHODS.filter((m) =>
+        m === method ? !current.includes(m) : current.includes(m),
+      );
+      onAcceptedPaymentMethodsChange(next);
+    },
+    [pmReadOnly, onAcceptedPaymentMethodsChange, acceptedPaymentMethods],
+  );
 
   const totalFeeValue = totalFee ?? DEFAULT_TOTAL_FEE;
   const participantPercent = parseFloat((totalFeeValue - organizerPercent).toFixed(2));
@@ -215,7 +257,7 @@ export function FinancialSection({
             Formas de pagamento aceitas
           </h2>
           <p className="font-family-dm-sans text-base leading-[1.3] text-gray-11">
-            {readOnly
+            {pmReadOnly
               ? "Formas de pagamento configuradas para este evento."
               : "Escolha como os participantes poderão pagar pela inscrição."}
           </p>
@@ -223,64 +265,98 @@ export function FinancialSection({
 
         <div className="flex flex-col gap-5">
           {/* PIX */}
-          <div className="flex items-center gap-5 rounded-lg border border-gray-6 bg-gray-2 p-5">
-            <PixIcon className="size-10 shrink-0" />
-            <span className="font-manrope text-lg font-extrabold leading-[1.1] text-gray-12">
-              PIX
-            </span>
+          <div className="flex items-center justify-between gap-4 rounded-lg border border-gray-6 bg-gray-2 p-5">
+            <div className="flex items-center gap-5">
+              <PixIcon className="size-10 shrink-0" />
+              <span className="font-manrope text-lg font-extrabold leading-[1.1] text-gray-12">
+                PIX
+              </span>
+            </div>
+            <Checkbox
+              aria-label="Aceitar pagamento via PIX"
+              checked={isAccepted("PIX")}
+              onCheckedChange={() => toggleMethod("PIX")}
+              disabled={pmReadOnly}
+              className="size-7"
+            />
           </div>
 
           {/* Debit card */}
           <div className="flex flex-col overflow-hidden rounded-lg border border-gray-6 bg-gray-2">
-            <div className="flex items-center gap-5 p-5">
-              <CardIcon className="size-10 shrink-0 text-gray-12" />
-              <div className="flex flex-col gap-2">
-                <span className="font-manrope text-lg font-extrabold leading-[1.1] text-gray-12">
-                  Cartão de débito
-                </span>
-                <span className="font-family-dm-sans text-base font-medium leading-[1.3] text-gray-11">
-                  Aceita Visa, Mastercard, Elo, Hipercard e American Express
-                </span>
+            <div className="flex items-center justify-between gap-4 p-5">
+              <div className="flex items-center gap-5">
+                <CardIcon className="size-10 shrink-0 text-gray-12" />
+                <div className="flex flex-col gap-2">
+                  <span className="font-manrope text-lg font-extrabold leading-[1.1] text-gray-12">
+                    Cartão de débito
+                  </span>
+                  <span className="font-family-dm-sans text-base font-medium leading-[1.3] text-gray-11">
+                    Aceita Visa, Mastercard, Elo, Hipercard e American Express
+                  </span>
+                </div>
               </div>
+              <Checkbox
+                aria-label="Aceitar pagamento com cartão de débito"
+                checked={isAccepted("DEBIT_CARD")}
+                onCheckedChange={() => toggleMethod("DEBIT_CARD")}
+                disabled={pmReadOnly}
+                className="size-7"
+              />
             </div>
           </div>
 
           {/* Credit card */}
           <div className="flex flex-col overflow-hidden rounded-lg border border-gray-6 bg-gray-2">
-            <div className="flex items-center gap-5 border-b border-gray-6 p-5">
-              <CardIcon className="size-10 shrink-0 text-gray-12" />
-              <div className="flex flex-col gap-2">
-                <span className="font-manrope text-lg font-extrabold leading-[1.1] text-gray-12">
-                  Cartão de crédito
-                </span>
-                <span className="font-family-dm-sans text-base font-medium leading-[1.3] text-gray-11">
-                  Aceita Visa, Mastercard, Elo, Hipercard e American Express
-                </span>
+            <div
+              className={cn(
+                "flex items-center justify-between gap-4 p-5",
+                isAccepted("CREDIT_CARD") && "border-b border-gray-6",
+              )}
+            >
+              <div className="flex items-center gap-5">
+                <CardIcon className="size-10 shrink-0 text-gray-12" />
+                <div className="flex flex-col gap-2">
+                  <span className="font-manrope text-lg font-extrabold leading-[1.1] text-gray-12">
+                    Cartão de crédito
+                  </span>
+                  <span className="font-family-dm-sans text-base font-medium leading-[1.3] text-gray-11">
+                    Aceita Visa, Mastercard, Elo, Hipercard e American Express
+                  </span>
+                </div>
               </div>
+              <Checkbox
+                aria-label="Aceitar pagamento com cartão de crédito"
+                checked={isAccepted("CREDIT_CARD")}
+                onCheckedChange={() => toggleMethod("CREDIT_CARD")}
+                disabled={pmReadOnly}
+                className="size-7"
+              />
             </div>
 
+            {/* Parcelamento só faz sentido com crédito habilitado */}
+            {isAccepted("CREDIT_CARD") && (
             <div className="flex flex-col gap-5 p-5">
               <div className="flex flex-col gap-4">
                 <span className="font-manrope text-base font-semibold leading-[1.1] text-gray-12">
-                  {readOnly ? "Parcelamento configurado" : "Em quantas vezes o participante pode parcelar?"}
+                  {pmReadOnly ? "Parcelamento configurado" : "Em quantas vezes o participante pode parcelar?"}
                 </span>
-                {!readOnly && (
+                {!pmReadOnly && (
                   <span className="font-family-dm-sans text-base leading-[1.3] text-gray-11">
                     Você pode oferecer parcelamento em até 3 vezes sem juros. Por padrão, parcelamos em 1x
                   </span>
                 )}
               </div>
-              <div className={cn("flex flex-wrap gap-3", readOnly && "pointer-events-none")}>
+              <div className={cn("flex flex-wrap gap-3", pmReadOnly && "pointer-events-none")}>
                 {([1, 2, 3] as const).map((n) => (
                   <button
                     key={n}
                     type="button"
-                    onClick={() => !readOnly && onMaxInstallmentsChange(n)}
+                    onClick={() => !pmReadOnly && onMaxInstallmentsChange(n)}
                     className={cn(
                       "flex flex-1 flex-col items-center justify-center gap-5 rounded-lg border px-8 py-7 transition-colors",
                       maxInstallments === n
                         ? "border-[#46a758] bg-[#daf1db] text-[#203c25]"
-                        : readOnly
+                        : pmReadOnly
                           ? "border-gray-6 bg-gray-3 text-gray-11"
                           : "border-gray-6 bg-gray-2 text-gray-12",
                     )}
@@ -291,7 +367,7 @@ export function FinancialSection({
                     <span
                       className={cn(
                         "font-family-dm-sans text-base font-medium leading-[1.3]",
-                        maxInstallments === n ? "text-[#203c25]" : readOnly ? "text-gray-11" : "text-gray-11",
+                        maxInstallments === n ? "text-[#203c25]" : "text-gray-11",
                       )}
                     >
                       {n === 1 ? "À vista" : "Sem juros"}
@@ -300,6 +376,7 @@ export function FinancialSection({
                 ))}
               </div>
             </div>
+            )}
           </div>
         </div>
       </div>

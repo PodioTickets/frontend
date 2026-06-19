@@ -24,6 +24,7 @@ import {
   EventPublicInfoCardDesktop,
   EventPublicInfoCardMobile,
 } from "@/components/Event/EventPublicInfoCard";
+import { TopicsPreviewKitsSection } from "@/components/Event/TopicsPreviewKitsSection";
 
 export const dynamic = "force-dynamic";
 
@@ -184,38 +185,30 @@ export default function PreviewEventPage() {
                 </div>
               ))}
 
-              {/* Kits */}
-              {kits.length > 0 && (
+              {/* Regulamento — espelha a página pública do evento (vem logo
+                  após os tópicos, quando houver regulationUrl). */}
+              {event?.regulationUrl && (
                 <div className="border-b border-gray-8 py-10 w-full">
                   <div className="flex flex-col gap-6 items-start">
                     <h2 className="text-gray-12 text-2xl font-bold font-manrope leading-[1.1]">
-                      Kits
+                      Regulamento
                     </h2>
-                    <div
-                      className="text-gray-11 text-base font-family-dm-sans leading-[1.3] prose prose-sm max-w-none"
-                      dangerouslySetInnerHTML={{
-                        __html: kits.map((kit) => kit.description || "").filter(Boolean).join(" ") || "Informações sobre os kits do evento."
-                      }}
-                    />
-                    {kits[0] && (
-                      <div className="flex items-start w-full">
-                        <div className="aspect-192/184 border border-gray-6 rounded-lg relative w-[192px] overflow-hidden">
-                          <ImageWithInitialFallback
-                            src={kits[0].imageUrl}
-                            alt={kits[0].name}
-                            name={kits[0].name}
-                            fill
-                            sizes="192px"
-                            className="size-full rounded-lg border-transparent border-0"
-                            letterClassName="text-3xl font-semibold"
-                          />
-                        </div>
-                      </div>
-                    )}
-
+                    <a
+                      href={event.regulationUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-sm text-primary-11 font-medium underline hover:text-primary-10"
+                    >
+                      <Button variant="outline" className="text-gray-12 border-gray-6">
+                        Ler regulamento
+                      </Button>
+                    </a>
                   </div>
                 </div>
               )}
+
+              {/* Kits */}
+              <TopicsPreviewKitsSection kits={kits} />
 
               {/* Mapa */}
               {event?.city && event?.state && (
@@ -225,7 +218,7 @@ export default function PreviewEventPage() {
                   </h2>
                   <div className="h-[310px] relative rounded-xl w-full overflow-hidden">
                     <div className="w-full h-full rounded-xl">
-                      <EventMap city={event.city} state={event.state} title={event.name} />
+                      <EventMap city={event.city} state={event.state} title={event.name} googleMapsLink={event.googleMapsLink} />
                     </div>
                   </div>
                   <Button disabled variant="outline" className="border-gray-6 text-gray-12 text-base font-bold px-11 h-12">

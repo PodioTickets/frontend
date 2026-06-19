@@ -59,8 +59,10 @@ function resolvePreviewPrice(
   preview: CouponPreviewResult | null | undefined,
   ticketQuantity?: number,
   voucherFreeTicketId?: string | null,
+  couponConditionsMet: boolean = true,
 ): { discounted: number; original: number; hasDiscount: boolean } {
-  if (!preview) return { discounted: price, original: price, hasDiscount: false };
+  const full = { discounted: price, original: price, hasDiscount: false };
+  if (!preview) return full;
   if (preview.kind === "voucher") {
     const isFree =
       !!voucherFreeTicketId &&
@@ -68,8 +70,16 @@ function resolvePreviewPrice(
       (ticketQuantity ?? 0) <= 1;
     return isFree
       ? { discounted: 0, original: price, hasDiscount: price > 0 }
-      : { discounted: price, original: price, hasDiscount: false };
+      : full;
   }
+  // Cupom: só risca se as condições globais (minCartValue/minQuantity) já estão
+  // atendidas — senão o card mostraria um preço descontado que o resumo ainda
+  // não aplica ("aplicar em silêncio"). E só nos ingressos cobertos por
+  // `appliesTo` (null/vazio = todos); fora da lista, mantém o preço cheio.
+  if (!couponConditionsMet) return full;
+  const allowed = preview.appliesTo;
+  const isEligible = !allowed || allowed.length === 0 || allowed.includes(ticketId);
+  if (!isEligible) return full;
   return applyCouponPreviewToPrice(price, preview);
 }
 
@@ -90,6 +100,10 @@ interface TicketCategoryCardProps {
   /** Id do ingresso "vencedor" do voucher (maior valor entre os elegíveis) —
    *  o único card que o voucher zera. Calculado no step (lista global). */
   voucherFreeTicketId?: string | null;
+  /** Condições globais do cupom de link (minCartValue/minQuantity) atendidas.
+   *  `false` suprime o strike-through nos cards — o appliesTo (quais ingressos)
+   *  já vem no próprio preview. Default `true` (sem cupom de link gated). */
+  couponConditionsMet?: boolean;
 }
 
 const formatPrice = (price: number) => {
@@ -149,6 +163,7 @@ const TicketItemMobile = memo(({
   couponPreview,
   userAge,
   voucherFreeTicketId,
+  couponConditionsMet,
 }: {
   ticket: Ticket;
   event: Event;
@@ -161,6 +176,8 @@ const TicketItemMobile = memo(({
   couponPreview?: CouponPreviewResult | null;
   userAge?: number | null;
   voucherFreeTicketId?: string | null;
+  /** Condições globais do cupom de link atendidas (suprime strike se false). */
+  couponConditionsMet?: boolean;
 }) => {
   const [isImageModalOpen, setIsImageModalOpen] = useState(false);
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
@@ -179,8 +196,8 @@ const TicketItemMobile = memo(({
       : userAge !== null && !isAgeWithinTicketLimit(userAge, ticket.ageLimit));
   const modalityInfo = useMemo(() => getCheckoutModalityInfo(ticket, event), [ticket, event]);
   const priceBreakdown = useMemo(
-    () => resolvePreviewPrice(price, ticket.id, couponPreview, quantity, voucherFreeTicketId),
-    [price, ticket.id, couponPreview, quantity, voucherFreeTicketId],
+    () => resolvePreviewPrice(price, ticket.id, couponPreview, quantity, voucherFreeTicketId, couponConditionsMet),
+    [price, ticket.id, couponPreview, quantity, voucherFreeTicketId, couponConditionsMet],
   );
 
   const productItems = useMemo(
@@ -224,7 +241,7 @@ const TicketItemMobile = memo(({
   const isSingleImageLayout = productItems.length === 1;
 
   return (
-    <div className="bg-gray-2 border border-gray-6 rounded-xl p-4 flex flex-col gap-6">
+    <div className="bg-gray-2 border border-gray-6 rounded-xl p-4 flex flex-col gap-2 md:gap-6">
       {isSingleImageLayout ? (
         <div className="flex gap-3 items-start w-full">
           {/* Imagem principal */}
@@ -366,7 +383,7 @@ const TicketItemMobile = memo(({
             </div>
           )}
 
-          <div className="flex flex-col gap-5">
+          <div className="flex flex-col gap-2">
             <div className="flex flex-col gap-1">
               <h2 className="text-lg font-bold text-gray-12 font-manrope leading-[1.1]">
                 {ticket.name}
@@ -504,6 +521,7 @@ const TicketItemDesktop = memo(({
   couponPreview,
   userAge,
   voucherFreeTicketId,
+  couponConditionsMet,
 }: {
   ticket: Ticket;
   event: Event;
@@ -516,6 +534,8 @@ const TicketItemDesktop = memo(({
   couponPreview?: CouponPreviewResult | null;
   userAge?: number | null;
   voucherFreeTicketId?: string | null;
+  /** Condições globais do cupom de link atendidas (suprime strike se false). */
+  couponConditionsMet?: boolean;
 }) => {
   const [isImageModalOpen, setIsImageModalOpen] = useState(false);
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
@@ -535,8 +555,8 @@ const TicketItemDesktop = memo(({
       : userAge !== null && !isAgeWithinTicketLimit(userAge, ticket.ageLimit));
   const modalityInfo = useMemo(() => getCheckoutModalityInfo(ticket, event), [ticket, event]);
   const priceBreakdown = useMemo(
-    () => resolvePreviewPrice(price, ticket.id, couponPreview, quantity, voucherFreeTicketId),
-    [price, ticket.id, couponPreview, quantity, voucherFreeTicketId],
+    () => resolvePreviewPrice(price, ticket.id, couponPreview, quantity, voucherFreeTicketId, couponConditionsMet),
+    [price, ticket.id, couponPreview, quantity, voucherFreeTicketId, couponConditionsMet],
   );
 
   const productItems = useMemo(
@@ -799,6 +819,7 @@ export function TicketCategoryCard({
   userAge,
   couponPreviewOverride,
   voucherFreeTicketId,
+  couponConditionsMet = true,
 }: TicketCategoryCardProps) {
   const kitSelectionDisplay = kitSelectionDisplayProp ?? defaultEventKitSelectionDisplay();
   const [isExpanded, setIsExpanded] = useState(expandedByDefault ?? index === 0);
@@ -836,12 +857,12 @@ export function TicketCategoryCard({
     for (const t of validTickets) {
       dMin = Math.min(
         dMin,
-        resolvePreviewPrice(getTicketPrice(t), t.id, effectivePreview, raceQuantities[t.id] || 0, voucherFreeTicketId).discounted,
+        resolvePreviewPrice(getTicketPrice(t), t.id, effectivePreview, raceQuantities[t.id] || 0, voucherFreeTicketId, couponConditionsMet).discounted,
       );
     }
     const discounted = dMin === Infinity ? minPrice : dMin;
     return { discounted, original: minPrice, hasDiscount: discounted < minPrice };
-  }, [validTickets, minPrice, effectivePreview, raceQuantities, voucherFreeTicketId]);
+  }, [validTickets, minPrice, effectivePreview, raceQuantities, voucherFreeTicketId, couponConditionsMet]);
 
   const showCategoryLevelKit =
     !!categoryId &&
@@ -898,6 +919,7 @@ export function TicketCategoryCard({
               couponPreview={effectivePreview}
               userAge={userAge}
               voucherFreeTicketId={voucherFreeTicketId}
+              couponConditionsMet={couponConditionsMet}
             />
           ))}
         </div>
@@ -916,6 +938,7 @@ export function TicketCategoryCard({
               couponPreview={effectivePreview}
               userAge={userAge}
               voucherFreeTicketId={voucherFreeTicketId}
+              couponConditionsMet={couponConditionsMet}
             />
           ))}
         </div>
@@ -933,7 +956,7 @@ export function TicketCategoryCard({
             onClick={handleToggle}
           >
             <div className="flex flex-1 items-center gap-3 min-w-0">
-              {showCategoryLevelKit && headerThumbItem ? (
+              {showCategoryLevelKit && headerThumbItem && !isExpanded ? (
                 <div className="size-20 shrink-0 rounded-lg border border-gray-6 overflow-hidden relative bg-gray-2">
                   <ImageWithInitialFallback
                     src={headerThumbItem.src}
@@ -948,17 +971,17 @@ export function TicketCategoryCard({
                 </div>
               ) : null}
               <div className="flex flex-col gap-1 min-w-0">
-                <h1 className="text-xl font-bold text-gray-12 font-manrope leading-[1.1]">
+                <h1 className="text-lg font-bold text-gray-12 font-manrope break-normal line-clamp-2">
                   {categoryName}
                 </h1>
                 {!isExpanded ? (
                   <div className="flex flex-wrap items-center gap-1 text-base">
                     <p className="text-gray-11 font-family-dm-sans leading-[1.3]">A partir de:</p>
-                    <span className="text-gray-12 font-bold font-manrope leading-[1.1]">
+                    <span className="text-gray-12 font-bold font-manrope">
                       {formatDisplayPrice(minPriceBreakdown)}
                     </span>
                     {minPriceBreakdown.hasDiscount && (
-                      <span className="text-gray-11 text-sm font-medium font-manrope leading-[1.1] line-through">
+                      <span className="text-gray-11 text-sm font-medium font-manrope line-through">
                         {formatPrice(minPrice)}
                       </span>
                     )}
@@ -973,7 +996,7 @@ export function TicketCategoryCard({
             className="overflow-hidden transition-all duration-200 ease-out"
             style={{ maxHeight: isExpanded ? "10000px" : "0", opacity: isExpanded ? 1 : 0 }}
           >
-            <div className="px-4 pb-7 border-t border-gray-6 flex flex-col gap-6 pt-6">
+            <div className="px-4 pb-6 border-t border-gray-6 flex flex-col gap-6 pt-6">
               {categoryDescription?.trim() ? (
                 <p className="text-sm text-gray-11 font-family-dm-sans leading-[1.3] ">
                   {categoryDescription.trim()}
@@ -1002,6 +1025,7 @@ export function TicketCategoryCard({
                     couponPreview={effectivePreview}
                     userAge={userAge}
                     voucherFreeTicketId={voucherFreeTicketId}
+                    couponConditionsMet={couponConditionsMet}
                   />
                 ))}
               </div>
@@ -1087,6 +1111,7 @@ export function TicketCategoryCard({
                     couponPreview={effectivePreview}
                     userAge={userAge}
                     voucherFreeTicketId={voucherFreeTicketId}
+                    couponConditionsMet={couponConditionsMet}
                   />
                 ))}
               </div>

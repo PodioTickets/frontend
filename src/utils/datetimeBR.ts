@@ -14,7 +14,7 @@
  * passe as MESMAS `options`; `timeZone` é forçado para "UTC".
  */
 
-type DateInput = string | number | Date | null | undefined;
+export type DateInput = string | number | Date | null | undefined;
 
 /**
  * Converte a entrada num `Date` representando o instante correto. Date-only
@@ -81,4 +81,45 @@ export function formatTimeBR(
   options: Intl.DateTimeFormatOptions = DEFAULT_TIME_OPTS,
 ): string {
   return formatDateTimeBR(value, options);
+}
+
+/**
+ * Fuso de Brasília. Sem horário de verão desde 2019 (UTC-3 fixo), mas usamos o
+ * nome da timezone (não offset cravado) pra o runtime resolver corretamente
+ * também datas históricas.
+ */
+const TZ_BR = "America/Sao_Paulo";
+
+/**
+ * Formata um INSTANTE REAL (ex.: data/hora de pagamento/compra, criação do
+ * pedido) no fuso de BRASÍLIA. Diferente dos helpers UTC acima: estes são para
+ * timestamps que representam um momento real no tempo (ISO com `Z`), onde o
+ * usuário espera ver o horário local de Brasília.
+ *
+ * ⚠️ NÃO use para a data "wall-clock" do evento — essa é naïve (sem fuso) e deve
+ * continuar nos helpers UTC, senão o dia desloca.
+ */
+export function formatInstantBRT(
+  value: DateInput,
+  options: Intl.DateTimeFormatOptions = { ...DEFAULT_DATE_OPTS, ...DEFAULT_TIME_OPTS },
+): string {
+  const d = toUtcDate(value);
+  if (!d) return "";
+  return new Intl.DateTimeFormat("pt-BR", { ...options, timeZone: TZ_BR }).format(d);
+}
+
+/** Atalho: só a DATA do instante (default `dd/mm/aaaa`), fuso de Brasília. */
+export function formatDateBRT(
+  value: DateInput,
+  options: Intl.DateTimeFormatOptions = DEFAULT_DATE_OPTS,
+): string {
+  return formatInstantBRT(value, options);
+}
+
+/** Atalho: só a HORA do instante (default `HH:mm`, 24h), fuso de Brasília. */
+export function formatTimeBRT(
+  value: DateInput,
+  options: Intl.DateTimeFormatOptions = DEFAULT_TIME_OPTS,
+): string {
+  return formatInstantBRT(value, options);
 }

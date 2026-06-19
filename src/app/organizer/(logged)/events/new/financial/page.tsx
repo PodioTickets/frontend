@@ -12,6 +12,10 @@ import { WizardStepLayout } from "@/components/Organizer/WizardStepLayout";
 import { FinancialSection } from "@/components/Organizer/FinancialSection";
 import toast from "react-hot-toast";
 import { cn } from "@/utils/cn";
+import {
+  ACCEPTED_PAYMENT_METHODS,
+  type AcceptedPaymentMethod,
+} from "@/interfaces/event";
 
 export default function FinancialPage() {
   const orgNav = useOrganizerNavigate();
@@ -20,6 +24,10 @@ export default function FinancialPage() {
   const { openPublishEventModal } = usePublishEventModal();
   const [organizerPercent, setOrganizerPercent] = useState(() => formData.organizerFeePercent ?? 0);
   const [maxInstallments, setMaxInstallments] = useState<1 | 2 | 3>(() => formData.maxInstallments ?? 1);
+  const [acceptedPaymentMethods, setAcceptedPaymentMethods] = useState<AcceptedPaymentMethod[]>(
+    // Rascunhos antigos (sem o campo) caem no default = todas as formas
+    () => (formData.acceptedPaymentMethods?.length ? formData.acceptedPaymentMethods : [...ACCEPTED_PAYMENT_METHODS]),
+  );
 
   useEffect(() => {
     updateFormData({ organizerFeePercent: organizerPercent });
@@ -29,6 +37,10 @@ export default function FinancialPage() {
     updateFormData({ maxInstallments });
   }, [maxInstallments]);
 
+  useEffect(() => {
+    updateFormData({ acceptedPaymentMethods });
+  }, [acceptedPaymentMethods]);
+
   const handleBack = () => {
     orgNav.push("/organizer/events/new/questionnaire");
   };
@@ -36,7 +48,12 @@ export default function FinancialPage() {
   const saveFinancialSettings = async (eventId: string) => {
     try {
       const participantFeePercent = parseFloat((6 - organizerPercent).toFixed(2));
-      await organizerService.saveFinancialSettings(eventId, organizerPercent, participantFeePercent, maxInstallments);
+      await organizerService.saveFinancialSettings(eventId, {
+        organizerFeePercent: organizerPercent,
+        participantFeePercent,
+        maxInstallments,
+        acceptedPaymentMethods,
+      });
     } catch {
       // endpoint pode ainda não existir no servidor — não bloqueia o fluxo
     }
@@ -108,6 +125,8 @@ export default function FinancialPage() {
         maxInstallments={maxInstallments}
         onOrganizerPercentChange={setOrganizerPercent}
         onMaxInstallmentsChange={setMaxInstallments}
+        acceptedPaymentMethods={acceptedPaymentMethods}
+        onAcceptedPaymentMethodsChange={setAcceptedPaymentMethods}
       />
     </WizardStepLayout>
   );

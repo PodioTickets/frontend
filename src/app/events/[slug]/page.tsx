@@ -14,7 +14,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { RegistrationCountdown } from "@/components/Event/RegistrationCountdown";
 import { ShareIcon } from "@/components/Icons/ShareIcon";
 import { ShareModal } from "@/components/ShareModal";
-import { ContactOrganizerModal } from "@/components/Event/ContactOrganizerModal";
+import { ContactOrganizerFlow } from "@/components/Event/ContactOrganizerFlow";
 import { Fragment, useState, useEffect, useMemo, useRef } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useLoginModal } from "@/stores/modalStore";
@@ -29,10 +29,22 @@ import { getEnabledTopicsSorted } from "@/lib/eventTopicSections";
 import { normalizeTopicHtmlAnchorHrefs } from "@/lib/normalizeTopicHtmlLinks";
 import { TopicRichContent } from "@/components/TopicRichContent";
 import { trackMetaPixel } from "@/lib/metaPixel";
+import { trackEventPageView } from "@/lib/activityTelemetry";
 import { InstagramIcon } from "@/components/Icons/InstagramIcon";
 import { FacebookIcon } from "@/components/Icons/FacebookIcon";
 import { YoutubeIcon } from "@/components/Icons/YoutubeIcon";
 import { TiktokIcon } from "@/components/Icons/TiktokIcon";
+
+const sanitizeUrl = (url: string | null | undefined): string | null => {
+  if (!url) return null;
+  try {
+    const parsed = new URL(url);
+    if (parsed.protocol !== 'https:' && parsed.protocol !== 'http:') return null;
+    return url;
+  } catch {
+    return null;
+  }
+};
 
 function OrganizerAvatar({
   logoUrl,
@@ -109,6 +121,13 @@ export default function EventPage() {
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: "instant" });
   }, [eventSlug]);
+
+  // Telemetria interna — page view do evento (topo do funil de compra no
+  // /admin/atividade). Throttle interno de 30s por evento absorve StrictMode.
+  useEffect(() => {
+    if (!event?.id) return;
+    trackEventPageView(event.id, eventSlug);
+  }, [event?.id, eventSlug]);
 
   // Meta Pixel — ViewContent: abriu a página do evento. Dedup por evento na
   // sessão (sessionStorage) → não re-dispara em F5 na mesma aba.
@@ -220,7 +239,11 @@ export default function EventPage() {
   const eventSuspendedByOrganizer =
     event.status === "SUSPENDED" || event.isSuspended === true;
 
-  const mapsUrl = event.googleMapsLink?.trim() ?? ""
+  const mapsUrl = sanitizeUrl(event.googleMapsLink?.trim()) ?? ""
+
+  const safeStravaId = event.stravaRouteId && /^\d+$/.test(event.stravaRouteId)
+    ? event.stravaRouteId
+    : null;
 
   // Banner visível (desktop): controla a coluna esquerda (banner + tópicos).
   const hasBanner = !!event.bannerUrl && event.bannerUrl.trim() !== "" && !imageError;
@@ -308,9 +331,9 @@ export default function EventPage() {
                   <path d="M2.5 7.5H17.5" stroke="#202020" stroke-width="1" strokeLinecap="round" />
                 </svg>
 
-                <span className="text-sm">
+                {event.registrationEndDate && <span className="text-sm">
                   Inscrições até {formatDate(new Date(event.registrationEndDate))}
-                </span>
+                </span>}
               </div>
               <div className="flex items-center gap-2 text-gray-12">
                 <LocationIcon className="size-5 text-gray-12 shrink-0" />
@@ -327,11 +350,11 @@ export default function EventPage() {
 
 
                 const socialLinks = [
-                  { url: event.instagram, icon: InstagramIcon },
-                  { url: event.facebook, icon: FacebookIcon },
-                  { url: event.youtube, icon: YoutubeIcon },
-                  { url: event.tiktok, icon: TiktokIcon },
-                  { url: event.website, icon: GlobeIcon },
+                  { url: sanitizeUrl(event.instagram), icon: InstagramIcon },
+                  { url: sanitizeUrl(event.facebook), icon: FacebookIcon },
+                  { url: sanitizeUrl(event.youtube), icon: YoutubeIcon },
+                  { url: sanitizeUrl(event.tiktok), icon: TiktokIcon },
+                  { url: sanitizeUrl(event.website), icon: GlobeIcon },
                 ]
 
 
@@ -517,6 +540,7 @@ export default function EventPage() {
                 city={event.city}
                 state={event.state}
                 title={event.name}
+                googleMapsLink={mapsUrl}
               />
             </div>
             <Button
@@ -528,7 +552,7 @@ export default function EventPage() {
           </div>
 
           {/* Strava */}
-          {event.stravaRouteId && (
+          {safeStravaId && (
             <div className="border border-gray-6 rounded-lg p-4">
               <h2 className="text-base font-bold text-gray-12 mb-3">Strava</h2>
               <div className="w-full h-[300px] rounded-lg overflow-hidden border border-gray-6 mb-3">
@@ -537,7 +561,7 @@ export default function EventPage() {
                   width="100%"
                   frameBorder="0"
                   scrolling="no"
-                  src={`https://www.strava.com/routes/${event.stravaRouteId}/embed`}
+                  src={`https://www.strava.com/routes/${safeStravaId}/embed`}
                   title={`Rota do ${event.name} no Strava`}
                   className="w-full h-full"
                   allowFullScreen
@@ -573,7 +597,7 @@ export default function EventPage() {
                   <path d="M7.5 12.4997L8.83616 13.5686C9.25403 13.9029 9.86103 13.849 10.2134 13.4462L12.5 10.833" stroke="#202020" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" />
                   <path d="M2.5 7.5H17.5" stroke="#202020" strokeWidth="1" strokeLinecap="round" />
                 </svg>
-                <span className="text-xs">Inscrições até {formatDate(new Date(event.registrationEndDate))}</span>
+                {event.registrationEndDate && <span className="text-xs">Inscrições até {formatDate(new Date(event.registrationEndDate))}</span>}
               </div>
             </div>
 
@@ -714,14 +738,14 @@ export default function EventPage() {
               ))}
 
               {/* Regulamento - exibido como tópico quando houver regulationUrl */}
-              {event.regulationUrl && (
+              {sanitizeUrl(event.regulationUrl) && (
                 <>
                   <div className="flex flex-col gap-6 my-10">
                     <h1 className="text-2xl font-bold text-gray-12">
                       Regulamento
                     </h1>
                     <a
-                      href={event.regulationUrl}
+                      href={sanitizeUrl(event.regulationUrl)!}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="text-sm text-primary-11 font-medium underline hover:text-primary-10"
@@ -745,10 +769,11 @@ export default function EventPage() {
                   city={event.city}
                   state={event.state}
                   title={event.name}
+                  googleMapsLink={mapsUrl}
                 />
               </div>
 
-              {event.stravaRouteId && (
+              {safeStravaId && (
                 <>
                   <div className="w-full h-px bg-gray-6" />
                   <div className="flex flex-col gap-4 mt-10">
@@ -763,7 +788,7 @@ export default function EventPage() {
                         width="100%"
                         frameBorder="0"
                         scrolling="no"
-                        src={`https://www.strava.com/routes/${event.stravaRouteId}/embed`}
+                        src={`https://www.strava.com/routes/${safeStravaId}/embed`}
                         title={`Rota do ${event.name} no Strava`}
                         className="w-full h-full"
                         allowFullScreen
@@ -816,11 +841,11 @@ export default function EventPage() {
                       if (!organizer) return null;
 
                       const socialLinks = [
-                        { url: event.instagram, icon: InstagramIcon },
-                        { url: event.facebook, icon: FacebookIcon },
-                        { url: event.youtube, icon: YoutubeIcon },
-                        { url: event.tiktok, icon: TiktokIcon },
-                        { url: event.website, icon: GlobeIcon },
+                        { url: sanitizeUrl(event.instagram), icon: InstagramIcon },
+                        { url: sanitizeUrl(event.facebook), icon: FacebookIcon },
+                        { url: sanitizeUrl(event.youtube), icon: YoutubeIcon },
+                        { url: sanitizeUrl(event.tiktok), icon: TiktokIcon },
+                        { url: sanitizeUrl(event.website), icon: GlobeIcon },
                       ];
 
                       return (
@@ -961,7 +986,7 @@ export default function EventPage() {
         eventName={event.name}
         eventUrl={`/events/${event.slug}`}
       />
-      <ContactOrganizerModal
+      <ContactOrganizerFlow
         isOpen={isContactModalOpen}
         onClose={() => setIsContactModalOpen(false)}
         organizerEmail={getEventOrganizer(event)?.email ?? ""}

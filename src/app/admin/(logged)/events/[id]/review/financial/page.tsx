@@ -11,17 +11,23 @@ import { WizardStepLayout } from "@/components/Organizer/WizardStepLayout";
 import { FinancialSection } from "@/components/Organizer/FinancialSection";
 import toast from "react-hot-toast";
 import { cn } from "@/utils/cn";
+import {
+  ACCEPTED_PAYMENT_METHODS,
+  type AcceptedPaymentMethod,
+} from "@/interfaces/event";
 
 type FinancialBaseline = {
   organizerPercent: number;
   maxInstallments: 1 | 2 | 3;
   totalFee: number;
+  acceptedPaymentMethods: AcceptedPaymentMethod[];
 };
 
 const DEFAULT_BASELINE: FinancialBaseline = {
   organizerPercent: 4,
   maxInstallments: 1,
   totalFee: 6,
+  acceptedPaymentMethods: [...ACCEPTED_PAYMENT_METHODS],
 };
 
 export default function ReviewFinancialPage() {
@@ -34,6 +40,9 @@ export default function ReviewFinancialPage() {
   const [organizerPercent, setOrganizerPercent] = useState(DEFAULT_BASELINE.organizerPercent);
   const [maxInstallments, setMaxInstallments] = useState<1 | 2 | 3>(DEFAULT_BASELINE.maxInstallments);
   const [totalFee, setTotalFee] = useState<number>(DEFAULT_BASELINE.totalFee);
+  const [acceptedPaymentMethods, setAcceptedPaymentMethods] = useState<AcceptedPaymentMethod[]>(
+    DEFAULT_BASELINE.acceptedPaymentMethods,
+  );
 
   // Baseline do GET inicial — usado só pelo guard de saída (não trava o botão
   // de publicar, que deve funcionar mesmo sem alterar a taxa).
@@ -43,11 +52,12 @@ export default function ReviewFinancialPage() {
     if (!authChecked || !eventId) return;
     organizerService
       .getFinancialSettings(eventId)
-      .then(({ organizerFeePercent, maxInstallments: mi, totalFee: tf }) => {
+      .then(({ organizerFeePercent, maxInstallments: mi, totalFee: tf, acceptedPaymentMethods: apm }) => {
         setOrganizerPercent(organizerFeePercent);
         setMaxInstallments(mi);
         setTotalFee(tf);
-        baselineRef.current = { organizerPercent: organizerFeePercent, maxInstallments: mi, totalFee: tf };
+        setAcceptedPaymentMethods(apm);
+        baselineRef.current = { organizerPercent: organizerFeePercent, maxInstallments: mi, totalFee: tf, acceptedPaymentMethods: apm };
       })
       .catch(() => {
         baselineRef.current = { ...DEFAULT_BASELINE };
@@ -60,7 +70,13 @@ export default function ReviewFinancialPage() {
     setSaving(true);
     try {
       const participantFeePercent = parseFloat((totalFee - organizerPercent).toFixed(2));
-      await organizerService.saveFinancialSettings(eventId, organizerPercent, participantFeePercent, maxInstallments, totalFee);
+      await organizerService.saveFinancialSettings(eventId, {
+        organizerFeePercent: organizerPercent,
+        participantFeePercent,
+        maxInstallments,
+        totalFee,
+        acceptedPaymentMethods,
+      });
       await adminService.publishEvent(eventId);
       toast.success("Evento publicado com sucesso!");
       router.push("/admin/auditoria-evento");
@@ -76,7 +92,9 @@ export default function ReviewFinancialPage() {
     baseline !== null &&
     (organizerPercent !== baseline.organizerPercent ||
       maxInstallments !== baseline.maxInstallments ||
-      totalFee !== baseline.totalFee);
+      totalFee !== baseline.totalFee ||
+      // Arrays sempre em ordem canônica (service/FinancialSection) → join é comparação segura
+      acceptedPaymentMethods.join(",") !== baseline.acceptedPaymentMethods.join(","));
 
   /* Descarta as edições locais, restaurando o baseline (GET inicial). */
   const discardLocalChanges = useCallback(() => {
@@ -85,6 +103,7 @@ export default function ReviewFinancialPage() {
     setOrganizerPercent(b.organizerPercent);
     setMaxInstallments(b.maxInstallments);
     setTotalFee(b.totalFee);
+    setAcceptedPaymentMethods(b.acceptedPaymentMethods);
   }, []);
 
   /* Guarda de saída: histórico/popstate + beforeunload + interceptação de
@@ -130,6 +149,8 @@ export default function ReviewFinancialPage() {
         onMaxInstallmentsChange={setMaxInstallments}
         totalFee={totalFee}
         onTotalFeeChange={setTotalFee}
+        acceptedPaymentMethods={acceptedPaymentMethods}
+        onAcceptedPaymentMethodsChange={setAcceptedPaymentMethods}
       />
     </WizardStepLayout>
 

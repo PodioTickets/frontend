@@ -39,6 +39,7 @@ import {
   formatDateShort,
   maskCPF,
   formatDate,
+  isVariationSoldOut,
 } from "./SubscriptionStep.utils";
 
 interface SubscriptionStepProps {
@@ -454,6 +455,9 @@ export function SubscriptionStep({
     );
     if (!participantTicket) return [];
     const ticketProducts = getProductsForTicket(participantTicket.ticketId);
+    // Opcionais (não obrigatórios). Os inclusos continuam aqui para SEREM
+    // EXIBIDOS, mas como cobram 0 (billableReaisForProductSelection), o resumo os
+    // classifica como "Incluso/grátis" (priceReais === 0), não como item adicional pago.
     return ticketProducts.filter((p) => !p.isRequired);
   };
 
@@ -562,6 +566,9 @@ export function SubscriptionStep({
           if (current != null && String(current).trim() !== "") continue;
 
           const v = product.variations[0];
+          // Não auto-seleciona variação única se ela estiver esgotada — o
+          // usuário não conseguiria trocar e o PATCH /products seria rejeitado.
+          if (isVariationSoldOut(product, v)) continue;
           additions[key] = v.id || `${product.id}-0`;
         }
       }
@@ -573,11 +580,20 @@ export function SubscriptionStep({
 
   const getVariationOptions = (product: Product): DropdownOption[] => {
     if (!product.variations || product.variations.length === 0) return [];
-    return product.variations.map((variation, index) => ({
-      id: variation.id || `${product.id}-${index}`,
-      label: variation.name,
-      suffix: previewVariationListPriceLabelForProduct(product, variation.price, variation.name),
-    }));
+    return product.variations.map((variation, index) => {
+      // Esgotado: estoque limitado sem disponível (regra do backend). Renderiza
+      // a opção apagada + "Esgotado" e bloqueia a seleção (o `disabled` no
+      // Dropdown). Sem preço à direita quando indisponível.
+      const soldOut = isVariationSoldOut(product, variation);
+      return {
+        id: variation.id || `${product.id}-${index}`,
+        label: variation.name,
+        suffix: soldOut
+          ? undefined
+          : previewVariationListPriceLabelForProduct(product, variation.price, variation.name),
+        disabled: soldOut,
+      };
+    });
   };
 
   const getSelectedVariation = (
@@ -730,6 +746,8 @@ export function SubscriptionStep({
   const getAdditionalProductsCount = (participantIndex: number): number => {
     const participantAdditionalProducts = getAdditionalProductsForParticipant(participantIndex);
     return participantAdditionalProducts.filter((product) => {
+      // Incluso é grátis → nunca conta como item adicional (mesmo selecionado).
+      if (product.isIncludedInTicket) return false;
       const variationKey = getVariationKey(participantIndex, product.id);
       const selectedId = selectedVariations[variationKey];
       if (selectedId === null || selectedId === undefined) return false;
@@ -1538,15 +1556,12 @@ export function SubscriptionStep({
                 })}
               </div>
 
-              {/* Subtotal só com mais de um ingresso diferente pra somar. */}
-              {groupedTickets.length > 1 && (
-                <div className="flex flex-col gap-2 mt-6">
-                  <p className="text-sm font-medium text-gray-12 flex items-center justify-between">
-                    Subtotal:
-                    <span className="text-gray-12">{formatPrice(totalPrice + totalProductsPrice)}</span>
-                  </p>
-                </div>
-              )}
+              <div className="flex flex-col gap-2 mt-6">
+                <p className="text-sm font-medium text-gray-12 flex items-center justify-between">
+                  Subtotal:
+                  <span className="text-gray-12">{formatPrice(totalPrice + totalProductsPrice)}</span>
+                </p>
+              </div>
               {hasCouponLine && (
                 <div className="flex flex-col gap-2 mt-2">
                   <p className="text-sm font-medium text-gray-12 flex items-center justify-between">
@@ -1564,7 +1579,7 @@ export function SubscriptionStep({
                 </div>
               )}
               {serviceFee > 0 && (
-                <div className={`flex flex-col gap-2 ${hasCouponLine || hasVoucherLine ? "mt-2" : "mt-6"}`}>
+                <div className={`flex flex-col gap-2 mt-2`}>
                   <p className="text-sm font-medium text-gray-12 flex items-center justify-between">
                     Taxa de serviço:
                     <span className="text-gray-12">{formatPrice(serviceFee)}</span>

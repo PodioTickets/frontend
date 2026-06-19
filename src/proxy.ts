@@ -232,6 +232,26 @@ function adminAppHostConfig(): { raw: string; hostname: string } | null {
   return { raw, hostname };
 }
 
+/**
+ * Guard de auth do admin no MIDDLEWARE (server-side) — DESLIGADO em dev.
+ *
+ * Motivo: o cookie httpOnly `pt_at_admin` é gravado pela API sob o host
+ * `localhost` (`COOKIE_DOMAIN=localhost`) e o browser NÃO o entrega ao host
+ * dedicado do admin (`test890.localhost`) na requisição de NAVEGAÇÃO — só nas
+ * chamadas XHR à API (que vão pro próprio `localhost`). Cookies de `localhost`
+ * não são compartilhados com `*.localhost`. Resultado: o guard SSR nunca
+ * enxerga o token e bounceia o admin pra `/login` mesmo logado. O organizador
+ * não sofre disso porque não tem guard SSR (auth é só client-side).
+ *
+ * Em dev, deixamos a auth a cargo do client (`useAdminAccess`), igual ao fluxo
+ * do organizador. NUNCA desligar em produção: lá `app.`/`api.` são same-site e o
+ * cookie de domínio-pai (`.podioticket.com.br`) é lido normalmente no SSR — o
+ * guard SSR é uma camada de defesa que queremos manter.
+ */
+function isAdminSsrGuardDisabled(): boolean {
+  return process.env.NODE_ENV === "development";
+}
+
 function applyAdminHostRouting(request: NextRequest): NextResponse | null {
   const cfg = adminAppHostConfig();
   if (!cfg) return null;
@@ -252,21 +272,28 @@ function applyAdminHostRouting(request: NextRequest): NextResponse | null {
 
     if (isAppHostInfrastructurePath(pathname)) return null;
 
-    // Auth guard integrado ao host admin
-    const isLoginPath = pathname === "/login" || pathname.startsWith("/login/");
-    const token = request.cookies.get("access_token")?.value;
+    // Auth guard integrado ao host admin. Lê o access token httpOnly da
+    // superfície ADMIN (`pt_at_admin`) — sessões isoladas por superfície (o
+    // middleware roda no server e enxerga cookies httpOnly).
+    // Em dev fica desligado (cookie de `localhost` não chega ao host dedicado
+    // `*.localhost` na navegação) → auth client-side via `useAdminAccess`.
+    if (!isAdminSsrGuardDisabled()) {
+      const isLoginPath =
+        pathname === "/login" || pathname.startsWith("/login/");
+      const token = request.cookies.get("pt_at_admin")?.value;
 
-    if (isLoginPath && token) {
-      const dest = request.nextUrl.clone();
-      dest.pathname = "/events";
-      return NextResponse.redirect(dest, 307);
-    }
+      if (isLoginPath && token && token.length >= 10) {
+        const dest = request.nextUrl.clone();
+        dest.pathname = "/events";
+        return NextResponse.redirect(dest, 307);
+      }
 
-    if (!isLoginPath && !token) {
-      const dest = request.nextUrl.clone();
-      dest.pathname = "/login";
-      if (pathname !== "/") dest.searchParams.set("next", pathname);
-      return NextResponse.redirect(dest, 307);
+      if (!isLoginPath && (!token || token.length < 10)) {
+        const dest = request.nextUrl.clone();
+        dest.pathname = "/login";
+        if (pathname !== "/") dest.searchParams.set("next", pathname);
+        return NextResponse.redirect(dest, 307);
+      }
     }
 
     // Rewrite para /admin/*
@@ -299,17 +326,22 @@ function applyAdminAuthGuard(request: NextRequest): NextResponse | null {
 
   if (!pathname.startsWith("/admin")) return null;
 
+  // Em dev o guard SSR é desligado (ver `isAdminSsrGuardDisabled`): o cookie
+  // httpOnly não chega ao middleware no host dedicado → auth fica client-side.
+  if (isAdminSsrGuardDisabled()) return null;
+
   const isPublic = pathname.startsWith("/admin/login");
-  const token = request.cookies.get("access_token")?.value;
+  // Access token httpOnly da superfície ADMIN (isolada das demais).
+  const token = request.cookies.get("pt_at_admin")?.value;
 
   if (isPublic) {
-    if (token) {
+    if (token && token.length >= 10) {
       return NextResponse.redirect(new URL("/admin/events", request.url));
     }
     return null;
   }
 
-  if (!token) {
+  if (!token || token.length < 10) {
     const loginUrl = new URL("/admin/login", request.url);
     loginUrl.searchParams.set("next", pathname);
     return NextResponse.redirect(loginUrl);
@@ -348,10 +380,13 @@ export async function proxy(request: NextRequest) {
   }
 
   if (request.method === "OPTIONS" && pathname.startsWith("/api/")) {
+    if (!origin || !isValidOrigin(origin, host)) {
+      return new NextResponse(null, { status: 403 });
+    }
     return new NextResponse(null, {
       status: 204,
       headers: {
-        "Access-Control-Allow-Origin": origin || "*",
+        "Access-Control-Allow-Origin": origin,
         "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
         "Access-Control-Allow-Headers":
           "Content-Type, Authorization, X-Admin-Secret",
@@ -421,10 +456,15 @@ export async function proxy(request: NextRequest) {
 
   // Braspag MPI 3DS 2.0: SDK carrega script de mpi(sandbox).braspag.com.br,
   // faz fetch para Cardinal Commerce (backend do MPI) e abre iframe do ACS do banco.
+  // Apata (apata.io) é o provedor de device fingerprint / coleta do 3DS usado pelo
+  // fluxo Braspag/Cardinal — o desafio/coleta carrega recursos de apata.io; sem
+  // liberar, a CSP bloqueia e a autenticação 3DS não acontece.
   const braspag3DSDomains = [
     "https://mpi.braspag.com.br",
     "https://mpisandbox.braspag.com.br",
     "https://*.cardinalcommerce.com",
+    "https://apata.io",
+    "https://*.apata.io",
   ];
   const braspag3DSCsp = braspag3DSDomains.join(" ");
 
@@ -433,7 +473,7 @@ export async function proxy(request: NextRequest) {
 
   const cspDirectives = [
     `default-src ${trustedDomains.join(" ")}`,
-    `script-src ${trustedDomains.join(" ")} ${isDev ? "'unsafe-eval'" : ""
+    /* TODO: migrar para nonce */ `script-src ${trustedDomains.join(" ")} ${isDev ? "'unsafe-eval'" : ""
     } 'unsafe-inline' blob: https://www.google.com https://maps.googleapis.com https://*.googleapis.com https://*.google.com https://challenges.cloudflare.com https://www.instagram.com https://connect.facebook.net https://platform.twitter.com https://www.tiktok.com https://strava-embeds.com ${braspag3DSCsp}`,
     `style-src ${trustedDomains.join(
       " "
@@ -443,10 +483,10 @@ export async function proxy(request: NextRequest) {
       " "
     )} wss: ws: https://www.google.com https://maps.googleapis.com https://*.googleapis.com https://*.google.com https://www.google-analytics.com https://*.google-analytics.com https://challenges.cloudflare.com https://www.facebook.com https://connect.facebook.net ${braspag3DSCsp} ${braspag3DSConnectExtras}`,
     // 3DS challenge abre iframe do ACS do banco emissor (Itaú, Bradesco, Nubank, etc).
-    // Cada banco usa seu próprio domínio — `https:` é a recomendação prática
-    // p/ 3DS, evita ter que manter allowlist de cada emissor.
-    `frame-src 'self' https: https://www.youtube.com https://www.google.com https://maps.google.com https://*.google.com https://*.googleapis.com https://www.strava.com https://*.strava.com https://strava-embeds.com https://challenges.cloudflare.com https://www.instagram.com https://www.facebook.com https://platform.twitter.com https://www.tiktok.com ${braspag3DSCsp}`,
-    `img-src ${trustedDomains.join(" ")} data: blob: https://cdn.podioticket.com.br https://*.google.com https://*.googleapis.com https://*.gstatic.com https://*.googleusercontent.com https://www.instagram.com https://*.cdninstagram.com https://*.fbcdn.net https://www.facebook.com https://*.strava.com https://strava-embeds.com`,
+    // Cada banco usa seu próprio domínio — domínios Braspag/Cardinal cobrem o fluxo 3DS;
+    // origens adicionais de embeds listadas explicitamente (sem https: genérico).
+    `frame-src 'self' https://www.youtube.com https://www.google.com https://maps.google.com https://*.google.com https://*.googleapis.com https://www.strava.com https://*.strava.com https://strava-embeds.com https://challenges.cloudflare.com https://www.instagram.com https://www.facebook.com https://platform.twitter.com https://www.tiktok.com ${braspag3DSCsp}`,
+    `img-src ${trustedDomains.join(" ")} data: blob: https://cdn.podioticket.com.br https://*.google.com https://*.googleapis.com https://*.gstatic.com https://*.googleusercontent.com https://www.instagram.com https://*.cdninstagram.com https://*.fbcdn.net https://www.facebook.com https://*.strava.com https://strava-embeds.com https://apata.io https://*.apata.io`,
     `media-src ${trustedDomains.join(" ")} data: blob:`,
     // worker-src e child-src: workers internos do Turnstile usam blob URLs
     `worker-src 'self' blob: https://challenges.cloudflare.com`,

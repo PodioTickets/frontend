@@ -33,6 +33,7 @@ import { FinancialStepIcon } from "@/components/Icons/Organizer/FinancialStepIco
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import { SuspendEventModal } from "@/components/Event/SuspendEventModal";
 import { ResumeEventModal } from "@/components/Event/ResumeEventModal";
+import { formatEventListCurrency, formatEventListDate } from "@/lib/eventListFormatters";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -52,6 +53,8 @@ interface AdminEvent {
   country?: string;
   eventDate?: string | null;
   createdAt: string;
+  revenue?: number;
+  confirmedRegistrations?: number;
   organization: {
     id: string;
     name: string;
@@ -72,21 +75,6 @@ interface Pagination {
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
-
-function formatCurrency(cents: number): string {
-  return new Intl.NumberFormat("pt-BR", {
-    style: "currency",
-    currency: "BRL",
-  }).format(cents / 100);
-}
-
-function formatDate(iso?: string | null): string {
-  if (!iso) return "—";
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return "—";
-  const months = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
-  return `${String(d.getDate()).padStart(2, "0")} ${months[d.getMonth()]}, ${d.getFullYear()}`;
-}
 
 function getInitials(name: string): string {
   const parts = name.trim().split(/\s+/).filter(Boolean);
@@ -528,7 +516,7 @@ export default function AdminEventsPage() {
                   <div className="flex items-center justify-between flex-wrap gap-2">
                     <div>
                       <p className="text-xs text-gray-11 font-family-dm-sans">Data do evento</p>
-                      <p className="text-sm font-semibold text-gray-12 font-family-dm-sans">{formatDate(ev.eventDate)}</p>
+                      <p className="text-sm font-semibold text-gray-12 font-family-dm-sans">{formatEventListDate(ev.eventDate)}</p>
                     </div>
                     <div>
                       <p className="text-xs text-gray-11 font-family-dm-sans">Inscritos</p>
@@ -618,21 +606,21 @@ export default function AdminEventsPage() {
                         {/* Data */}
                         <td className="py-3.5 px-4 text-center whitespace-nowrap">
                           <span className="text-sm font-semibold text-gray-12 font-family-dm-sans">
-                            {formatDate(event.eventDate)}
+                            {formatEventListDate(event.eventDate)}
                           </span>
                         </td>
 
                         {/* Inscritos */}
                         <td className="py-3.5 px-4 text-center">
                           <span className="text-sm font-semibold text-gray-12 font-family-dm-sans">
-                            {event._count?.registrations ?? 0}
+                            {event.confirmedRegistrations ?? 0}
                           </span>
                         </td>
 
                         {/* Receita */}
                         <td className="py-3.5 px-4 text-center whitespace-nowrap">
                           <span className="text-sm font-semibold text-gray-12 font-family-dm-sans">
-                            {formatCurrency(event.totalSales ?? event.totalRevenue ?? 0)}
+                            {formatEventListCurrency(event.revenue ?? 0)}
                           </span>
                         </td>
 

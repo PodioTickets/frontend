@@ -4,6 +4,10 @@ import type { EventKitSelectionDisplay } from "@/lib/eventKitSelectionDisplay";
 
 export type { EventKitSelectionDisplay };
 
+/** Métodos de pagamento configuráveis na tela financeira do evento (whitelist do checkout). */
+export const ACCEPTED_PAYMENT_METHODS = ["PIX", "DEBIT_CARD", "CREDIT_CARD"] as const;
+export type AcceptedPaymentMethod = (typeof ACCEPTED_PAYMENT_METHODS)[number];
+
 export interface Event {
   id: string;
   slug: string;
@@ -19,6 +23,8 @@ export interface Event {
   serviceFee: number;
   participantFeePercent?: number;
   maxInstallments?: 1 | 2 | 3;
+  /** Whitelist de métodos do checkout (tela financeira). Ausente = todos. */
+  acceptedPaymentMethods?: AcceptedPaymentMethod[];
   googleMapsLink: string;
   stravaRouteId?: string;
   /** URL do regulamento do evento (ex.: PDF) */

@@ -117,6 +117,20 @@ export function useSubscriptionData(eventId: string | undefined) {
         name: v.name,
         price: productPriceFromApiToReais(v.price),
         stock: typeof v.stock === "number" ? v.stock : parseInt(String(v.stock), 10) || 0,
+        // Estoque restante (limitado): usado pra marcar variação esgotada no
+        // dropdown. Ausente em respostas legadas → fica undefined (não esgota).
+        availableStock:
+          typeof v.availableStock === "number"
+            ? v.availableStock
+            : v.availableStock != null
+              ? parseInt(String(v.availableStock), 10) || 0
+              : undefined,
+        soldCount:
+          typeof v.soldCount === "number"
+            ? v.soldCount
+            : v.soldCount != null
+              ? parseInt(String(v.soldCount), 10) || 0
+              : undefined,
       })),
     }));
   }, [productsData]);

@@ -116,12 +116,17 @@ export function ParticipantSummaryModal({
     }).format(price);
   };
 
+  // Mesma semântica do checkout (billableReaisForProductSelection): o preço da
+  // variação é o TOTAL daquela variação. Não incluso → exibe o total cheio;
+  // incluso no ingresso → exibe só o acréscimo sobre a base já paga no ingresso.
   const formatVariationSidePriceFromCents = (
     basePriceCents: number,
     variationPriceCents: number,
+    isIncludedInTicket: boolean,
   ): string => {
     const base = basePriceCents / 100;
     const v = variationPriceCents / 100;
+    if (!isIncludedInTicket) return formatPrice(v);
     if (v < base) return formatPrice(v);
     return formatPrice(Math.max(0, v - base));
   };
@@ -427,6 +432,7 @@ export function ParticipantSummaryModal({
                                 {formatVariationSidePriceFromCents(
                                   product.basePrice,
                                   product.selectedVariation.price,
+                                  product.isIncludedInTicket,
                                 )}
                               </p>
                             ) : null}
@@ -485,6 +491,7 @@ export function ParticipantSummaryModal({
                                 {formatVariationSidePriceFromCents(
                                   product.basePrice,
                                   product.selectedVariation.price,
+                                  product.isIncludedInTicket,
                                 )}
                               </p>
                             ) : null}

@@ -11,6 +11,95 @@ const ADMIN_AUDIT_LOGS_PATH =
 
 const ADMIN_ORGANIZATIONS_PATH = "/api/v1/admin/organizations";
 
+const ADMIN_USER_ACTIVITY_PATH = "/api/v1/admin/user-activity";
+
+// ──────────────── User activity (cliente final + anônimo) ────────────────
+
+export const USER_ACTIVITY_CATEGORIES = [
+  "PAGE_VIEW",
+  "CLICK",
+  "API",
+  "AUTH",
+  "CHECKOUT",
+  "PROFILE",
+  "COMPLIANCE",
+  "OTHER",
+] as const;
+export type AdminUserActivityCategory =
+  (typeof USER_ACTIVITY_CATEGORIES)[number];
+
+export const USER_ACTIVITY_SOURCES = ["FRONTEND", "BACKEND", "WEBHOOK"] as const;
+export type AdminUserActivitySource = (typeof USER_ACTIVITY_SOURCES)[number];
+
+export interface AdminUserActivityUser {
+  id: string;
+  fullName: string;
+  email: string;
+  accountType?: string | null;
+}
+
+/**
+ * Item do `UserActivityLog` (endpoint `/admin/user-activity`). Anônimo =
+ * `userId`/`user` null — o ResponseCompressionInterceptor dropa chaves null
+ * do payload, então TODO campo anulável pode chegar AUSENTE.
+ */
+export interface AdminUserActivityItem {
+  id: string;
+  userId: string | null;
+  user: AdminUserActivityUser | null;
+  sessionId: string | null;
+  ip: string | null;
+  userAgent: string | null;
+  source: string;
+  category: string;
+  action: string;
+  path: string | null;
+  referrer: string | null;
+  metadata?: Record<string, unknown> | null;
+  occurredAt: string;
+}
+
+/** Métricas agregadas do dashboard (`GET /admin/user-activity/stats`). */
+export interface AdminUserActivityStats {
+  range: { from: string; to: string };
+  totals: {
+    events: number;
+    uniqueUsers: number;
+    uniqueSessions: number;
+    anonymousEvents: number;
+    /** Views da página pública de evento (action `page:event`) no período. */
+    eventPageViews: number;
+    /** Pagamentos confirmados (action `order.paid`) no período. */
+    paymentsConfirmed: number;
+  };
+  byCategory: Array<{ category: string; count: number }>;
+  bySource: Array<{ source: string; count: number }>;
+  topActions: Array<{ action: string; count: number }>;
+  /** Série diária esparsa (`day` = YYYY-MM-DD UTC) — dias sem evento são omitidos. */
+  perDay: Array<{ day: string; count: number }>;
+  /** Views da página de evento por dia (esparsa, mesmo formato de `perDay`). */
+  viewsPerDay: Array<{ day: string; count: number }>;
+}
+
+/**
+ * Etapa do funil de compra (`GET /admin/user-activity/funnel`). Ordem
+ * canônica garantida pelo backend: page:event → order.reserve →
+ * order.billing-address → order.pay → order.paid.
+ */
+export interface AdminPurchaseFunnelStage {
+  action: string;
+  /** Contagem bruta de ações (cada clique/tentativa conta). */
+  total: number;
+  /** Sessões/usuários únicos que chegaram na etapa — base do funil. */
+  unique: number;
+}
+
+export interface AdminPurchaseFunnel {
+  range: { from: string; to: string };
+  eventId: string | null;
+  stages: AdminPurchaseFunnelStage[];
+}
+
 export interface AdminAuditOrganization {
   id: string;
   name?: string;
@@ -328,7 +417,7 @@ export class AdminService {
   constructor(private apiClient: ApiClient) { }
 
 
-  async login(data: { emailOrCpf: string; password: string; }): Promise<{
+  async login(data: { emailOrCpf: string; password: string; turnstileToken?: string }): Promise<{
     success: boolean;
     data?: {
       access_token: string;
@@ -349,6 +438,9 @@ export class AdminService {
       const payload = {
         emailOrCpf: data.emailOrCpf,
         password: data.password,
+        // Token do Cloudflare Turnstile — só vai no body quando presente, para
+        // não enviar `undefined` em ambientes sem captcha configurado.
+        ...(data.turnstileToken ? { turnstileToken: data.turnstileToken } : {}),
       };
       const response = await this.apiClient.post<LoginResponse>(
         endpoint,
@@ -539,6 +631,224 @@ export class AdminService {
         total: pagination.total ?? 0,
         totalPages: Math.max(1, pagination.totalPages ?? 1),
       },
+    };
+  }
+
+  /**
+   * `GET /admin/user-activity` — UserActivityLog (cliente final + anônimo),
+   * paralelo ao audit-log do painel. Filtros combinados via AND; ordenação
+   * fixa `occurredAt desc`; `limit` máx. 100 (cap do backend).
+   */
+  async getUserActivityLogs(params?: {
+    q?: string;
+    category?: string;
+    source?: string;
+    userId?: string;
+    /** Substring em nome/sobrenome/email — exclui anônimos. */
+    userSearch?: string;
+    sessionId?: string;
+    ip?: string;
+    from?: string;
+    to?: string;
+    page?: number;
+    limit?: number;
+  }): Promise<{
+    items: AdminUserActivityItem[];
+    pagination: OrganizationAuditLogsPagination;
+  }> {
+    const { page = 1, limit = 20, ...filters } = params || {};
+    const safeLimit = Math.min(100, Math.max(1, limit));
+
+    const res = await this.apiClient.get<Record<string, unknown>>(
+      ADMIN_USER_ACTIVITY_PATH,
+      {
+        params: {
+          page,
+          limit: safeLimit,
+          // Só envia filtros preenchidos — string vazia viraria filtro real
+          ...Object.fromEntries(
+            Object.entries(filters).filter(
+              ([, v]) => typeof v === "string" && v.trim() !== ""
+            )
+          ),
+        },
+      }
+    );
+
+    const body = (res.data ?? {}) as Record<string, unknown>;
+    const data = (body.data ?? body) as Record<string, unknown>;
+    const rawItems = Array.isArray(data.items) ? data.items : [];
+    const rawPagination = (data.pagination ?? {}) as Record<string, unknown>;
+
+    const str = (v: unknown): string | null =>
+      typeof v === "string" && v ? v : null;
+
+    const items: AdminUserActivityItem[] = rawItems.map((raw, i) => {
+      const r = (raw && typeof raw === "object" ? raw : {}) as Record<
+        string,
+        unknown
+      >;
+      const u = (r.user && typeof r.user === "object" ? r.user : null) as
+        | Record<string, unknown>
+        | null;
+      return {
+        id: str(r.id) ?? `activity-${i}`,
+        userId: str(r.userId),
+        user: u
+          ? {
+              id: str(u.id) ?? "",
+              fullName: str(u.fullName) ?? "",
+              email: str(u.email) ?? "",
+              accountType: str(u.accountType),
+            }
+          : null,
+        sessionId: str(r.sessionId),
+        ip: str(r.ip),
+        userAgent: str(r.userAgent),
+        source: str(r.source) ?? "—",
+        category: str(r.category) ?? "—",
+        action: str(r.action) ?? "—",
+        path: str(r.path),
+        referrer: str(r.referrer),
+        metadata:
+          r.metadata && typeof r.metadata === "object" && !Array.isArray(r.metadata)
+            ? (r.metadata as Record<string, unknown>)
+            : null,
+        occurredAt: str(r.occurredAt) ?? "",
+      };
+    });
+
+    const num = (v: unknown): number | null =>
+      typeof v === "number" && Number.isFinite(v) ? v : null;
+
+    return {
+      items,
+      pagination: {
+        page: num(rawPagination.page) ?? page,
+        limit: num(rawPagination.limit) ?? safeLimit,
+        total: num(rawPagination.total) ?? 0,
+        totalPages: Math.max(1, num(rawPagination.totalPages) ?? 1),
+      },
+    };
+  }
+
+  /**
+   * `GET /admin/user-activity/stats` — métricas agregadas (dashboard).
+   * Agregação 100% no banco; janela default de 30 dias quando sem from/to.
+   */
+  async getUserActivityStats(params?: {
+    category?: string;
+    source?: string;
+    /** Restringe as métricas a um evento esportivo (metadata.eventId). */
+    eventId?: string;
+    from?: string;
+    to?: string;
+  }): Promise<AdminUserActivityStats> {
+    const res = await this.apiClient.get<Record<string, unknown>>(
+      `${ADMIN_USER_ACTIVITY_PATH}/stats`,
+      {
+        params: Object.fromEntries(
+          Object.entries(params ?? {}).filter(
+            ([, v]) => typeof v === "string" && v.trim() !== ""
+          )
+        ),
+      }
+    );
+
+    const body = (res.data ?? {}) as Record<string, unknown>;
+    const data = (body.data ?? body) as Record<string, unknown>;
+
+    const n = (v: unknown): number =>
+      typeof v === "number" && Number.isFinite(v) ? v : 0;
+    const s = (v: unknown): string => (typeof v === "string" ? v : "");
+    const arr = (v: unknown): Record<string, unknown>[] =>
+      Array.isArray(v)
+        ? v.filter(
+            (x): x is Record<string, unknown> =>
+              !!x && typeof x === "object" && !Array.isArray(x)
+          )
+        : [];
+
+    const totals = (data.totals ?? {}) as Record<string, unknown>;
+    const range = (data.range ?? {}) as Record<string, unknown>;
+
+    return {
+      range: { from: s(range.from), to: s(range.to) },
+      totals: {
+        events: n(totals.events),
+        uniqueUsers: n(totals.uniqueUsers),
+        uniqueSessions: n(totals.uniqueSessions),
+        anonymousEvents: n(totals.anonymousEvents),
+        eventPageViews: n(totals.eventPageViews),
+        paymentsConfirmed: n(totals.paymentsConfirmed),
+      },
+      byCategory: arr(data.byCategory).map((g) => ({
+        category: s(g.category),
+        count: n(g.count),
+      })),
+      bySource: arr(data.bySource).map((g) => ({
+        source: s(g.source),
+        count: n(g.count),
+      })),
+      topActions: arr(data.topActions).map((g) => ({
+        action: s(g.action),
+        count: n(g.count),
+      })),
+      perDay: arr(data.perDay).map((g) => ({
+        day: s(g.day),
+        count: n(g.count),
+      })),
+      viewsPerDay: arr(data.viewsPerDay).map((g) => ({
+        day: s(g.day),
+        count: n(g.count),
+      })),
+    };
+  }
+
+  /**
+   * `GET /admin/user-activity/funnel` — funil de compra (sessões únicas por
+   * etapa). O backend já devolve as etapas na ordem canônica com zero-fill;
+   * a normalização aqui é só defesa contra chave dropada pelo
+   * ResponseCompressionInterceptor (count 0 → chave ausente).
+   */
+  async getUserActivityFunnel(params?: {
+    eventId?: string;
+    from?: string;
+    to?: string;
+  }): Promise<AdminPurchaseFunnel> {
+    const res = await this.apiClient.get<Record<string, unknown>>(
+      `${ADMIN_USER_ACTIVITY_PATH}/funnel`,
+      {
+        params: Object.fromEntries(
+          Object.entries(params ?? {}).filter(
+            ([, v]) => typeof v === "string" && v.trim() !== ""
+          )
+        ),
+      }
+    );
+
+    const body = (res.data ?? {}) as Record<string, unknown>;
+    const data = (body.data ?? body) as Record<string, unknown>;
+
+    const n = (v: unknown): number =>
+      typeof v === "number" && Number.isFinite(v) ? v : 0;
+    const s = (v: unknown): string => (typeof v === "string" ? v : "");
+    const range = (data.range ?? {}) as Record<string, unknown>;
+    const rawStages = Array.isArray(data.stages) ? data.stages : [];
+
+    return {
+      range: { from: s(range.from), to: s(range.to) },
+      eventId: typeof data.eventId === "string" ? data.eventId : null,
+      stages: rawStages
+        .filter(
+          (x): x is Record<string, unknown> =>
+            !!x && typeof x === "object" && !Array.isArray(x)
+        )
+        .map((g) => ({
+          action: s(g.action),
+          total: n(g.total),
+          unique: n(g.unique),
+        })),
     };
   }
 

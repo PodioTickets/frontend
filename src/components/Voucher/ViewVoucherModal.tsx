@@ -7,6 +7,7 @@ import { X, ChevronLeft, ChevronRight, Download } from "lucide-react";
 import { organizerService } from "@/services";
 import toast from "react-hot-toast";
 import { useClipboard } from "@/hooks/useClipboard";
+import { buildCouponShareLink } from "@/lib/couponShareLink";
 import { formatDateBR } from "@/utils/datetimeBR";
 import { CopyIcon } from "@/components/Icons/CopyIcon";
 import { Button } from "@/components/Button";
@@ -63,6 +64,8 @@ export function ViewVoucherModal() {
 
   const eventId = data?.eventId;
   const groupName = data?.groupName;
+  // Slug repassado pelo opener (EventVouchersView) p/ montar o link público.
+  const eventSlug = data?.eventSlug as string | undefined;
 
   // Buscar tickets e categorias
   const { tickets } = useTickets(eventId, isOpen);
@@ -153,8 +156,9 @@ export function ViewVoucherModal() {
     }
   };
 
+  // Copia o LINK público do evento com o voucher já aplicado (?voucher=CODIGO).
   const handleCopyCode = async (code: string) => {
-    await copyToClipboard(code);
+    await copyToClipboard(buildCouponShareLink(eventSlug, code, "voucher"));
   };
 
   const handleDownloadCSV = () => {
@@ -374,7 +378,7 @@ export function ViewVoucherModal() {
                                     <button
                                       onClick={() => handleCopyCode(voucher.code)}
                                       className="size-7 rounded-lg flex items-center justify-center hover:bg-gray-3 transition-colors cursor-pointer"
-                                      title="Copiar código"
+                                      title="Copiar link do voucher"
                                     >
                                       <CopyIcon className="size-4 text-gray-11" />
                                     </button>

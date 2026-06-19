@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
+import { surfaceHeader } from "@/lib/authSurface";
 import { Input } from "@/components/Input";
 import { DatePicker } from "@/components/DatePicker";
 import { TimePicker } from "@/components/TimePicker";
@@ -277,10 +278,12 @@ export function InformationForm({
       const fd = new FormData();
       fd.append("file", pdfFile);
       const apiUrl = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:3333").replace(/\/$/, "");
-      const token = (userService as any).apiClient?.getAccessToken();
+      // Auth por cookie httpOnly: `credentials: "include"`.
+      // `X-PT-Surface` declara a superfície (fetch cru não passa pelo ApiClient).
       const response = await fetch(`${apiUrl}/api/v1/upload/pdf`, {
         method: "POST",
-        headers: { Authorization: `Bearer ${token}` },
+        credentials: "include",
+        headers: surfaceHeader(),
         body: fd,
       });
       let result: Record<string, unknown> = {};

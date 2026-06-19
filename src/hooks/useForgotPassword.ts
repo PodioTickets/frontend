@@ -2,19 +2,29 @@ import { useMutation } from "@tanstack/react-query";
 import { userService } from "@/services";
 import toast from "react-hot-toast";
 
+/** Identificador exclusivo: informe `email` OU `cpf` (dígitos, sem máscara). */
 interface ForgotPasswordData {
-  email: string;
+  email?: string;
+  cpf?: string;
   accountType?: "USER" | "ORGANIZER";
 }
 
 interface VerifyCodeData {
-  email: string;
+  email?: string;
+  cpf?: string;
   code: string;
   accountType?: "USER" | "ORGANIZER";
 }
 
+/** Resultado do passo 1 — `maskedEmail` só vem no fluxo por CPF. */
+interface ForgotPasswordResult {
+  success?: boolean;
+  message?: string;
+  maskedEmail?: string;
+}
+
 interface UseForgotPasswordReturn {
-  forgotPassword: (data: ForgotPasswordData) => Promise<void>;
+  forgotPassword: (data: ForgotPasswordData) => Promise<ForgotPasswordResult>;
   resendCode: (data: ForgotPasswordData) => Promise<void>;
   verifyResetCode: (data: VerifyCodeData) => Promise<{ token: string }>;
   isPending: boolean;
@@ -55,6 +65,7 @@ export function useForgotPassword(): UseForgotPasswordReturn {
     mutationFn: async (data: ForgotPasswordData) => {
       return userService.forgotPassword({
         email: data.email,
+        cpf: data.cpf,
         accountType: data.accountType ?? "USER",
       });
     },
@@ -75,6 +86,7 @@ export function useForgotPassword(): UseForgotPasswordReturn {
     mutationFn: async (data: ForgotPasswordData) => {
       return userService.resendResetCode({
         email: data.email,
+        cpf: data.cpf,
         accountType: data.accountType ?? "USER",
       });
     },
@@ -106,7 +118,7 @@ export function useForgotPassword(): UseForgotPasswordReturn {
 
   return {
     forgotPassword: async (data: ForgotPasswordData) => {
-      await mutation.mutateAsync(data);
+      return mutation.mutateAsync(data);
     },
     resendCode: async (data: ForgotPasswordData) => {
       await resendMutation.mutateAsync(data);

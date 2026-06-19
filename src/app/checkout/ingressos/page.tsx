@@ -12,8 +12,14 @@ import { useCheckoutTimer } from "@/contexts/CheckoutTimerContext";
 import { useCheckoutReservation } from "@/hooks/useCheckoutReservation";
 import { useTickets } from "@/hooks/useTickets";
 import { OrderApiError } from "@/interfaces/order";
-import { getPendingCoupon, getPendingCouponKind } from "@/hooks/usePendingCoupon";
-import { useAuth } from "@/hooks/useAuth";
+import {
+  getPendingCoupon,
+  getPendingCouponKind,
+  normalizeCouponCode,
+  readCouponParamEntry,
+} from "@/hooks/usePendingCoupon";
+import { useVoucherLinkValidation } from "@/hooks/useVoucherLinkValidation";
+import { InfoIcon } from "@/components/Icons/InfoIcon";
 import { trackMetaPixel } from "@/lib/metaPixel";
 import toast from "react-hot-toast";
 import CheckoutIngressosLoading from "./loading";
@@ -23,7 +29,6 @@ function CheckoutIngressosContent() {
   const router = useRouter();
   const eventId = searchParams.get("eventId");
   const { event, loading: isLoading } = useEvent(eventId ?? "");
-  const { isAuthenticated } = useAuth();
   const { raceQuantities, updateRaceQuantity, bindOrder } = useCheckout();
   const { startTimer, syncFromOrder } = useCheckoutTimer();
   const { reserveOrder, patchCoupon } = useCheckoutReservation();
@@ -34,6 +39,21 @@ function CheckoutIngressosContent() {
   // transição visual. Combinado com loading.tsx, o feedback é instantâneo.
   const [isNavigating, startNavigation] = useTransition();
   const { tickets: availableTickets, loading: ticketsLoading } = useTickets(eventId, !!eventId, false, true);
+
+  /* Voucher vindo por LINK (`?voucher=`): valida cedo pra avisar o usuário
+   * AQUI — sem isso, um voucher já utilizado/expirado falha em silêncio no
+   * patchCoupon do handleNext e a pessoa só descobre no pagamento (sem o
+   * desconto). A URL é a fonte de verdade do código (CouponLinkCapture).
+   * Exibido como BANNER persistente (não toast): a pessoa chega pela URL do
+   * link, então o aviso precisa estar visível quando ela olhar a tela. */
+  const pendingEntry = readCouponParamEntry(searchParams);
+  const linkVoucherCode =
+    pendingEntry?.kind === "voucher" ? normalizeCouponCode(pendingEntry.code) : null;
+  const { data: voucherCheck } = useVoucherLinkValidation(eventId, linkVoucherCode);
+  const linkVoucherError =
+    linkVoucherCode && voucherCheck && !voucherCheck.usable
+      ? voucherCheck.message
+      : null;
 
   // Remove from state any ticket that was deleted by the organizer
   useEffect(() => {
@@ -48,6 +68,15 @@ function CheckoutIngressosContent() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [availableTickets, ticketsLoading]);
 
+  /* Voltar pra página do evento (origem do checkout) — espelha o botão dos
+   * demais steps. Sem slug (carregamento/evento legado), cai pra home. */
+  const handleBack = () => {
+    const slug = (event as { slug?: string } | null)?.slug;
+    startNavigation(() => {
+      router.push(slug ? `/events/${slug}` : "/");
+    });
+  };
+
   const handleNext = async () => {
     if (!eventId || reservingRef.current) return;
     reservingRef.current = true;
@@ -59,6 +88,9 @@ function CheckoutIngressosContent() {
 
     if (tickets.length === 0) {
       toast.error("Selecione pelo menos um ingresso para continuar.");
+      // Sem o reset, o guard de reentrância fica preso em `true` e os cliques
+      // seguintes viram no-op silencioso (o `finally` abaixo não roda neste retorno).
+      reservingRef.current = false;
       return;
     }
 
@@ -74,37 +106,55 @@ function CheckoutIngressosContent() {
       const fallbackUrl = slug ? `/events/${slug}` : `/`;
       startTimer(order, fallbackUrl);
 
-      // Meta Pixel — AddToCart: selecionou ingressos e avançou. Só captamos
-      // quando o usuário está LOGADO (regra do produto). Dedup por order.
-      if (isAuthenticated) {
-        trackMetaPixel(
-          event?.tracking?.metaPixelId,
-          "AddToCart",
-          {
-            content_type: "product",
-            content_ids: tickets.map((t) => t.ticketId),
-            currency: "BRL",
-            value: (order.pricing?.total ?? 0) / 100,
-            num_items: tickets.reduce((sum, t) => sum + t.quantity, 0),
-          },
-          { onceKey: `atc:${order.orderId}` },
-        );
-      }
+      // Meta Pixel — AddToCart: selecionou ingressos e avançou. Disparamos
+      // para usuários logados E deslogados (a reserva já existe neste ponto).
+      // Dedup por order garante 1 disparo por pedido (F5 / revisita).
+      trackMetaPixel(
+        event?.tracking?.metaPixelId,
+        "AddToCart",
+        {
+          content_type: "product",
+          content_ids: tickets.map((t) => t.ticketId),
+          currency: "BRL",
+          value: (order.pricing?.total ?? 0) / 100,
+          num_items: tickets.reduce((sum, t) => sum + t.quantity, 0),
+        },
+        { onceKey: `atc:${order.orderId}` },
+      );
 
-      // Aplica cupom/voucher vindo do link (?coupon= / ?voucher=) silenciosamente
-      // — falha não interrompe o fluxo (código errado pro evento, expirado, etc.).
+      // Aplica cupom/voucher vindo do link (?coupon= / ?voucher=). CUPOM falha em
+      // silêncio (decisão de produto: código errado pro evento, expirado, etc. não
+      // interrompem). VOUCHER inusável avisa o motivo real (já utilizado/expirado)
+      // — é 100% OFF, o usuário PRECISA saber que vai pagar cheio. O fluxo segue.
       // A chave (couponCode vs voucherCode) segue o TIPO capturado do link.
       const pending = getPendingCoupon();
       if (pending) {
-        const payload =
-          getPendingCouponKind() === "voucher"
-            ? { voucherCode: pending }
-            : { couponCode: pending };
+        const isVoucher = getPendingCouponKind() === "voucher";
+        const payload = isVoucher
+          ? { voucherCode: pending }
+          : { couponCode: pending };
         try {
           const updated = await patchCoupon(order.orderId, payload);
           syncFromOrder(updated);
-        } catch {
-          /* silencioso por design */
+          // Rejeição NÃO é exceção: o backend devolve 200 + `couponRejected`
+          // (código/motivo) mantendo a order válida. Voucher rejeitado precisa
+          // ser audível — é 100% OFF, a pessoa vai pagar cheio sem saber.
+          if (isVoucher && updated.couponRejected) {
+            toast.error(
+              updated.couponRejected.reason || "Não foi possível aplicar o voucher.",
+              { duration: 6000 },
+            );
+          }
+        } catch (couponErr) {
+          if (isVoucher) {
+            toast.error(
+              couponErr instanceof OrderApiError
+                ? couponErr.message
+                : "Não foi possível aplicar o voucher.",
+              { duration: 6000 },
+            );
+          }
+          /* cupom: silencioso por design */
         }
         // NÃO limpa o pendente: mantém `?coupon=`/`?voucher=` na URL (via
         // CouponLinkCapture) pra o link persistir ao voltar pro /ingressos e
@@ -181,7 +231,7 @@ function CheckoutIngressosContent() {
     <div className="w-full gap-4">
       <CheckoutHeader activeStep={1} />
       <div className="w-full max-w-[1280px] mx-auto flex flex-col min-h-screen items-start justify-start gap-4 py-4 md:py-11 px-4 bg-gray-2 md:bg-transparent">
-        <ModalitiesStep event={event} onNext={handleNext} isSubmitting={reserving || isNavigating} />
+        <ModalitiesStep event={event} onNext={handleNext} onBack={handleBack} isSubmitting={reserving || isNavigating} />
       </div>
     </div>
   );

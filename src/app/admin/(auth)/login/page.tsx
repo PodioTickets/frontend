@@ -1,9 +1,11 @@
 "use client";
 
 import { useState, useRef } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { useAuth } from "@/hooks/useAuth";
 import { adminService } from "@/services";
+import { useAdminAppSurface } from "@/contexts/AdminAppSurfaceContext";
+import { adminExternalHref } from "@/lib/adminPathPresentation";
 import { Input } from "@/components/Input";
 import { Button } from "@/components/Button";
 import { Mail, Lock, Star, Eye, EyeOff, Info } from "lucide-react";
@@ -30,9 +32,9 @@ function classifyLoginError(msg: string): string {
 }
 
 export default function AdminLoginPage() {
-  const router = useRouter();
   const searchParams = useSearchParams();
   const { login, logout } = useAuth();
+  const adminSurface = useAdminAppSurface();
   const [formData, setFormData] = useState({ email: "", password: "" });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [loginError, setLoginError] = useState<string | null>(null);
@@ -77,9 +79,14 @@ export default function AdminLoginPage() {
       }
       toast.success("Login realizado com sucesso!");
       const next = searchParams.get("next");
-      router.push(next && next.startsWith("/admin") ? next : "/admin/events");
-      setFormData({ email: "", password: "" });
-      setErrors({});
+      const target = next && next.startsWith("/admin") ? next : "/admin/events";
+      // Redirect pós-login via navegação DURA (full reload), não `router.push`:
+      // - garante que o middleware (proxy.ts) veja o cookie httpOnly recém-setado
+      //   e renderize a área logada (a navegação soft do Next não pegava);
+      // - `adminExternalHref` traduz `/admin/events` → `/events` no host dedicado
+      //   do admin (URL canônica sem `/admin`), evitando o 307 do proxy.
+      window.location.href = adminExternalHref(target, adminSurface);
+      return;
     } catch (error) {
       if (error instanceof ZodError) {
         const newErrors: Record<string, string> = {};
@@ -231,17 +238,22 @@ export default function AdminLoginPage() {
               </div>
             )}
 
-            {/* Captcha */}
+            {/* Captcha Turnstile — no mobile segue o padrão do login mobile
+                (scale ~0.85 com wrapper de altura fixa); no desktop fica em
+                tamanho cheio, igual ao login desktop. */}
             {TURNSTILE_SITE_KEY && (
-              <Turnstile
-                ref={turnstileRef}
-                siteKey={TURNSTILE_SITE_KEY}
-                onSuccess={setTurnstileToken}
-                onError={() => setTurnstileToken(null)}
-                onExpire={() => setTurnstileToken(null)}
-                options={{ theme: "auto", size: "flexible" }}
-                className="w-full"
-              />
+              <div className="flex h-14 w-full items-center justify-center">
+                <div className="w-full scale-[0.85] lg:scale-100">
+                  <Turnstile
+                    ref={turnstileRef}
+                    siteKey={TURNSTILE_SITE_KEY}
+                    onSuccess={setTurnstileToken}
+                    onError={() => setTurnstileToken(null)}
+                    onExpire={() => setTurnstileToken(null)}
+                    options={{ theme: "light", size: "flexible" }}
+                  />
+                </div>
+              </div>
             )}
 
             <Button

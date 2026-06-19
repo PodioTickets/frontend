@@ -1,5 +1,5 @@
 import "server-only";
-import { cookies } from "next/headers";
+import { readServerSurfaceToken } from "./serverSurface";
 
 /**
  * Server-side fetch do evento completo (`GET /api/v1/events/{eventId}`).
@@ -14,8 +14,7 @@ import { cookies } from "next/headers";
 export async function fetchEventById(eventId: string): Promise<unknown | null> {
   if (!eventId) return null;
 
-  const cookieStore = await cookies();
-  const token = cookieStore.get("access_token")?.value;
+  const token = await readServerSurfaceToken();
   if (!token) return null;
 
   const baseUrl = (

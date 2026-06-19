@@ -137,7 +137,7 @@ export function CategoryKitHorizontalCarousel({
                       "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-8",
                       // Mobile: 60×60 pra caber 5 itens visíveis (343-32 gaps = 311 ÷ 5 ≈ 62).
                       // Desktop: 112×112 original.
-                      "size-[60px] md:size-[112px]",
+                      "size-[100px] md:size-[112px]",
                       isCenter
                         ? "z-10 border-primary-8 scale-110"
                         : "border-gray-5 scale-90 hover:border-gray-7"

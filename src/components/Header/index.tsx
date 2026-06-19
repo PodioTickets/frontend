@@ -1,76 +1,32 @@
 "use client";
 import { Button } from "../Button";
 import { motion, AnimatePresence } from "framer-motion";
-import { useEffect, useState, useRef, useMemo } from "react";
+import { useEffect, useState, useMemo } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useOrganizerAppSurface } from "@/contexts/OrganizerAppSurfaceContext";
 import { withOrganizerPathPrefix } from "@/lib/organizerPathPresentation";
 import { useAuth } from "@/hooks/useAuth";
 import Image from "next/image";
-import { Dropdown, DropdownOption } from "../Dropdown";
+import { Dropdown } from "../Dropdown";
 import { ArrowButton } from "../ArrowButton";
 import { SearchBar } from "../SearchBar";
-import { LanguageToggle } from "../LanguageToggle";
 import { modalitiesColumns } from "@/constants";
 import { eventService } from "@/services";
 import { useModalStore } from "@/stores/modalStore";
 import { formatDateBR } from "@/utils/datetimeBR";
-import { User, LogOut, X, Globe } from "lucide-react";
+import { User, LogOut, X } from "lucide-react";
 import { TicketIcon } from "../Icons/TicketIcon";
 import { InfoIcon } from "../Icons/InfoIcon";
 import { TwitterIcon } from "../Icons/TwitterIcon";
 import { InstagramIcon } from "../Icons/InstagramIcon";
 import { FacebookIcon } from "../Icons/FacebookIcon";
-import { useLanguage, Language } from "@/contexts/LanguageContext";
 import { UserIcon } from "../Icons/UserIcon";
 import { getAvatarUrl } from "@/utils/avatar";
 import { ImageWithInitialFallback } from "@/components/ImageWithInitialFallback";
 import { withAdminPathPrefix } from "@/lib/adminPathPresentation";
 import { useAdminAppSurface } from "@/contexts/AdminAppSurfaceContext";
 import { YoutubeIcon } from "../Icons/YoutubeIcon";
-
-function MobileLanguageToggle({ onClose }: { onClose: () => void }) {
-  const { language, setLanguage } = useLanguage();
-
-  const languages: Array<{ code: Language; label: string }> = [
-    { code: "pt", label: "PT-BR" },
-    { code: "en", label: "ENG" },
-    { code: "es", label: "ESP" },
-  ];
-
-  const dropdownOptions: DropdownOption[] = languages.map((lang) => ({
-    id: lang.code,
-    label: lang.label,
-    onClick: () => {
-      setLanguage(lang.code);
-      onClose();
-    },
-  }));
-
-  return (
-    <div className="relative">
-      <Dropdown
-        options={dropdownOptions}
-        dataAttribute="mobile-language"
-        width="w-full"
-        maxHeight="max-h-[200px]"
-        className="top-14 left-0 right-0"
-        trigger={(isOpen) => (
-          <Button variant="outline" className="w-full">
-            <Globe className="size-5" />
-            <span className="text-base font-medium">Idioma</span>
-          </Button>
-        )}
-        onSelect={(option) => {
-          if (option.onClick) {
-            option.onClick();
-          }
-        }}
-      />
-    </div>
-  );
-}
 
 export function Header() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -93,18 +49,17 @@ export function Header() {
   }, [user]);
 
   const [searchResults, setSearchResults] = useState<Array<{ id: string; title: string; href: string; logoUrl?: string; location?: string; date?: string }>>([]);
-  const searchDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
   useEffect(() => {
+    let cancelled = false;
     const q = search.trim();
     if (q.length === 0) {
       setSearchResults([]);
-      return;
+      return () => { cancelled = true; };
     }
-    if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current);
-    searchDebounceRef.current = setTimeout(async () => {
+    const timer = setTimeout(async () => {
       try {
         const res = await eventService.searchEvents({ q, limit: 5, status: "PUBLISHED" } as any);
+        if (cancelled) return;
         setSearchResults(
           (res.events || []).map((e: any) => {
             const city: string = e.city || "";
@@ -133,11 +88,12 @@ export function Header() {
           })
         );
       } catch {
-        setSearchResults([]);
+        if (!cancelled) setSearchResults([]);
       }
     }, 300);
     return () => {
-      if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current);
+      cancelled = true;
+      clearTimeout(timer);
     };
   }, [search]);
 
@@ -170,7 +126,10 @@ export function Header() {
     };
   }, [mobileMenuOpen]);
 
-  if (isOrganizer || isAdmin) {
+  // A landing institucional (/lp) tem seu próprio topo (hero) — sem o header do site.
+  const isLanding = pathname === "/lp" || pathname.startsWith("/lp/");
+
+  if (isOrganizer || isAdmin || isLanding) {
     return null;
   }
 
@@ -251,11 +210,6 @@ export function Header() {
                     onClick: () => {
                       push("/user/tickets");
                     },
-                  },
-                  {
-                    id: "help",
-                    icon: InfoIcon,
-                    label: "Central de ajuda",
                   },
                   {
                     id: "logout",
@@ -369,7 +323,7 @@ export function Header() {
               </div>
 
               {/* Scrollable Content */}
-              <div className="overflow-y-auto h-[calc(100vh-64px)]">
+              <div className="overflow-y-auto h-[calc(100vh-64px)] overscroll-contain [-webkit-overflow-scrolling:touch] [touch-action:pan-y]">
                 {/* Menu Items */}
                 <div className="bg-[#222] border-b border-[#3a3a3a] space-y-2 font-family-dm-sans">
                   {isAuthenticated && user ? (
@@ -398,12 +352,12 @@ export function Header() {
                           Meus ingressos
                         </span>
                       </button>
-                      <button className="w-full flex gap-2 items-center h-[52px] px-4 border-b border-[#3a3a3a] text-[#EEE] hover:bg-[#2a2a2a] transition-colors">
+                     {/*  <button className="w-full flex gap-2 items-center h-[52px] px-4 border-b border-[#3a3a3a] text-[#EEE] hover:bg-[#2a2a2a] transition-colors">
                         <InfoIcon className="w-5 h-5 text-[#EEE]" />
                         <span className="text-base font-medium text-[#EEE]">
                           Central de ajuda
                         </span>
-                      </button>
+                      </button> */}
 
                       <button
                         onClick={() => {
@@ -443,9 +397,6 @@ export function Header() {
                       >
                         Criar conta
                       </Button>
-                      <MobileLanguageToggle
-                        onClose={() => setMobileMenuOpen(false)}
-                      />
                     </div>
                   )}
                 </div>
@@ -474,17 +425,14 @@ export function Header() {
 
                   {/* Introductory Text */}
                   <p className="font-family-dm-sans text-[#B4B4B4] text-sm text-center leading-relaxed">
-                    PodioTicket é o ponto de encontro de quem vibra por esporte,
-                    onde você descobre o próximo desafio, junta a galera,
-                    combina a largada e transforma cada chegada em uma memória
-                    que dá vontade de repetir
+                    A PódioTicket é o ponto de encontro de quem vive o esporte. Aqui você encontra seu próximo desafio, reúne os amigos, combina a largada e transforma cada chegada em uma história que merece ser lembrada.
                   </p>
 
                   {/* Social Media Section */}
                   <div className="text-[#EEE] flex items-center gap-10 w-full my-4 mb-6">
                     <div className="flex-1 h-px bg-[#606060] min-w-0" />
                     <p className="text-start whitespace-nowrap shrink-0">
-                      Nós conheça mais
+                      Saiba mais sobre nós
                     </p>
                     <div className="flex-1 h-px bg-[#606060] min-w-0" />
                   </div>
@@ -495,13 +443,6 @@ export function Header() {
                       className="size-12 border border-[#3A3A3A] p-3 rounded-full flex items-center justify-center"
                     >
                       <InstagramIcon className="w-full h-full text-gray-2" />
-                    </Link>
-                    <Link
-                      target="_blank"
-                      href="https://x.com/podiotickets"
-                      className="size-12 border border-[#3A3A3A] p-3 rounded-full flex items-center justify-center"
-                    >
-                      <TwitterIcon className="w-full h-full text-gray-2" />
                     </Link>
                     <Link
                       target="_blank"

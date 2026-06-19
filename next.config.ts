@@ -29,9 +29,33 @@ const nextConfig: NextConfig = {
 
   // Type checking roda no editor/IDE — não durante o docker build na VPS.
   // ESLint não precisa de flag: o Next 16 removeu a integração com `next build`.
+  /* ATENÇÃO: erros de TS existentes — remover após corrigir */
   typescript: { ignoreBuildErrors: true },
 
+  // Remove TODOS os console.* do bundle de produção (mantém error/warn para
+  // observabilidade real). Evita vazar dado de usuário/preço/IDs em produção
+  // sem precisar caçar cada log manualmente. Em dev os logs continuam ativos.
+  compiler: {
+    removeConsole:
+      process.env.NODE_ENV === "production"
+        ? { exclude: ["error", "warn"] }
+        : false,
+  },
+
   transpilePackages: ["quill-resize-module"],
+  async redirects() {
+    return [
+      {
+        // /terms entrega direto o PDF estático dos termos (abre no viewer nativo
+        // do browser). É o link público canônico — usado no footer do login do
+        // organizador via publicSiteHref("/terms"). 307 (não-permanente) pra não
+        // cachear no browser caso vire uma página real depois.
+        source: "/terms",
+        destination: "/termos-comprador.pdf",
+        permanent: false,
+      },
+    ];
+  },
   async headers() {
     return [
       {
@@ -43,9 +67,13 @@ const nextConfig: NextConfig = {
   images: {
     unoptimized: true,
     remotePatterns: [
-      { protocol: "https", hostname: "**" },
-      /** API / uploads em http (dev ou legado) — sem isso o next/image recusa o src */
-      { protocol: "http", hostname: "**" },
+      { protocol: "https", hostname: "*.podioticket.com.br" },
+      { protocol: "https", hostname: "cdn.podioticket.com.br" },
+      { protocol: "https", hostname: "*.amazonaws.com" },
+      { protocol: "https", hostname: "*.googleusercontent.com" },
+      { protocol: "https", hostname: "*.cdninstagram.com" },
+      // Desenvolvimento local (HTTP apenas para localhost)
+      { protocol: "http", hostname: "localhost" },
     ],
   },
   compress: true,

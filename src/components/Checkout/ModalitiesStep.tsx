@@ -12,17 +12,22 @@ import { useQuery } from "@tanstack/react-query";
 import { useTickets } from "@/hooks/useTickets";
 import { useTicketCategories } from "@/hooks/useTicketCategories";
 import { Loading } from "../Loading";
+import { ArrowButton } from "../ArrowButton";
 import { MobileSummaryBar } from "./MobileSummaryBar";
 import type { Ticket } from "@/hooks/useTickets";
 import { parseEventKitSelectionDisplay } from "@/lib/eventKitSelectionDisplay";
 import { ticketUnitPriceForPrePaymentCents } from "@/lib/orderAutoCouponDisplay";
 import {
+  computeLinkCouponTicketDiscount,
   computeTicketPricingWithCoupon,
   computeTicketPricingWithDiscount,
   computeVoucherTicketsDiscount,
+  couponConditionsMet,
+  couponCoversAnySelected,
   couponPreviewToOrderCoupon,
   formatCouponLineLabel,
   formatVoucherLineLabel,
+  normalizeCouponAppliesTo,
 } from "@/lib/orderCouponDiscount";
 import type { CouponPreviewResult } from "@/lib/orderCouponDiscount";
 import { useAuth } from "@/hooks/useAuth";
@@ -35,10 +40,12 @@ import { computeAgeCouponTicketDiscount, formatAgeCouponLineLabel } from "@/lib/
 interface ModalitiesStepProps {
   event: Event;
   onNext: () => void;
+  /** Voltar pra página do evento — espelha o botão dos demais steps do checkout. */
+  onBack?: () => void;
   isSubmitting?: boolean;
 }
 
-export function ModalitiesStep({ event, onNext, isSubmitting = false }: ModalitiesStepProps) {
+export function ModalitiesStep({ event, onNext, onBack, isSubmitting = false }: ModalitiesStepProps) {
   const { raceQuantities } = useCheckout();
   const { isAuthenticated } = useAuth();
   const { openLoginModal } = useLoginModal();
@@ -252,8 +259,8 @@ export function ModalitiesStep({ event, onNext, isSubmitting = false }: Modaliti
   // Desconto autoritativo do voucher já aplicado na order (centavos → reais).
   const orderVoucherDiscount = orderVoucher
     ? (orderData?.pricing?.voucherDiscount ??
-        timerCurrentOrder?.pricing?.voucherDiscount ??
-        0) / 100
+      timerCurrentOrder?.pricing?.voucherDiscount ??
+      0) / 100
     : 0;
   // Desconto do voucher: do preview do link calcula client-side (1 unidade de
   // maior valor entre os selecionados); da order usa o valor autoritativo.
@@ -287,6 +294,52 @@ export function ModalitiesStep({ event, onNext, isSubmitting = false }: Modaliti
     }
   }
 
+  // Cupom de LINK manual (`?cupom=`, preview): respeita appliesTo + minCartValue
+  // + minQuantity. Cupons automáticos (QUANTITY/AGE) seguem ocultos até o
+  // pagamento (comportamento atual). Só quando ainda não há cupom REAL na order
+  // (o backend já é autoritativo nesse caso, via finalUnitPrice).
+  const isAutoLinkCoupon =
+    couponData?.couponType === "QUANTITY" || couponData?.couponType === "AGE";
+  const useLinkCoupon = !!couponData && !isAutoLinkCoupon && !orderCoupon;
+  const linkCouponDiscount = useLinkCoupon
+    ? computeLinkCouponTicketDiscount(
+      couponData,
+      selectedTickets,
+      totalPrice,
+      totalParticipants,
+    )
+    : null;
+  // Condições globais (valor/qtd mínimos) atendidas? Usado pra suprimir o
+  // strike-through dos cards quando o desconto ainda não vale (mantém card e
+  // resumo coerentes). `true` quando não há cupom de link gated.
+  const linkCouponConditionsMet = useLinkCoupon
+    ? couponConditionsMet(couponData, totalPrice, totalParticipants)
+    : true;
+  // Cupom de link cobre ALGUM ingresso selecionado? Se não (ticket fora do
+  // `appliesTo`), o cupom não deve aparecer no resumo — espelha o voucher.
+  const linkCouponCoversSelection = useLinkCoupon
+    ? couponCoversAnySelected(couponData?.appliesTo, selectedTickets)
+    : false;
+
+  // Cupom DISCOUNT REAL já aplicado na order (reserva): também precisa respeitar
+  // `appliesTo` — antes caía no `computeTicketPricingWithCoupon`, que descontava o
+  // subtotal INTEIRO (inclusive ingressos não cobertos). Preços vêm cheios
+  // (`unitPrice`), então recalculamos só sobre os elegíveis. Sem gating de min
+  // (o backend já validou ao aplicar). Auto (QUANTITY/AGE) seguem no caminho antigo.
+  const orderManualCouponDiscount =
+    !useLinkCoupon && appliedCoupon?.couponType === "DISCOUNT"
+      ? computeLinkCouponTicketDiscount(
+        {
+          type: appliedCoupon.type,
+          value: appliedCoupon.value,
+          appliesTo: normalizeCouponAppliesTo(appliedCoupon.appliesTo),
+        },
+        selectedTickets,
+        totalPrice,
+        totalParticipants,
+      )
+      : null;
+
   // Cupom AUTOMÁTICO de idade (elegibilidade do backend). Só entra quando não há
   // voucher nem cupom manual de link — esses são intenção explícita do usuário e
   // têm prioridade. O desconto respeita as condições do endpoint (appliesTo +
@@ -306,13 +359,13 @@ export function ModalitiesStep({ event, onNext, isSubmitting = false }: Modaliti
   const ageCouponPreview: CouponPreviewResult | null =
     ageCoupon && (ageCoupon.appliesTo == null || ageCoupon.appliesTo === "all")
       ? {
-          kind: "coupon",
-          code: "",
-          value: ageCoupon.value,
-          type: ageCoupon.type,
-          couponType: "AGE",
-          applyToProducts: ageCoupon.applyToProducts,
-        }
+        kind: "coupon",
+        code: "",
+        value: ageCoupon.value,
+        type: ageCoupon.type,
+        couponType: "AGE",
+        applyToProducts: ageCoupon.applyToProducts,
+      }
       : null;
 
   // Taxa de serviço + total calculados client-side com a MESMA regra do
@@ -322,22 +375,39 @@ export function ModalitiesStep({ event, onNext, isSubmitting = false }: Modaliti
     () =>
       useVoucher
         ? computeTicketPricingWithDiscount(
-            voucherDiscount,
+          voucherDiscount,
+          totalPrice,
+          event.participantFeePercent ?? 0,
+        )
+        : ageCoupon
+          ? computeTicketPricingWithDiscount(
+            ageDiscount,
             totalPrice,
             event.participantFeePercent ?? 0,
           )
-        : ageCoupon
-          ? computeTicketPricingWithDiscount(
-              ageDiscount,
+          : linkCouponDiscount != null
+            ? // Cupom de link manual: desconto JÁ filtrado por appliesTo + gated
+            // por minCartValue/minQuantity. A taxa recai sobre o subtotal já
+            // descontado, igual aos demais caminhos.
+            computeTicketPricingWithDiscount(
+              linkCouponDiscount,
               totalPrice,
               event.participantFeePercent ?? 0,
             )
-          : computeTicketPricingWithCoupon(
-              appliedCoupon,
-              totalPrice,
-              event.participantFeePercent ?? 0,
-            ),
-    [useVoucher, voucherDiscount, ageCoupon, ageDiscount, appliedCoupon, totalPrice, event.participantFeePercent],
+            : orderManualCouponDiscount != null
+              ? // Cupom DISCOUNT real da order: idem, mas appliesTo-aware (não
+              // desconta mais o subtotal inteiro quando cobre só algumas modalidades).
+              computeTicketPricingWithDiscount(
+                orderManualCouponDiscount,
+                totalPrice,
+                event.participantFeePercent ?? 0,
+              )
+              : computeTicketPricingWithCoupon(
+                appliedCoupon,
+                totalPrice,
+                event.participantFeePercent ?? 0,
+              ),
+    [useVoucher, voucherDiscount, ageCoupon, ageDiscount, linkCouponDiscount, orderManualCouponDiscount, appliedCoupon, totalPrice, event.participantFeePercent],
   );
   const serviceFee = pricing.serviceFee;
   const totalWithFee = pricing.total;
@@ -353,7 +423,10 @@ export function ModalitiesStep({ event, onNext, isSubmitting = false }: Modaliti
         : "";
   // Cupom do link ainda sem desconto calculado ("ao continuar"). Voucher e cupom
   // de idade são calculados client-side, então não usam esse fallback.
-  const couponPending = !!pendingCoupon && !voucherData;
+  // "Ao continuar" (cupom pendente) só quando o cupom de link cobre a seleção —
+  // ticket fora do `appliesTo` esconde o cupom por inteiro (paridade com voucher).
+  const couponPending =
+    !!pendingCoupon && !voucherData && (!useLinkCoupon || linkCouponCoversSelection);
 
   // Agrupa ingressos para exibição
   const groupedTickets = useMemo(() => {
@@ -431,6 +504,7 @@ export function ModalitiesStep({ event, onNext, isSubmitting = false }: Modaliti
                   userAge={userAge}
                   couponPreviewOverride={ageCouponPreview}
                   voucherFreeTicketId={voucherFreeTicketId}
+                  couponConditionsMet={linkCouponConditionsMet}
                 />
               ))}
               {categorizedTickets.map((category, index) => (
@@ -448,6 +522,7 @@ export function ModalitiesStep({ event, onNext, isSubmitting = false }: Modaliti
                   userAge={userAge}
                   couponPreviewOverride={ageCouponPreview}
                   voucherFreeTicketId={voucherFreeTicketId}
+                  couponConditionsMet={linkCouponConditionsMet}
                 />
               ))}
             </>
@@ -461,40 +536,53 @@ export function ModalitiesStep({ event, onNext, isSubmitting = false }: Modaliti
         </div>
 
         {/* Barra de resumo fixa (mobile) — unificada entre os steps do checkout. */}
-        <MobileSummaryBar
-          variant="full"
-          eventName={event.name}
-          totalParticipants={totalParticipants}
-          tickets={groupedTickets.map((t) => ({
-            categoryName: t.categoryName,
-            name: t.ticketName,
-            quantity: t.quantity,
-            total: t.total,
-          }))}
-          subtotal={totalPrice}
-          discount={
-            hasCouponLine
-              ? { label: discountLineLabel, amount: pricing.couponDiscount }
-              : null
-          }
-          pendingDiscountLabel={
-            couponPending ? `Cupom ${pendingCoupon}${couponPercentSuffix}` : null
-          }
-          serviceFee={serviceFee}
-          total={totalWithFee}
-          cta={{
-            label: "Selecionar",
-            onClick: handleNext,
-            disabled: totalParticipants === 0,
-            loading: isSubmitting,
-          }}
-        />
+        {groupedTickets.length > 0 && (
+          <MobileSummaryBar
+            variant="full"
+            eventName={event.name}
+            totalParticipants={totalParticipants}
+            tickets={groupedTickets.map((t) => ({
+              categoryName: t.categoryName,
+              name: t.ticketName,
+              quantity: t.quantity,
+              total: t.total,
+            }))}
+            subtotal={totalPrice}
+            discount={
+              hasCouponLine
+                ? { label: discountLineLabel, amount: pricing.couponDiscount }
+                : null
+            }
+            pendingDiscountLabel={
+              couponPending ? `Cupom ${pendingCoupon}${couponPercentSuffix}` : null
+            }
+            serviceFee={serviceFee}
+            total={totalWithFee}
+            cta={{
+              label: "Selecionar",
+              onClick: handleNext,
+              disabled: totalParticipants === 0,
+              loading: isSubmitting,
+            }}
+          />
+        )}
       </div>
 
       {/* Desktop Layout */}
       <div className="hidden md:block w-full">
         <div className="w-full">
-          <h1 className="text-2xl font-bold">Selecione seus ingressos</h1>
+          <div className="flex items-center gap-2">
+            {onBack && (
+              <button
+                className="cursor-pointer rotate-180 size-8 flex items-center justify-center rounded-full border border-gray-6"
+                onClick={onBack}
+                aria-label="Voltar para a página do evento"
+              >
+                <ArrowButton isOpen={false} />
+              </button>
+            )}
+            <h1 className="text-2xl font-bold">Selecione seus ingressos</h1>
+          </div>
           <p className="text-sm text-gray-11 mt-4">
             Escolha seus ingressos e defina a quantidade. Você pode ajustar depois em Informações.
           </p>
@@ -516,6 +604,7 @@ export function ModalitiesStep({ event, onNext, isSubmitting = false }: Modaliti
                         userAge={userAge}
                         couponPreviewOverride={ageCouponPreview}
                         voucherFreeTicketId={voucherFreeTicketId}
+                        couponConditionsMet={linkCouponConditionsMet}
                       />
                       {!isLast && <div className="w-full h-px bg-gray-6" />}
                     </Fragment>
@@ -539,6 +628,7 @@ export function ModalitiesStep({ event, onNext, isSubmitting = false }: Modaliti
                         userAge={userAge}
                         couponPreviewOverride={ageCouponPreview}
                         voucherFreeTicketId={voucherFreeTicketId}
+                        couponConditionsMet={linkCouponConditionsMet}
                       />
                       {!isLastCategory && (
                         <div className="w-full h-px bg-gray-6" />

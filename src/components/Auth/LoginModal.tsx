@@ -27,24 +27,51 @@ import {
   readReturnPath,
   clearReturnPath,
 } from "@/utils/authRedirect";
+import { EmailIcon } from "../Icons/EmailIcon";
+import { PasswordIcon } from "../Icons/PasswordIcon";
+import { CPFIcon } from "../Icons/CPFIcon";
+import { Checkbox } from "@/components/CheckBox";
+import { getCpfValidationMessage } from "@/utils/cpf";
 
 const TURNSTILE_SITE_KEY = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY ?? "";
 
+/** Identificador escolhido para recuperar a senha. */
+type ForgotMethod = "email" | "cpf";
+
+/** Máscara progressiva de CPF (xxx.xxx.xxx-xx) — mesma usada no cadastro. */
+function maskCPF(value: string): string {
+  const numbers = value.replace(/\D/g, "");
+  if (numbers.length <= 3) return numbers;
+  if (numbers.length <= 6) return `${numbers.slice(0, 3)}.${numbers.slice(3)}`;
+  if (numbers.length <= 9)
+    return `${numbers.slice(0, 3)}.${numbers.slice(3, 6)}.${numbers.slice(6)}`;
+  return `${numbers.slice(0, 3)}.${numbers.slice(3, 6)}.${numbers.slice(6, 9)}-${numbers.slice(9, 11)}`;
+}
+
 function ForgotPasswordPanel({
+  method,
+  onMethodChange,
   email,
   onEmailChange,
+  cpf,
+  onCpfChange,
   error,
   onSubmit,
   isPending,
   onClose,
 }: {
+  method: ForgotMethod;
+  onMethodChange: (method: ForgotMethod) => void;
   email: string;
   onEmailChange: (value: string) => void;
+  cpf: string;
+  onCpfChange: (value: string) => void;
   error?: string;
   onSubmit: (e: FormEvent) => void;
   isPending: boolean;
   onClose: () => void;
 }) {
+  const isCpf = method === "cpf";
   return (
     <div className="bg-gray-1 rounded-xl w-full overflow-hidden flex flex-col border border-gray-6 md:border-0">
       <div className="flex items-center justify-between px-4 py-4 border-b border-gray-6 shrink-0">
@@ -63,33 +90,94 @@ function ForgotPasswordPanel({
       <form onSubmit={onSubmit} className="flex flex-col w-full">
         <div className="flex flex-col gap-8 pt-4 pb-6 px-6">
           <p className="font-medium text-base leading-[1.3] text-gray-12 font-family-dm-sans">
-            Informe o e-mail da sua conta e enviaremos um código para criar uma
-            nova senha
+            Informe o e-mail ou CPF da sua conta. Enviaremos um código de 6
+            dígitos para que você possa criar uma nova senha.
           </p>
-          <div className="flex flex-col gap-2 w-full min-w-0">
-            <label
-              htmlFor="forgot-password-email"
-              className="font-normal text-base leading-[1.3] text-gray-12 font-family-dm-sans"
+          <div className="flex flex-col gap-5 w-full min-w-0">
+            {/* Toggle email/CPF: visual de checkbox (design), semântica de radio */}
+            <div
+              role="radiogroup"
+              aria-label="Como deseja recuperar a senha"
+              className="flex gap-4 items-center"
             >
-              E-mail cadastrado
-            </label>
-            <div className="relative w-full">
-              <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-11 pointer-events-none" />
-              <Input
-                id="forgot-password-email"
-                type="email"
-                autoComplete="email"
-                placeholder="seu@email.com"
-                value={email}
-                onChange={(e) => onEmailChange(e.target.value)}
-                className={`pl-10 h-12 rounded-lg ${error ? "border-red-9 focus-visible:border-red-9" : ""
-                  }`}
-                aria-invalid={!!error}
-              />
+              <label className="flex gap-2 items-center cursor-pointer">
+                <Checkbox
+                  checked={!isCpf}
+                  onCheckedChange={() => onMethodChange("email")}
+                  role="radio"
+                  aria-checked={!isCpf}
+                />
+                <span className="font-normal text-sm leading-[1.3] text-gray-12 font-family-dm-sans select-none">
+                  Informar email
+                </span>
+              </label>
+              <label className="flex gap-2 items-center cursor-pointer">
+                <Checkbox
+                  checked={isCpf}
+                  onCheckedChange={() => onMethodChange("cpf")}
+                  role="radio"
+                  aria-checked={isCpf}
+                />
+                <span className="font-normal text-sm leading-[1.3] text-gray-12 font-family-dm-sans select-none">
+                  Informar CPF
+                </span>
+              </label>
             </div>
-            {error ? (
-              <p className="text-sm text-red-9 font-family-dm-sans">{error}</p>
-            ) : null}
+            {isCpf ? (
+              <div className="flex flex-col gap-2 w-full min-w-0">
+                <label
+                  htmlFor="forgot-password-cpf"
+                  className="font-normal text-base leading-[1.3] text-gray-12 font-family-dm-sans"
+                >
+                  CPF cadastrado
+                </label>
+                <div className="relative w-full">
+                  <CPFIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-11 pointer-events-none" />
+                  <Input
+                    id="forgot-password-cpf"
+                    type="text"
+                    inputMode="numeric"
+                    autoComplete="off"
+                    maxLength={14}
+                    placeholder="000.000.000-00"
+                    value={cpf}
+                    onChange={(e) => onCpfChange(e.target.value)}
+                    className={`pl-10 h-12 rounded-lg ${error ? "border-red-9 focus-visible:border-red-9" : ""
+                      }`}
+                    aria-invalid={!!error}
+                  />
+                </div>
+                {error ? (
+                  <p className="text-sm text-red-9 font-family-dm-sans">{error}</p>
+                ) : null}
+              </div>
+            ) : (
+              <div className="flex flex-col gap-2 w-full min-w-0">
+                <label
+                  htmlFor="forgot-password-email"
+                  className="font-normal text-base leading-[1.3] text-gray-12 font-family-dm-sans"
+                >
+                  E-mail cadastrado
+                </label>
+                <div className="relative w-full">
+                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-11 pointer-events-none" />
+                  <Input
+                    id="forgot-password-email"
+                    type="email"
+                    autoComplete="email"
+                    placeholder="seu@email.com"
+                    value={email}
+                    onChange={(e) => onEmailChange(e.target.value)}
+                    className={`pl-10 h-12 rounded-lg ${error ? "border-red-9 focus-visible:border-red-9" : ""
+                      }`}
+                    aria-invalid={!!error}
+                  />
+                </div>
+                {error ? (
+                  <p className="text-sm text-red-9 font-family-dm-sans">{error}</p>
+                ) : null}
+              </div>
+            )}
           </div>
         </div>
         <div className="flex px-6 pt-4 pb-8 w-full">
@@ -98,7 +186,7 @@ function ForgotPasswordPanel({
             disabled={isPending}
             className="w-full h-12 leading-[1.1] font-manrope rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {isPending ? "Enviando..." : "Enviar código de recuperação"}
+            {isPending ? "Enviando..." : "Recuperar senha"}
           </Button>
         </div>
       </form>
@@ -119,6 +207,7 @@ function ForgotPasswordEnterCodePanel({
   isVerifying,
   resendCooldownSeconds,
 }: {
+  /** E-mail digitado pelo usuário; vazio quando o fluxo foi por CPF (não revelamos o e-mail da conta). */
   sentToEmail: string;
   code: string;
   onCodeChange: (value: string) => void;
@@ -158,11 +247,18 @@ function ForgotPasswordEnterCodePanel({
       </div>
       <form onSubmit={onSubmit} className="flex flex-col w-full">
         <div className="flex flex-col gap-6 pt-4 pb-2 px-6 w-full">
-          <p className="font-medium text-base leading-[1.3] text-gray-12 font-family-dm-sans">
-            Enviamos um código de 6 dígitos para{" "}
-            <span className="font-bold text-gray-12">{sentToEmail}</span>.
-            Digite-o abaixo para continuar.
-          </p>
+          <div className="flex flex-col items-center gap-2">
+            <p className="font-medium text-base leading-[1.3] text-gray-12 font-family-dm-sans">
+              Vamos enviar um código de 6 dígitos para o e-mail abaixo para que você possa criar uma nova senha.
+            </p>
+            <div className="flex items-center justify-center gap-2 px-3 py-2 w-min bg-gray-3 rounded-lg border border-gray-6">
+              <EmailIcon className="w-4 h-4 text-gray-11 shrink-0" />
+              <span className="font-normal text-sm leading-[1.3] text-gray-11 font-family-dm-sans">
+                {sentToEmail}
+              </span>
+            </div>
+          </div>
+
           <div className="flex flex-col gap-3 w-full min-w-0">
             <OtpCodeInput
               value={code}
@@ -274,8 +370,8 @@ function ForgotPasswordNewPasswordPanel({
                 value={password}
                 onChange={(e) => onPasswordChange(e.target.value)}
                 className={`pl-10 pr-10 h-12 rounded-lg ${fieldErrors.password
-                    ? "border-red-9 focus-visible:border-red-9"
-                    : ""
+                  ? "border-red-9 focus-visible:border-red-9"
+                  : ""
                   }`}
                 aria-invalid={!!fieldErrors.password}
               />
@@ -311,8 +407,8 @@ function ForgotPasswordNewPasswordPanel({
                 value={confirmPassword}
                 onChange={(e) => onConfirmPasswordChange(e.target.value)}
                 className={`pl-10 pr-10 h-12 rounded-lg ${fieldErrors.confirmPassword
-                    ? "border-red-9 focus-visible:border-red-9"
-                    : ""
+                  ? "border-red-9 focus-visible:border-red-9"
+                  : ""
                   }`}
                 aria-invalid={!!fieldErrors.confirmPassword}
               />
@@ -336,7 +432,7 @@ function ForgotPasswordNewPasswordPanel({
           <Button
             type="submit"
             disabled={isPending}
-            className="w-full h-12 bg-primary-11 text-primary-2 hover:bg-primary-10 font-bold text-lg leading-[1.1] font-manrope rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full h-12 font-bold text-lg leading-[1.1] font-manrope rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {isPending ? "Salvando..." : "Salvar"}
           </Button>
@@ -346,13 +442,14 @@ function ForgotPasswordNewPasswordPanel({
   );
 }
 
-const GoogleIcon = () => (
+const GoogleIcon = ({ className = "size-6" }: { className?: string }) => (
   <svg
     xmlns="http://www.w3.org/2000/svg"
     width="28"
     height="28"
     viewBox="0 0 28 28"
     fill="none"
+    className={className}
   >
     <path
       d="M25.4404 11.7148H24.5007V11.6663H14.0007V16.333H20.5941C19.6322 19.0496 17.0474 20.9997 14.0007 20.9997C10.1349 20.9997 7.00065 17.8654 7.00065 13.9997C7.00065 10.1339 10.1349 6.99967 14.0007 6.99967C15.7851 6.99967 17.4085 7.67284 18.6446 8.77242L21.9445 5.47251C19.8608 3.53059 17.0737 2.33301 14.0007 2.33301C7.55773 2.33301 2.33398 7.55676 2.33398 13.9997C2.33398 20.4426 7.55773 25.6663 14.0007 25.6663C20.4436 25.6663 25.6673 20.4426 25.6673 13.9997C25.6673 13.2174 25.5868 12.4538 25.4404 11.7148Z"
@@ -405,8 +502,14 @@ export function LoginModal() {
   const [mfaResendCooldown, setMfaResendCooldown] = useState(0);
 
   const [forgotFlow, setForgotFlow] = useState<ForgotFlow>("idle");
+  const [forgotMethod, setForgotMethod] = useState<ForgotMethod>("email");
   const [forgotEmail, setForgotEmail] = useState("");
+  const [forgotCpf, setForgotCpf] = useState("");
   const [passwordResetEmail, setPasswordResetEmail] = useState("");
+  /** CPF (só dígitos) usado no passo 1 — identificador das chamadas verify/resend. */
+  const [passwordResetCpf, setPasswordResetCpf] = useState("");
+  /** E-mail MASCARADO da conta (só no fluxo por CPF) — pra indicar onde o código foi enviado. */
+  const [passwordResetMaskedEmail, setPasswordResetMaskedEmail] = useState("");
   const [forgotEmailError, setForgotEmailError] = useState<string | undefined>(
     undefined
   );
@@ -437,8 +540,12 @@ export function LoginModal() {
   useEffect(() => {
     if (!isOpen) {
       setForgotFlow("idle");
+      setForgotMethod("email");
       setForgotEmail("");
+      setForgotCpf("");
       setPasswordResetEmail("");
+      setPasswordResetCpf("");
+      setPasswordResetMaskedEmail("");
       setForgotEmailError(undefined);
       setResetCode("");
       setResetCodeError(undefined);
@@ -599,13 +706,66 @@ export function LoginModal() {
     if (forgotEmailError) setForgotEmailError(undefined);
   };
 
+  const handleForgotCpfChange = (value: string) => {
+    setForgotCpf(maskCPF(value));
+    if (forgotEmailError) setForgotEmailError(undefined);
+  };
+
+  const handleForgotMethodChange = (method: ForgotMethod) => {
+    setForgotMethod(method);
+    setForgotEmailError(undefined);
+  };
+
   const handleForgotPasswordSubmit = async (e: FormEvent) => {
     e.preventDefault();
     try {
-      forgotPasswordStep1Schema.parse({ email: forgotEmail });
-      setForgotEmailError(undefined);
-      await forgotPassword({ email: forgotEmail, accountType: "USER" });
-      setPasswordResetEmail(forgotEmail);
+      if (forgotMethod === "cpf") {
+        // Validação local (algoritmo da Receita) antes de bater no backend
+        const cpfError = getCpfValidationMessage(forgotCpf);
+        if (cpfError) {
+          setForgotEmailError(cpfError);
+          toast.error(cpfError);
+          return;
+        }
+        const cpfDigits = forgotCpf.replace(/\D/g, "");
+        setForgotEmailError(undefined);
+
+        // Cooldown: se já enviamos para ESTE mesmo CPF e o cooldown ainda corre,
+        // NÃO reenvia (o usuário não pode burlar o limite voltando pra cá) — só
+        // retorna ao passo do código com o tempo restante. Identificador
+        // diferente = pedido novo → segue o fluxo normal abaixo.
+        if (forgotResendCooldown > 0 && passwordResetCpf === cpfDigits) {
+          toast.error(`Aguarde ${forgotResendCooldown}s para reenviar o código.`);
+          setForgotFlow("enter-code");
+          return;
+        }
+
+        const result = await forgotPassword({ cpf: cpfDigits, accountType: "USER" });
+        setPasswordResetCpf(cpfDigits);
+        setPasswordResetEmail("");
+        // E-mail mascarado da conta (quando o CPF existe) pra mostrar no passo
+        // do código. Ausente = CPF sem conta; mantém a mensagem genérica.
+        setPasswordResetMaskedEmail(result?.maskedEmail ?? "");
+      } else {
+        forgotPasswordStep1Schema.parse({ email: forgotEmail });
+        setForgotEmailError(undefined);
+
+        // Mesmo cooldown para o fluxo por e-mail (comparação canônica: trim +
+        // lowercase, igual à chave de rate limit do backend).
+        const sameEmail =
+          passwordResetEmail.trim().toLowerCase() ===
+          forgotEmail.trim().toLowerCase();
+        if (forgotResendCooldown > 0 && sameEmail) {
+          toast.error(`Aguarde ${forgotResendCooldown}s para reenviar o código.`);
+          setForgotFlow("enter-code");
+          return;
+        }
+
+        await forgotPassword({ email: forgotEmail, accountType: "USER" });
+        setPasswordResetEmail(forgotEmail);
+        setPasswordResetCpf("");
+        setPasswordResetMaskedEmail("");
+      }
       setResetCode("");
       setResetCodeError(undefined);
       setForgotResendCooldown(60);
@@ -630,7 +790,10 @@ export function LoginModal() {
     try {
       setResetCodeError(undefined);
       const result = await verifyResetCode({
-        email: passwordResetEmail,
+        // Mesmo identificador usado no passo 1 (email OU cpf)
+        ...(passwordResetEmail
+          ? { email: passwordResetEmail }
+          : { cpf: passwordResetCpf }),
         code: resetCode,
         accountType: "USER",
       });
@@ -642,9 +805,15 @@ export function LoginModal() {
   };
 
   const handleResendResetEmail = async () => {
-    if (!passwordResetEmail || forgotResendCooldown > 0) return;
+    if ((!passwordResetEmail && !passwordResetCpf) || forgotResendCooldown > 0)
+      return;
     try {
-      await resendCode({ email: passwordResetEmail, accountType: "USER" });
+      await resendCode({
+        ...(passwordResetEmail
+          ? { email: passwordResetEmail }
+          : { cpf: passwordResetCpf }),
+        accountType: "USER",
+      });
       setForgotResendCooldown(60);
       setResetCode("");
       setResetCodeError(undefined);
@@ -680,7 +849,7 @@ export function LoginModal() {
     setNewPassword("");
     setConfirmNewPassword("");
     setResetPasswordToken("");
-    if (passwordResetEmail) {
+    if (passwordResetEmail || passwordResetCpf) {
       setForgotFlow("enter-code");
     } else {
       setForgotFlow("email");
@@ -874,8 +1043,12 @@ export function LoginModal() {
   const forgotStepContent =
     forgotFlow === "email" ? (
       <ForgotPasswordPanel
+        method={forgotMethod}
+        onMethodChange={handleForgotMethodChange}
         email={forgotEmail}
         onEmailChange={handleForgotEmailChange}
+        cpf={forgotCpf}
+        onCpfChange={handleForgotCpfChange}
         error={forgotEmailError}
         onSubmit={handleForgotPasswordSubmit}
         isPending={forgotPasswordPending}
@@ -883,7 +1056,7 @@ export function LoginModal() {
       />
     ) : forgotFlow === "enter-code" ? (
       <ForgotPasswordEnterCodePanel
-        sentToEmail={passwordResetEmail}
+        sentToEmail={passwordResetEmail || passwordResetMaskedEmail}
         code={resetCode}
         onCodeChange={(v) => { setResetCode(v); if (resetCodeError) setResetCodeError(undefined); }}
         error={resetCodeError}
@@ -938,71 +1111,53 @@ export function LoginModal() {
                 </div>
               ) : (
                 <>
-                  {/* Header with glow effect */}
-                  <div className="relative h-[164px] flex items-end justify-between pb-7 pt-8 px-4 overflow-hidden">
-                    {/* Glow effect background */}
-                    <div className="absolute top-[-190px] left-1/2 -translate-x-1/2 w-[390px] h-[312px] flex items-center justify-center pointer-events-none">
-                      <div className="rotate-90 w-[312px] h-[390px] relative">
-                        <div className="absolute inset-[-60.87%_-76.09%] opacity-20">
-                          <div className="w-full h-full bg-primary-5 rounded-full blur-3xl" />
-                        </div>
-                      </div>
-                    </div>
-
+                  {/* Header — mesmo padrão do desktop: logo central + linhas
+                      decorativas em gradiente (Figma 883:50467/50468). */}
+                  <div className="relative h-[68px] px-4 flex items-center justify-center overflow-hidden">
                     {/* Close button */}
                     <button
                       onClick={closeLoginModal}
-                      className="absolute top-4 right-4 z-20 flex items-center justify-center size-8 rounded-full hover:bg-gray-3 transition-colors"
+                      className="absolute top-4 right-4 z-20 flex items-center justify-center size-8 rounded-full bg-gray-1 hover:bg-gray-3 transition-colors"
                       aria-label="Fechar modal"
                     >
                       <X className="size-5 text-gray-12" />
                     </button>
 
-                    {/* Left decorative */}
-                    <div className="absolute left-0 top-0 w-[162px] h-[80px]">
-                      <Image
-                        src="/images/login_left.png"
-                        alt="Decorative left"
-                        width={162}
-                        height={80}
-                        draggable={false}
-                        className="w-full h-full object-contain"
-                      />
+                    {/* Linhas decorativas — versão REDUZIDA (~65%) das do
+                        desktop: em 390px de viewport, dois lados de 162px
+                        quase encostariam no logo. Lado esquerdo é espelho. */}
+                    <div className="pointer-events-none absolute right-0 top-0 h-[68px] w-[106px]" aria-hidden>
+                      <div className="absolute bottom-[42px] left-[33px] h-1.5 w-[73px] rounded-l-full bg-gradient-to-l from-[rgba(62,155,79,0)] to-[#3e9b4f]" />
+                      <div className="absolute bottom-[31px] left-[53px] h-1.5 w-[53px] rounded-l-full bg-gradient-to-l from-[rgba(62,155,79,0)] to-[#3e9b4f]" />
+                      <div className="absolute bottom-[20px] left-[73px] h-1.5 w-[33px] rounded-l-full bg-gradient-to-l from-[rgba(62,155,79,0)] to-[#3e9b4f]" />
+                    </div>
+                    <div className="pointer-events-none absolute left-0 top-0 h-[68px] w-[106px] -scale-x-100" aria-hidden>
+                      <div className="absolute bottom-[42px] left-[33px] h-1.5 w-[73px] rounded-l-full bg-gradient-to-l from-[rgba(62,155,79,0)] to-[#3e9b4f]" />
+                      <div className="absolute bottom-[31px] left-[53px] h-1.5 w-[53px] rounded-l-full bg-gradient-to-l from-[rgba(62,155,79,0)] to-[#3e9b4f]" />
+                      <div className="absolute bottom-[20px] left-[73px] h-1.5 w-[33px] rounded-l-full bg-gradient-to-l from-[rgba(62,155,79,0)] to-[#3e9b4f]" />
                     </div>
 
                     {/* Logo */}
-                    <div className="relative w-full z-10 flex items-center justify-center gap-2.5">
+                    <div className="relative z-10 flex items-center justify-center">
                       <Image
                         src="/images/logo_horizontal_black.png"
                         alt="Pódio Ticket"
-                        width={33}
-                        height={33}
+                        width={210}
+                        height={36}
                         priority
                         className="h-8 w-auto"
                         draggable={false}
                       />
                     </div>
-
-                    {/* Right decorative */}
-                    <div className="absolute right-0 top-0 w-[162px] h-[80px]">
-                      <Image
-                        src="/images/login_right.png"
-                        alt="Decorative right"
-                        width={162}
-                        height={80}
-                        draggable={false}
-                        className="w-full h-full object-contain"
-                      />
-                    </div>
                   </div>
 
                   {/* Content */}
-                  <div className="flex flex-col items-center w-full min-h-[648px]">
-                    {/* Welcome text */}
-                    <div className="flex flex-col items-center justify-center pt-3 px-4 pb-0">
-                      <h2 className="font-extrabold text-2xl leading-[1.1] text-gray-12 font-manrope">
-                        Bem-vindo de volta
-                      </h2>
+                  <div className="flex flex-col items-center justify-center w-full min-h-[648px] h-full">
+                    {/* Welcome text — mesmo texto do desktop */}
+                    <div className="flex flex-col items-center justify-center pt-6 px-4 pb-0 text-center">
+                      <p className="font-normal text-lg leading-[1.3] text-gray-11 font-family-dm-sans">
+                        Sua próxima largada começa aqui!
+                      </p>
                     </div>
 
                     {/* Form inputs */}
@@ -1017,7 +1172,7 @@ export function LoginModal() {
                             Email
                           </label>
                           <div className="relative w-full">
-                            <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-11" />
+                            <EmailIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-11" />
                             <Input
                               type="email"
                               placeholder="Digite seu email"
@@ -1045,7 +1200,7 @@ export function LoginModal() {
                             Senha
                           </label>
                           <div className="relative w-full">
-                            <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-11 pointer-events-none" />
+                            <PasswordIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-11 pointer-events-none" />
                             <Input
                               type={showPassword ? "text" : "password"}
                               placeholder="Digite sua senha"
@@ -1089,7 +1244,16 @@ export function LoginModal() {
                         <button
                           type="button"
                           onClick={() => {
-                            setForgotEmail(formData.email);
+                            {
+                              // Login aceita email OU CPF: pré-seleciona o
+                              // método conforme o que foi digitado lá.
+                              const typed = formData.email.trim();
+                              const isCpfLike =
+                                typed !== "" && /^[\d.\-\s]+$/.test(typed);
+                              setForgotMethod(isCpfLike ? "cpf" : "email");
+                              setForgotEmail(isCpfLike ? "" : typed);
+                              setForgotCpf(isCpfLike ? maskCPF(typed) : "");
+                            }
                             setForgotEmailError(undefined);
                             setForgotFlow("email");
                           }}
@@ -1099,24 +1263,30 @@ export function LoginModal() {
                         </button>
                       </div>
 
-                      {/* Captcha Turnstile */}
+                      {/* Captcha Turnstile — retângulo "normal" (300×65)
+                          reduzido via scale pra ~255×55: não existe tamanho
+                          fino nativo no widget. Wrapper com altura fixa
+                          absorve o espaço extra do scale. */}
                       {TURNSTILE_SITE_KEY && (
-                        <Turnstile
-                          ref={mobileTurnstileRef}
-                          siteKey={TURNSTILE_SITE_KEY}
-                          onSuccess={setTurnstileToken}
-                          onError={() => setTurnstileToken(null)}
-                          onExpire={() => setTurnstileToken(null)}
-                          options={{ theme: "auto", size: "flexible" }}
-                          className="w-full"
-                        />
+                        <div className="flex h-14 w-full items-center justify-center">
+                          <div className="w-full scale-[0.85]">
+                            <Turnstile
+                              ref={mobileTurnstileRef}
+                              siteKey={TURNSTILE_SITE_KEY}
+                              onSuccess={setTurnstileToken}
+                              onError={() => setTurnstileToken(null)}
+                              onExpire={() => setTurnstileToken(null)}
+                              options={{ theme: "light", size: "flexible" }}
+                            />
+                          </div>
+                        </div>
                       )}
 
                       {/* Login button */}
                       <Button
                         type="submit"
                         disabled={isSubmitting || authLoading || (!!TURNSTILE_SITE_KEY && !turnstileToken)}
-                        className="w-full h-11 bg-primary-11 text-primary-2 hover:bg-primary-10 font-bold text-base font-manrope disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="w-full h-11 font-bold text-base font-manrope disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         {isSubmitting || authLoading
                           ? "Conectando..."
@@ -1125,7 +1295,7 @@ export function LoginModal() {
                     </form>
 
                     {/* Social login section */}
-                    <div className="flex-1 flex flex-col gap-6 items-center justify-between pb-8 pt-4 px-4 w-full">
+                    <div className="flex-1 flex flex-col gap-6 items-center justify-between pb-8 px-4 w-full">
                       <div className="flex flex-col gap-6 items-start w-full">
                         {/* Divider */}
                         <div className="flex gap-2.5 items-center justify-center w-full">
@@ -1189,7 +1359,7 @@ export function LoginModal() {
               onClick={(e) => e.stopPropagation()}
               className={`rounded-xl shadow-2xl w-full mx-4 relative overflow-hidden max-h-[calc(100dvh-32px)] ${mfaToken || showForgotFlow
                 ? "max-w-[460px] bg-transparent"
-                : "max-w-[600px] bg-gray-1 overflow-y-auto"
+                : "max-w-[624px] bg-gray-1 overflow-y-auto"
                 }`}
             >
               {mfaToken ? (
@@ -1198,24 +1368,27 @@ export function LoginModal() {
                 forgotStepContent
               ) : (
                 <>
-                  <div className="relative pt-8 pb-3 px-6 flex items-center justify-center">
+                  <div className="relative h-[68px] px-6 flex items-center justify-center">
                     {/* Close button */}
                     <button
                       onClick={closeLoginModal}
-                      className="absolute top-4 right-4 z-20 flex items-center justify-center size-8 rounded-full hover:bg-gray-3 transition-colors"
+                      className="absolute top-4 right-4 z-20 flex items-center justify-center size-8 rounded-full bg-gray-1 hover:bg-gray-3 transition-colors"
                       aria-label="Fechar modal"
                     >
                       <X className="size-5 text-gray-12" />
                     </button>
 
-                    <div className="absolute left-0 top-0 w-[162px] h-[80px] flex items-center justify-center">
-                      <Image
-                        src="/images/login_left.png"
-                        alt="Decorative left"
-                        width={162}
-                        height={80}
-                        draggable={false}
-                      />
+                    {/* Linhas decorativas em gradiente (Figma 883:50467/50468) —
+                        lado esquerdo é o espelho horizontal do direito. */}
+                    <div className="pointer-events-none absolute right-0 top-0 h-[68px] w-[162px]" aria-hidden>
+                      <div className="absolute bottom-[46px] left-[50px] h-2 w-[112px] rounded-l-full bg-gradient-to-l from-[rgba(62,155,79,0)] to-[#3e9b4f]" />
+                      <div className="absolute bottom-[30px] left-[81px] h-2 w-[81px] rounded-l-full bg-gradient-to-l from-[rgba(62,155,79,0)] to-[#3e9b4f]" />
+                      <div className="absolute bottom-[14px] left-[111px] h-2 w-[51px] rounded-l-full bg-gradient-to-l from-[rgba(62,155,79,0)] to-[#3e9b4f]" />
+                    </div>
+                    <div className="pointer-events-none absolute left-0 top-0 h-[68px] w-[162px] -scale-x-100" aria-hidden>
+                      <div className="absolute bottom-[46px] left-[50px] h-2 w-[112px] rounded-l-full bg-gradient-to-l from-[rgba(62,155,79,0)] to-[#3e9b4f]" />
+                      <div className="absolute bottom-[30px] left-[81px] h-2 w-[81px] rounded-l-full bg-gradient-to-l from-[rgba(62,155,79,0)] to-[#3e9b4f]" />
+                      <div className="absolute bottom-[14px] left-[111px] h-2 w-[51px] rounded-l-full bg-gradient-to-l from-[rgba(62,155,79,0)] to-[#3e9b4f]" />
                     </div>
 
                     <div className="relative z-10 flex items-center">
@@ -1225,17 +1398,7 @@ export function LoginModal() {
                         width={210}
                         height={36}
                         priority
-                        className="h-9 w-auto"
-                        draggable={false}
-                      />
-                    </div>
-
-                    <div className="absolute right-0 top-0 w-[162px] h-[80px]">
-                      <Image
-                        src="/images/login_right.png"
-                        alt="Decorative right"
-                        width={162}
-                        height={80}
+                        className="h-8 w-auto"
                         draggable={false}
                       />
                     </div>
@@ -1244,28 +1407,25 @@ export function LoginModal() {
                   {/* Content */}
                   <div className="flex flex-col items-center w-full">
                     {/* Welcome text */}
-                    <div className="flex flex-col gap-4 items-center justify-center pt-8 pb-0 px-6 text-center">
-                      <h2 className="font-extrabold text-[28px] leading-[1.1] text-gray-12 font-manrope">
-                        Bem-vindo de volta
-                      </h2>
+                    <div className="flex flex-col gap-4 items-center justify-center pt-6 pb-0 px-6 text-center">
                       <p className="font-normal text-lg leading-[1.3] text-gray-11 font-family-dm-sans">
-                        Por favor, preencha os campos para Entrar
+                        Sua próxima largada começa aqui!
                       </p>
                     </div>
 
                     {/* Form inputs */}
                     <form
                       onSubmit={handleSubmit}
-                      className="flex flex-col gap-5 items-start p-6 w-full"
+                      className="flex flex-col gap-3 items-start p-6 w-full"
                     >
-                      <div className="flex flex-col gap-5 items-start w-full">
+                      <div className="flex flex-col gap-3 items-start w-full">
                         {/* Email input */}
                         <div className="flex flex-col gap-1 items-start w-full">
                           <label className="font-normal text-base leading-[1.3] text-gray-11 font-family-dm-sans">
                             Email
                           </label>
                           <div className="relative w-full">
-                            <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-11" />
+                            <EmailIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-11" />
                             <Input
                               type="email"
                               placeholder="Digite seu email"
@@ -1293,7 +1453,7 @@ export function LoginModal() {
                             Senha
                           </label>
                           <div className="relative w-full">
-                            <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-11 pointer-events-none" />
+                            <PasswordIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-11 pointer-events-none" />
                             <Input
                               type={showPassword ? "text" : "password"}
                               placeholder="Digite sua senha"
@@ -1337,7 +1497,16 @@ export function LoginModal() {
                         <button
                           type="button"
                           onClick={() => {
-                            setForgotEmail(formData.email);
+                            {
+                              // Login aceita email OU CPF: pré-seleciona o
+                              // método conforme o que foi digitado lá.
+                              const typed = formData.email.trim();
+                              const isCpfLike =
+                                typed !== "" && /^[\d.\-\s]+$/.test(typed);
+                              setForgotMethod(isCpfLike ? "cpf" : "email");
+                              setForgotEmail(isCpfLike ? "" : typed);
+                              setForgotCpf(isCpfLike ? maskCPF(typed) : "");
+                            }
                             setForgotEmailError(undefined);
                             setForgotFlow("email");
                           }}
@@ -1347,24 +1516,30 @@ export function LoginModal() {
                         </button>
                       </div>
 
-                      {/* Captcha Turnstile */}
+                      {/* Captcha Turnstile — retângulo "normal" (300×65)
+                          reduzido via scale pra ~255×55: não existe tamanho
+                          fino nativo no widget. Wrapper com altura fixa
+                          absorve o espaço extra do scale. */}
                       {TURNSTILE_SITE_KEY && (
-                        <Turnstile
-                          ref={desktopTurnstileRef}
-                          siteKey={TURNSTILE_SITE_KEY}
-                          onSuccess={setTurnstileToken}
-                          onError={() => setTurnstileToken(null)}
-                          onExpire={() => setTurnstileToken(null)}
-                          options={{ theme: "auto", size: "flexible" }}
-                          className="w-full"
-                        />
+                        <div className="flex h-14 w-full items-center justify-center">
+                          <div className="scale-100 w-full">
+                            <Turnstile
+                              ref={desktopTurnstileRef}
+                              siteKey={TURNSTILE_SITE_KEY}
+                              onSuccess={setTurnstileToken}
+                              onError={() => setTurnstileToken(null)}
+                              onExpire={() => setTurnstileToken(null)}
+                              options={{ theme: "light", size: "flexible" }}
+                            />
+                          </div>
+                        </div>
                       )}
 
                       {/* Login button */}
                       <Button
                         type="submit"
                         disabled={isSubmitting || authLoading || (!!TURNSTILE_SITE_KEY && !turnstileToken)}
-                        className="w-full h-12 bg-primary-11 text-primary-2 hover:bg-primary-10 font-bold text-xl font-manrope disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="w-full h-12 font-bold text-lg font-manrope disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         {isSubmitting || authLoading
                           ? "Conectando..."
@@ -1373,7 +1548,7 @@ export function LoginModal() {
                     </form>
 
                     {/* Social login section */}
-                    <div className="flex flex-col gap-6 items-center justify-center pb-8 px-6 w-full">
+                    <div className="flex flex-col gap-8 items-center justify-center pt-2 pb-8 px-6 w-full">
                       <div className="flex flex-col gap-6 items-start w-full">
                         {/* Divider */}
                         <div className="flex gap-2.5 items-center justify-center w-full">
@@ -1390,8 +1565,8 @@ export function LoginModal() {
                             onClick={handleGoogleLogin}
                             className="w-full border border-gray-6 rounded-lg h-12 flex items-center justify-center gap-2 hover:bg-gray-3 transition-colors"
                           >
-                            <GoogleIcon />
-                            <span className="font-normal text-base leading-[1.3] text-gray-12 font-family-dm-sans">
+                            <GoogleIcon className="size-6" />
+                            <span className="font-normal text-sm leading-[1.3] text-gray-12 font-family-dm-sans">
                               Entrar com Google
                             </span>
                           </Button>
@@ -1413,18 +1588,6 @@ export function LoginModal() {
                           Criar conta
                         </button>
                       </div>
-
-                      {/* Terms and privacy */}
-                      <p className="text-xs leading-[1.3] text-gray-11 text-center font-family-dm-sans">
-                        Ao continuar você concorda com nossos{" "}
-                        <button className="font-bold text-gray-12 underline hover:text-primary-10 transition-colors cursor-pointer">
-                          Termos de serviço
-                        </button>{" "}
-                        e{" "}
-                        <button className="font-bold text-gray-12 underline hover:text-primary-10 transition-colors cursor-pointer">
-                          Política de privacidade
-                        </button>
-                      </p>
                     </div>
                   </div>
                 </>

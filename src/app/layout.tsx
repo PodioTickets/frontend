@@ -71,17 +71,35 @@ export default async function RootLayout({
 }>) {
   const headersList = await headers();
   const host = headersList.get("host")?.split(":")[0]?.toLowerCase() ?? "";
-  const appHost =
-    process.env.ORGANIZER_APP_HOST?.split(":")[0]?.trim().toLowerCase() ?? "";
-  const adminHost =
-    process.env.ADMIN_APP_HOST?.split(":")[0]?.trim().toLowerCase() ?? "";
+  // Shell (Header/Footer) por HOST do painel. Usa o env SERVER (settável por-deploy
+  // sem rebuild); cai pro NEXT_PUBLIC (build-time) se o server não estiver setado.
+  // Match EXATO de propósito: o app host serve também páginas públicas, então marcar
+  // por heurística esconderia o Header/Footer delas.
+  const appHost = (process.env.ORGANIZER_APP_HOST || process.env.NEXT_PUBLIC_ORGANIZER_APP_HOST)
+    ?.split("://").pop()?.split("/")[0]?.split(":")[0]?.trim().toLowerCase() ?? "";
+  const adminHost = (process.env.ADMIN_APP_HOST || process.env.NEXT_PUBLIC_ADMIN_APP_HOST)
+    ?.split("://").pop()?.split("/")[0]?.split(":")[0]?.trim().toLowerCase() ?? "";
   const isAppOrganizerSurface = Boolean(appHost && host === appHost);
   const isAdminSurface = Boolean(adminHost && host === adminHost);
+
+  // Superfície de AUTH resolvida no SERVER (env runtime, mesma fonte que dirige o
+  // rewrite do proxy). Exposta ao JS client via <meta> para o `getCurrentSurface`
+  // (em authSurface.ts) NÃO depender do `NEXT_PUBLIC_*_APP_HOST` em build-time —
+  // que, se ausente no build, faria o client cair em "client" nas URLs curtas
+  // reescritas (/events) e mandar o header de superfície errado → 401/bounce.
+  const appSurfaceForClient: "" | "admin" | "organizer" = isAdminSurface
+    ? "admin"
+    : isAppOrganizerSurface
+      ? "organizer"
+      : "";
 
   return (
     <html lang="pt-BR" className={`${manrope.variable} ${dmSans.variable}`}>
       <head>
         <link rel="icon" href="/images/logo.png" />
+        {appSurfaceForClient ? (
+          <meta name="pt-app-surface" content={appSurfaceForClient} />
+        ) : null}
       </head>
 
       <body suppressHydrationWarning className="scroll-smooth antialiased">

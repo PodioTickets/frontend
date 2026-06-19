@@ -149,7 +149,7 @@ export function SearchableSelect({
               />
             </div>
           </div>
-          <div className="max-h-[220px] overflow-y-auto [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-gray-6 [&::-webkit-scrollbar]:w-2">
+          <div className="max-h-[220px] overflow-y-auto overscroll-contain [-webkit-overflow-scrolling:touch] [touch-action:pan-y] [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-gray-6 [&::-webkit-scrollbar]:w-2">
             {filtered.length === 0 ? (
               <div className="px-3 py-4 text-center font-family-dm-sans text-sm text-gray-11">
                 {emptyText}

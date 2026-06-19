@@ -237,6 +237,18 @@ export interface OrderPaymentStatusResponse {
   };
 }
 
+/**
+ * Resposta do polling ATIVO de PIX (`GET /payments/order/:id/pix-status`).
+ * O backend reconsulta a Braspag em tempo real e, se pago, confirma+finaliza
+ * o pedido (mesma fonte de verdade do webhook).
+ */
+export interface PixPollStatusResponse {
+  /** PaymentStatus do backend (UPPERCASE): "PAID" | "PENDING" | "FAILED" | "REFUNDED". */
+  status: string;
+  /** true quando o pagamento está confirmado e o pedido foi finalizado. */
+  paid: boolean;
+}
+
 // ---- Error codes que o backend pode retornar ----
 
 export type OrderErrorCode =
@@ -260,6 +272,7 @@ export type OrderErrorCode =
   | "COUPON_MIN_VALUE"
   | "VOUCHER_NOT_FOUND"
   | "VOUCHER_EXPIRED"
+  | "VOUCHER_ALREADY_USED"
   | "DISCOUNT_CONFLICT"
   // Remoção de slot reservado (`DELETE /orders/:id/participants/:slot`)
   | "INVALID_SLOT"
