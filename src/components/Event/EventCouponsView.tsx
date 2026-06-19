@@ -11,6 +11,7 @@ import toast from "react-hot-toast";
 import { formatDateBR } from "@/utils/datetimeBR";
 import { Plus, ChevronLeft, ChevronRight } from "lucide-react";
 import { useClipboard } from "@/hooks/useClipboard";
+import { buildCouponShareLink } from "@/lib/couponShareLink";
 import { useCreateCouponModal, useDeleteCouponModal } from "@/stores/modalStore";
 import { Loading } from "@/components/Loading";
 
@@ -186,9 +187,11 @@ export function EventCouponsView({
     });
   };
 
+  // Copia o LINK público do evento com o cupom já aplicado (?cupom=CODIGO),
+  // não o código cru — o destinatário cai no checkout com o desconto pronto.
   const handleCopyCode = async (code: string) => {
     try {
-      await copyToClipboard(code);
+      await copyToClipboard(buildCouponShareLink(event?.slug, code, "coupon"));
     } catch {
       // Error já é tratado pelo hook
     }
@@ -425,8 +428,8 @@ export function EventCouponsView({
                                   type="button"
                                   onClick={() => handleCopyCode(coupon.code)}
                                   className="size-6 flex items-center justify-center rounded-lg hover:bg-gray-3 transition-colors shrink-0 cursor-pointer"
-                                  aria-label="Copiar código"
-                                  title="Copiar código"
+                                  aria-label="Copiar link do cupom"
+                                  title="Copiar link do cupom"
                                 >
                                   <CopyIcon className="size-4 text-gray-11" />
                                 </button>

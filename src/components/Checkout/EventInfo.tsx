@@ -8,7 +8,8 @@ import { useCheckout } from "@/contexts/CheckoutContext";
 import { useMemo } from "react";
 import type { Ticket } from "@/hooks/useTickets";
 import { getEventOrganizer, getEventOrganizationId } from "@/utils/organization";
-import { ContactOrganizerModal } from "@/components/Event/ContactOrganizerModal";
+import { formatBRL as formatPrice } from "@/lib/money";
+import { ContactOrganizerFlow } from "@/components/Event/ContactOrganizerFlow";
 import { usePendingCouponSnapshot } from "@/hooks/usePendingCoupon";
 import { useCouponPreview } from "@/hooks/useCouponPreview";
 import { useAgeCouponEligibility } from "@/hooks/useAgeCouponEligibility";
@@ -53,14 +54,6 @@ export function EventInfo({ event, onNext, isSubmitting = false, tickets = [], c
   const { isAuthenticated } = useAuth();
   const { data: ageEligibility } = useAgeCouponEligibility(event.id, isAuthenticated);
 
-  const formatPrice = (price: number) => {
-    return new Intl.NumberFormat("pt-BR", {
-      style: "currency",
-      currency: "BRL",
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    }).format(price);
-  };
 
   // Preview pode ser cupom (percentual/fixo) ou voucher (100% OFF por ticket).
   const couponData = couponPreview?.kind === "coupon" ? couponPreview : null;
@@ -452,7 +445,7 @@ export function EventInfo({ event, onNext, isSubmitting = false, tickets = [], c
         </Button>
       </div>
 
-      <ContactOrganizerModal
+      <ContactOrganizerFlow
         isOpen={isContactModalOpen}
         onClose={() => setIsContactModalOpen(false)}
         organizerEmail={getEventOrganizer(event)?.email ?? ""}

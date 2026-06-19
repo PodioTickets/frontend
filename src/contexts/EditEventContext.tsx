@@ -14,7 +14,7 @@ import { useQuery } from "@tanstack/react-query";
 import { organizerService } from "@/services";
 import { queryKeys } from "@/services/cache/QueryClient";
 
-interface EditEventFormData {
+export interface EditEventFormData {
   eventId: string;
   name: string;
   eventDate: string;

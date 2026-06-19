@@ -12,6 +12,7 @@ import { isBrazilianCountry } from "@/validators/Auth.validator";
 import { cn } from "@/utils/cn";
 import { organizerService } from "@/services";
 import toast from "react-hot-toast";
+import { useModalSubmitState } from "@/hooks/useModalSubmitState";
 import { MessageSentModal } from "./MessageSentModal";
 import { LoadingAnimation } from "@/components/Loading";
 
@@ -74,7 +75,7 @@ export function ContactOrganizerModal({
   eventId,
 }: ContactOrganizerModalProps) {
   const { user } = useAuth();
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const { isSubmitting, runSubmit } = useModalSubmitState();
   const [sent, setSent] = useState(false);
 
   const mobileTurnstileRef = useRef<TurnstileInstance>(null);
@@ -216,37 +217,36 @@ export function ContactOrganizerModal({
       return;
     }
 
-    setIsSubmitting(true);
-    try {
-      // Mínimo de 3s de loading para o usuário sentir o envio acontecendo
-      // antes do popup de sucesso. Se a API for mais lenta, espera ela.
-      // `Promise.all` retorna quando a mais demorada termina — sem block extra.
-      await Promise.all([
-        organizerService.contactOrganizer(organizationId, {
-          name: form.name,
-          email: form.email,
-          phone: form.phone || undefined,
-          cpf: form.cpf || undefined,
-          subject: form.subject || undefined,
-          message: form.message,
-          eventId: eventId || undefined,
-        }),
-        new Promise((resolve) => setTimeout(resolve, 3000)),
-      ]);
-      setSent(true);
-      // Limpa o formulário após enviar — assunto/mensagem não são re-preenchidos
-      // pelo effect de abertura (só dados do usuário), então sem isso a mensagem
-      // anterior reaparece ao reabrir. Os campos do usuário voltam no próximo open.
-      setForm({ name: "", cpf: "", email: "", phone: "", subject: "", message: "" });
-      setErrors({});
-      setTurnstileToken(null);
-      mobileTurnstileRef.current?.reset();
-      desktopTurnstileRef.current?.reset();
-    } catch {
-      toast.error("Erro ao enviar mensagem. Tente novamente.");
-    } finally {
-      setIsSubmitting(false);
-    }
+    await runSubmit(async () => {
+      try {
+        // Mínimo de 3s de loading para o usuário sentir o envio acontecendo
+        // antes do popup de sucesso. Se a API for mais lenta, espera ela.
+        // `Promise.all` retorna quando a mais demorada termina — sem block extra.
+        await Promise.all([
+          organizerService.contactOrganizer(organizationId, {
+            name: form.name,
+            email: form.email,
+            phone: form.phone || undefined,
+            cpf: form.cpf || undefined,
+            subject: form.subject || undefined,
+            message: form.message,
+            eventId: eventId || undefined,
+          }),
+          new Promise((resolve) => setTimeout(resolve, 3000)),
+        ]);
+        setSent(true);
+        // Limpa o formulário após enviar — assunto/mensagem não são re-preenchidos
+        // pelo effect de abertura (só dados do usuário), então sem isso a mensagem
+        // anterior reaparece ao reabrir. Os campos do usuário voltam no próximo open.
+        setForm({ name: "", cpf: "", email: "", phone: "", subject: "", message: "" });
+        setErrors({});
+        setTurnstileToken(null);
+        mobileTurnstileRef.current?.reset();
+        desktopTurnstileRef.current?.reset();
+      } catch {
+        toast.error("Erro ao enviar mensagem. Tente novamente.");
+      }
+    });
   };
 
   const fieldClass = (error?: string) =>

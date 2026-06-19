@@ -162,7 +162,7 @@ export function RegistrationsView({
             <Search className="size-5 text-gray-11 shrink-0" />
             <input
               type="text"
-              placeholder="Nome, Documento, IDs.."
+              placeholder="Nome, Documento, cupom, pagamento.."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="flex-1 min-w-0 h-10 bg-transparent font-family-dm-sans font-normal text-sm text-gray-12 placeholder:text-gray-11 outline-none"
@@ -272,7 +272,7 @@ export function RegistrationsView({
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-5 text-gray-11" />
             <Input
               type="text"
-              placeholder="Nome, Documento, ID do pedido, ingresso..."
+              placeholder="Nome, Documento, ID, cupom, voucher, pagamento (ex.: pix)..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="pl-10 h-[46px]"

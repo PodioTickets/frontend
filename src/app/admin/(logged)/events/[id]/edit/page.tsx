@@ -12,17 +12,12 @@ import { WizardStepLayout } from "@/components/Organizer/WizardStepLayout";
 import { InformationForm } from "@/components/Organizer/InformationForm";
 import { buildCreateEventBodyFromForm } from "@/lib/createEventDraftSync";
 import { organizerEventEditClientPage } from "@/lib/organizerAudit";
-import { wouldRegistrationEndBeforeStart, REGISTRATION_END_BEFORE_START_TOAST } from "@/utils/registrationPeriod";
+import {
+  validateEventInformation,
+  isEventInformationValid,
+  eventInformationHasChanges,
+} from "@/lib/eventEditValidation";
 import toast from "react-hot-toast";
-
-const INFORMATION_FIELDS = [
-  "name", "eventDate",
-  "registrationStartDate", "registrationStartTime",
-  "registrationEndDate", "registrationEndTime",
-  "cep", "street", "neighborhood", "city", "state", "googleMapsLink",
-  "contactEmail", "instagram", "facebook", "youtube", "tiktok", "website",
-  "regulationUrl",
-] as const;
 
 export default function EditInformationPage() {
   const params = useParams();
@@ -41,28 +36,7 @@ export default function EditInformationPage() {
   const [hasPendingPdf, setHasPendingPdf] = useState(false);
 
   const validateForm = (): boolean => {
-    const newErrors: Record<string, string> = {};
-    if (!formData.name.trim()) newErrors.name = "Nome do evento é obrigatório";
-    if (!formData.eventDate) newErrors.eventDate = "Data do evento é obrigatória";
-    if (!formData.registrationStartDate?.trim()) newErrors.registrationStartDate = "Data de início das inscrições é obrigatória";
-    if (!formData.registrationEndDate?.trim()) newErrors.registrationEndDate = "Data de encerramento das inscrições é obrigatória";
-    if (wouldRegistrationEndBeforeStart(formData)) newErrors.registrationPeriod = REGISTRATION_END_BEFORE_START_TOAST;
-    const cepDigits = (formData.cep ?? "").replace(/\D/g, "");
-    if (!cepDigits) {
-      newErrors.cep = "CEP é obrigatório";
-    } else if (cepDigits.length !== 8) {
-      newErrors.cep = "CEP inválido";
-    } else {
-      if (!formData.street?.trim()) newErrors.street = "Rua é obrigatória";
-      if (!formData.city?.trim()) newErrors.city = "Cidade é obrigatória";
-      if (!formData.state?.trim()) newErrors.state = "Estado é obrigatório";
-      if (!formData.googleMapsLink?.trim()) newErrors.googleMapsLink = "URL do Google Maps é obrigatória";
-    }
-    if (!formData.contactEmail?.trim()) {
-      newErrors.contactEmail = "Email de atendimento é obrigatório";
-    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.contactEmail.trim())) {
-      newErrors.contactEmail = "Email inválido";
-    }
+    const newErrors = validateEventInformation(formData);
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -101,26 +75,8 @@ export default function EditInformationPage() {
   };
 
 
-  const cepDigits = (formData.cep ?? "").replace(/\D/g, "");
-  const isFormValid =
-    !!formData.name?.trim() &&
-    !!formData.eventDate &&
-    !!formData.registrationStartDate?.trim() &&
-    !!formData.registrationEndDate?.trim() &&
-    cepDigits.length === 8 &&
-    !!formData.street?.trim() &&
-    !!formData.city?.trim() &&
-    !!formData.state?.trim() &&
-    !!formData.contactEmail?.trim();
-
-  const hasChanges =
-    hasPendingPdf ||
-    INFORMATION_FIELDS.some(
-      (k) =>
-        (formData[k as keyof typeof formData] ?? "") !==
-        (initialFormData[k as keyof typeof initialFormData] ?? ""),
-    );
-
+  const isFormValid = isEventInformationValid(formData);
+  const hasChanges = eventInformationHasChanges(formData, initialFormData, hasPendingPdf);
   const canSave = isFormValid && hasChanges;
 
   /* Descarta as edições locais re-aplicando o baseline (`initialFormData`) sobre

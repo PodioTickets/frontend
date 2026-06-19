@@ -14,7 +14,7 @@
  * passe as MESMAS `options`; `timeZone` é forçado para "UTC".
  */
 
-type DateInput = string | number | Date | null | undefined;
+export type DateInput = string | number | Date | null | undefined;
 
 /**
  * Converte a entrada num `Date` representando o instante correto. Date-only

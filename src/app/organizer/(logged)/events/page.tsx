@@ -42,6 +42,7 @@ import { SuspendEventModal } from "@/components/Event/SuspendEventModal";
 import { ResumeEventModal } from "@/components/Event/ResumeEventModal";
 import { cn } from "@/utils/cn";
 import { ArrowButton } from "@/components/ArrowButton";
+import { formatEventListCurrency } from "@/lib/eventListFormatters";
 
 /** Alinhado à API: status SUSPENDED (POST …/suspend e …/resume). */
 function isEventSuspended(event: { status?: string }) {
@@ -108,12 +109,6 @@ export default function OrganizerEventsPage() {
   const visibleStatusOptions = STATUS_FILTER_OPTIONS.filter(
     (opt) => opt.value === "all" || availableStatuses.has(opt.value),
   );
-
-  const formatCurrencyBRL = (cents: number) =>
-    `R$ ${(cents / 100).toLocaleString("pt-BR", {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    })}`;
 
   useEffect(() => {
     // Aguarda a verificação de autenticação terminar
@@ -513,7 +508,7 @@ export default function OrganizerEventsPage() {
                           </td>
                           <td className="py-4 px-5 text-center">
                             <span className="text-sm font-semibold text-gray-12 font-family-dm-sans">
-                              R$ {(event.totalSales / 100).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                              {formatEventListCurrency(event.totalSales)}
                             </span>
                           </td>
                           <td className="py-4 px-5 text-center min-w-[130px] w-[130px]">
@@ -734,7 +729,7 @@ export default function OrganizerEventsPage() {
                           Vendas
                         </p>
                         <p className="text-base font-extrabold text-gray-12 font-manrope truncate w-full">
-                          {formatCurrencyBRL(event.totalSales || 0)}
+                          {formatEventListCurrency(event.totalSales)}
                         </p>
                       </div>
                     </div>

@@ -13,6 +13,7 @@ import { getApiClient } from "@/services/base/ApiClient";
 import toast from "react-hot-toast";
 import { ChooseAccountModal, mapPixKeyToAccount, type PixAccount } from "./ChooseAccountModal";
 import { organizerService } from "@/services";
+import { useModalSubmitState } from "@/hooks/useModalSubmitState";
 
 export function RequestTransferModal() {
   const { isOpen, closeRequestTransferModal, data } = useRequestTransferModal();
@@ -20,7 +21,7 @@ export function RequestTransferModal() {
   const [amountFocused, setAmountFocused] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
   const [transferAmount, setTransferAmount] = useState("");
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const { isSubmitting, runSubmit } = useModalSubmitState();
   const [showChooseAccount, setShowChooseAccount] = useState(false);
   const [pixAccounts, setPixAccounts] = useState<PixAccount[]>([]);
   const [selectedAccount, setSelectedAccount] = useState<PixAccount | null>(null);
@@ -134,22 +135,21 @@ export function RequestTransferModal() {
       return;
     }
 
-    setIsSubmitting(true);
-    try {
-      await getApiClient().post(
-        `/api/v1/events/${eventId}/repasse/withdrawals`,
-        {
-          amount: Math.round(numericAmount * 100),
-          pixKeyId: selectedAccount.id,
-        }
-      );
-      setTransferAmount(formatAmount(amount));
-      setShowSuccess(true);
-    } catch (err: any) {
-      toast.error(err?.message || "Erro ao solicitar saque");
-    } finally {
-      setIsSubmitting(false);
-    }
+    await runSubmit(async () => {
+      try {
+        await getApiClient().post(
+          `/api/v1/events/${eventId}/repasse/withdrawals`,
+          {
+            amount: Math.round(numericAmount * 100),
+            pixKeyId: selectedAccount.id,
+          }
+        );
+        setTransferAmount(formatAmount(amount));
+        setShowSuccess(true);
+      } catch (err: any) {
+        toast.error(err?.message || "Erro ao solicitar saque");
+      }
+    });
   };
 
   const handleClose = () => {
