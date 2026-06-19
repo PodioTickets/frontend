@@ -10,6 +10,7 @@ import { defaultEventKitSelectionDisplay } from "@/lib/eventKitSelectionDisplay"
 import { ImageCarouselModal } from "./ImageCarouselModal";
 import { ImageWithInitialFallback } from "@/components/ImageWithInitialFallback";
 import { getCheckoutModalityInfo } from "@/utils/checkoutModalityDisplay";
+import { formatBRL as formatPriceCurrency } from "@/lib/money";
 import {
   getTicketProductCarouselItems,
   getCategoryKitCarouselItems,
@@ -113,13 +114,6 @@ const formatPrice = (price: number) => {
 /* Sempre formata como moeda (R$ 0,00 pra zero) — usado no preço DESCONTADO.
  * Quando o voucher zera o ingresso, mostra "R$ 0,00" em vez de "Gratuito"
  * (decisão do usuário: deixa claro que ficou grátis por conta do voucher). */
-const formatPriceCurrency = (price: number) =>
-  new Intl.NumberFormat("pt-BR", {
-    style: "currency",
-    currency: "BRL",
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  }).format(price);
 
 /* Preço a exibir no card: com desconto ativo usa moeda (voucher → "R$ 0,00");
  * sem desconto, mantém "Gratuito" pra ingresso naturalmente gratuito. */

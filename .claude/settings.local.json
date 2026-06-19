@@ -208,7 +208,8 @@
       "Bash(cd *)",
       "Bash(npx --yes sharp-cli -i feat.png -o card1foot extract 470 60 640 130)",
       "Bash(npx --yes sharp-cli -i feat.png -o c1txt extract 670 90 620 110)",
-      "Bash(cp c1txt *)"
+      "Bash(cp c1txt *)",
+      "PowerShell(npx tsc --noEmit 2>&1 | Select-Object -First 40)"
     ]
   },
   "disabledMcpjsonServers": [

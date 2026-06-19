@@ -7,6 +7,7 @@ import { StarIcon } from "../Icons/StarIcon";
 import type { Event } from "@/interfaces/event";
 import { formatDocumentDisplay, isPersonBr } from "@/utils/documentDisplay";
 import { formatDateBR } from "@/utils/datetimeBR";
+import { formatBRL as formatPrice } from "@/lib/money";
 import { SeeDetailsIcon } from "../Icons/SeeDetailsIcon";
 
 interface OrderItem {
@@ -131,14 +132,6 @@ export function OrderSummary({
     }
   }, [externalCouponCode]);
 
-  const formatPrice = (price: number) => {
-    return new Intl.NumberFormat("pt-BR", {
-      style: "currency",
-      currency: "BRL",
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    }).format(price);
-  };
 
   const formatDate = (date: string) => {
     if (!date) return "";

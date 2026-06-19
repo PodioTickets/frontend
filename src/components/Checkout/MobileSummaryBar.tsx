@@ -7,6 +7,7 @@ import { Button } from "../Button";
 import { Tooltip } from "../Tooltip";
 import { SeeDetailsIcon } from "../Icons/SeeDetailsIcon";
 import { usePathname } from "next/navigation";
+import { formatBRL as formatPrice } from "@/lib/money";
 
 /**
  * Barra de resumo fixa (mobile) unificada do checkout.
@@ -81,13 +82,6 @@ export interface MobileSummaryBarProps {
   onOpenChange?: (open: boolean) => void;
 }
 
-const formatPrice = (price: number) =>
-  new Intl.NumberFormat("pt-BR", {
-    style: "currency",
-    currency: "BRL",
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  }).format(price);
 
 /** Linha "label: valor" padrão do resumo. Reusada nos detalhes ricos pra
  * padronizar o tamanho dos textos entre breakdown e cards de participante. */

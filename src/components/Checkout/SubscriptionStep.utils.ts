@@ -1,5 +1,6 @@
 import { isSemInteresseVariation } from "@/utils/semInteresseVariation";
 import { formatDateBR } from "@/utils/datetimeBR";
+import { formatBRL } from "@/lib/money";
 
 export interface Product {
   id: string;
@@ -62,15 +63,8 @@ export function productPriceFromApiToReais(value: unknown): number {
   return Number.isFinite(n) ? n / 100 : 0;
 }
 
-/** Formata preço (valor em reais). */
-export const formatPrice = (price: number) => {
-  return new Intl.NumberFormat("pt-BR", {
-    style: "currency",
-    currency: "BRL",
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  }).format(price);
-};
+/** Formata preço (valor em reais). Delega ao formatador canônico `formatBRL`. */
+export const formatPrice = (price: number) => formatBRL(price);
 
 /** Preço específico da variação ≠ 0 (0 = "só base", igual ao modal). */
 const variationHasMeaningfulSpecificPriceReais = (priceReais: number): boolean => {

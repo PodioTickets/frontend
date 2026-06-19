@@ -81,7 +81,9 @@ interface ResizeInternals {
   quill: { root: HTMLElement };
   requestUpdate: () => void;
   addBox: (place: string) => void;
-  handleDrag: (evt: MouseEvent | TouchEvent) => void;
+  // Método (não propriedade) — a subclasse sobrescreve `handleDrag` como método;
+  // declarar como propriedade aqui dispara TS2425 (kinds incompatíveis).
+  handleDrag(evt: MouseEvent | TouchEvent): void;
 }
 
 export function createTopicResizeWithSideHandlesClass(

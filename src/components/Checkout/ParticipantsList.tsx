@@ -6,6 +6,7 @@ import { ChevronDown } from "lucide-react";
 import { useCheckout } from "@/contexts/CheckoutContext";
 import { cn } from "@/utils/cn";
 import { formatDateBR } from "@/utils/datetimeBR";
+import { formatBRL as formatCurrency } from "@/lib/money";
 
 interface ParticipantCardProps {
   participantIndex: number;
@@ -49,12 +50,6 @@ function ParticipantCard({
     return `${cleaned.slice(0, 3)}.***.***-${cleaned.slice(9)}`;
   };
 
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat("pt-BR", {
-      style: "currency",
-      currency: "BRL",
-    }).format(value);
-  };
 
   const getGenderLabel = (gender: string) => {
     const labels: Record<string, string> = {

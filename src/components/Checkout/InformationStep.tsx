@@ -33,6 +33,7 @@ import toast from "react-hot-toast";
 import { Loading } from "../Loading";
 import { getCpfValidationMessage, isValidCPF } from "@/utils/cpf";
 import { isBrazilianCountry } from "@/validators/Auth.validator";
+import { formatBRL as formatPrice } from "@/lib/money";
 import { formatDateBR } from "@/utils/datetimeBR";
 import { OrderApiError } from "@/interfaces/order";
 import { COUNTRIES_PT_BR } from "@/data/countries";
@@ -828,14 +829,6 @@ export function InformationStep({
     return grouped;
   }, [raceQuantities, categorizedTickets, uncategorizedTickets]);
 
-  const formatPrice = (price: number) => {
-    return new Intl.NumberFormat("pt-BR", {
-      style: "currency",
-      currency: "BRL",
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    }).format(price);
-  };
 
   const toggleParticipant = (index: number) => {
     // Garantir que o participante existe (fallback caso o useEffect não tenha executado)
