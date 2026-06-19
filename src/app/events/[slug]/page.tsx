@@ -14,7 +14,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { RegistrationCountdown } from "@/components/Event/RegistrationCountdown";
 import { ShareIcon } from "@/components/Icons/ShareIcon";
 import { ShareModal } from "@/components/ShareModal";
-import { ContactOrganizerModal } from "@/components/Event/ContactOrganizerModal";
+import { ContactOrganizerFlow } from "@/components/Event/ContactOrganizerFlow";
 import { Fragment, useState, useEffect, useMemo, useRef } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useLoginModal } from "@/stores/modalStore";
@@ -986,7 +986,7 @@ export default function EventPage() {
         eventName={event.name}
         eventUrl={`/events/${event.slug}`}
       />
-      <ContactOrganizerModal
+      <ContactOrganizerFlow
         isOpen={isContactModalOpen}
         onClose={() => setIsContactModalOpen(false)}
         organizerEmail={getEventOrganizer(event)?.email ?? ""}
