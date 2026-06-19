@@ -2,7 +2,7 @@ import { useCallback } from "react";
 import {
   OrderApiError,
   type OrderErrorResponse,
-  type OrderPaymentStatusResponse,
+  type PixPollStatusResponse,
   type OrderResponse,
   type PatchBillingAddressRequest,
   type PatchCouponRequest,
@@ -276,17 +276,25 @@ export function useCheckoutReservation() {
     [],
   );
 
-  /** `GET /orders/{id}/payment-status` — polling do PIX. */
+  /**
+   * `GET /payments/order/{id}/pix-status` — polling ATIVO do PIX.
+   *
+   * Diferente do antigo `/orders/:id/payment-status` (leitura PASSIVA do banco, que
+   * só reflete o que já foi gravado), este endpoint RECONSULTA a Braspag em tempo real
+   * e, se pago, CONFIRMA+FINALIZA o pedido no backend (mesma fonte de verdade do
+   * webhook). É o fallback que garante a confirmação mesmo se o webhook falhar.
+   * Retorna `{ status, paid }`.
+   */
   const getPaymentStatus = useCallback(
-    async (orderId: string): Promise<OrderPaymentStatusResponse> => {
+    async (orderId: string): Promise<PixPollStatusResponse> => {
       const res = await fetch(
-        `${API_BASE_URL}${ORDERS_PATH}/${orderId}/payment-status`,
+        `${API_BASE_URL}/api/v1/payments/order/${orderId}/pix-status`,
         {
           method: "GET",
           credentials: "include", headers: authHeaders(),
         },
       );
-      return handleResponse<OrderPaymentStatusResponse>(res);
+      return handleResponse<PixPollStatusResponse>(res);
     },
     [],
   );
