@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from "react";
 import { useRouter, useParams } from "next/navigation";
-import { sanitizeRichHtml } from "@/lib/richContent";
 import { userService, organizerService } from "@/services";
 import { Button } from "@/components/Button";
 import { ArrowButton } from "@/components/ArrowButton";
@@ -21,6 +20,7 @@ import {
   EventPublicInfoCardDesktop,
   EventPublicInfoCardMobile,
 } from "@/components/Event/EventPublicInfoCard";
+import { TopicsPreviewKitsSection } from "@/components/Event/TopicsPreviewKitsSection";
 
 export const dynamic = "force-dynamic";
 
@@ -201,42 +201,7 @@ export default function EditFlowEventPreviewPage() {
                 </div>
               )}
 
-              {kits.length > 0 && (
-                <div className="w-full border-b border-gray-8 py-10">
-                  <div className="flex flex-col items-start gap-6">
-                    <h2 className="font-manrope text-2xl font-bold leading-[1.1] text-gray-12">
-                      Kits
-                    </h2>
-                    <div
-                      className="max-w-none font-family-dm-sans text-base leading-[1.3] text-gray-11 prose prose-sm"
-                      dangerouslySetInnerHTML={{
-                        __html:
-                          sanitizeRichHtml(
-                            kits
-                              .map((kit) => String(kit.description || ""))
-                              .filter(Boolean)
-                              .join(" "),
-                          ) || "Informações sobre os kits do evento.",
-                      }}
-                    />
-                    {kits[0] && (
-                      <div className="flex w-full items-start">
-                        <div className="relative aspect-192/184 w-[192px] overflow-hidden rounded-lg border border-gray-6">
-                          <ImageWithInitialFallback
-                            src={kits[0].imageUrl as string | undefined}
-                            alt={String(kits[0].name ?? "")}
-                            name={String(kits[0].name ?? "")}
-                            fill
-                            sizes="192px"
-                            className="size-full rounded-lg border-transparent border-0"
-                            letterClassName="text-3xl font-semibold"
-                          />
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
+              <TopicsPreviewKitsSection kits={kits} />
 
               {city && state && (
                 <div className="flex w-full flex-col items-start gap-6 py-10">

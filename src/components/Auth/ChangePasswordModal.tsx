@@ -2,13 +2,14 @@
 
 import React, { useState, useEffect } from "react";
 import { useChangePasswordModal } from "@/stores/modalStore";
-import { Button } from "@/components/Button";
 import { X, Lock, Eye, EyeOff } from "lucide-react";
 import toast from "react-hot-toast";
 import { motion, AnimatePresence } from "framer-motion";
 import { Input } from "@/components/Input";
 import { userService } from "@/services";
 import { useAuth } from "@/hooks/useAuth";
+import { useModalSubmitState } from "@/hooks/useModalSubmitState";
+import { ModalFooterActions } from "@/components/ui/ModalFooterActions";
 
 export function ChangePasswordModal() {
   const { isOpen, closeChangePasswordModal } = useChangePasswordModal();
@@ -19,7 +20,7 @@ export function ChangePasswordModal() {
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const { isSubmitting, runSubmit } = useModalSubmitState();
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -59,32 +60,30 @@ export function ChangePasswordModal() {
       return;
     }
 
-    setIsSubmitting(true);
+    await runSubmit(async () => {
+      try {
+        await userService.changePassword({
+          ...(hasPassword && { currentPassword }),
+          newPassword,
+        });
 
-    try {
-      await userService.changePassword({
-        ...(hasPassword && { currentPassword }),
-        newPassword,
-      });
+        toast.success("Senha alterada com sucesso!");
+        closeChangePasswordModal();
+        resetForm();
+        await refetchUser();
+      } catch (error: any) {
+        console.error("Error changing password:", error);
+        const message: string = error?.message || "Erro ao alterar senha. Verifique os dados e tente novamente.";
 
-      toast.success("Senha alterada com sucesso!");
-      closeChangePasswordModal();
-      resetForm();
-      await refetchUser();
-    } catch (error: any) {
-      console.error("Error changing password:", error);
-      const message: string = error?.message || "Erro ao alterar senha. Verifique os dados e tente novamente.";
-
-      if (message.toLowerCase().includes("igual")) {
-        setErrors((prev) => ({ ...prev, newPassword: message }));
-      } else if (message.toLowerCase().includes("senha atual")) {
-        setErrors((prev) => ({ ...prev, currentPassword: message }));
-      } else {
-        toast.error(message);
+        if (message.toLowerCase().includes("igual")) {
+          setErrors((prev) => ({ ...prev, newPassword: message }));
+        } else if (message.toLowerCase().includes("senha atual")) {
+          setErrors((prev) => ({ ...prev, currentPassword: message }));
+        } else {
+          toast.error(message);
+        }
       }
-    } finally {
-      setIsSubmitting(false);
-    }
+    });
   };
 
   const resetForm = () => {
@@ -264,24 +263,15 @@ export function ChangePasswordModal() {
                 </div>
 
                 {/* Buttons */}
-                <div className="flex gap-[10px] items-center justify-end pb-8 pt-4 px-6 w-full">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={handleClose}
-                    className="flex-1 h-12 px-8 border-[1.5px] border-gray-6 text-gray-12 font-bold text-base leading-[1.1] font-manrope"
-                  >
-                    Cancelar
-                  </Button>
-                  <Button
-                    type="button"
-                    onClick={handleSubmit}
-                    disabled={isSubmitting}
-                    className="flex-1 h-12 px-8 bg-[#59E373] text-[#141414] hover:bg-[#59E373]/90 font-bold text-base leading-[1.1] font-manrope disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    {isSubmitting ? "Salvando..." : "Salvar"}
-                  </Button>
-                </div>
+                <ModalFooterActions
+                  submitLabel="Salvar"
+                  onCancel={handleClose}
+                  onSubmit={handleSubmit}
+                  isSubmitting={isSubmitting}
+                  className="items-center justify-end pb-8 pt-4 px-6 gap-[10px]"
+                  cancelClassName="px-8 leading-[1.1]"
+                  submitClassName="px-8 leading-[1.1]"
+                />
               </div>
             </div>
           </motion.div>

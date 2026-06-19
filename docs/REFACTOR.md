@@ -166,25 +166,50 @@ zerar os erros antigos — ver Bloco 4).
         organizer (RevenueChart/PaymentMethodsCard/TicketsWithLotsList/eventTabs não
         renderizados). **538/615 → 21/36**. 146/146 testes.
   - **✅ BLOCO 2 (admin×organizer) 100% — 8 pares, ~8.700 linhas de página removidas.**
-  - [ ] (fase 2) scaffold comum `<EventPageShell headerComponent={…}>` p/ colapsar
-        o corpo JSX duplicado que sobrou após extrair lógica/row.
+  - [x] (fase 2 — COMPLETO 2026-06-17) controller compartilhado das páginas espelhadas.
+        Esclarecimento: o *corpo JSX* já estava colapsado nos componentes `View`; o que
+        restava duplicado era a LÓGICA DE CONTROLLER. Dashboard já tinha `useEventDashboard`;
+        os pares cupom/voucher/ads/notifications/financial já eram shells de 21–38 linhas.
+        O único outlier era **registrations** (admin 252 / organizer 256, ~190 linhas de
+        controller duplicadas) → extraído `src/hooks/useEventRegistrations.ts` (auth, loaders,
+        filtros, paginação, modais; diferenças via `onUnauthenticated` + `loadAggregateStats`).
+        Páginas viraram shells: **252/256 → 59/66**. 220/220 testes, sem erros novos de tsc.
+        (Um `<EventPageShell>` genérico não agrega: cada página só passa `header` + `{...viewProps}`.)
 - **Modais com boilerplate repetido (~1.100 linhas).**
   - [x] **Lista de CPF + import CSV** (CreateCoupon/CreateVoucherModal, ~200 linhas
         idênticas) → `src/lib/cpfList.ts` (puro: format/validate/parse CSV — 11 testes)
         + `src/hooks/useCpfList.ts` (estado + handlers). Modais: 1447→1359 e 938→845.
         157/157 testes, tsc limpo.
-  - [ ] Estado `isSubmitting`/validação/erro repetido em 15+ modais → `useModalSubmitState()`.
-  - [ ] Footer save/cancel repetido → `<ModalFooterActions>`.
-- [ ] **Páginas de lista de evento (~250 linhas).** `formatCurrency`/`formatDate`
-      duplicados em `admin/events/page.tsx` e `organizer/events/page.tsx`
-      → `src/lib/eventListFormatters.ts`.
-- [ ] **Validação de edição de evento (~120 linhas).** `validateForm` idêntico
-      nas duas `events/[id]/edit/page.tsx` → `src/lib/eventEditValidation.ts`.
+  - [x] **`useModalSubmitState()` criado** (`src/hooks/useModalSubmitState.ts`, 4 testes) —
+        `runSubmit(fn)` encapsula `setIsSubmitting(true)` + try/finally (nunca esquece o
+        finally). Adotado em: ChangePassword, ChangeEmail, ContactOrganizer, RequestTransfer,
+        CreateQuestion (handlers). FALTAM (deferidos pro split do Bloco 3, são arquivos-monstro):
+        CreateProduct, CreateCoupon, CreateVoucher, Login, Register.
+  - [x] **`<ModalFooterActions>` criado** (`src/components/ui/ModalFooterActions.tsx`, 4 testes) —
+        footer canônico Cancelar(outline)+Submit(default verde); overrides de className por
+        botão/wrapper p/ casar spacing sem regressão visual. Adotado em ChangePassword.
+        Footers com layout próprio (h-11, multi-step, tela de sucesso, gating turnstile)
+        seguem com markup dedicado de propósito (evitar regressão visual).
+- [x] **Páginas de lista de evento (~250 linhas).** (COMPLETO 2026-06-17)
+      `formatCurrency`/`formatDate`/`formatCurrencyBRL` + formatação inline de moeda
+      duplicados em `admin/events/page.tsx` e `organizer/events/page.tsx` →
+      `src/lib/eventListFormatters.ts` (`formatEventListCurrency` + `formatEventListDate`,
+      5 testes vitest). Corrigido bug latente de fuso: o `formatDate` do admin usava
+      getters LOCAIS (`getDate/getMonth`), deslocando date-only "-1 dia" no Brasil;
+      agora ancora em UTC via `toUtcDate` (datetimeBR, `DateInput` exportado).
+- [x] **Validação de edição de evento (~120 linhas).** (COMPLETO 2026-06-17)
+      `validateForm` + `isFormValid` + `hasChanges` + `INFORMATION_FIELDS` idênticos
+      nas duas `events/[id]/edit/page.tsx` → `src/lib/eventEditValidation.ts`
+      (`validateEventInformation`/`isEventInformationValid`/`eventInformationHasChanges`,
+      puras, 12 testes vitest). `EditEventFormData` exportado do contexto. Páginas
+      diferem só em nav/redirect/className.
 - [ ] **Formatação inline (~150 linhas).** Há `.replace(/\D/g,…)` e formatação de
       centavos reimplementados no checkout apesar dos utwils canônicos
       (`documentDisplay`, `phone`, `postalCode`, `datetimeBR`). Padronizar uso.
-- [ ] **Bloco de descrição de kits** duplicado nas 4 preview pages de tópicos
-      (já sanitizado, mas ainda copy-paste) → componente compartilhado.
+- [x] **Bloco de descrição de kits** duplicado nas 4 preview pages de tópicos
+      (COMPLETO 2026-06-17) → `src/components/Event/TopicsPreviewKitsSection.tsx`.
+      Sink único de `sanitizeRichHtml`. Aplicado em organizer new/edit + admin
+      edit/review; imports órfãos de `sanitizeRichHtml` removidos. 212/212 testes.
 
 ---
 
@@ -214,6 +239,33 @@ zerar os erros antigos — ver Bloco 4).
 - [ ] **God object `OrganizerService.ts` (2.992 linhas).** Dividir por domínio:
       `EventService`, `TicketService`, `CouponService`, `VoucherService`,
       `ProductService`, `OrganizationService`, `AuditService`, `UploadService`.
+  - [x] **Fase 1 (COMPLETO 2026-06-17): tipos + normalizadores → `OrganizerService.types.ts`.**
+        Movidas ~1.090 linhas (69 interfaces/types + helpers `normalize*`/`unwrap*`).
+        `OrganizerService.ts` re-exporta tudo (`export * from "./OrganizerService.types"`)
+        → zero mudança em call-sites/imports. Arquivo: 3.041 → classe 1.951 + types 1.180.
+        Helpers privados usados pela classe foram exportados. 220/220 testes, tsc sem erros
+        novos (seguem os 2 pré-existentes).
+  - [~] **Fase 2: split da CLASSE por domínio (EM ANDAMENTO)** — cadeia de herança/mixins
+        preservando 100% a API `organizerService.x` (zero call-site tocado; instanciação única
+        em `services/index.ts`).
+    - [x] **1ª fatia (2026-06-17):** `OrganizerServiceBase` (segura o `protected apiClient`) +
+          `OrganizerReportingService` (leitura/relatórios/financeiro: dashboard, financeiro,
+          fiscal, repasses, parcelas, estornos, chargebacks, payment-details, inscrições
+          enriquecidas, PDFs, contato, bundle — 632 linhas, NÃO usa nenhum helper/símbolo
+          externo, só `apiClient`+tipos). `OrganizerService extends OrganizerReportingService`
+          com o domínio org/evento/catálogo. **Main 1.950 → 1.321** (+ reporting 714 + base 10
+          + types 1.180). 220/220 testes, tsc sem erros novos. Verificado: as 3 chamadas
+          método-a-método (`getOrganization`/`updateOrganization`/`getEventTracking`) ficam
+          todas no head (subclasse) — tail não chama métodos do head.
+    - [x] **2ª fatia (2026-06-17): Catálogo** → `OrganizerCatalogService` (modalidades, kits,
+          perguntas, inscrições export/stats/revenue, tópicos, localizações, categorias,
+          ingressos, produtos, cupons, vouchers — 687 linhas; usa só `apiClient` +
+          `unwrapProductApiPayload`). Inserido na cadeia: Base → Reporting → **Catalog** →
+          OrganizerService. **Main 1.321 → 628.** Removido comentário órfão "Dashboard methods".
+          220/220 testes, tsc sem erros novos. Cadeia atual: base 10 / reporting 714 /
+          catalog 769 / main 628 / types 1.180.
+    - [ ] **Última fatia (opcional):** separar Org de Evento (o head de 628 ainda mistura os
+          dois). Ganho marginal — pode encerrar aqui. Smoke-test do painel ao vivo antes de prod.
 - [ ] **`UserService.ts` (1.231 linhas).** Separar `AuthService` (login/MFA/reset)
       de `UserService` (profile).
 - [ ] **Tipos inline → `src/interfaces/`.** `payment.ts` novo; revisar overlap

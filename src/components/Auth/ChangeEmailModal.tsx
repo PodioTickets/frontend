@@ -10,6 +10,7 @@ import { X, ChevronLeft, Mail, Lock, Eye, EyeOff } from "lucide-react";
 import toast from "react-hot-toast";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/utils/cn";
+import { useModalSubmitState } from "@/hooks/useModalSubmitState";
 import Image from "next/image";
 import { EmailIcon } from "../Icons/EmailIcon";
 
@@ -29,7 +30,7 @@ export function ChangeEmailModal() {
   const [codeError, setCodeError] = useState("");
   const [resendCooldown, setResendCooldown] = useState(0);
 
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const { isSubmitting, setIsSubmitting, runSubmit } = useModalSubmitState();
   const [isResending, setIsResending] = useState(false);
 
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
@@ -86,7 +87,7 @@ export function ChangeEmailModal() {
       return;
     }
 
-    setIsSubmitting(true);
+    await runSubmit(async () => {
     try {
       await userService.changeEmail({ newEmail: newEmail.trim().toLowerCase(), currentPassword });
       setCode(["", "", "", "", "", ""]);
@@ -119,9 +120,8 @@ export function ChangeEmailModal() {
       } else {
         toast.error(msg);
       }
-    } finally {
-      setIsSubmitting(false);
     }
+    });
   };
 
   // Step 2: verify 6-digit code
@@ -131,7 +131,7 @@ export function ChangeEmailModal() {
       setCodeError("Preencha todos os 6 dígitos");
       return;
     }
-    setIsSubmitting(true);
+    await runSubmit(async () => {
     try {
       await userService.verifyEmailChange(codeStr);
       setStep("success");
@@ -142,9 +142,8 @@ export function ChangeEmailModal() {
       setCode(["", "", "", "", "", ""]);
       setCodeError(msg);
       setTimeout(() => inputRefs.current[0]?.focus(), 50);
-    } finally {
-      setIsSubmitting(false);
     }
+    });
   };
 
   const handleResend = async () => {

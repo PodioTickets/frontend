@@ -19,11 +19,11 @@ const SPECIALIST_HREF = "https://www.huggy.chat/b7cff6c8-d928-4aa2-b825-9395b36c
 
 const IMG = {
   heroDashboards: "/images/landing/hero-dashboards.png",
-  featureCheckout: "/images/landing/feature-checkout.jpg",
-  featureParticipants: "/images/landing/feature-participants.jpg",
-  featureCoupons: "/images/landing/feature-coupons.jpg",
+  featureExperience: "/images/landing/feature-experience.png",
+  featureVouchers: "/images/landing/feature-vouchers.png",
+  featureParticipants: "/images/landing/feature-participants-table.png",
   communication: "/images/landing/communication-dashboard.png",
-  sports: "/images/landing/sports-photo.png",
+  sports: "/images/landing/sports-devices.jpg",
   ctaTeam: "/images/landing/cta-team.jpg",
 };
 
@@ -101,7 +101,7 @@ function Hero() {
         </div>
 
         {/* Mockup de dashboards em perspectiva */}
-        <div className="relative mt-12 md:mt-16 -rotate-[7.62deg]">
+        <div className="relative mt-12 md:mt-16">
           <Image
             src={IMG.heroDashboards}
             alt="Painéis da plataforma PódioTicket"
@@ -112,6 +112,7 @@ function Hero() {
           />
         </div>
       </div>
+      <div className="w-full h-[2px] bg-linear-to-r from-transparent via-gray-6 to-transparent" />
     </section>
   );
 }
@@ -131,8 +132,7 @@ function SalesSection() {
             width={3192}
             height={1888}
             quality={100}
-            sizes="(min-width: 768px) 758px, 100vw"
-            className="h-auto w-full max-w-[758px] hidden md:block"
+            className="h-auto w-full hidden md:block"
           />
 
           <Image
@@ -145,7 +145,7 @@ function SalesSection() {
             className="h-auto w-full md:hidden"
           />
         </div>
-        <div className="flex flex-col gap-6">
+        <div className="flex flex-col gap-6 max-w-[450px] w-full">
           <div className="flex flex-col gap-3 text-center md:text-start">
             <h2 className="font-manrope text-[28px] font-extrabold leading-[1.3] text-gray-12 md:text-[36px]">
               Acompanhe suas vendas em tempo real
@@ -176,25 +176,28 @@ function FeatureCard({
   description,
   className = "",
   imageClassName = "",
+  sizes = "(min-width: 1024px) 640px, 100vw",
 }: {
   image: string;
   title: string;
   description: string;
   className?: string;
   imageClassName?: string;
+  sizes?: string;
 }) {
   return (
     <div
-      className={`group relative flex flex-col justify-end overflow-hidden rounded-2xl bg-[#1d2620] ${className}`}
+      className={`group relative flex flex-col justify-end overflow-hidden rounded-2xl shadow-xl  ${className}`}
     >
       <Image
         src={image}
         alt={title}
         fill
+        sizes={sizes}
         className={`object-cover ${imageClassName}`}
       />
       {/* gradiente para legibilidade do texto */}
-      <div className="absolute inset-0 bg-gradient-to-t from-[#0e1512] via-[#0e1512]/70 to-transparent" />
+      <div className="absolute inset-0 bg-gradient-to-t from-[#0e1512] via-30% via-transparent to-transparent" />
       <div className="relative z-10 flex flex-col gap-3 p-6">
         <h3 className="font-manrope text-[18px] font-bold leading-[1.1] text-white md:text-[20px]">{title}</h3>
         <p className="font-family-dm-sans text-[14px] leading-[1.3] text-[#d9d9d9] md:text-[18px]">
@@ -214,23 +217,29 @@ function FeaturesSection() {
           subtitle="Ferramentas pensadas para quem organiza evento esportivo de verdade"
         />
         <div className="mt-12 grid grid-cols-1 gap-5 lg:grid-cols-2">
+          {/* Linha 1: dois cards iguais (experiência + cupons/vouchers) */}
           <FeatureCard
-            image={IMG.featureCheckout}
+            image={IMG.featureExperience}
             title="Ofereça uma experiência profissional na inscrição"
             description="Personalize categorias, kits e produtos do evento. Configure tamanhos de camisa, produtos opcionais, brindes e muito mais."
-            className="min-h-[420px] lg:row-span-2 lg:min-h-[557px]"
+            className="min-h-[360px] lg:min-h-[557px]"
+            imageClassName="object-top"
           />
+          <FeatureCard
+            image={IMG.featureVouchers}
+            title="Ofereça descontos e cortesias com facilidade"
+            description="Crie cupons promocionais, vouchers e regras de desconto para impulsionar as inscrições e gerenciar benefícios para patrocinadores, parceiros e grupos específicos."
+            className="min-h-[360px] lg:min-h-[557px]"
+            imageClassName="object-top"
+          />
+          {/* Linha 2: card largura total (participantes) */}
           <FeatureCard
             image={IMG.featureParticipants}
             title="Gerencie seus participantes com facilidade"
             description="Tenha todas as informações dos inscritos organizadas. Pesquise atletas, exporte listas, acompanhe pagamentos e mantenha tudo sob controle."
-            className="min-h-[266px]"
-          />
-          <FeatureCard
-            image={IMG.featureCoupons}
-            title="Ofereça descontos e cortesias com facilidade"
-            description="Crie cupons promocionais, vouchers e regras de desconto para impulsionar as inscrições e gerenciar benefícios para patrocinadores, parceiros e grupos específicos."
-            className="min-h-[266px]"
+            className="min-h-[300px] lg:col-span-2 lg:min-h-[450px]"
+            imageClassName="object-left-top"
+            sizes="(min-width: 1024px) 1280px, 100vw"
           />
         </div>
       </div>
@@ -305,7 +314,7 @@ function SupportSection() {
 function CommunicationSection() {
   return (
     <section className="overflow-hidden bg-gray-2 pt-20 md:pt-28">
-      <div className="mx-auto flex flex-col md:flex-row max-w-[1280px] items-center gap-4 px-4 md:px-0">
+      <div className="mx-auto flex flex-col md:flex-row max-w-[1280px] w-full items-center md:justify-between gap-4 md:gap-8 px-4 md:px-0">
         <div className="flex flex-col gap-6 max-w-[410px] w-full">
           <div className="flex flex-col gap-4 text-center md:text-left">
             <h2 className="font-manrope text-[28px] font-extrabold leading-[1.3] text-gray-12 md:text-[36px]">
@@ -317,13 +326,13 @@ function CommunicationSection() {
             </p>
           </div>
         </div>
-        <div className="relative  mt-10 mb-20 max-md:flex items-center justify-center">
+        <div className="relative mt-10 mb-20 max-md:flex items-center justify-center">
           <Image
             src={IMG.communication}
             alt="Comunicação com participantes na PódioTicket"
             width={792}
             height={656}
-            className="h-auto max-md:ml-[25%] w-[150%] max-w-none lg:w-[150%]"
+            className="h-auto max-w-none w-full"
           />
         </div>
       </div>
@@ -339,13 +348,13 @@ function SportsSection() {
   return (
     <section className="bg-gray-2 py-20 md:py-28">
       <div className="mx-auto flex flex-col-reverse max-w-[1280px] items-center gap-12 px-4 md:px-0 lg:grid lg:grid-cols-2">
-        <div className="w-full overflow-hidden rounded-2xl">
+        <div className="relative aspect-[608/365] w-full overflow-hidden rounded-2xl">
           <Image
             src={IMG.sports}
-            alt="Eventos esportivos"
-            width={608}
-            height={365}
-            className="h-auto w-full object-cover"
+            alt="A plataforma PódioTicket no notebook e no celular"
+            fill
+            sizes="(min-width: 1024px) 608px, 100vw"
+            className="object-cover object-center"
           />
         </div>
         <div className="flex flex-col gap-12 justify-between py-10 h-full">
