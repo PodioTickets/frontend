@@ -4,6 +4,7 @@ import { Check, CheckCircle2, Briefcase, Palette, ChevronRightIcon, ArrowRight }
 import { Button } from "@/components/Button";
 import { ArrowUpRightIcon } from "@/components/Icons/ArrowUpRightIcon";
 import { cn } from "@/utils/cn";
+import { Reveal } from "@/components/Landing/Reveal";
 
 /**
  * Landing page institucional (pública) da PódioTicket — fiel ao Figma
@@ -86,22 +87,24 @@ function Hero() {
   return (
     <section className="relative overflow-hidden bg-gradient-to-b from-primary-2 to-gray-2">
       <div className="relative mx-auto max-w-[1280px] px-4 md:px-0">
-        <div className="mx-auto flex max-w-[900px] flex-col items-center gap-6 text-center">
-          <span className="inline-flex items-center justify-center rounded-[32px] border border-primary-6 bg-primary-3 px-6 py-3 font-manrope text-[16px] font-semibold leading-[1.1] text-primary-12">
-            Plataforma feita para o esporte
-          </span>
-          <h1 className="font-manrope text-[28px] font-extrabold leading-[1.1] text-gray-12 md:text-[48px]">
-            Venda mais inscrições e reduza o trabalho da sua equipe
-          </h1>
-          <p className="w-full font-family-dm-sans text-[16px] leading-[1.4] text-gray-11 md:text-[20px]">
-            A PódioTicket reúne inscrições, participantes, financeiro e
-            comunicação em uma única plataforma para eventos esportivos
-          </p>
-          <SpecialistButton className="mt-2" />
-        </div>
+        <Reveal>
+          <div className="mx-auto flex max-w-[900px] flex-col items-center gap-6 text-center">
+            <span className="inline-flex items-center justify-center rounded-[32px] border border-primary-6 bg-primary-3 px-6 py-3 font-manrope text-[16px] font-semibold leading-[1.1] text-primary-12">
+              Plataforma feita para o esporte
+            </span>
+            <h1 className="font-manrope text-[28px] font-extrabold leading-[1.1] text-gray-12 md:text-[48px]">
+              Venda mais inscrições e reduza o trabalho da sua equipe
+            </h1>
+            <p className="w-full font-family-dm-sans text-[16px] leading-[1.4] text-gray-11 md:text-[20px]">
+              A PódioTicket reúne inscrições, participantes, financeiro e
+              comunicação em uma única plataforma para eventos esportivos
+            </p>
+            <SpecialistButton className="mt-2" />
+          </div>
+        </Reveal>
 
         {/* Mockup de dashboards em perspectiva */}
-        <div className="relative mt-12 md:mt-16">
+        <Reveal delay={150} className="relative mt-12 md:mt-16">
           <Image
             src={IMG.heroDashboards}
             alt="Painéis da plataforma PódioTicket"
@@ -110,7 +113,7 @@ function Hero() {
             priority
             className="mx-auto h-auto w-full max-w-[1158px]"
           />
-        </div>
+        </Reveal>
       </div>
       <div className="w-full h-[2px] bg-linear-to-r from-transparent via-gray-6 to-transparent" />
     </section>
@@ -124,7 +127,7 @@ function Hero() {
 function SalesSection() {
   return (
     <section className="bg-gray-2 py-20 md:py-28">
-      <div className="mx-auto flex flex-col-reverse md:flex-row max-w-[1280px] items-center gap-16 px-4 md:px-0">
+      <Reveal className="mx-auto flex flex-col-reverse md:flex-row max-w-[1280px] items-center gap-16 px-4 md:px-0">
         <div className="flex justify-center lg:justify-start">
           <Image
             src="/landing/vendas-por-pagamento.png"
@@ -161,7 +164,7 @@ function SalesSection() {
             <CheckItem>Siga a evolução das vendas dia a dia</CheckItem>
           </div>
         </div>
-      </div>
+      </Reveal>
     </section>
   );
 }
@@ -212,11 +215,13 @@ function FeaturesSection() {
   return (
     <section className="bg-gray-2 py-20 md:py-28">
       <div className="mx-auto max-w-[1280px] px-4 md:px-0">
-        <SectionHeading
-          title="Tudo que você precisa para operar seu evento"
-          subtitle="Ferramentas pensadas para quem organiza evento esportivo de verdade"
-        />
-        <div className="mt-12 grid grid-cols-1 gap-5 lg:grid-cols-2">
+        <Reveal>
+          <SectionHeading
+            title="Tudo que você precisa para operar seu evento"
+            subtitle="Ferramentas pensadas para quem organiza evento esportivo de verdade"
+          />
+        </Reveal>
+        <Reveal delay={120} className="mt-12 grid grid-cols-1 gap-5 lg:grid-cols-2">
           {/* Linha 1: dois cards iguais (experiência + cupons/vouchers) */}
           <FeatureCard
             image={IMG.featureExperience}
@@ -241,7 +246,7 @@ function FeaturesSection() {
             imageClassName="object-left-top"
             sizes="(min-width: 1024px) 1280px, 100vw"
           />
-        </div>
+        </Reveal>
       </div>
     </section>
   );
@@ -285,12 +290,14 @@ function SupportSection() {
   return (
     <section className="bg-gradient-to-b from-[#191919] to-[#222222] py-20 md:py-28">
       <div className="mx-auto max-w-[1280px] w-full px-4 md:px-0">
-        <SectionHeading
-          dark
-          title="Você organiza. A gente te apoia do início ao fim!"
-          subtitle="Tenha uma equipe ao seu lado para apoiar a organização do evento, responder dúvidas e auxiliar na divulgação"
-        />
-        <div className="mt-12 grid grid-cols-1 gap-5 lg:grid-cols-2">
+        <Reveal>
+          <SectionHeading
+            dark
+            title="Você organiza. A gente te apoia do início ao fim!"
+            subtitle="Tenha uma equipe ao seu lado para apoiar a organização do evento, responder dúvidas e auxiliar na divulgação"
+          />
+        </Reveal>
+        <Reveal delay={120} className="mt-12 grid grid-cols-1 gap-5 lg:grid-cols-2">
           <SupportCard
             icon={<Briefcase className="size-9" strokeWidth={1.6} />}
             title="Um assessor ao seu lado em cada etapa da organização"
@@ -301,7 +308,7 @@ function SupportSection() {
             title="Uma equipe de design pronta para valorizar seu evento"
             description="Nossa equipe de design ajuda a criar banners, cards e materiais de divulgação para promover seu evento. Tudo com qualidade profissional e sem custo adicional"
           />
-        </div>
+        </Reveal>
       </div>
     </section>
   );
@@ -314,7 +321,7 @@ function SupportSection() {
 function CommunicationSection() {
   return (
     <section className="overflow-hidden bg-gray-2 pt-20 md:pt-28">
-      <div className="mx-auto flex flex-col md:flex-row max-w-[1280px] w-full items-center md:justify-between gap-4 md:gap-8 px-4 md:px-0">
+      <Reveal className="mx-auto flex flex-col md:flex-row max-w-[1280px] w-full items-center md:justify-between gap-4 md:gap-8 px-4 md:px-0">
         <div className="flex flex-col gap-6 max-w-[410px] w-full">
           <div className="flex flex-col gap-4 text-center md:text-left">
             <h2 className="font-manrope text-[28px] font-extrabold leading-[1.3] text-gray-12 md:text-[36px]">
@@ -335,7 +342,7 @@ function CommunicationSection() {
             className="h-auto max-w-none w-full"
           />
         </div>
-      </div>
+      </Reveal>
     </section>
   );
 }
@@ -347,7 +354,7 @@ function CommunicationSection() {
 function SportsSection() {
   return (
     <section className="bg-gray-2 py-20 md:py-28">
-      <div className="mx-auto flex flex-col-reverse max-w-[1280px] items-center gap-12 px-4 md:px-0 lg:grid lg:grid-cols-2">
+      <Reveal className="mx-auto flex flex-col-reverse max-w-[1280px] items-center gap-12 px-4 md:px-0 lg:grid lg:grid-cols-2">
         <div className="relative aspect-[608/365] w-full overflow-hidden rounded-2xl">
           <Image
             src={IMG.sports}
@@ -376,7 +383,7 @@ function SportsSection() {
             <span className="h-1 w-14 rounded-full bg-[#d9d9d9]" />
           </div>
         </div>
-      </div>
+      </Reveal>
     </section>
   );
 }
@@ -389,7 +396,7 @@ function CtaSection() {
   return (
     <section className="bg-gray-2 py-16 md:py-24">
       <div className="mx-auto max-w-[1280px] px-4 md:px-0">
-        <div className="grid grid-cols-1 overflow-hidden rounded-2xl shadow-md border border-gray-6 bg-gray-1 lg:grid-cols-[534px_1fr]">
+        <Reveal className="grid grid-cols-1 overflow-hidden rounded-2xl shadow-md border border-gray-6 bg-gray-1 lg:grid-cols-[534px_1fr]">
           <div className="flex flex-col gap-7 p-8 md:p-10">
             <div className="flex flex-col gap-5">
               <h2 className="font-manrope text-[24px] font-extrabold leading-[1.1] text-gray-12 md:text-[28px]">
@@ -410,7 +417,7 @@ function CtaSection() {
               className="object-cover object-top"
             />
           </div>
-        </div>
+        </Reveal>
       </div>
     </section>
   );
@@ -499,6 +506,10 @@ function ModalitiesBand() {
 export function LandingPage() {
   return (
     <main className="bg-gray-2">
+      {/* Sem JS os blocos do <Reveal> nascem opacity-0 — reativa tudo. */}
+      <noscript>
+        <style>{`[data-reveal]{opacity:1 !important;transform:none !important}`}</style>
+      </noscript>
       <Hero />
       <SalesSection />
       <FeaturesSection />
