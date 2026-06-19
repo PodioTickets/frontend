@@ -287,6 +287,7 @@ export function EventVouchersView({
                                     className="border-gray-6 text-gray-12 h-[36px] text-sm mr-4"
                                     onClick={() => openViewVoucherModal({
                                       eventId: eventId,
+                                      eventSlug: event?.slug,
                                       groupName: group.name,
                                     })}
                                   >
@@ -343,6 +344,7 @@ export function EventVouchersView({
                             variant="outline"
                             onClick={() => openViewVoucherModal({
                               eventId: eventId,
+                              eventSlug: event?.slug,
                               groupName: group.name,
                             })}
                             className="flex-1 h-11 rounded-lg border-gray-6 text-gray-12 font-manrope font-bold text-base hover:bg-gray-3"

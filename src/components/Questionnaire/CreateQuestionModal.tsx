@@ -15,6 +15,7 @@ import { SelectTicketsModal } from "../Coupon/SelectTicketsModal";
 import { ArrowButton } from "../ArrowButton";
 import { Dropdown } from "../Dropdown";
 import { cn } from "@/utils/cn";
+import { useModalSubmitState } from "@/hooks/useModalSubmitState";
 
 const PENDING_QUESTION_PREFIX = "__pending_question__";
 
@@ -48,7 +49,7 @@ export function CreateQuestionModal() {
   const [appliesTo, setAppliesTo] = useState<"all" | "specific">("all");
   const [selectedTicketIds, setSelectedTicketIds] = useState<string[]>([]);
   const [showSelectTicketsModal, setShowSelectTicketsModal] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const { isSubmitting, runSubmit } = useModalSubmitState();
   const [isMdUp, setIsMdUp] = useState(true);
   const [isEditingDescription, setIsEditingDescription] = useState(false);
   const [editingDescription, setEditingDescription] = useState("");
@@ -167,8 +168,7 @@ export function CreateQuestionModal() {
       return;
     }
 
-    setIsSubmitting(true);
-
+    await runSubmit(async () => {
     try {
       const questionData: CreateQuestionRequest = {
         question: question.trim(),
@@ -223,16 +223,14 @@ export function CreateQuestionModal() {
     } catch (error: any) {
       console.error("Error saving question:", error);
       toast.error(error.response?.data?.message || "Erro ao salvar pergunta");
-    } finally {
-      setIsSubmitting(false);
     }
+    });
   };
 
   const handleDelete = async () => {
     if (!isEditing || !data?.questionId || !eventId) return;
 
-    setIsSubmitting(true);
-
+    await runSubmit(async () => {
     try {
       if (deferPersistence && isPendingQuestionId(data.questionId)) {
         if (onModalSave) {
@@ -257,9 +255,8 @@ export function CreateQuestionModal() {
     } catch (error: any) {
       console.error("Error deleting question:", error);
       toast.error(error.response?.data?.message || "Erro ao deletar pergunta");
-    } finally {
-      setIsSubmitting(false);
     }
+    });
   };
 
   const selectedTypeLabel = QUESTION_TYPES.find(t => t.value === type)?.label || "Selecione o tipo";
