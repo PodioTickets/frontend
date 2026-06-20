@@ -107,7 +107,7 @@ export function Footer() {
         {/* Copyright Mobile */}
         <p className="text-white text-xs text-center">
           © {currentYear} - Todos os direitos reservados para PódioTicket
-          <br /> Atendimento: suporte@podioticket.com.br
+          <br /> Atendimento: suporte@podioticket.com.br | +55 11 94086-8733
           <br /> CNPJ: 65.174.909/0001-01
         </p>
       </div>
@@ -170,7 +170,7 @@ export function Footer() {
 
         <p className="text-[#B4B4B4] text-sm text-center mt-10">
           © {currentYear} - Todos os direitos reservados para PódioTicket
-          <br /> Atendimento: suporte@podioticket.com.br
+          <br /> Atendimento: suporte@podioticket.com.br | +55 11 94086-8733
           <br /> CNPJ: 65.174.909/0001-01
         </p>
       </div>
