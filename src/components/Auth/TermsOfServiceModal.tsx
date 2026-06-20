@@ -5,7 +5,24 @@ import { motion, AnimatePresence } from "framer-motion";
 import { X } from "lucide-react";
 import { Button } from "@/components/Button";
 import { ArrowButton } from "@/components/ArrowButton";
-import { PdfViewer } from "@/components/PdfViewer";
+import dynamic from "next/dynamic";
+
+/**
+ * `PdfViewer` carrega o react-pdf/pdf.js (lib pesada) só quando o modal de termos
+ * é montado — antes era import estático e entrava no bundle de quem só importa
+ * este modal. `ssr: false` porque o pdf.js depende de APIs de browser.
+ */
+const PdfViewer = dynamic(
+  () => import("@/components/PdfViewer").then((m) => m.PdfViewer),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="flex items-center justify-center py-10 text-sm text-gray-11 font-family-dm-sans">
+        Carregando documento...
+      </div>
+    ),
+  },
+);
 
 /**
  * Modal de Termos de Uso da PódioTicket.

@@ -243,11 +243,14 @@ zerar os erros antigos — ver Bloco 4).
   - [ ] **Fase 2 (hard, ainda no corpo de 2.212 linhas):** `usePaymentFlow` (estado cartão/débito/
         PIX, parcelas, cupom, handlers de pagamento/3DS), `useBillingAddressForm` (validação por país
         + payload PATCH). `PaymentMethodSelector` se valer. ⚠️ checkout = alto risco; validar ao vivo.
-- [ ] **`InformationStep.tsx` (2.878 linhas).** Extrair:
-  - `useParticipantState` (snapshots, sessionStorage, expand/saved).
-  - `useParticipantValidation` (CPF, telefone, data, perguntas condicionais).
-  - `src/lib/participantSnapshot.ts` (build/read/apply).
-  - Componente `ParticipantCard`.
+- [~] **`InformationStep.tsx` (2.863 linhas) — split EM ANDAMENTO.**
+  - [x] **Fase 1 (2026-06-20): subcomponente + snapshot.** `2863 → 2733` (−130).
+        `NationalitySelect.tsx` (dropdown de país, autocontido) extraído; `src/lib/participantSnapshot.ts`
+        criado com `readSavedState` (leitura SSR-safe) + tipo `SavedSnapshotMap`. Imports órfãos
+        (`COUNTRIES_PT_BR`/`FlagIcon`/`Search`) limpos. tsc 0, 436/436.
+  - [ ] **Fase 2 (hard, corpo monolítico):** `useParticipantState` (snapshots/sessionStorage/expand),
+        `useParticipantValidation` (CPF/telefone/data/perguntas condicionais), `ParticipantCard`.
+        `participantSnapshot.ts` pode crescer com build/apply. ⚠️ checkout = alto risco; validar ao vivo.
 - [~] **`CreateProductModal.tsx` (2.347 linhas) — split EM ANDAMENTO.**
   - [x] **Fase 1 (2026-06-18): tipos + validação pura.** `CreateProductModal.types.ts`
         (`ProductVariation`/`LinkedTicketListItem`/`MobileVariationDraft`) +
@@ -286,9 +289,32 @@ zerar os erros antigos — ver Bloco 4).
         igual `TicketForm`); adoção `useModalSubmitState.runSubmit` em `executeSave`/
         `performDeleteProduct` (dedup cosmético de try/finally, muda control-flow do save → risco
         vs ganho baixo); `<ProductModalFooter>` (footer custom 3-botões, não force `ModalFooterActions`).
-- [ ] **`LoginModal.tsx` / `RegisterModal.tsx` (~1.600 cada).** Extrair
-      `useLoginFlow`/`useRegisterFlow` e quebrar em painéis
-      (`LoginPanel`, `ForgotPasswordPanel`, `ResetPasswordPanel`, `Register Step1/2/3`).
+- [~] **`LoginModal.tsx` / `RegisterModal.tsx` (~1.600 cada) — split EM ANDAMENTO.**
+  - [x] **Login Fase 1 (2026-06-20): painéis de "esqueci senha".** `1601 → 1207` (−394).
+        `ForgotPasswordPanels.tsx` (`ForgotPasswordPanel` + `ForgotPasswordEnterCodePanel` +
+        `ForgotPasswordNewPasswordPanel` + tipo `ForgotMethod`, todos props-driven). Imports órfãos
+        (`Mail`/`Lock`/`ArrowLeft`/`CPFIcon`/`Checkbox`) limpos. `maskCPF`/`GoogleIcon` ficam (GoogleIcon
+        local tem SVG distinto do `Icons/GoogleIcon` — não dedupar). tsc 0, 436/436.
+  - [~] **Login Fase 2 (EM ANDAMENTO):**
+    - [x] **`useForgotPasswordFlow` (2026-06-20).** Toda a máquina de "esqueci senha" (estado +
+          3 efeitos: reset-on-close, cooldown, token de `loginModalData` + handlers) extraída p/
+          `src/components/Auth/useForgotPasswordFlow.ts`. Render do Login consome o retorno (mesmos
+          nomes via destructure). Entrada via ação `startForgotFlowFrom` (encapsula maskCPF). LoginModal
+          **1207 → 924** (−283; total −677 vs HEAD 1601). **Verificado: 10/10 handlers byte-idênticos
+          ao original (git HEAD)** + tsc 0 + 451/451. ⚠️ smoke test do fluxo ao vivo recomendado.
+    - [x] **`useLoginFlow` (2026-06-20).** Login e-mail/senha + MFA + Google OAuth (formData, errors,
+          turnstile + refs, mfa*, 4 efeitos + handlers) → `src/components/Auth/useLoginFlow.ts`. Render
+          consome via destructure; OTP via `handleMfaCodeChange`. LoginModal **924 → 734** (−190;
+          **total 1601 → 734, −54%**). **Verificado: handlers byte-idênticos ao HEAD** (só `handleSubmit`
+          trocou `React.FormEvent`→`FormEvent`, corpo idêntico) + tsc 0 + 451/451. ⚠️ smoke ao vivo.
+  - **LoginModal Fase 2 COMPLETA: 1601 → 734 (−867, −54%); 3 arquivos novos** (ForgotPasswordPanels +
+    useForgotPasswordFlow + useLoginFlow). Só o `GoogleIcon` local e o render permanecem no arquivo.
+  - [x] **RegisterModal Fase 2 (2026-06-20): `useRegisterFlow`.** Toda a máquina de cadastro
+        (steps 1-4 + completar-perfil Google: estado, 3 efeitos, validações por step, handlers)
+        extraída p/ `src/components/Auth/useRegisterFlow.ts`. Os `renderStepX` ficam no componente
+        consumindo o destructure. RegisterModal **1580 → 1135** (−445). **Verificado: 11/11 handlers
+        byte-idênticos ao HEAD** (handleNext/validateStep*/buildPersonalUpdateData/etc.) + tsc 0 +
+        451/451. ⚠️ smoke ao vivo: cadastro novo (BR/estrangeiro) + completar perfil via Google.
 - [ ] **God object `OrganizerService.ts` (2.992 linhas).** Dividir por domínio:
       `EventService`, `TicketService`, `CouponService`, `VoucherService`,
       `ProductService`, `OrganizationService`, `AuditService`, `UploadService`.
@@ -349,8 +375,12 @@ zerar os erros antigos — ver Bloco 4).
 
 - [ ] **Reduzir `"use client"` (297 ocorrências).** Marcar layouts/páginas como
       Server Components onde possível; `"use client"` só nos consumidores.
-- [ ] **`dynamic()` nos steps de checkout** (PaymentStep/InformationStep ~3k LOC
-      cada) — ganho direto de TTI. Idem chart.js (`RevenueChartImpl`), react-pdf.
+- [x] **`dynamic()` em libs pesadas — FEITO/MOOT (2026-06-20).**
+  - chart.js: JÁ era dynamic (`RevenueChart.tsx` envolve `RevenueChartImpl` com `next/dynamic`).
+  - react-pdf: `PdfViewer` agora carregado via `next/dynamic({ssr:false})` no `TermsOfServiceModal`
+    (única importadora) — react-pdf/pdf.js só entra no bundle quando o modal de termos abre.
+  - PaymentStep/InformationStep: **MOOT** — são páginas de rota próprias (`/checkout/informacoes`,
+    `/checkout/pagamento`), já code-split por rota pelo Next. `dynamic()` neles seria redundante.
 - [ ] **Virtualização** de tabelas grandes (registrations, `TicketsSection`)
       com `VirtualList`/react-window.
 - [ ] **`ignoreBuildErrors: true`** (`next.config.ts:32`). **`tsc --noEmit` agora dá 0 erros**
@@ -399,12 +429,21 @@ zerar os erros antigos — ver Bloco 4).
   - [x] `postalCode.test.ts` (16): config CEP/ZIP/CAP por país (BR/US/AR/fallback), format/isValid/toBackend.
   - [x] `phone.test.ts` (16): ISO por nome PT-BR, máscara nacional + strip de DDI, dígitos p/ backend,
         validação por país, placeholder/maxLength.
-- [ ] **3DS / fluxo de reserva (integração)** — `useThreeDS` é orquestração do SDK Braspag
-      (DOM/postMessage) e os hooks fazem fetch; NÃO é unit-testável puro. Precisa de **MSW**
-      (mock de API) + jsdom — investimento de infra à parte (decisão consciente). A lógica pura
-      em volta já está coberta acima.
-- [ ] **Hooks core (integração):** `useAuth`, `useCheckoutReservation`, `useThreeDS` — depende do MSW.
-- [ ] **MSW** para mock de API + testes de integração de React Query.
+- [x] **MSW (infra) — FEITO (2026-06-20).** `msw@2` instalado (devDep). `src/test/mswServer.ts`:
+      `setupServer` compartilhado + helper opt-in `useMswServer()` (liga listen/reset/close por
+      arquivo). **NÃO** está no setup global de propósito (`onUnhandledRequest:"error"`) — só os
+      testes de integração ligam, mantendo os 436 testes existentes intactos. 443/443, tsc 0.
+- [x] **`useCheckoutReservation` (integração) — FEITO (2026-06-20).** Caracterização da camada de
+      rede do checkout: `src/hooks/__tests__/useCheckoutReservation.integration.test.ts` (7 testes) —
+      reserve/get/pay/coupon/pix-status/cancel: wiring de fetch, header `Idempotency-Key`,
+      normalização `id→orderId`, `OrderApiError` no erro, 404 do cancel tratado como sucesso.
+- [x] **`AuthService` (integração) — FEITO (2026-06-20).** `src/services/user/__tests__/AuthService.integration.test.ts`
+      (8 testes): login (shape aninhado/plano/MFA/endpoint organizer/erro-envelope), register
+      (CPF strip vs PASSPORT cru, phone strip, retorno user+tokens, erro lança). Confirma que o MSW
+      intercepta axios (ApiClient) além de fetch.
+- [~] **3DS / `useThreeDS` (integração)** — DISPENSADO por ora (decisão do usuário 2026-06-20):
+      orquestração do SDK Braspag (DOM/postMessage) exige mock pesado de `window`; ROI baixo.
+- [ ] **Hooks core restantes:** caracterização a nível de componente dos steps conforme a Fase 2 exigir.
 - [x] Sanitizer de conteúdo rico (`richContent.test.ts`).
 
 ---
