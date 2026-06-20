@@ -11,6 +11,7 @@ import { ProductCardGallery } from "./ProductCardGallery";
 import { formatPhoneForCountry } from "@/utils/phone";
 import { isBrazilianCountry } from "@/validators/Auth.validator";
 import { formatDateBR } from "@/utils/datetimeBR";
+import { formatBRL as formatPrice } from "@/lib/money";
 
 interface Product {
   id: string;
@@ -107,14 +108,6 @@ export function ParticipantSummaryModal({
     });
   };
 
-  const formatPrice = (price: number) => {
-    return new Intl.NumberFormat("pt-BR", {
-      style: "currency",
-      currency: "BRL",
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    }).format(price);
-  };
 
   // Mesma semântica do checkout (billableReaisForProductSelection): o preço da
   // variação é o TOTAL daquela variação. Não incluso → exibe o total cheio;

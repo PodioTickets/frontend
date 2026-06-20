@@ -8,6 +8,7 @@ import { CalendarIcon } from "../Icons/CalendarIcon";
 import { ClockIcon } from "../Icons/ClockIcon";
 import { Counter } from "./Counter";
 import type { Kit } from "@/constants/kits";
+import { formatBRL as formatPrice } from "@/lib/money";
 import { useCheckout } from "@/contexts/CheckoutContext";
 import { formatDateBR } from "@/utils/datetimeBR";
 import { Minus, Plus, ChevronDown, ChevronUp } from "lucide-react";
@@ -30,14 +31,6 @@ export function KitCard({ kit, index }: KitCardProps) {
     });
   };
 
-  const formatPrice = (price: number) => {
-    return new Intl.NumberFormat("pt-BR", {
-      style: "currency",
-      currency: "BRL",
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    }).format(price);
-  };
 
   const formatAgeLimit = (ageLimit?: { min?: number; max?: number }) => {
     if (!ageLimit) return null;

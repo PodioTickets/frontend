@@ -10,6 +10,7 @@ import { RegistrationQRCode } from "../QRCode/RegistrationQRCode";
 import { type IncludedProduct } from "@/components/Ticket/ProductVariationCard";
 import { ParticipantProductsTab } from "./ParticipantProductsTab";
 import { EventInfoCard } from "@/components/Event/EventInfoCard";
+import { formatBRL as formatCurrency } from "@/lib/money";
 import { Tooltip } from "@/components/Tooltip";
 import { formatPhoneForCountry } from "@/utils/phone";
 import { isBrazilianCountry } from "@/validators/Auth.validator";
@@ -140,12 +141,6 @@ export function PaymentSuccessStep({
     });
   };
 
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat("pt-BR", {
-      style: "currency",
-      currency: "BRL",
-    }).format(value);
-  };
 
   /* Brasileiro quando: (1) country bate com BR/Brasil/Brazil (sinal mais
    * confiável, vem do cadastro internacional), (2) country null mas

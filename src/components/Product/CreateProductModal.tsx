@@ -33,94 +33,30 @@ import { cn } from "@/utils/cn";
 import { isSemInteresseVariation } from "@/utils/semInteresseVariation";
 import { useEvent } from "@/hooks/useEvent";
 import { formatDateBR, toUtcDate } from "@/utils/datetimeBR";
+import {
+  variationStockToPersist,
+  categoryLabelFromTicket,
+  buyerVariationEditStateFromApiProduct,
+  sanitizeVariationTypeLabelInput,
+  parsePriceReais,
+  formatPriceFromApi,
+  variationHasMeaningfulSpecificPrice,
+  maskPriceInputFromDigits as formatPrice,
+  validateProductForm,
+} from "@/lib/productValidation";
+import type {
+  ProductVariation,
+  LinkedTicketListItem,
+  MobileVariationDraft,
+} from "@/components/Product/CreateProductModal.types";
+import { useProductLinkedTickets } from "@/components/Product/useProductLinkedTickets";
+import { useProductImageUpload } from "@/components/Product/useProductImageUpload";
+import { ProductLinkedTicketsConfirmDialog } from "@/components/Product/ProductLinkedTicketsConfirmDialog";
+import { useProductVariations } from "@/components/Product/useProductVariations";
+import { ProductPreview } from "@/components/Product/ProductPreview";
+import { ProductVariationMobileSheets } from "@/components/Product/ProductVariationMobileSheets";
+import { ProductVariations } from "@/components/Product/ProductVariations";
 
-interface ProductVariation {
-  id: string;
-  name: string;
-  price: string;
-  /**
-   * Estoque UNIFICADO editável = restante disponível. O "total/limite" deixou de
-   * existir na UI; é derivado no save aplicando ao limite persistido o MESMO
-   * delta que o organizador aplicou ao restante (ver `variationStockToPersist`).
-   */
-  stock: string;
-  /**
-   * Snapshot PERSISTIDO do backend (só em edição). Necessários pra reconstruir o
-   * limite preservando vendas E holds. Ausentes em criação / variação nova.
-   * - `persistedStock`     → limite salvo (`0` = ilimitado).
-   * - `persistedAvailable` → restante salvo na carga (baseline do delta).
-   * - `soldCount`          → vendidas confirmadas (coluna "Total vendidos").
-   */
-  persistedStock?: number;
-  persistedAvailable?: number;
-  soldCount?: number;
-}
-
-type LinkedTicketListItem = { name: string; categoryLabel: string };
-
-/**
- * Limite (`stock`) a enviar pro backend a partir do estoque RESTANTE editável.
- * O backend reconcilia o restante por DELTA do limite — então preservamos vendas
- * E holds aplicando ao limite persistido o MESMO delta que o organizador aplicou
- * ao restante:  novoLimite = limitePersistido + (restanteAtual − restanteOriginal).
- * Variação nova (sem snapshot): limite = restante digitado (sem vendas/holds).
- * Nunca abaixo de 0.
- */
-function variationStockToPersist(v: ProductVariation): number {
-  const remaining = parseInt(v.stock, 10) || 0;
-  if (v.persistedStock == null || v.persistedAvailable == null) {
-    return Math.max(0, remaining);
-  }
-  const delta = remaining - v.persistedAvailable;
-  return Math.max(0, v.persistedStock + delta);
-}
-
-function categoryLabelFromTicket(t: Record<string, unknown>): string {
-  const nested = t.category as { name?: string } | undefined;
-  const fromNested =
-    typeof nested?.name === "string" ? nested.name.trim() : "";
-  if (fromNested) return fromNested;
-  const snake = t.category_name;
-  if (typeof snake === "string" && snake.trim()) return snake.trim();
-  const cid = t.categoryId ?? t.category_id;
-  if (cid == null || cid === "") return "Sem categoria";
-  return "Sem categoria";
-}
-
-/** Lê campos da API (camelCase ou snake_case) para o formulário de edição. */
-function buyerVariationEditStateFromApiProduct(p: Record<string, unknown> | null | undefined): {
-  allowed: boolean;
-  deadlineDays: string;
-} {
-  if (!p || typeof p !== "object") {
-    return { allowed: false, deadlineDays: "30" };
-  }
-  const rawAllowed =
-    p.buyerVariationEditAllowed ?? p.buyer_variation_edit_allowed;
-  const allowed =
-    rawAllowed === true ||
-    rawAllowed === "true" ||
-    rawAllowed === 1 ||
-    rawAllowed === "1";
-  const rawDays =
-    p.variationEditDeadlineDays ?? p.variation_edit_deadline_days;
-  const n =
-    typeof rawDays === "number" && Number.isFinite(rawDays)
-      ? rawDays
-      : parseInt(String(rawDays ?? "").replace(/\D/g, ""), 10);
-  if (!allowed) {
-    return { allowed: false, deadlineDays: "30" };
-  }
-  if (Number.isFinite(n) && n >= 0) {
-    return { allowed: true, deadlineDays: String(n) };
-  }
-  return { allowed: true, deadlineDays: "30" };
-}
-
-/** Nome do tipo de variação: só letras, números e espaços (sem . , - etc.). */
-function sanitizeVariationTypeLabelInput(value: string): string {
-  return value.replace(/[^\p{L}\p{N}\s]/gu, "");
-}
 
 export function CreateProductModal() {
   const {
@@ -131,12 +67,43 @@ export function CreateProductModal() {
     onModalProductDelete,
   } = useCreateProductModal();
   const [productName, setProductName] = useState("");
-  const [productImages, setProductImages] = useState<string[]>([]);
-  const [primaryImageIndex, setPrimaryImageIndex] = useState(0);
+  const {
+    productImages,
+    setProductImages,
+    primaryImageIndex,
+    setPrimaryImageIndex,
+    productCropRef,
+    cropTargetIndexRef,
+    handleProductCropped,
+    handleDrop,
+    handleDragOver,
+  } = useProductImageUpload();
   const [isIncludedInTicket, setIsIncludedInTicket] = useState(true);
   const [basePrice, setBasePrice] = useState("");
   const [variationTypeName, setVariationTypeName] = useState("");
-  const [variations, setVariations] = useState<ProductVariation[]>([]);
+  const {
+    variations,
+    setVariations,
+    defaultVariationStockFromBatches,
+    mobileMoreMenuVariationId,
+    setMobileMoreMenuVariationId,
+    mobileVariationDraft,
+    setMobileVariationDraft,
+    mobileVariationDraftError,
+    setMobileVariationDraftError,
+    handleAddVariation,
+    handleRemoveVariation,
+    handleVariationChange,
+    handlePriceChange,
+    openMobileEditVariation,
+    openMobileAddVariation,
+    closeMobileVariationDraft,
+    handleMobileDraftPriceChange,
+    saveMobileVariationDraft,
+    handleMobileRemoveVariation,
+  } = useProductVariations({
+    ticketBatchesTotalQuantity: data?.ticketBatchesTotalQuantity,
+  });
   const [isRequired, setIsRequired] = useState(true);
   const [buyerCanEditVariation, setBuyerCanEditVariation] = useState(false);
   const [variationChangeDeadlineDays, setVariationChangeDeadlineDays] =
@@ -145,9 +112,6 @@ export function CreateProductModal() {
   const [isDeleting, setIsDeleting] = useState(false);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [saveConfirmOpen, setSaveConfirmOpen] = useState(false);
-  const [linkedTicketsResolved, setLinkedTicketsResolved] = useState<
-    LinkedTicketListItem[]
-  >([]);
   /** Edição: carregamento do produto via API ao abrir o modal. */
   const [productFetchStatus, setProductFetchStatus] = useState<
     "idle" | "loading" | "loaded" | "error"
@@ -156,25 +120,12 @@ export function CreateProductModal() {
   const [productFormBaseline, setProductFormBaseline] = useState<string | null>(
     null,
   );
-  const productCropRef = useRef<ImageUploadWithCropRef>(null);
-  /** null = adicionar nova foto; number = substituir foto naquele índice */
-  const cropTargetIndexRef = useRef<number | null>(null);
   /** Variação «Sem interesse» criada pelo backend: não exibimos ao organizador, mas reenviamos no PATCH se o produto continuar fora do ingresso. */
   const organizerHiddenSemInteresseRef = useRef<ProductVariation | null>(null);
 
   // ─── Mobile-only: bottom sheets para edição/criação de variação (Figma 3428:160661 + 3428:161019) ───
   // Mobile não edita inputs inline — abre bottom sheet "Mais opções" (Editar/Remover)
   // que por sua vez abre "Editar/Adicionar variação" com inputs nome/preço/estoque.
-  const [mobileMoreMenuVariationId, setMobileMoreMenuVariationId] = useState<string | null>(null);
-  type MobileVariationDraft = {
-    /** "new" cria uma nova variação ao salvar; UUID edita a existente. */
-    target: "new" | string;
-    name: string;
-    price: string;
-    stock: string;
-  };
-  const [mobileVariationDraft, setMobileVariationDraft] = useState<MobileVariationDraft | null>(null);
-  const [mobileVariationDraftError, setMobileVariationDraftError] = useState<string | null>(null);
 
   const isEditing = data?.productId !== undefined;
   const isReadOnly = data?.readOnly === true;
@@ -199,13 +150,6 @@ export function CreateProductModal() {
   }, [modalEvent?.eventDate, variationChangeDeadlineDays]);
 
   /** Estoque inicial de cada variação nova: soma das vagas de todos os lotes do ingresso (vem do modal). */
-  const defaultVariationStockFromBatches = useMemo(() => {
-    const raw = data?.ticketBatchesTotalQuantity;
-    if (typeof raw === "number" && Number.isFinite(raw)) {
-      return String(Math.max(0, Math.floor(raw)));
-    }
-    return "0";
-  }, [data?.ticketBatchesTotalQuantity]);
 
   const filledVariationsCount = variations.filter((v) => v.name.trim()).length;
   /** Criar e editar: no mínimo 1 nome de variação preenchido. */
@@ -246,36 +190,12 @@ export function CreateProductModal() {
     return null;
   })();
 
-  /** Valor em reais a partir do texto "10,50" / "0,00". */
-  const parsePriceReais = (formatted: string): number => {
-    const n = parseFloat(
-      String(formatted ?? "")
-        .replace(",", ".")
-        .trim(),
-    );
-    return Number.isFinite(n) ? n : 0;
-  };
 
   /** Produto não incluso: preço base obrigatório e > 0. */
   const basePriceInvalidNotIncluded =
     !isIncludedInTicket && parsePriceReais(basePrice) <= 0;
 
-  // Helper: API retorna preços em centavos; exibir em reais (formato "10,50")
-  const formatPriceFromApi = (value: number | string | undefined): string => {
-    if (value == null || value === "") return "";
-    if (typeof value === "number")
-      return (value / 100).toFixed(2).replace(".", ",");
-    const s = String(value).trim().replace(".", ",");
-    return s;
-  };
 
-  /** Campo «preço específico» com valor numérico ≠ 0 (vazio ou 0 / 0,00 = sem preço específico na prévia). */
-  const variationHasMeaningfulSpecificPrice = (price: string | undefined) => {
-    const s = String(price ?? "").trim();
-    if (s === "") return false;
-    const n = parseFloat(s.replace(",", "."));
-    return Number.isFinite(n) && n !== 0;
-  };
 
   /** Alguma variação com preço específico realmente diferente de zero. */
   const anyVariationHasSpecificPrice = useMemo(
@@ -495,7 +415,6 @@ export function CreateProductModal() {
       setProductFormBaseline(null);
       setProductFetchStatus("idle");
       setSaveConfirmOpen(false);
-      setLinkedTicketsResolved([]);
       organizerHiddenSemInteresseRef.current = null;
       return;
     }
@@ -594,181 +513,14 @@ export function CreateProductModal() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen, formInitVersion]);
 
-  useEffect(() => {
-    if (!isOpen || !eventId) return;
-
-    let cancelled = false;
-    const productId = data?.productId;
-
-    const itemsFromModalProp = (): LinkedTicketListItem[] => {
-      const lt = data?.linkedTickets;
-      if (Array.isArray(lt) && lt.length > 0) {
-        return lt
-          .map((x: { name?: unknown; categoryName?: unknown; category?: unknown }) => {
-            const name = String(x?.name ?? "").trim();
-            const catRaw = x?.categoryName ?? x?.category;
-            const categoryLabel =
-              typeof catRaw === "string" && catRaw.trim()
-                ? catRaw.trim()
-                : "—";
-            return { name, categoryLabel };
-          })
-          .filter((x) => x.name);
-      }
-      const raw = data?.linkedTicketNames;
-      if (!Array.isArray(raw)) return [];
-      return raw
-        .map((n) => ({
-          name: String(n ?? "").trim(),
-          categoryLabel: "—",
-        }))
-        .filter((x) => x.name);
-    };
-
-    const mergeByTicketName = (
-      fromApi: LinkedTicketListItem[],
-      fromModal: LinkedTicketListItem[],
-    ): LinkedTicketListItem[] => {
-      const seen = new Set<string>();
-      const out: LinkedTicketListItem[] = [];
-      for (const item of fromApi) {
-        if (seen.has(item.name)) continue;
-        seen.add(item.name);
-        out.push(item);
-      }
-      for (const item of fromModal) {
-        if (seen.has(item.name)) continue;
-        seen.add(item.name);
-        out.push(item);
-      }
-      return out;
-    };
-
-    (async () => {
-      const modalItems = itemsFromModalProp();
-      if (!productId) {
-        if (!cancelled) setLinkedTicketsResolved(modalItems);
-        return;
-      }
-      try {
-        const res = await organizerService.getTickets(eventId, {
-          page: 1,
-          limit: 500,
-        });
-        if (cancelled) return;
-        const tickets = res.tickets || [];
-        const pid = String(productId);
-        const fromApi = tickets
-          .filter(
-            (t: { productIds?: string[] }) =>
-              Array.isArray(t.productIds) &&
-              t.productIds.some((id) => String(id) === pid),
-          )
-          .map((t: Record<string, unknown>) => ({
-            name: String(t.name ?? "").trim(),
-            categoryLabel: categoryLabelFromTicket(t),
-          }))
-          .filter((x) => x.name);
-        if (!cancelled) {
-          setLinkedTicketsResolved(mergeByTicketName(fromApi, modalItems));
-        }
-      } catch {
-        if (!cancelled) setLinkedTicketsResolved(modalItems);
-      }
-    })();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [
+  const linkedTicketsResolved = useProductLinkedTickets({
     isOpen,
     eventId,
-    data?.productId,
-    data?.linkedTicketNames,
-    data?.linkedTickets,
-  ]);
+    productId: data?.productId,
+    linkedTickets: data?.linkedTickets,
+    linkedTicketNames: data?.linkedTicketNames,
+  });
 
-  const handleProductCropped = useCallback((file: File) => {
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      const dataUrl = reader.result as string;
-      const targetIndex = cropTargetIndexRef.current;
-      setProductImages(prev => {
-        if (targetIndex !== null && targetIndex < prev.length) {
-          const updated = [...prev];
-          updated[targetIndex] = dataUrl;
-          return updated;
-        }
-        return [...prev, dataUrl];
-      });
-      if (targetIndex === null) {
-        // Nova foto: tornar primária se for a primeira
-        setProductImages(prev => {
-          if (prev.length === 1) setPrimaryImageIndex(0);
-          return prev;
-        });
-      }
-      cropTargetIndexRef.current = null;
-    };
-    reader.readAsDataURL(file);
-  }, []);
-
-  const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
-    e.preventDefault();
-    const file = e.dataTransfer.files[0];
-    if (file && file.type.startsWith("image/")) {
-      cropTargetIndexRef.current = null;
-      productCropRef.current?.openWithFile(file);
-    }
-  };
-
-  const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
-    e.preventDefault();
-  };
-
-  const handleAddVariation = () => {
-    const newVariation: ProductVariation = {
-      id: Date.now().toString(),
-      name: "",
-      price: "",
-      stock: defaultVariationStockFromBatches,
-    };
-    setVariations([...variations, newVariation]);
-  };
-
-  const handleRemoveVariation = (id: string) => {
-    if (variations.length <= 1) {
-      toast.error("É necessário ter pelo menos uma variação");
-      return;
-    }
-    setVariations(variations.filter((v) => v.id !== id));
-  };
-
-  const handleVariationChange = (
-    id: string,
-    field: keyof ProductVariation,
-    value: string,
-  ) => {
-    setVariations(
-      variations.map((v) => (v.id === id ? { ...v, [field]: value } : v)),
-    );
-  };
-
-  const formatPrice = (value: string) => {
-    const numbers = value.replace(/\D/g, "");
-    if (!numbers) return "";
-    const cents = parseInt(numbers, 10);
-    return (cents / 100).toFixed(2).replace(".", ",");
-  };
-
-  const handlePriceChange = (id: string, value: string) => {
-    const formatted = formatPrice(value);
-    handleVariationChange(
-      id,
-      "price",
-      formatted === "" ? "0,00" : formatted,
-    );
-  };
 
   const handleBasePriceChange = (value: string) => {
     const raw = value.replace(/^R\$\s*/i, "").trim();
@@ -776,136 +528,20 @@ export function CreateProductModal() {
     setBasePrice(formatted === "" ? "0,00" : formatted);
   };
 
-  // ─── Handlers dos bottom sheets mobile de variação ───
-  const openMobileEditVariation = (id: string) => {
-    const v = variations.find((x) => x.id === id);
-    if (!v) return;
-    setMobileVariationDraft({ target: id, name: v.name, price: v.price, stock: v.stock });
-    setMobileVariationDraftError(null);
-    setMobileMoreMenuVariationId(null);
-  };
-
-  const openMobileAddVariation = () => {
-    setMobileVariationDraft({ target: "new", name: "", price: "", stock: defaultVariationStockFromBatches });
-    setMobileVariationDraftError(null);
-  };
-
-  const closeMobileVariationDraft = () => {
-    setMobileVariationDraft(null);
-    setMobileVariationDraftError(null);
-  };
-
-  const handleMobileDraftPriceChange = (value: string) => {
-    if (!mobileVariationDraft) return;
-    const formatted = formatPrice(value);
-    setMobileVariationDraft({ ...mobileVariationDraft, price: formatted === "" ? "" : formatted });
-  };
-
-  const saveMobileVariationDraft = () => {
-    if (!mobileVariationDraft) return;
-    const name = mobileVariationDraft.name.trim();
-    if (!name) {
-      setMobileVariationDraftError("Informe o nome da variação.");
-      return;
-    }
-    // Nome único dentro do produto (ignora a própria variação ao editar).
-    const nameKey = name.toLocaleLowerCase("pt-BR");
-    const isDuplicateName = variations.some(
-      (v) =>
-        v.id !== mobileVariationDraft.target &&
-        v.name.trim().toLocaleLowerCase("pt-BR") === nameKey,
-    );
-    if (isDuplicateName) {
-      setMobileVariationDraftError("Já existe uma variação com esse nome.");
-      return;
-    }
-    if (mobileVariationDraft.target === "new") {
-      const newVariation: ProductVariation = {
-        id: Date.now().toString(),
-        name,
-        price: mobileVariationDraft.price || "",
-        stock: mobileVariationDraft.stock || defaultVariationStockFromBatches,
-      };
-      setVariations([...variations, newVariation]);
-    } else {
-      const targetId = mobileVariationDraft.target;
-      setVariations(
-        variations.map((v) =>
-          v.id === targetId
-            ? { ...v, name, price: mobileVariationDraft.price, stock: mobileVariationDraft.stock }
-            : v,
-        ),
-      );
-    }
-    closeMobileVariationDraft();
-  };
-
-  const handleMobileRemoveVariation = (id: string) => {
-    setMobileMoreMenuVariationId(null);
-    handleRemoveVariation(id);
-  };
-
   const validateBeforeSave = (): boolean => {
     if (isProductLoading) return false;
-
-    if (!productName.trim()) {
-      toast.error("Digite o nome do produto");
+    const result = validateProductForm({
+      productName,
+      variations,
+      eventId,
+      productHoldsStock,
+      isIncludedInTicket,
+      basePrice,
+    });
+    if (!result.ok) {
+      toast.error(result.message);
       return false;
     }
-
-    if (productName.length > 100) {
-      toast.error("O nome do produto deve ter no máximo 100 caracteres");
-      return false;
-    }
-
-    if (!hasMinVariations) {
-      toast.error("Preencha o nome de pelo menos uma variação");
-      return false;
-    }
-
-    // Nomes de variação devem ser únicos dentro do produto.
-    // Comparação normalizada (trim + case-insensitive pt-BR): duas variações que
-    // diferem só por maiúscula/espaço seriam indistinguíveis para o comprador.
-    const seenVariationNames = new Set<string>();
-    for (const v of variations) {
-      const trimmed = v.name.trim();
-      if (!trimmed) continue;
-      const key = trimmed.toLocaleLowerCase("pt-BR");
-      if (seenVariationNames.has(key)) {
-        toast.error(
-          `Variação duplicada: "${trimmed}". Cada variação deve ter um nome único.`,
-        );
-        return false;
-      }
-      seenVariationNames.add(key);
-    }
-
-    if (!eventId) {
-      toast.error("Evento não encontrado");
-      return false;
-    }
-
-    // Todo produto segura estoque (inclusive incluso+obrigatório): o campo é o
-    // estoque RESTANTE. O total (restante + vendidas) precisa ser > 0 — uma
-    // variação esgotada (restante 0, mas com vendas) é válida; restante 0 sem
-    // nenhuma venda significaria total 0, que não é permitido.
-    if (productHoldsStock) {
-      for (const v of variations) {
-        if (!v.name.trim()) continue;
-        if (variationStockToPersist(v) <= 0) {
-          toast.error(
-            `Informe um estoque maior que zero para a variação "${v.name.trim()}".`,
-          );
-          return false;
-        }
-      }
-    }
-
-    if (!isIncludedInTicket && parsePriceReais(basePrice) <= 0) {
-      toast.error("Informe um preço maior que zero para o produto.");
-      return false;
-    }
-
     return true;
   };
 
@@ -1456,420 +1092,39 @@ export function CreateProductModal() {
                         </p>
                       </div>
 
-                      {/* Variation Name Input */}
-                      <div className="flex flex-col gap-2">
-                        <label className="text-gray-12 text-base font-normal font-family-dm-sans leading-[1.3]">
-                          Digite o nome da variação:
-                        </label>
-                        <Input
-                          type="text"
-                          value={variationTypeName}
-                          onChange={(e) =>
-                            setVariationTypeName(
-                              sanitizeVariationTypeLabelInput(e.target.value),
-                            )
-                          }
-                          placeholder={`Ex: "Tamanho/cor/variação"`}
-                          className="h-12 px-3"
-                        />
-
-                      </div>
-
-                      {/* Variations: mobile = cards (Figma); desktop = tabela */}
-                      <div
-                        className={cn(
-                          "flex flex-col",
-                          "max-md:gap-3 max-md:border-0 max-md:bg-transparent",
-                          "md:rounded-lg md:border-[1.5px] md:border-gray-6 md:bg-gray-2",
-                        )}
-                      >
-                        {/* Table Header — desktop */}
-                        <div className="hidden h-11 items-center rounded-t-lg border-b border-gray-6 bg-gray-3 md:flex">
-                          <div className="flex-1 px-4">
-                            <span className="text-sm font-medium font-inter leading-[1.3] text-gray-12">
-                              {variationTypeName.trim() || "Variações"}
-                            </span>
-                          </div>
-                          <div className="flex w-[188px] items-center justify-center px-4 border-r h-full border-gray-6">
-                            <span className="flex items-center gap-1 text-sm font-medium font-inter leading-[1.3] text-gray-12">
-                              Preço específico{" "}
-                              <Tooltip
-                                content={
-                                  <div className="flex w-full flex-col gap-2 text-left font-family-dm-sans text-sm font-normal leading-[1.4] text-gray-12">
-                                    <p>
-                                      Defina um preço específico para esta
-                                      variação, caso ela tenha um valor diferente
-                                      do produto principal.
-                                    </p>
-                                    <p>
-                                      Por exemplo: a camiseta custa R$50, mas a
-                                      variação na cor azul pode custar R$60.
-                                    </p>
-                                    <p>
-                                      Se este campo não for preenchido, o sistema
-                                      utilizará automaticamente o preço padrão do
-                                      produto.
-                                    </p>
-                                  </div>
-                                }
-                                position="topLeft"
-                              >
-                                <button
-                                  type="button"
-                                  className="inline-flex cursor-help rounded text-gray-12 hover:text-gray-11 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-8"
-                                  aria-label="Informação: preço específico da variação"
-                                >
-                                  <BookIcon className="size-5 shrink-0" />
-                                </button>
-                              </Tooltip>
-                            </span>
-                          </div>
-                          {productHoldsStock && (
-                            <div className="flex w-[132px] items-center justify-center px-4">
-                              <span className="text-sm font-medium font-inter leading-[1.3] text-gray-12">
-                                Estoque
-                              </span>
-                            </div>
-                          )}
-                          {showSoldColumn && (
-                            <div className="flex w-[150px] items-center justify-center px-4">
-                              <span className="text-sm w-max font-medium font-inter leading-[1.3] text-gray-12">
-                                Total vendidos
-                              </span>
-                            </div>
-                          )}
-                          <div className="flex h-full w-[74px] items-center justify-center border-l border-gray-6 px-4">
-                            <span className="text-sm font-medium font-inter leading-[1.3] text-gray-12">
-                              Ações
-                            </span>
-                          </div>
-                        </div>
-
-                        {/* Variations List */}
-                        {variations.map((variation) => {
-                          return (
-                            <Fragment key={variation.id}>
-                              {/* Mobile — Figma 3428:160742 (cartão read-only, edição via bottom sheet) */}
-                              <div className="flex flex-col gap-4 rounded-lg border border-gray-6 bg-gray-1 px-3 py-4 md:hidden">
-                                <div className="flex w-full items-start justify-between gap-2">
-                                  <div className="flex min-w-0 flex-1 flex-col gap-3">
-                                    <p className="text-sm font-normal font-family-dm-sans leading-[1.3] text-gray-11">
-                                      Nome da variação
-                                    </p>
-                                    <p className="truncate text-sm font-semibold font-family-dm-sans leading-[1.3] text-gray-12">
-                                      {variation.name || "—"}
-                                    </p>
-                                  </div>
-                                  <button
-                                    type="button"
-                                    onClick={() => setMobileMoreMenuVariationId(variation.id)}
-                                    className="flex size-8 shrink-0 items-center justify-center rounded-lg text-gray-11 transition-colors hover:bg-gray-3"
-                                    aria-label="Mais opções da variação"
-                                  >
-                                    <MoreVertical className="size-6" />
-                                  </button>
-                                </div>
-                                <div className="flex w-full items-start justify-between gap-4">
-                                  <div className="flex flex-col gap-3">
-                                    <p className="text-sm font-normal font-family-dm-sans leading-[1.3] text-gray-11">
-                                      Preço específico
-                                    </p>
-                                    <p className="text-sm font-semibold font-family-dm-sans leading-[1.3] text-gray-12">
-                                      {isIncludedInTicket ? "Incluso" : `R$ ${variation.price || "0,00"}`}
-                                    </p>
-                                  </div>
-                                  <div className="flex items-start gap-6">
-                                    {productHoldsStock && (
-                                      <div className="flex flex-col items-end gap-3">
-                                        <p className="text-right text-sm font-normal font-family-dm-sans leading-[1.3] text-gray-11">
-                                          Estoque
-                                        </p>
-                                        <p className="text-sm font-semibold font-family-dm-sans leading-[1.3] text-gray-12">
-                                          {`${variation.stock || "0"} Un`}
-                                        </p>
-                                      </div>
-                                    )}
-                                    {showSoldColumn && (
-                                      <div className="flex flex-col items-end gap-3">
-                                        <p className="text-right text-sm font-normal font-family-dm-sans leading-[1.3] text-gray-11">
-                                          Total vendidos
-                                        </p>
-                                        <p className="text-sm font-semibold font-family-dm-sans leading-[1.3] text-gray-11 tabular-nums">
-                                          {variation.soldCount ?? 0}
-                                        </p>
-                                      </div>
-                                    )}
-                                  </div>
-                                </div>
-                              </div>
-
-                              {/* Desktop — linha da tabela */}
-                              <div className="hidden border-b border-gray-6 md:flex md:h-[52px] md:items-center">
-                                <div className="flex flex-1 px-4">
-                                  <input
-                                    type="text"
-                                    value={variation.name}
-                                    onChange={(e) =>
-                                      handleVariationChange(
-                                        variation.id,
-                                        "name",
-                                        e.target.value,
-                                      )
-                                    }
-                                    placeholder="Ex: P, M, G"
-                                    className="h-auto w-full border-0 bg-transparent px-0 text-sm font-medium font-inter text-gray-12 focus:border-0 focus:outline-none focus:ring-0"
-                                  />
-                                </div>
-                                <div className="flex w-[188px] items-center justify-center px-4">
-                                  {isIncludedInTicket ? (
-                                    <span className="flex items-center gap-1 text-sm font-medium font-inter text-gray-11">
-                                      Incluso
-                                    </span>
-                                  ) : (
-                                    <div className="flex items-center gap-0.5 text-sm font-semibold font-inter text-gray-12">
-                                      <span>R$</span>
-                                      <input
-                                        type="text"
-                                        inputMode="numeric"
-                                        value={variation.price || "0,00"}
-                                        onChange={(e) =>
-                                          handlePriceChange(
-                                            variation.id,
-                                            e.target.value,
-                                          )
-                                        }
-                                        className="w-16 border-0 bg-transparent px-0 focus:border-0 focus:outline-none focus:ring-0"
-                                        placeholder="0,00"
-                                      />
-                                    </div>
-                                  )}
-                                </div>
-                                {productHoldsStock && (
-                                  <div className="flex w-[132px] items-center justify-center px-4">
-                                    <input
-                                      type="number"
-                                      value={variation.stock}
-                                      onChange={(e) =>
-                                        handleVariationChange(
-                                          variation.id,
-                                          "stock",
-                                          e.target.value,
-                                        )
-                                      }
-                                      className="w-16 border-0 bg-transparent px-0 text-center text-sm font-semibold font-inter text-gray-12 tabular-nums focus:outline-none focus:ring-0 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
-                                      placeholder="0"
-                                    />
-                                  </div>
-                                )}
-                                {showSoldColumn && (
-                                  <div className="flex w-[150px] items-center justify-center px-4">
-                                    <span className="text-sm font-semibold font-inter text-gray-11 tabular-nums w-max">
-                                      {variation.soldCount ?? 0}
-                                    </span>
-                                  </div>
-                                )}
-                                <div className="flex w-[74px] items-center justify-center px-4">
-                                  <button
-                                    type="button"
-                                    title="Remover variação"
-                                    onClick={() =>
-                                      handleRemoveVariation(variation.id)
-                                    }
-                                    className="flex size-9 items-center justify-center rounded-lg border-[1.5px] border-red-6 bg-red-2 transition-colors hover:bg-red-3"
-                                  >
-                                    <TrashIcon className="size-5 text-red-12" />
-                                  </button>
-                                </div>
-                              </div>
-                            </Fragment>
-                          );
-                        })}
-
-                        {/* Add Variation Button — desktop adiciona linha inline, mobile abre bottom sheet. */}
-                        <div className="flex justify-center p-4 max-md:pt-0 md:border-t md:border-gray-6">
-                          <button
-                            type="button"
-                            onClick={() => {
-                              if (typeof window !== "undefined" && window.matchMedia("(max-width: 767px)").matches) {
-                                openMobileAddVariation();
-                              } else {
-                                handleAddVariation();
-                              }
-                            }}
-                            className="flex h-11 items-center gap-1 px-6 text-base font-semibold font-family-dm-sans text-gray-11 transition-colors hover:text-gray-12 md:px-11"
-                          >
-                            <Plus className="size-6" />
-                            Adicionar variação
-                          </button>
-                        </div>
-                      </div>
-
-                      {/* Erro de validação: nome de variação duplicado — abaixo
-                          do componente de variações, acima da prévia. */}
-                      {duplicateVariationName && (
-                        <p className="font-family-dm-sans text-sm text-red-11">
-                          Já existe uma variação com o nome &quot;{duplicateVariationName}&quot;. Cada variação deve ter um nome único.
-                        </p>
-                      )}
+                      <ProductVariations
+                        variationTypeName={variationTypeName}
+                        setVariationTypeName={setVariationTypeName}
+                        variations={variations}
+                        isIncludedInTicket={isIncludedInTicket}
+                        productHoldsStock={productHoldsStock}
+                        showSoldColumn={showSoldColumn}
+                        duplicateVariationName={duplicateVariationName}
+                        handleVariationChange={handleVariationChange}
+                        handlePriceChange={handlePriceChange}
+                        handleRemoveVariation={handleRemoveVariation}
+                        handleAddVariation={handleAddVariation}
+                        openMobileAddVariation={openMobileAddVariation}
+                        setMobileMoreMenuVariationId={setMobileMoreMenuVariationId}
+                      />
                     </div>
                   </div>
 
                   {/* Right Column - Preview */}
-                  <div className="flex w-full shrink-0 flex-col gap-4 md:sticky md:top-5">
-                    <div className="flex w-full flex-col gap-3 md:gap-5">
-                      {isIncludedInTicket && (
-                        <div className="flex flex-col gap-3">
-                          <p className="text-gray-12 text-base font-normal font-family-dm-sans leading-[1.3]">
-                            Deseja liberar a edição da variação pelo comprador após a compra?
-                          </p>
-                          <div className="flex flex-wrap items-center gap-x-[10px] gap-y-2">
-                            <div className="flex items-center gap-2">
-                              <Radio
-                                name="buyerVariationEdit"
-                                checked={buyerCanEditVariation}
-                                onChange={() => setBuyerCanEditVariation(true)}
-                              />
-                              <button
-                                type="button"
-                                className="cursor-pointer select-none border-none bg-transparent p-0 text-left text-base font-normal font-family-dm-sans leading-[1.3] text-gray-12 hover:text-gray-12 md:text-sm"
-                                onClick={() => setBuyerCanEditVariation(true)}
-                              >
-                                Sim
-                              </button>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <Radio
-                                name="buyerVariationEdit"
-                                checked={!buyerCanEditVariation}
-                                onChange={() => setBuyerCanEditVariation(false)}
-                              />
-                              <button
-                                type="button"
-                                className="cursor-pointer select-none border-none bg-transparent p-0 text-left text-base font-normal font-family-dm-sans leading-[1.3] text-gray-12 hover:text-gray-12 md:text-sm"
-                                onClick={() => setBuyerCanEditVariation(false)}
-                              >
-                                Não
-                              </button>
-                            </div>
-                          </div>
-                        </div>
-                      )}
-                      {isIncludedInTicket && buyerCanEditVariation && (
-                        <div className="flex flex-col gap-4">
-                          <p className="text-gray-12 text-base font-normal font-family-dm-sans leading-[1.3]">
-                            Até quantos dias antes do evento o participante
-                            pode alterar a variação?
-                          </p>
-                          {/* Campo composto (número + sufixo acoplado) — Figma 4906:166308 */}
-                          <div className="flex h-12 w-fit items-stretch overflow-hidden rounded-lg border border-gray-6 focus-within:border-primary-8">
-                            <input
-                              type="text"
-                              inputMode="numeric"
-                              pattern="[0-9]*"
-                              maxLength={4}
-                              value={variationChangeDeadlineDays}
-                              onChange={(e) =>
-                                setVariationChangeDeadlineDays(
-                                  e.target.value
-                                    .replace(/\D/g, "")
-                                    .slice(0, 4),
-                                )
-                              }
-                              className="w-18 shrink-0 bg-transparent px-2 text-center font-manrope text-xl font-bold leading-[1.1] text-gray-11 placeholder:text-gray-11 outline-none"
-                              placeholder="30"
-                              aria-label="Dias antes do evento para alterar variação"
-                            />
-                            <div className="flex items-center border-l border-gray-6 bg-gray-3 px-3">
-                              <span className="text-base font-normal font-family-dm-sans leading-[1.3] text-gray-11">
-                                Dias antes do evento
-                              </span>
-                            </div>
-                          </div>
-                          {/* Data-limite calculada (evento − N dias) — Figma 4895:156352 */}
-                          {variationDeadlineDateLabel && (
-                            <div className="flex flex-col gap-2.5 rounded-lg bg-primary-3 px-4 py-3">
-                              <div className="flex items-center gap-2">
-                                <CalendarIcon className="size-5 shrink-0 text-primary-12" />
-                                <p className="text-base font-medium font-family-dm-sans leading-[1.3] text-primary-12">
-                                  Participantes podem alterar até dia {variationDeadlineDateLabel}
-                                </p>
-                              </div>
-                              <p className="text-base font-normal font-family-dm-sans leading-[1.3] text-primary-12">
-                                Após esta data, o participante não poderá mais
-                                editar a variação do produto.
-                              </p>
-                            </div>
-                          )}
-                        </div>
-                      )}
-                    </div>
-
-                    <h3 className="text-lg font-bold font-manrope leading-[1.1] text-gray-12 md:text-xl">
-                      Prévia
-                    </h3>
-                    <div className="flex w-full flex-col rounded-xl border border-gray-6 bg-gray-2 md:w-[406px]">
-                      <div
-                        className={cn(
-                          "flex items-center gap-3 p-4",
-                          productPreviewDropdownOptions.length > 0 && "border-b border-gray-6",
-                        )}
-                      >
-                        <div className="relative size-[100px] shrink-0 overflow-hidden rounded border border-gray-6 bg-gray-3">
-                          <ImageWithInitialFallback
-                            src={productImages[primaryImageIndex] ?? productImages[0] ?? null}
-                            alt="Product preview"
-                            name={productName || "Nome do produto"}
-                            fill
-                            sizes="100px"
-                            className="size-full border-transparent border-0"
-                            letterClassName="text-2xl font-semibold"
-                          />
-                        </div>
-                        <div className="flex flex-col justify-between flex-1 gap-4">
-                          <p className="text-gray-12 text-base font-semibold font-manrope leading-[1.1]">
-                            {productName || "Nome do produto"}
-                          </p>
-                          {isIncludedInTicket ? (
-                            <p className="text-gray-12 text-base font-manrope leading-[1.1]">
-                              Incluso no ingresso
-                            </p>
-                          ) : (
-                            <p className="text-gray-12 text-base font-manrope leading-[1.1]">
-                              R$ {basePrice.trim() ? basePrice : "0,00"}
-                            </p>
-                          )}
-                        </div>
-                      </div>
-                      {productPreviewDropdownOptions.length > 0 ? (
-                        <div className="p-4">
-                          <p className="mb-2 text-base text-gray-12">
-                            {/* Com nome: usa o texto do organizador como título
-                                (ex.: "Escolha o tamanho da camisa"). Vazio: rótulo
-                                padrão "Escolha a variação". */}
-                            {variationTypeName.trim() || "Escolha a variação"}
-                          </p>
-                          <Dropdown
-                            options={productPreviewDropdownOptions}
-                            menuInPortal
-                            position="bottom"
-                            align="start"
-                            width="w-full"
-                            maxHeight="max-h-[200px]"
-                            trigger={(isOpen: boolean) => (
-                              <div className="flex h-12 w-full cursor-pointer items-center justify-between rounded-lg border border-gray-6 px-3 py-4 transition-colors hover:border-gray-8">
-                                <p className="text-base text-gray-11">
-                                  <span className="">
-                                    Selecione a variação
-                                  </span>
-                                </p>
-                                <ArrowButton isOpen={isOpen} />
-                              </div>
-                            )}
-                          />
-                        </div>
-                      ) : null}
-                    </div>
-                  </div>
+                  <ProductPreview
+                    isIncludedInTicket={isIncludedInTicket}
+                    buyerCanEditVariation={buyerCanEditVariation}
+                    setBuyerCanEditVariation={setBuyerCanEditVariation}
+                    variationChangeDeadlineDays={variationChangeDeadlineDays}
+                    setVariationChangeDeadlineDays={setVariationChangeDeadlineDays}
+                    variationDeadlineDateLabel={variationDeadlineDateLabel}
+                    productPreviewDropdownOptions={productPreviewDropdownOptions}
+                    productImages={productImages}
+                    primaryImageIndex={primaryImageIndex}
+                    productName={productName}
+                    basePrice={basePrice}
+                    variationTypeName={variationTypeName}
+                  />
                 </div>
               </div>
 
@@ -1944,400 +1199,103 @@ export function CreateProductModal() {
             onCropFailed={(msg) => toast.error(msg)}
           />
 
-          {/* Bottom sheet mobile: "Mais opções" da variação (Figma 3428:160985) */}
-          <AnimatePresence>
-            {mobileMoreMenuVariationId !== null && (
-              <>
-                <motion.div
-                  key="variation-more-backdrop"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  transition={{ duration: 0.2 }}
-                  className="fixed inset-0 z-60 bg-[rgba(32,32,32,0.9)] md:hidden"
-                  onClick={() => setMobileMoreMenuVariationId(null)}
-                />
-                <motion.div
-                  key="variation-more-sheet"
-                  initial={{ y: "100%" }}
-                  animate={{ y: 0 }}
-                  exit={{ y: "100%" }}
-                  transition={{ duration: 0.25, ease: "easeOut" }}
-                  className="fixed inset-x-0 bottom-0 z-61 flex flex-col items-stretch rounded-t-xl bg-gray-1 md:hidden"
-                >
-                  <div className="flex items-center justify-between border-b border-gray-6 px-4 py-2">
-                    <p className="font-family-dm-sans text-base font-semibold leading-[1.3] text-gray-12">
-                      Mais opções
-                    </p>
-                    <button
-                      type="button"
-                      onClick={() => setMobileMoreMenuVariationId(null)}
-                      className="flex size-7 items-center justify-center rounded-lg text-gray-11 hover:bg-gray-3"
-                      aria-label="Fechar"
-                    >
-                      <X className="size-5" />
-                    </button>
-                  </div>
-                  <div className="flex flex-col pb-[max(2.5rem,env(safe-area-inset-bottom))]">
-                    <button
-                      type="button"
-                      onClick={() => mobileMoreMenuVariationId && openMobileEditVariation(mobileMoreMenuVariationId)}
-                      className="flex h-11 items-center gap-2 border-b border-gray-6 px-4 text-left transition-colors hover:bg-gray-3"
-                    >
-                      <Pencil className="size-5 text-gray-12" />
-                      <span className="font-family-dm-sans text-sm font-medium leading-[1.3] text-gray-12">
-                        Editar variante
-                      </span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => mobileMoreMenuVariationId && handleMobileRemoveVariation(mobileMoreMenuVariationId)}
-                      className="flex h-11 items-center gap-2 border-b border-gray-6 px-4 text-left transition-colors hover:bg-red-2"
-                    >
-                      <X className="size-5 text-red-11" />
-                      <span className="font-family-dm-sans text-sm font-medium leading-[1.3] text-red-11">
-                        Remover variante
-                      </span>
-                    </button>
-                  </div>
-                </motion.div>
-              </>
-            )}
-          </AnimatePresence>
+          <ProductVariationMobileSheets
+            mobileMoreMenuVariationId={mobileMoreMenuVariationId}
+            setMobileMoreMenuVariationId={setMobileMoreMenuVariationId}
+            openMobileEditVariation={openMobileEditVariation}
+            handleMobileRemoveVariation={handleMobileRemoveVariation}
+            mobileVariationDraft={mobileVariationDraft}
+            setMobileVariationDraft={setMobileVariationDraft}
+            mobileVariationDraftError={mobileVariationDraftError}
+            setMobileVariationDraftError={setMobileVariationDraftError}
+            closeMobileVariationDraft={closeMobileVariationDraft}
+            handleMobileDraftPriceChange={handleMobileDraftPriceChange}
+            saveMobileVariationDraft={saveMobileVariationDraft}
+            isIncludedInTicket={isIncludedInTicket}
+            productHoldsStock={productHoldsStock}
+          />
 
-          {/* Bottom sheet mobile: "Adicionar/Editar variação" (Figma 3428:161368) */}
-          <AnimatePresence>
-            {mobileVariationDraft !== null && (
+          <ProductLinkedTicketsConfirmDialog
+            open={deleteConfirmOpen}
+            idBase="delete-product"
+            busy={isDeleting}
+            onBackdropClose={() => setDeleteConfirmOpen(false)}
+            gapClassName="gap-11"
+            title="Deletar produto permanentemente?"
+            description="Ao deletar este produto, ele será removido de todos os ingressos vinculados:"
+            items={linkedTicketsResolved}
+            bulletClassName="bg-red-11"
+            emptyFallback={
+              <p className="text-gray-11 text-sm font-normal font-family-dm-sans leading-[1.3] text-center">
+                Este produto pode estar vinculado a outros ingressos do evento. A
+                exclusão removerá o produto de todos eles.
+              </p>
+            }
+            footer={
               <>
-                <motion.div
-                  key="variation-draft-backdrop"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  transition={{ duration: 0.2 }}
-                  className="fixed inset-0 z-60 bg-[rgba(32,32,32,0.9)] md:hidden"
-                  onClick={closeMobileVariationDraft}
-                />
-                <motion.div
-                  key="variation-draft-sheet"
-                  initial={{ y: "100%" }}
-                  animate={{ y: 0 }}
-                  exit={{ y: "100%" }}
-                  transition={{ duration: 0.25, ease: "easeOut" }}
-                  className="fixed inset-x-0 bottom-0 z-61 flex flex-col items-stretch rounded-t-xl bg-gray-1 md:hidden"
+                <Button
+                  type="button"
+                  variant="destructive"
+                  onClick={() => void performDeleteProduct()}
+                  disabled={isDeleting}
+                  className="font-manrope text-base rounded-lg"
                 >
-                  <div className="flex items-center justify-between border-b border-gray-6 px-4 py-2">
-                    <p className="font-family-dm-sans text-base font-semibold leading-[1.3] text-gray-12">
-                      {mobileVariationDraft.target === "new" ? "Adicionar variação" : "Editar variação"}
-                    </p>
-                    <button
-                      type="button"
-                      onClick={closeMobileVariationDraft}
-                      className="flex size-7 items-center justify-center rounded-lg text-gray-11 hover:bg-gray-3"
-                      aria-label="Fechar"
-                    >
-                      <X className="size-5" />
-                    </button>
-                  </div>
-                  <div className="flex flex-col gap-6 px-4 pt-6 pb-3">
-                    <div className="flex flex-col gap-2">
-                      <label className="font-family-dm-sans text-base font-normal leading-[1.3] text-gray-12">
-                        Nome da variação
-                      </label>
-                      <input
-                        type="text"
-                        value={mobileVariationDraft.name}
-                        onChange={(e) => {
-                          setMobileVariationDraft({ ...mobileVariationDraft, name: e.target.value });
-                          if (mobileVariationDraftError) setMobileVariationDraftError(null);
-                        }}
-                        placeholder="Ex: GG, Azul, 22"
-                        className="h-12 rounded-lg border border-gray-6 bg-transparent px-3 py-4 font-family-dm-sans text-base leading-[1.3] text-gray-12 placeholder:text-gray-11 focus:border-gray-8 focus:outline-none"
-                      />
-                      {mobileVariationDraftError && (
-                        <p className="font-family-dm-sans text-sm text-red-11">{mobileVariationDraftError}</p>
-                      )}
-                    </div>
-                    {!isIncludedInTicket && (
-                      <div className="flex flex-col gap-2">
-                        <div className="flex items-center gap-1">
-                          <label className="font-family-dm-sans text-base font-normal leading-[1.3] text-gray-12">
-                            Preço específico
-                          </label>
-                          <Tooltip content="Sobrescreve o preço base do produto pra essa variação.">
-                            <BookIcon className="size-5 text-gray-11" />
-                          </Tooltip>
-                        </div>
-                        <div className="flex h-12 items-center gap-2 rounded-lg border border-gray-6 px-3 py-4">
-                          <span className="font-family-dm-sans text-base text-gray-11">R$</span>
-                          <input
-                            type="text"
-                            inputMode="numeric"
-                            value={mobileVariationDraft.price}
-                            onChange={(e) => handleMobileDraftPriceChange(e.target.value)}
-                            placeholder="00,00"
-                            className="flex-1 border-0 bg-transparent p-0 font-family-dm-sans text-base leading-[1.3] text-gray-12 placeholder:text-gray-11 focus:outline-none"
-                          />
-                        </div>
-                      </div>
-                    )}
-                    {productHoldsStock && (
-                      <div className="flex flex-col gap-2">
-                        <label className="font-family-dm-sans text-base font-normal leading-[1.3] text-gray-12">
-                          Estoque
-                        </label>
-                        <input
-                          type="number"
-                          value={mobileVariationDraft.stock}
-                          onChange={(e) => setMobileVariationDraft({ ...mobileVariationDraft, stock: e.target.value })}
-                          placeholder="Ex: 100"
-                          className="h-12 rounded-lg border border-gray-6 bg-transparent px-3 py-4 font-family-dm-sans text-base leading-[1.3] text-gray-12 placeholder:text-gray-11 focus:border-gray-8 focus:outline-none"
-                        />
-                      </div>
-                    )}
-                  </div>
-                  <div className="flex gap-2 px-4 py-6 pb-[max(1.5rem,env(safe-area-inset-bottom))]">
-                    <Button
-                      type="button"
-                      variant={"outline"}
-                      onClick={closeMobileVariationDraft}
-                      className="flex h-12 flex-1 items-center justify-center rounded-lg border border-gray-6 font-manrope text-base font-bold leading-[1.1] text-gray-12 transition-colors hover:bg-gray-3"
-                    >
-                      Cancelar
-                    </Button>
-                    <Button
-                      type="button"
-                      variant={"default"}
-                      onClick={saveMobileVariationDraft}
-                      className="flex h-12 flex-1 items-center justify-center rounded-lg font-manrope text-base font-bold leading-[1.1] transition-colors"
-                    >
-                      {mobileVariationDraft.target === "new" ? "Adicionar" : "Salvar"}
-                    </Button>
-                  </div>
-                </motion.div>
-              </>
-            )}
-          </AnimatePresence>
-
-          {/* Confirmação de exclusão (Figma: modal sobre o fluxo de produto) */}
-          <AnimatePresence>
-            {deleteConfirmOpen && (
-              <>
-                <motion.div
-                  key="delete-backdrop"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  transition={{ duration: 0.2 }}
-                  className="fixed inset-0 z-60 bg-[rgba(32,32,32,0.9)]"
-                  onClick={() => {
-                    if (!isDeleting) setDeleteConfirmOpen(false);
-                  }}
-                />
-                <motion.div
-                  key="delete-modal"
-                  initial={{ opacity: 0, scale: 0.95, y: 16 }}
-                  animate={{ opacity: 1, scale: 1, y: 0 }}
-                  exit={{ opacity: 0, scale: 0.95, y: 16 }}
-                  transition={{ duration: 0.2, ease: "easeOut" }}
-                  className="fixed inset-0 z-61 flex items-center justify-center p-4 pointer-events-none"
+                  {isDeleting ? "Deletando..." : "Deletar produto"}
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setDeleteConfirmOpen(false)}
+                  disabled={isDeleting}
+                  className="border-gray-6 text-gray-12 font-manrope text-base rounded-lg"
                 >
-                  <div
-                    className="bg-gray-1 rounded-xl w-full max-w-[652px] flex flex-col gap-11 pt-6 pb-5 px-5 shadow-2xl pointer-events-auto max-h-[min(90vh,720px)] min-h-0"
-                    onClick={(e) => e.stopPropagation()}
-                    role="dialog"
-                    aria-modal="true"
-                    aria-labelledby="delete-product-title"
-                    aria-describedby="delete-product-desc"
-                  >
-                    <div className="flex flex-col gap-6 items-stretch shrink-0">
-                      <div className="flex flex-col gap-4 items-center text-center">
-                        <h2
-                          id="delete-product-title"
-                          className="text-gray-12 text-xl font-semibold font-family-dm-sans leading-[1.3]"
-                        >
-                          Deletar produto permanentemente?
-                        </h2>
-                        <p
-                          id="delete-product-desc"
-                          className="text-gray-11 text-base font-normal font-family-dm-sans leading-[1.3] max-w-full"
-                        >
-                          Ao deletar este produto, ele será removido de todos os
-                          ingressos vinculados:
-                        </p>
-                      </div>
-                      <div className="max-h-[min(50vh,420px)] min-h-0 overflow-y-auto rounded-xl bg-gray-3 p-4 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-gray-6 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar]:w-2">
-                        {linkedTicketsResolved.length > 0 ? (
-                          <ul className="flex flex-col gap-3">
-                            {linkedTicketsResolved.map((row, idx) => (
-                              <li
-                                key={`${row.name}-${idx}`}
-                                className="flex items-center gap-2"
-                              >
-                                <span
-                                  className="mt-1.5 size-1.5 shrink-0 rounded-full bg-red-11"
-                                  aria-hidden
-                                />
-                                <div className="min-w-0 flex-1">
-                                  {row.categoryLabel !== "—" ? (
-                                    <span className="block text-xs font-normal font-family-dm-sans leading-[1.3] text-gray-11">
-                                      {row.categoryLabel}
-                                    </span>
-                                  ) : null}
-                                  <span className="wrap-break-word text-sm font-medium font-family-dm-sans leading-[1.3] text-gray-12">
-                                    {row.name}
-                                  </span>
-                                </div>
-                              </li>
-                            ))}
-                          </ul>
-                        ) : (
-                          <p className="text-gray-11 text-sm font-normal font-family-dm-sans leading-[1.3] text-center">
-                            Este produto pode estar vinculado a outros ingressos
-                            do evento. A exclusão removerá o produto de todos eles.
-                          </p>
-                        )}
-                      </div>
-                    </div>
-                    <div className="flex items-center justify-between gap-3 shrink-0 flex-wrap">
-                      <Button
-                        type="button"
-                        variant="destructive"
-                        onClick={() => void performDeleteProduct()}
-                        disabled={isDeleting}
-                        className="font-manrope text-base rounded-lg"
-                      >
-                        {isDeleting ? "Deletando..." : "Deletar produto"}
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        onClick={() => setDeleteConfirmOpen(false)}
-                        disabled={isDeleting}
-                        className="border-gray-6 text-gray-12 font-manrope text-base rounded-lg"
-                      >
-                        Cancelar
-                      </Button>
-                    </div>
-                  </div>
-                </motion.div>
+                  Cancelar
+                </Button>
               </>
-            )}
-          </AnimatePresence>
+            }
+          />
 
           {/* Confirmação ao salvar — mesma lista de ingressos vinculados */}
-          <AnimatePresence>
-            {saveConfirmOpen && (
+          <ProductLinkedTicketsConfirmDialog
+            open={saveConfirmOpen}
+            idBase="save-product"
+            busy={isSubmitting}
+            onBackdropClose={() => setSaveConfirmOpen(false)}
+            gapClassName="gap-8"
+            title={isEditing ? "Salvar alterações no produto?" : "Criar produto?"}
+            description={
+              isEditing
+                ? "Este produto está vinculado aos seguintes ingressos. As alterações serão refletidas em todos eles:"
+                : "O produto será vinculado ao kit destes ingressos:"
+            }
+            items={linkedTicketsResolved}
+            bulletClassName="bg-primary-9"
+            footer={
               <>
-                <motion.div
-                  key="save-backdrop"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  transition={{ duration: 0.2 }}
-                  className="fixed inset-0 z-60 bg-[rgba(32,32,32,0.9)]"
-                  onClick={() => {
-                    if (!isSubmitting) setSaveConfirmOpen(false);
-                  }}
-                />
-                <motion.div
-                  key="save-modal"
-                  initial={{ opacity: 0, scale: 0.95, y: 16 }}
-                  animate={{ opacity: 1, scale: 1, y: 0 }}
-                  exit={{ opacity: 0, scale: 0.95, y: 16 }}
-                  transition={{ duration: 0.2, ease: "easeOut" }}
-                  className="pointer-events-none fixed inset-0 z-61 flex items-center justify-center p-4"
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setSaveConfirmOpen(false)}
+                  disabled={isSubmitting}
+                  className="rounded-lg border-gray-6 font-manrope text-base text-gray-12"
                 >
-                  <div
-                    className="pointer-events-auto flex max-h-[min(90vh,720px)] min-h-0 w-full max-w-[652px] flex-col gap-8 rounded-xl bg-gray-1 px-5 pb-5 pt-6 shadow-2xl"
-                    onClick={(e) => e.stopPropagation()}
-                    role="dialog"
-                    aria-modal="true"
-                    aria-labelledby="save-product-title"
-                    aria-describedby="save-product-desc"
-                  >
-                    <div className="flex shrink-0 flex-col items-stretch gap-6">
-                      <div className="flex flex-col items-center gap-4 text-center">
-                        <h2
-                          id="save-product-title"
-                          className="text-xl font-semibold font-family-dm-sans leading-[1.3] text-gray-12"
-                        >
-                          {isEditing
-                            ? "Salvar alterações no produto?"
-                            : "Criar produto?"}
-                        </h2>
-                        <p
-                          id="save-product-desc"
-                          className="max-w-full text-base font-normal font-family-dm-sans leading-[1.3] text-gray-11"
-                        >
-                          {isEditing ? (
-                            <>
-                              Este produto está vinculado aos seguintes
-                              ingressos. As alterações serão refletidas em todos
-                              eles:
-                            </>
-                          ) : (
-                            <>
-                              O produto será vinculado ao kit destes ingressos:
-                            </>
-                          )}
-                        </p>
-                      </div>
-                      <div className="max-h-[min(50vh,420px)] min-h-0 overflow-y-auto rounded-xl bg-gray-3 p-4 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-gray-6 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar]:w-2">
-                        <ul className="flex flex-col gap-3">
-                          {linkedTicketsResolved.map((row, idx) => (
-                            <li
-                              key={`save-${row.name}-${idx}`}
-                              className="flex items-center gap-2"
-                            >
-                              <span
-                                className="mt-1.5 size-1.5 shrink-0 rounded-full bg-primary-9"
-                                aria-hidden
-                              />
-                              <div className="min-w-0 flex-1">
-                                {row.categoryLabel !== "—" ? (
-                                  <span className="block text-xs font-normal font-family-dm-sans leading-[1.3] text-gray-11">
-                                    {row.categoryLabel}
-                                  </span>
-                                ) : null}
-                                <span className="wrap-break-word text-sm font-medium font-family-dm-sans leading-[1.3] text-gray-12">
-                                  {row.name}
-                                </span>
-
-                              </div>
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                    </div>
-                    <div className="flex shrink-0 flex-wrap items-center justify-between gap-3">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        onClick={() => setSaveConfirmOpen(false)}
-                        disabled={isSubmitting}
-                        className="rounded-lg border-gray-6 font-manrope text-base text-gray-12"
-                      >
-                        Cancelar
-                      </Button>
-                      <Button
-                        type="button"
-                        onClick={confirmSaveAfterDialog}
-                        disabled={isSubmitting}
-                        className="rounded-lg font-manrope text-base"
-                      >
-                        {isSubmitting
-                          ? "Salvando..."
-                          : isEditing
-                            ? "Salvar alterações"
-                            : "Criar produto"}
-                      </Button>
-                    </div>
-                  </div>
-                </motion.div>
+                  Cancelar
+                </Button>
+                <Button
+                  type="button"
+                  onClick={confirmSaveAfterDialog}
+                  disabled={isSubmitting}
+                  className="rounded-lg font-manrope text-base"
+                >
+                  {isSubmitting
+                    ? "Salvando..."
+                    : isEditing
+                      ? "Salvar alterações"
+                      : "Criar produto"}
+                </Button>
               </>
-            )}
-          </AnimatePresence>
+            }
+          />
         </>
       )}
     </AnimatePresence>

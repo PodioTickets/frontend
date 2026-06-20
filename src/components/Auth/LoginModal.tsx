@@ -1,446 +1,21 @@
 "use client";
 
-import { useState, useEffect, useRef, type FormEvent } from "react";
 import { useLoginModal, useRegisterModal } from "@/stores/modalStore";
-import { useAuth } from "@/hooks/useAuth";
-import { useForgotPassword } from "@/hooks/useForgotPassword";
-import { useResetPassword } from "@/hooks/useResetPassword";
 import { Input } from "@/components/Input";
 import { Button } from "@/components/Button";
 import { OtpCodeInput } from "@/components/OtpCodeInput";
-import { Mail, Lock, X, ArrowLeft, Eye, EyeOff, Info, Shield } from "lucide-react";
+import { X, Eye, EyeOff, Info, Shield } from "lucide-react";
 import Image from "next/image";
-import {
-  loginSchema,
-  forgotPasswordStep1Schema,
-  resetPasswordSchema,
-  type LoginFormData,
-} from "@/validators/Auth.validator";
-import { ZodError } from "zod";
-import toast from "react-hot-toast";
 import { motion, AnimatePresence } from "framer-motion";
-import { Turnstile, type TurnstileInstance } from "@marsidev/react-turnstile";
-import { useRouter } from "next/navigation";
-import {
-  saveReturnPath,
-  sanitizeReturnPath,
-  readReturnPath,
-  clearReturnPath,
-} from "@/utils/authRedirect";
+import { Turnstile } from "@marsidev/react-turnstile";
 import { EmailIcon } from "../Icons/EmailIcon";
 import { PasswordIcon } from "../Icons/PasswordIcon";
-import { CPFIcon } from "../Icons/CPFIcon";
-import { Checkbox } from "@/components/CheckBox";
-import { getCpfValidationMessage } from "@/utils/cpf";
+import { ForgotPasswordPanel, ForgotPasswordEnterCodePanel, ForgotPasswordNewPasswordPanel } from "./ForgotPasswordPanels";
+import { useForgotPasswordFlow } from "./useForgotPasswordFlow";
+import { useLoginFlow } from "./useLoginFlow";
 
 const TURNSTILE_SITE_KEY = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY ?? "";
 
-/** Identificador escolhido para recuperar a senha. */
-type ForgotMethod = "email" | "cpf";
-
-/** Máscara progressiva de CPF (xxx.xxx.xxx-xx) — mesma usada no cadastro. */
-function maskCPF(value: string): string {
-  const numbers = value.replace(/\D/g, "");
-  if (numbers.length <= 3) return numbers;
-  if (numbers.length <= 6) return `${numbers.slice(0, 3)}.${numbers.slice(3)}`;
-  if (numbers.length <= 9)
-    return `${numbers.slice(0, 3)}.${numbers.slice(3, 6)}.${numbers.slice(6)}`;
-  return `${numbers.slice(0, 3)}.${numbers.slice(3, 6)}.${numbers.slice(6, 9)}-${numbers.slice(9, 11)}`;
-}
-
-function ForgotPasswordPanel({
-  method,
-  onMethodChange,
-  email,
-  onEmailChange,
-  cpf,
-  onCpfChange,
-  error,
-  onSubmit,
-  isPending,
-  onClose,
-}: {
-  method: ForgotMethod;
-  onMethodChange: (method: ForgotMethod) => void;
-  email: string;
-  onEmailChange: (value: string) => void;
-  cpf: string;
-  onCpfChange: (value: string) => void;
-  error?: string;
-  onSubmit: (e: FormEvent) => void;
-  isPending: boolean;
-  onClose: () => void;
-}) {
-  const isCpf = method === "cpf";
-  return (
-    <div className="bg-gray-1 rounded-xl w-full overflow-hidden flex flex-col border border-gray-6 md:border-0">
-      <div className="flex items-center justify-between px-4 py-4 border-b border-gray-6 shrink-0">
-        <h2 className="font-semibold text-xl leading-[1.3] text-gray-12 font-family-dm-sans">
-          Esqueceu sua senha?
-        </h2>
-        <button
-          type="button"
-          onClick={onClose}
-          className="flex items-center justify-center size-8 rounded-lg hover:bg-gray-3 transition-colors shrink-0"
-          aria-label="Fechar modal"
-        >
-          <X className="size-[18px] text-gray-12" />
-        </button>
-      </div>
-      <form onSubmit={onSubmit} className="flex flex-col w-full">
-        <div className="flex flex-col gap-8 pt-4 pb-6 px-6">
-          <p className="font-medium text-base leading-[1.3] text-gray-12 font-family-dm-sans">
-            Informe o e-mail ou CPF da sua conta. Enviaremos um código de 6
-            dígitos para que você possa criar uma nova senha.
-          </p>
-          <div className="flex flex-col gap-5 w-full min-w-0">
-            {/* Toggle email/CPF: visual de checkbox (design), semântica de radio */}
-            <div
-              role="radiogroup"
-              aria-label="Como deseja recuperar a senha"
-              className="flex gap-4 items-center"
-            >
-              <label className="flex gap-2 items-center cursor-pointer">
-                <Checkbox
-                  checked={!isCpf}
-                  onCheckedChange={() => onMethodChange("email")}
-                  role="radio"
-                  aria-checked={!isCpf}
-                />
-                <span className="font-normal text-sm leading-[1.3] text-gray-12 font-family-dm-sans select-none">
-                  Informar email
-                </span>
-              </label>
-              <label className="flex gap-2 items-center cursor-pointer">
-                <Checkbox
-                  checked={isCpf}
-                  onCheckedChange={() => onMethodChange("cpf")}
-                  role="radio"
-                  aria-checked={isCpf}
-                />
-                <span className="font-normal text-sm leading-[1.3] text-gray-12 font-family-dm-sans select-none">
-                  Informar CPF
-                </span>
-              </label>
-            </div>
-            {isCpf ? (
-              <div className="flex flex-col gap-2 w-full min-w-0">
-                <label
-                  htmlFor="forgot-password-cpf"
-                  className="font-normal text-base leading-[1.3] text-gray-12 font-family-dm-sans"
-                >
-                  CPF cadastrado
-                </label>
-                <div className="relative w-full">
-                  <CPFIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-11 pointer-events-none" />
-                  <Input
-                    id="forgot-password-cpf"
-                    type="text"
-                    inputMode="numeric"
-                    autoComplete="off"
-                    maxLength={14}
-                    placeholder="000.000.000-00"
-                    value={cpf}
-                    onChange={(e) => onCpfChange(e.target.value)}
-                    className={`pl-10 h-12 rounded-lg ${error ? "border-red-9 focus-visible:border-red-9" : ""
-                      }`}
-                    aria-invalid={!!error}
-                  />
-                </div>
-                {error ? (
-                  <p className="text-sm text-red-9 font-family-dm-sans">{error}</p>
-                ) : null}
-              </div>
-            ) : (
-              <div className="flex flex-col gap-2 w-full min-w-0">
-                <label
-                  htmlFor="forgot-password-email"
-                  className="font-normal text-base leading-[1.3] text-gray-12 font-family-dm-sans"
-                >
-                  E-mail cadastrado
-                </label>
-                <div className="relative w-full">
-                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-11 pointer-events-none" />
-                  <Input
-                    id="forgot-password-email"
-                    type="email"
-                    autoComplete="email"
-                    placeholder="seu@email.com"
-                    value={email}
-                    onChange={(e) => onEmailChange(e.target.value)}
-                    className={`pl-10 h-12 rounded-lg ${error ? "border-red-9 focus-visible:border-red-9" : ""
-                      }`}
-                    aria-invalid={!!error}
-                  />
-                </div>
-                {error ? (
-                  <p className="text-sm text-red-9 font-family-dm-sans">{error}</p>
-                ) : null}
-              </div>
-            )}
-          </div>
-        </div>
-        <div className="flex px-6 pt-4 pb-8 w-full">
-          <Button
-            type="submit"
-            disabled={isPending}
-            className="w-full h-12 leading-[1.1] font-manrope rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {isPending ? "Enviando..." : "Recuperar senha"}
-          </Button>
-        </div>
-      </form>
-    </div>
-  );
-}
-
-function ForgotPasswordEnterCodePanel({
-  sentToEmail,
-  code,
-  onCodeChange,
-  error,
-  onSubmit,
-  onBack,
-  onClose,
-  onResend,
-  isResending,
-  isVerifying,
-  resendCooldownSeconds,
-}: {
-  /** E-mail digitado pelo usuário; vazio quando o fluxo foi por CPF (não revelamos o e-mail da conta). */
-  sentToEmail: string;
-  code: string;
-  onCodeChange: (value: string) => void;
-  error?: string;
-  onSubmit: (e: FormEvent) => void;
-  onBack: () => void;
-  onClose: () => void;
-  onResend: () => void;
-  isResending: boolean;
-  isVerifying: boolean;
-  resendCooldownSeconds: number;
-}) {
-  return (
-    <div className="bg-gray-1 rounded-xl w-full overflow-hidden flex flex-col border border-gray-6 md:border-0">
-      <div className="flex items-start justify-between px-4 py-4 border-b border-gray-6 shrink-0 gap-2">
-        <div className="flex gap-0.5 items-center min-w-0 flex-1">
-          <button
-            type="button"
-            onClick={onBack}
-            className="flex items-center justify-center size-8 rounded-lg hover:bg-gray-3 transition-colors shrink-0"
-            aria-label="Voltar"
-          >
-            <ArrowLeft className="size-[18px] text-gray-12" />
-          </button>
-          <h2 className="font-semibold text-xl leading-[1.3] text-gray-12 font-family-dm-sans truncate pl-0.5">
-            Verifique seu e-mail
-          </h2>
-        </div>
-        <button
-          type="button"
-          onClick={onClose}
-          className="flex items-center justify-center size-8 rounded-lg hover:bg-gray-3 transition-colors shrink-0"
-          aria-label="Fechar modal"
-        >
-          <X className="size-[18px] text-gray-12" />
-        </button>
-      </div>
-      <form onSubmit={onSubmit} className="flex flex-col w-full">
-        <div className="flex flex-col gap-6 pt-4 pb-2 px-6 w-full">
-          <div className="flex flex-col items-center gap-2">
-            <p className="font-medium text-base leading-[1.3] text-gray-12 font-family-dm-sans">
-              Vamos enviar um código de 6 dígitos para o e-mail abaixo para que você possa criar uma nova senha.
-            </p>
-            <div className="flex items-center justify-center gap-2 px-3 py-2 w-min bg-gray-3 rounded-lg border border-gray-6">
-              <EmailIcon className="w-4 h-4 text-gray-11 shrink-0" />
-              <span className="font-normal text-sm leading-[1.3] text-gray-11 font-family-dm-sans">
-                {sentToEmail}
-              </span>
-            </div>
-          </div>
-
-          <div className="flex flex-col gap-3 w-full min-w-0">
-            <OtpCodeInput
-              value={code}
-              onChange={onCodeChange}
-              disabled={isVerifying}
-              error={!!error}
-            />
-            {error ? (
-              <p className="text-sm text-red-9 font-family-dm-sans">{error}</p>
-            ) : null}
-          </div>
-          <div className="flex flex-wrap gap-2 items-center justify-center w-full">
-            <p className="font-medium text-sm leading-[1.3] text-gray-12 font-family-dm-sans">
-              Não recebeu o código?
-            </p>
-            <button
-              type="button"
-              onClick={onResend}
-              disabled={isResending || resendCooldownSeconds > 0}
-              className="font-semibold text-sm leading-[1.3] text-primary-10 font-family-dm-sans hover:text-primary-11 transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer bg-transparent border-0 p-0"
-            >
-              {isResending
-                ? "Reenviando..."
-                : resendCooldownSeconds > 0
-                  ? `Reenviar em ${resendCooldownSeconds}s`
-                  : "Reenviar código"}
-            </button>
-          </div>
-        </div>
-        <div className="flex px-6 pt-4 pb-8 w-full">
-          <Button
-            type="submit"
-            disabled={isVerifying || code.length !== 6}
-            className="w-full h-12 leading-[1.1] font-manrope rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {isVerifying ? "Verificando..." : "Verificar código"}
-          </Button>
-        </div>
-      </form>
-    </div>
-  );
-}
-
-function ForgotPasswordNewPasswordPanel({
-  password,
-  confirmPassword,
-  onPasswordChange,
-  onConfirmPasswordChange,
-  fieldErrors,
-  onSubmit,
-  onBack,
-  onClose,
-  isPending,
-}: {
-  password: string;
-  confirmPassword: string;
-  onPasswordChange: (value: string) => void;
-  onConfirmPasswordChange: (value: string) => void;
-  fieldErrors: { password?: string; confirmPassword?: string };
-  onSubmit: (e: FormEvent) => void;
-  onBack: () => void;
-  onClose: () => void;
-  isPending: boolean;
-}) {
-  const [showNewPassword, setShowNewPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-
-  return (
-    <div className="bg-gray-1 rounded-xl w-full overflow-hidden flex flex-col border border-gray-6 md:border-0">
-      <div className="flex items-start justify-between px-4 py-4 border-b border-gray-6 shrink-0 gap-2">
-        <div className="flex gap-0.5 items-center min-w-0 flex-1">
-          <button
-            type="button"
-            onClick={onBack}
-            className="flex items-center justify-center size-8 rounded-lg hover:bg-gray-3 transition-colors shrink-0"
-            aria-label="Voltar"
-          >
-            <ArrowLeft className="size-[18px] text-gray-12" />
-          </button>
-          <h2 className="font-semibold text-xl leading-[1.3] text-gray-12 font-family-dm-sans truncate pl-0.5">
-            Alterar senha
-          </h2>
-        </div>
-        <button
-          type="button"
-          onClick={onClose}
-          className="flex items-center justify-center size-8 rounded-lg hover:bg-gray-3 transition-colors shrink-0"
-          aria-label="Fechar modal"
-        >
-          <X className="size-[18px] text-gray-12" />
-        </button>
-      </div>
-      <form onSubmit={onSubmit} className="flex flex-col w-full">
-        <div className="flex flex-col gap-6 p-6 w-full">
-          <div className="flex flex-col gap-2 w-full min-w-0">
-            <label
-              htmlFor="new-password-field"
-              className="font-normal text-base leading-[1.3] text-gray-12 font-family-dm-sans"
-            >
-              Nova senha
-            </label>
-            <div className="relative w-full">
-              <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-11 pointer-events-none" />
-              <Input
-                id="new-password-field"
-                type={showNewPassword ? "text" : "password"}
-                autoComplete="new-password"
-                placeholder="Digite uma nova senha"
-                value={password}
-                onChange={(e) => onPasswordChange(e.target.value)}
-                className={`pl-10 pr-10 h-12 rounded-lg ${fieldErrors.password
-                  ? "border-red-9 focus-visible:border-red-9"
-                  : ""
-                  }`}
-                aria-invalid={!!fieldErrors.password}
-              />
-              <button
-                type="button"
-                onClick={() => setShowNewPassword((v) => !v)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-11 hover:text-gray-12 transition-colors"
-                aria-label={showNewPassword ? "Ocultar senha" : "Mostrar senha"}
-              >
-                {showNewPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-              </button>
-            </div>
-            {fieldErrors.password ? (
-              <p className="text-sm text-red-9 font-family-dm-sans">
-                {fieldErrors.password}
-              </p>
-            ) : null}
-          </div>
-          <div className="flex flex-col gap-2 w-full min-w-0">
-            <label
-              htmlFor="confirm-new-password-field"
-              className="font-normal text-base leading-[1.3] text-gray-12 font-family-dm-sans"
-            >
-              Confirmar nova senha
-            </label>
-            <div className="relative w-full">
-              <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-11 pointer-events-none" />
-              <Input
-                id="confirm-new-password-field"
-                type={showConfirmPassword ? "text" : "password"}
-                autoComplete="new-password"
-                placeholder="Digite sua senha novamente"
-                value={confirmPassword}
-                onChange={(e) => onConfirmPasswordChange(e.target.value)}
-                className={`pl-10 pr-10 h-12 rounded-lg ${fieldErrors.confirmPassword
-                  ? "border-red-9 focus-visible:border-red-9"
-                  : ""
-                  }`}
-                aria-invalid={!!fieldErrors.confirmPassword}
-              />
-              <button
-                type="button"
-                onClick={() => setShowConfirmPassword((v) => !v)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-11 hover:text-gray-12 transition-colors"
-                aria-label={showConfirmPassword ? "Ocultar senha" : "Mostrar senha"}
-              >
-                {showConfirmPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-              </button>
-            </div>
-            {fieldErrors.confirmPassword ? (
-              <p className="text-sm text-red-9 font-family-dm-sans">
-                {fieldErrors.confirmPassword}
-              </p>
-            ) : null}
-          </div>
-        </div>
-        <div className="flex px-6 pt-4 pb-8 w-full">
-          <Button
-            type="submit"
-            disabled={isPending}
-            className="w-full h-12 font-bold text-lg leading-[1.1] font-manrope rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {isPending ? "Salvando..." : "Salvar"}
-          </Button>
-        </div>
-      </form>
-    </div>
-  );
-}
 
 const GoogleIcon = ({ className = "size-6" }: { className?: string }) => (
   <svg
@@ -470,494 +45,67 @@ const GoogleIcon = ({ className = "size-6" }: { className?: string }) => (
   </svg>
 );
 
-type ForgotFlow = "idle" | "email" | "enter-code" | "new-password";
-
 export function LoginModal() {
-  const { isOpen, closeLoginModal, openLoginModal, data: loginModalData } =
-    useLoginModal();
+  const { isOpen, closeLoginModal, openLoginModal } = useLoginModal();
   const { openRegisterModal } = useRegisterModal();
-  const router = useRouter();
-  const { login, finishLoginMfa, isLoading: authLoading } = useAuth();
   const {
-    forgotPassword,
-    resendCode,
-    verifyResetCode,
-    isPending: forgotPasswordPending,
-    isResending: forgotPasswordResending,
-    isVerifying: forgotPasswordVerifying,
-  } = useForgotPassword();
-  const { resetPassword, isPending: resetPasswordPending } = useResetPassword();
+    forgotFlow,
+    forgotMethod,
+    forgotEmail,
+    forgotCpf,
+    forgotEmailError,
+    resetCode,
+    resetCodeError,
+    passwordResetEmail,
+    passwordResetMaskedEmail,
+    newPassword,
+    confirmNewPassword,
+    resetPasswordFieldErrors,
+    forgotResendCooldown,
+    forgotPasswordPending,
+    forgotPasswordResending,
+    forgotPasswordVerifying,
+    resetPasswordPending,
+    startForgotFlowFrom,
+    backToEmailStep,
+    handleForgotMethodChange,
+    handleForgotEmailChange,
+    handleForgotCpfChange,
+    handleResetCodeChange,
+    handleForgotPasswordSubmit,
+    handleCodeSubmit,
+    handleResendResetEmail,
+    handleNewPasswordChange,
+    handleConfirmNewPasswordChange,
+    handleBackFromNewPassword,
+    handleNewPasswordSubmit,
+  } = useForgotPasswordFlow();
 
-  // Form data state
-  const [formData, setFormData] = useState({
-    email: "",
-    password: "",
-  });
-
-  // Estado do passo MFA de login
-  const [mfaToken, setMfaToken] = useState<string | null>(null);
-  const [mfaCode, setMfaCode] = useState("");
-  const [mfaError, setMfaError] = useState("");
-  const [mfaConfirming, setMfaConfirming] = useState(false);
-  const [mfaResendCooldown, setMfaResendCooldown] = useState(0);
-
-  const [forgotFlow, setForgotFlow] = useState<ForgotFlow>("idle");
-  const [forgotMethod, setForgotMethod] = useState<ForgotMethod>("email");
-  const [forgotEmail, setForgotEmail] = useState("");
-  const [forgotCpf, setForgotCpf] = useState("");
-  const [passwordResetEmail, setPasswordResetEmail] = useState("");
-  /** CPF (só dígitos) usado no passo 1 — identificador das chamadas verify/resend. */
-  const [passwordResetCpf, setPasswordResetCpf] = useState("");
-  /** E-mail MASCARADO da conta (só no fluxo por CPF) — pra indicar onde o código foi enviado. */
-  const [passwordResetMaskedEmail, setPasswordResetMaskedEmail] = useState("");
-  const [forgotEmailError, setForgotEmailError] = useState<string | undefined>(
-    undefined
-  );
-  const [resetCode, setResetCode] = useState("");
-  const [resetCodeError, setResetCodeError] = useState<string | undefined>(undefined);
-  const [resetPasswordToken, setResetPasswordToken] = useState("");
-  const [newPassword, setNewPassword] = useState("");
-  const [confirmNewPassword, setConfirmNewPassword] = useState("");
-  const [resetPasswordFieldErrors, setResetPasswordFieldErrors] = useState<{
-    password?: string;
-    confirmPassword?: string;
-  }>({});
-  /** Cooldown alinhado ao backend (1 min entre reenvios efetivos) */
-  const [forgotResendCooldown, setForgotResendCooldown] = useState(0);
-
-  const [showPassword, setShowPassword] = useState(false);
-
-  // Turnstile
-  const mobileTurnstileRef = useRef<TurnstileInstance>(null);
-  const desktopTurnstileRef = useRef<TurnstileInstance>(null);
-  const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
-
-  // Validation errors state
-  const [errors, setErrors] = useState<Record<string, string>>({});
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [credentialsError, setCredentialsError] = useState(false);
-
-  useEffect(() => {
-    if (!isOpen) {
-      setForgotFlow("idle");
-      setForgotMethod("email");
-      setForgotEmail("");
-      setForgotCpf("");
-      setPasswordResetEmail("");
-      setPasswordResetCpf("");
-      setPasswordResetMaskedEmail("");
-      setForgotEmailError(undefined);
-      setResetCode("");
-      setResetCodeError(undefined);
-      setResetPasswordToken("");
-      setNewPassword("");
-      setConfirmNewPassword("");
-      setResetPasswordFieldErrors({});
-      setForgotResendCooldown(0);
-      setCredentialsError(false);
-      setTurnstileToken(null);
-      setMfaToken(null);
-      setMfaCode("");
-      setMfaError("");
-      setMfaResendCooldown(0);
-      mobileTurnstileRef.current?.reset();
-      desktopTurnstileRef.current?.reset();
-    } else {
-      // Verifica se há um token MFA do Google OAuth pendente
-      const googleMfaToken = sessionStorage.getItem("googleMfaToken");
-      if (googleMfaToken) {
-        sessionStorage.removeItem("googleMfaToken");
-        setMfaToken(googleMfaToken);
-        setMfaCode("");
-        setMfaError("");
-      }
-    }
-  }, [isOpen]);
-
-  // Auto-abre o modal quando redireccionado do Google OAuth com MFA pendente
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    const params = new URLSearchParams(window.location.search);
-    if (params.get("googleMfa") === "1") {
-      window.history.replaceState(null, "", window.location.pathname);
-      openLoginModal();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  const forgotResendTimerActive = forgotResendCooldown > 0;
-  useEffect(() => {
-    if (!forgotResendTimerActive) return;
-    const id = setInterval(() => {
-      setForgotResendCooldown((s) => Math.max(0, s - 1));
-    }, 1000);
-    return () => clearInterval(id);
-  }, [forgotResendTimerActive]);
-
-  // Inicia cooldown de reenvio MFA quando token aparece
-  useEffect(() => {
-    if (mfaToken) { setMfaResendCooldown(60); }
-  }, [mfaToken]);
-
-  // Countdown do reenvio MFA
-  useEffect(() => {
-    if (mfaResendCooldown <= 0) return;
-    const timer = setTimeout(() => setMfaResendCooldown((c) => c - 1), 1000);
-    return () => clearTimeout(timer);
-  }, [mfaResendCooldown]);
-
-  useEffect(() => {
-    if (!isOpen) return;
-    const raw = loginModalData?.passwordResetToken;
-    const token =
-      typeof raw === "string" && raw.trim().length > 0 ? raw.trim() : "";
-    if (token) {
-      setResetPasswordToken(token);
-      setForgotFlow("new-password");
-    }
-  }, [isOpen, loginModalData?.passwordResetToken]);
-
-  const handleGoogleLogin = () => {
-    // Salva a URL atual para voltar a ela após o login (resiliente ao
-    // round-trip do OAuth — ver utils/authRedirect).
-    let returnTo: string | null = null;
-    if (typeof window !== "undefined") {
-      const currentPath = window.location.pathname + window.location.search;
-      // Não salvar se já estiver na página de callback ou auth
-      if (!currentPath.startsWith("/auth/")) {
-        saveReturnPath(currentPath);
-        returnTo = sanitizeReturnPath(currentPath);
-      }
-    }
-    const apiUrl = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:3333").replace(/\/$/, "");
-    // Também enviamos o destino na URL: se o backend ecoar `redirect_to` no
-    // callback, o retorno sobrevive mesmo a uma troca de origem do OAuth (quando
-    // o storage por-origem não está visível na origem do callback). Inofensivo
-    // se o backend ignorar o param.
-    const googleUrl = returnTo
-      ? `${apiUrl}/api/v1/auth/google?redirect_to=${encodeURIComponent(returnTo)}`
-      : `${apiUrl}/api/v1/auth/google`;
-    window.location.href = googleUrl;
-  };
-
-  const handleInputChange = (field: string, value: string) => {
-    setFormData((prev) => ({ ...prev, [field]: value }));
-    setCredentialsError(false);
-    if (errors[field]) {
-      setErrors((prev) => {
-        const newErrors = { ...prev };
-        delete newErrors[field];
-        return newErrors;
-      });
-    }
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsSubmitting(true);
-
-    try {
-      const validatedData: LoginFormData = loginSchema.parse(formData);
-
-      const result = await login({
-        emailOrCpf: validatedData.email,
-        password: validatedData.password,
-        ...(turnstileToken ? { turnstileToken } : {}),
-      });
-
-      if (result?.mfaRequired) {
-        setMfaToken(result.mfaToken);
-        setMfaCode("");
-        setMfaError("");
-        return;
-      }
-
-      toast.success("Login realizado com sucesso!");
-      closeLoginModal();
-      setFormData({ email: "", password: "" });
-      setErrors({});
-    } catch (error) {
-      if (error instanceof ZodError) {
-        const newErrors: Record<string, string> = {};
-        error.issues.forEach((err) => {
-          if (err.path.length > 0) {
-            newErrors[err.path[0] as string] = err.message;
-          }
-        });
-        setErrors(newErrors);
-        const firstError = error.issues[0];
-        if (firstError) {
-          toast.error(firstError.message);
-        }
-      } else {
-        setCredentialsError(true);
-        // Reseta o captcha para exigir nova resolução após erro de credenciais
-        setTurnstileToken(null);
-        mobileTurnstileRef.current?.reset();
-        desktopTurnstileRef.current?.reset();
-      }
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  const handleForgotEmailChange = (value: string) => {
-    setForgotEmail(value);
-    if (forgotEmailError) setForgotEmailError(undefined);
-  };
-
-  const handleForgotCpfChange = (value: string) => {
-    setForgotCpf(maskCPF(value));
-    if (forgotEmailError) setForgotEmailError(undefined);
-  };
-
-  const handleForgotMethodChange = (method: ForgotMethod) => {
-    setForgotMethod(method);
-    setForgotEmailError(undefined);
-  };
-
-  const handleForgotPasswordSubmit = async (e: FormEvent) => {
-    e.preventDefault();
-    try {
-      if (forgotMethod === "cpf") {
-        // Validação local (algoritmo da Receita) antes de bater no backend
-        const cpfError = getCpfValidationMessage(forgotCpf);
-        if (cpfError) {
-          setForgotEmailError(cpfError);
-          toast.error(cpfError);
-          return;
-        }
-        const cpfDigits = forgotCpf.replace(/\D/g, "");
-        setForgotEmailError(undefined);
-
-        // Cooldown: se já enviamos para ESTE mesmo CPF e o cooldown ainda corre,
-        // NÃO reenvia (o usuário não pode burlar o limite voltando pra cá) — só
-        // retorna ao passo do código com o tempo restante. Identificador
-        // diferente = pedido novo → segue o fluxo normal abaixo.
-        if (forgotResendCooldown > 0 && passwordResetCpf === cpfDigits) {
-          toast.error(`Aguarde ${forgotResendCooldown}s para reenviar o código.`);
-          setForgotFlow("enter-code");
-          return;
-        }
-
-        const result = await forgotPassword({ cpf: cpfDigits, accountType: "USER" });
-        setPasswordResetCpf(cpfDigits);
-        setPasswordResetEmail("");
-        // E-mail mascarado da conta (quando o CPF existe) pra mostrar no passo
-        // do código. Ausente = CPF sem conta; mantém a mensagem genérica.
-        setPasswordResetMaskedEmail(result?.maskedEmail ?? "");
-      } else {
-        forgotPasswordStep1Schema.parse({ email: forgotEmail });
-        setForgotEmailError(undefined);
-
-        // Mesmo cooldown para o fluxo por e-mail (comparação canônica: trim +
-        // lowercase, igual à chave de rate limit do backend).
-        const sameEmail =
-          passwordResetEmail.trim().toLowerCase() ===
-          forgotEmail.trim().toLowerCase();
-        if (forgotResendCooldown > 0 && sameEmail) {
-          toast.error(`Aguarde ${forgotResendCooldown}s para reenviar o código.`);
-          setForgotFlow("enter-code");
-          return;
-        }
-
-        await forgotPassword({ email: forgotEmail, accountType: "USER" });
-        setPasswordResetEmail(forgotEmail);
-        setPasswordResetCpf("");
-        setPasswordResetMaskedEmail("");
-      }
-      setResetCode("");
-      setResetCodeError(undefined);
-      setForgotResendCooldown(60);
-      setForgotFlow("enter-code");
-    } catch (error) {
-      if (error instanceof ZodError) {
-        const first = error.issues[0];
-        setForgotEmailError(first?.message ?? "Email inválido");
-        if (first?.message) toast.error(first.message);
-        return;
-      }
-      // API errors are toasted by useForgotPassword
-    }
-  };
-
-  const handleCodeSubmit = async (e: FormEvent) => {
-    e.preventDefault();
-    if (resetCode.length !== 6) {
-      setResetCodeError("Digite os 6 dígitos do código");
-      return;
-    }
-    try {
-      setResetCodeError(undefined);
-      const result = await verifyResetCode({
-        // Mesmo identificador usado no passo 1 (email OU cpf)
-        ...(passwordResetEmail
-          ? { email: passwordResetEmail }
-          : { cpf: passwordResetCpf }),
-        code: resetCode,
-        accountType: "USER",
-      });
-      setResetPasswordToken(result.token);
-      setForgotFlow("new-password");
-    } catch {
-      // Erro tratado no hook (toast)
-    }
-  };
-
-  const handleResendResetEmail = async () => {
-    if ((!passwordResetEmail && !passwordResetCpf) || forgotResendCooldown > 0)
-      return;
-    try {
-      await resendCode({
-        ...(passwordResetEmail
-          ? { email: passwordResetEmail }
-          : { cpf: passwordResetCpf }),
-        accountType: "USER",
-      });
-      setForgotResendCooldown(60);
-      setResetCode("");
-      setResetCodeError(undefined);
-    } catch {
-      // Erro tratado no hook (toast)
-    }
-  };
-
-  const handleNewPasswordChange = (value: string) => {
-    setNewPassword(value);
-    if (resetPasswordFieldErrors.password) {
-      setResetPasswordFieldErrors((prev) => {
-        const next = { ...prev };
-        delete next.password;
-        return next;
-      });
-    }
-  };
-
-  const handleConfirmNewPasswordChange = (value: string) => {
-    setConfirmNewPassword(value);
-    if (resetPasswordFieldErrors.confirmPassword) {
-      setResetPasswordFieldErrors((prev) => {
-        const next = { ...prev };
-        delete next.confirmPassword;
-        return next;
-      });
-    }
-  };
-
-  const handleBackFromNewPassword = () => {
-    setResetPasswordFieldErrors({});
-    setNewPassword("");
-    setConfirmNewPassword("");
-    setResetPasswordToken("");
-    if (passwordResetEmail || passwordResetCpf) {
-      setForgotFlow("enter-code");
-    } else {
-      setForgotFlow("email");
-    }
-  };
-
-  const handleNewPasswordSubmit = async (e: FormEvent) => {
-    e.preventDefault();
-    if (!resetPasswordToken) {
-      toast.error("Link inválido ou expirado. Solicite um novo e-mail.");
-      return;
-    }
-    try {
-      const validated = resetPasswordSchema.parse({
-        password: newPassword,
-        confirmPassword: confirmNewPassword,
-      });
-      setResetPasswordFieldErrors({});
-      await resetPassword({
-        token: resetPasswordToken,
-        password: validated.password,
-      });
-      closeLoginModal();
-      setTimeout(() => openLoginModal(), 0);
-    } catch (error) {
-      if (error instanceof ZodError) {
-        const next: { password?: string; confirmPassword?: string } = {};
-        error.issues.forEach((issue) => {
-          const key = issue.path[0];
-          if (key === "password" || key === "confirmPassword") {
-            next[key] = issue.message;
-          }
-        });
-        setResetPasswordFieldErrors(next);
-        return;
-      }
-      // Erro de API
-      const err = error as any;
-      const msg =
-        err?.response?.data?.message ||
-        err?.message ||
-        "Erro ao redefinir senha. Tente novamente.";
-      if (msg.toLowerCase().includes("igual")) {
-        setResetPasswordFieldErrors({ password: msg });
-      } else {
-        toast.error(msg);
-      }
-    }
-  };
-
-  const fecharMfa = () => {
-    setMfaToken(null);
-    setMfaCode("");
-    setMfaError("");
-    setMfaResendCooldown(0);
-  };
-
-  const handleMfaResend = async () => {
-    if (!mfaToken) return;
-    try {
-      const apiBase = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:3333").replace(/\/$/, "");
-      const res = await fetch(`${apiBase}/api/v1/auth/2fa/resend-login-code`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ mfaToken }),
-      });
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        toast.error(data?.message || "Erro ao reenviar código.");
-        return;
-      }
-      setMfaResendCooldown(60);
-      toast.success("Código reenviado para seu e-mail.");
-    } catch {
-      toast.error("Erro ao reenviar código. Tente novamente.");
-    }
-  };
-
-  const handleMfaConfirm = async () => {
-    if (!mfaToken) return;
-    if (mfaCode.length < 6) {
-      setMfaError("Preencha todos os 6 dígitos do código.");
-      return;
-    }
-    setMfaConfirming(true);
-    setMfaError("");
-    try {
-      await finishLoginMfa(mfaToken, mfaCode);
-      toast.success("Login realizado com sucesso!");
-      closeLoginModal();
-      setFormData({ email: "", password: "" });
-      setErrors({});
-      // MFA do Google: o callback redirecionou pra `/?googleMfa=1` e o destino
-      // original ficou no storage. Concluído o 2FA, volta pra lá (ex.: checkout
-      // com a quantidade já selecionada). Só navega se houver destino salvo —
-      // MFA de e-mail/senha não salva e mantém o comportamento atual (só fecha).
-      const returnTo = readReturnPath();
-      if (returnTo) {
-        clearReturnPath();
-        router.replace(returnTo);
-      }
-    } catch (err: any) {
-      setMfaError(err?.message || "Código inválido. Tente novamente.");
-      setMfaResendCooldown(60);
-    } finally {
-      setMfaConfirming(false);
-    }
-  };
+  const {
+    formData,
+    errors,
+    isSubmitting,
+    credentialsError,
+    showPassword,
+    setShowPassword,
+    turnstileToken,
+    setTurnstileToken,
+    authLoading,
+    mfaToken,
+    mfaCode,
+    mfaError,
+    mfaConfirming,
+    mfaResendCooldown,
+    handleMfaCodeChange,
+    mobileTurnstileRef,
+    desktopTurnstileRef,
+    handleGoogleLogin,
+    handleInputChange,
+    handleSubmit,
+    fecharMfa,
+    handleMfaResend,
+    handleMfaConfirm,
+  } = useLoginFlow();
 
   const mfaStepContent = mfaToken ? (
     <div className="bg-[#FCFCFC] rounded-xl w-full overflow-hidden flex flex-col border border-gray-6 md:border-0">
@@ -987,7 +135,7 @@ export function LoginModal() {
 
         <OtpCodeInput
           value={mfaCode}
-          onChange={(v) => { setMfaCode(v); setMfaError(""); }}
+          onChange={handleMfaCodeChange}
           disabled={mfaConfirming}
           error={!!mfaError}
           autoFocus
@@ -1058,10 +206,10 @@ export function LoginModal() {
       <ForgotPasswordEnterCodePanel
         sentToEmail={passwordResetEmail || passwordResetMaskedEmail}
         code={resetCode}
-        onCodeChange={(v) => { setResetCode(v); if (resetCodeError) setResetCodeError(undefined); }}
+        onCodeChange={handleResetCodeChange}
         error={resetCodeError}
         onSubmit={handleCodeSubmit}
-        onBack={() => setForgotFlow("email")}
+        onBack={backToEmailStep}
         onClose={closeLoginModal}
         onResend={handleResendResetEmail}
         isResending={forgotPasswordResending}
@@ -1243,20 +391,7 @@ export function LoginModal() {
                         {/* Forgot password link */}
                         <button
                           type="button"
-                          onClick={() => {
-                            {
-                              // Login aceita email OU CPF: pré-seleciona o
-                              // método conforme o que foi digitado lá.
-                              const typed = formData.email.trim();
-                              const isCpfLike =
-                                typed !== "" && /^[\d.\-\s]+$/.test(typed);
-                              setForgotMethod(isCpfLike ? "cpf" : "email");
-                              setForgotEmail(isCpfLike ? "" : typed);
-                              setForgotCpf(isCpfLike ? maskCPF(typed) : "");
-                            }
-                            setForgotEmailError(undefined);
-                            setForgotFlow("email");
-                          }}
+                          onClick={() => startForgotFlowFrom(formData.email)}
                           className="font-semibold text-sm leading-[1.3] text-gray-11 hover:text-primary-10 transition-colors font-family-dm-sans cursor-pointer underline"
                         >
                           Esqueci minha senha
@@ -1496,20 +631,7 @@ export function LoginModal() {
                         {/* Forgot password link */}
                         <button
                           type="button"
-                          onClick={() => {
-                            {
-                              // Login aceita email OU CPF: pré-seleciona o
-                              // método conforme o que foi digitado lá.
-                              const typed = formData.email.trim();
-                              const isCpfLike =
-                                typed !== "" && /^[\d.\-\s]+$/.test(typed);
-                              setForgotMethod(isCpfLike ? "cpf" : "email");
-                              setForgotEmail(isCpfLike ? "" : typed);
-                              setForgotCpf(isCpfLike ? maskCPF(typed) : "");
-                            }
-                            setForgotEmailError(undefined);
-                            setForgotFlow("email");
-                          }}
+                          onClick={() => startForgotFlowFrom(formData.email)}
                           className="font-semibold text-base leading-[1.3] text-gray-11 hover:text-primary-10 transition-colors font-family-dm-sans cursor-pointer underline"
                         >
                           Esqueci minha senha
