@@ -23,6 +23,7 @@ const IMG = {
   featureExperience: "/images/landing/feature-experience.png",
   featureVouchers: "/images/landing/feature-vouchers.png",
   featureParticipants: "/images/landing/feature-participants-table.png",
+  featureParticipantsMobile: "/images/landing/feature-participants-table-mobile.png",
   communication: "/images/landing/communication-dashboard.png",
   sports: "/images/landing/sports-devices.jpg",
   ctaTeam: "/images/landing/cta-team.jpg",
@@ -242,7 +243,15 @@ function FeaturesSection() {
             image={IMG.featureParticipants}
             title="Gerencie seus participantes com facilidade"
             description="Tenha todas as informações dos inscritos organizadas. Pesquise atletas, exporte listas, acompanhe pagamentos e mantenha tudo sob controle."
-            className="min-h-[300px] lg:col-span-2 lg:min-h-[450px]"
+            className="max-md:hidden min-h-[300px] lg:col-span-2 lg:min-h-[450px]"
+            imageClassName="object-left-top"
+            sizes="(min-width: 1024px) 1280px, 100vw"
+          />
+          <FeatureCard
+            image={IMG.featureParticipantsMobile}
+            title="Gerencie seus participantes com facilidade"
+            description="Tenha todas as informações dos inscritos organizadas. Pesquise atletas, exporte listas, acompanhe pagamentos e mantenha tudo sob controle."
+            className="min-h-[300px] lg:col-span-2 lg:min-h-[450px] md:hidden"
             imageClassName="object-left-top"
             sizes="(min-width: 1024px) 1280px, 100vw"
           />
