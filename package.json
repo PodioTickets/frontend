@@ -68,6 +68,7 @@
     "eslint": "^9",
     "eslint-config-next": "16.0.3",
     "jsdom": "^29.1.1",
+    "msw": "^2.14.6",
     "shadcn": "^3.6.2",
     "tailwindcss": "^4",
     "typescript": "^5",

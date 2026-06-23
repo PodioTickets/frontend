@@ -23,6 +23,16 @@ export function ContentWrapper({ children }: { children: React.ReactNode }) {
     return <div>{children}</div>;
   }
 
+  // A landing institucional (/crie-seu-evento-na-podioticket) tem seu próprio topo
+  // (hero full-bleed). Sem este caso, o offset `mt-[64px]` abaixo reservaria espaço
+  // para o header — expondo uma faixa `bg-gray-2` acima do gradiente do hero
+  // ("espaço em branco" que não pega o gradiente).
+  const LANDING_PATH = "/crie-seu-evento-na-podioticket";
+  const isLanding = pathname === LANDING_PATH || pathname.startsWith(`${LANDING_PATH}/`);
+  if (isLanding) {
+    return <div>{children}</div>;
+  }
+
   const isOrganizer = normalized.startsWith("/organizer");
 
   if (isOrganizer) {

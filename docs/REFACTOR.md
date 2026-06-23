@@ -203,9 +203,22 @@ zerar os erros antigos — ver Bloco 4).
       (`validateEventInformation`/`isEventInformationValid`/`eventInformationHasChanges`,
       puras, 12 testes vitest). `EditEventFormData` exportado do contexto. Páginas
       diferem só em nav/redirect/className.
-- [ ] **Formatação inline (~150 linhas).** Há `.replace(/\D/g,…)` e formatação de
-      centavos reimplementados no checkout apesar dos utwils canônicos
-      (`documentDisplay`, `phone`, `postalCode`, `datetimeBR`). Padronizar uso.
+- [x] **Formatação inline (~150 linhas).** (COMPLETO 2026-06-18)
+  - **Moeda (12 cópias → canônico):** havia `new Intl.NumberFormat("pt-BR",{style:'currency',
+    currency:'BRL'})` reimplementado inline em 11 componentes do checkout + o `formatPrice`
+    do `SubscriptionStep.utils`. Criado `src/lib/money.ts` (`formatBRL(reais)` +
+    `formatBRLFromCents(centavos)`, nome com UNIDADE explícita p/ evitar o erro reais×centavos;
+    9 testes). `SubscriptionStep.utils.formatPrice` agora delega a `formatBRL`. Os 11
+    componentes importam `formatBRL` com alias do nome local (`formatPrice`/`formatCurrency`/
+    `formatPriceCurrency`) → call-sites intactos, saída byte-a-byte igual (BRL já assume 2 casas).
+  - **Phone e datetime:** JÁ eram canônicos no checkout (`formatPhoneForCountry`, `formatDateBR`) — nada a fazer.
+  - **CEP (`CheckoutAddressSection`):** JÁ usa `postalConfig.format()/.isValid()`; os `.replace(/\D/g)`
+    restantes são extração dos 8 dígitos pro lookup ViaCEP (BR-específico, legítimo).
+  - **⚠️ Documento NÃO consolidado (de propósito):** as cópias de `maskCPF`/`isBr`/`formatCPF` no
+    checkout têm DIVERGÊNCIAS INTENCIONAIS — `PaymentSuccessStep` mascara com 2 dígitos iniciais
+    (`12.***`) vs 3 nas demais; `isParticipantBr` do PaymentSuccessStep NÃO normaliza gentílico
+    (≠ `isPersonBr` canônico). Unificar mudaria exibição de PII/heurística → adiado (precisa
+    decisão de produto; "checkout não pode ter problema"). 406/406 testes, tsc 0 erros.
 - [x] **Bloco de descrição de kits** duplicado nas 4 preview pages de tópicos
       (COMPLETO 2026-06-17) → `src/components/Event/TopicsPreviewKitsSection.tsx`.
       Sink único de `sanitizeRichHtml`. Aplicado em organizer new/edit + admin
@@ -219,23 +232,89 @@ zerar os erros antigos — ver Bloco 4).
 > `useSubscriptionData.ts`) e `TicketForm` (`.tsx` + `.types.ts` + `.utils.ts` +
 > `.draft.ts` + subseções). Replicar esse padrão nos arquivos abaixo.
 
-- [ ] **`PaymentStep.tsx` (2.926 linhas).** Extrair:
-  - `usePaymentFlow` (estado de cartão/débito/PIX, parcelas, cupom, handlers).
-  - `useBillingAddressForm` (validação por país, payload PATCH).
-  - `src/lib/paymentValidation.ts` (consolidar com `utils/cardValidation.ts`).
-  - Subcomponentes: `CreditCardForm`, `DebitCardForm`, `PixForm`, `PaymentMethodSelector`.
-  - Tipos para `src/interfaces/payment.ts` (`PaymentMethod`, `CardErrors`, …).
-- [ ] **`InformationStep.tsx` (2.878 linhas).** Extrair:
-  - `useParticipantState` (snapshots, sessionStorage, expand/saved).
-  - `useParticipantValidation` (CPF, telefone, data, perguntas condicionais).
-  - `src/lib/participantSnapshot.ts` (build/read/apply).
-  - Componente `ParticipantCard`.
-- [ ] **`CreateProductModal.tsx` (2.343 linhas).** Extrair `useProductForm`,
-      `src/lib/productValidation.ts`, `useProductImageUpload`, `<ProductVariations>`.
-      Unificar tipo `ProductVariation` (hoje duplicado com `SubscriptionStep.utils.ts`).
-- [ ] **`LoginModal.tsx` / `RegisterModal.tsx` (~1.600 cada).** Extrair
-      `useLoginFlow`/`useRegisterFlow` e quebrar em painéis
-      (`LoginPanel`, `ForgotPasswordPanel`, `ResetPasswordPanel`, `Register Step1/2/3`).
+- [~] **`PaymentStep.tsx` (2.903 linhas) — split EM ANDAMENTO.**
+  - [x] **Fase 1 (2026-06-19): tipos + subcomponentes + validação pura.** `2903 → 2212`
+        (−691, ~24%). Arquivos novos: `src/interfaces/payment.ts` (`PaymentMethod`/`PaymentOption`/
+        `CardErrors`), `src/lib/paymentValidation.ts` (`formatCardNumber` dedup + `cvvMaxLengthForCard`,
+        7 testes), `PaymentCardForms.tsx` (`CreditCardForm`+`DebitCardForm`, memo preservado),
+        `PixModal.tsx` (`PixModal`+`PixForm`+`API_URL`), `PaymentMethodParts.tsx`
+        (`PaymentMethodOption`+`BillingAddressConfirmedSummary`). Imports órfãos limpos.
+        tsc 0, 436/436. API pública (`<PaymentStep/>`) intacta.
+  - [ ] **Fase 2 (hard, ainda no corpo de 2.212 linhas):** `usePaymentFlow` (estado cartão/débito/
+        PIX, parcelas, cupom, handlers de pagamento/3DS), `useBillingAddressForm` (validação por país
+        + payload PATCH). `PaymentMethodSelector` se valer. ⚠️ checkout = alto risco; validar ao vivo.
+- [~] **`InformationStep.tsx` (2.863 linhas) — split EM ANDAMENTO.**
+  - [x] **Fase 1 (2026-06-20): subcomponente + snapshot.** `2863 → 2733` (−130).
+        `NationalitySelect.tsx` (dropdown de país, autocontido) extraído; `src/lib/participantSnapshot.ts`
+        criado com `readSavedState` (leitura SSR-safe) + tipo `SavedSnapshotMap`. Imports órfãos
+        (`COUNTRIES_PT_BR`/`FlagIcon`/`Search`) limpos. tsc 0, 436/436.
+  - [ ] **Fase 2 (hard, corpo monolítico):** `useParticipantState` (snapshots/sessionStorage/expand),
+        `useParticipantValidation` (CPF/telefone/data/perguntas condicionais), `ParticipantCard`.
+        `participantSnapshot.ts` pode crescer com build/apply. ⚠️ checkout = alto risco; validar ao vivo.
+- [~] **`CreateProductModal.tsx` (2.347 linhas) — split EM ANDAMENTO.**
+  - [x] **Fase 1 (2026-06-18): tipos + validação pura.** `CreateProductModal.types.ts`
+        (`ProductVariation`/`LinkedTicketListItem`/`MobileVariationDraft`) +
+        `src/lib/productValidation.ts` (puras: `variationStockToPersist`, `categoryLabelFromTicket`,
+        `buyerVariationEditStateFromApiProduct`, `sanitizeVariationTypeLabelInput`, `parsePriceReais`,
+        `formatPriceFromApi`, `variationHasMeaningfulSpecificPrice`, `maskPriceInputFromDigits`,
+        `validateProductForm` retornando `{ok}|{ok,message}` — toast fica no componente). 23 testes
+        vitest. Modal: **2347 → 2191**. tsc 0, 429/429 testes.
+        NOTA: o `ProductVariation` do modal (form/draft, `price`/`stock` string) é DIFERENTE da
+        shape de runtime do checkout (`SubscriptionStep.utils.Product`, numérica/centavos) — NÃO
+        unificar; são domínios distintos (edição × consumo).
+  - [x] **Fase 2 (2026-06-18): hooks `useProductLinkedTickets` + `useProductImageUpload`.**
+        Linked tickets: efeito autocontido (merge props+API, dedup por nome) movido p/ hook
+        (clear no close embutido). Image upload: estado `productImages`/`primaryImageIndex` +
+        refs do crop + `handleProductCropped`/`handleDrop`/`handleDragOver`; expõe setters p/ a
+        hidratação/reset (ainda no componente). Modal: **2191 → 2073**. tsc 0, 429/429.
+  - [x] **Fase 3 (2026-06-18): `<ProductLinkedTicketsConfirmDialog>`.** Os 2 diálogos
+        (excluir/salvar) quase idênticos → 1 componente parametrizado (título/descrição/cor do
+        marcador/fallback/rodapé via props; shell backdrop+lista compartilhado). Modal: **2073 →
+        1936**. (`<ProductPreview>` deixado p/ depois — ver abaixo.)
+  - [x] **Fase 4 (2026-06-19): `useProductVariations`.** Estado de variação (+ mobile draft) e
+        os 10 handlers (add/remove/change/price + bottom-sheets) movidos p/ o hook, que calcula
+        `defaultVariationStockFromBatches` internamente e o devolve p/ a hidratação/reset.
+        Modal: **1936 → 1842**.
+  - [x] **Fase 5 (2026-06-19): subcomponentes de UI.** `<ProductPreview>` (radios de edição +
+        prévia do card; 1842→1702), `<ProductVariationMobileSheets>` (2 bottom-sheets mobile;
+        1702→1544), `<ProductVariations>` (input do tipo + tabela desktop/cards mobile + add +
+        erro dup; 1544→1305). tsc 0, 429/429 em cada passo.
+  - **RESUMO Fases 1–5: modal 2347 → 1305 (−1042, ~44%), 9 arquivos novos** (types,
+    productValidation+23 testes, useProductLinkedTickets, useProductImageUpload,
+    ProductLinkedTicketsConfirmDialog, useProductVariations, ProductPreview,
+    ProductVariationMobileSheets, ProductVariations). API pública (`<CreateProductModal/>` sem
+    props) intacta. **Lógica e UI todas extraídas.**
+  - [ ] **Opcional (não feito de propósito):** `useProductForm` (mover hydrate/reset/snapshot/
+        dirty + state de form pra um hook — a orquestração legitimamente pode ficar no container,
+        igual `TicketForm`); adoção `useModalSubmitState.runSubmit` em `executeSave`/
+        `performDeleteProduct` (dedup cosmético de try/finally, muda control-flow do save → risco
+        vs ganho baixo); `<ProductModalFooter>` (footer custom 3-botões, não force `ModalFooterActions`).
+- [~] **`LoginModal.tsx` / `RegisterModal.tsx` (~1.600 cada) — split EM ANDAMENTO.**
+  - [x] **Login Fase 1 (2026-06-20): painéis de "esqueci senha".** `1601 → 1207` (−394).
+        `ForgotPasswordPanels.tsx` (`ForgotPasswordPanel` + `ForgotPasswordEnterCodePanel` +
+        `ForgotPasswordNewPasswordPanel` + tipo `ForgotMethod`, todos props-driven). Imports órfãos
+        (`Mail`/`Lock`/`ArrowLeft`/`CPFIcon`/`Checkbox`) limpos. `maskCPF`/`GoogleIcon` ficam (GoogleIcon
+        local tem SVG distinto do `Icons/GoogleIcon` — não dedupar). tsc 0, 436/436.
+  - [~] **Login Fase 2 (EM ANDAMENTO):**
+    - [x] **`useForgotPasswordFlow` (2026-06-20).** Toda a máquina de "esqueci senha" (estado +
+          3 efeitos: reset-on-close, cooldown, token de `loginModalData` + handlers) extraída p/
+          `src/components/Auth/useForgotPasswordFlow.ts`. Render do Login consome o retorno (mesmos
+          nomes via destructure). Entrada via ação `startForgotFlowFrom` (encapsula maskCPF). LoginModal
+          **1207 → 924** (−283; total −677 vs HEAD 1601). **Verificado: 10/10 handlers byte-idênticos
+          ao original (git HEAD)** + tsc 0 + 451/451. ⚠️ smoke test do fluxo ao vivo recomendado.
+    - [x] **`useLoginFlow` (2026-06-20).** Login e-mail/senha + MFA + Google OAuth (formData, errors,
+          turnstile + refs, mfa*, 4 efeitos + handlers) → `src/components/Auth/useLoginFlow.ts`. Render
+          consome via destructure; OTP via `handleMfaCodeChange`. LoginModal **924 → 734** (−190;
+          **total 1601 → 734, −54%**). **Verificado: handlers byte-idênticos ao HEAD** (só `handleSubmit`
+          trocou `React.FormEvent`→`FormEvent`, corpo idêntico) + tsc 0 + 451/451. ⚠️ smoke ao vivo.
+  - **LoginModal Fase 2 COMPLETA: 1601 → 734 (−867, −54%); 3 arquivos novos** (ForgotPasswordPanels +
+    useForgotPasswordFlow + useLoginFlow). Só o `GoogleIcon` local e o render permanecem no arquivo.
+  - [x] **RegisterModal Fase 2 (2026-06-20): `useRegisterFlow`.** Toda a máquina de cadastro
+        (steps 1-4 + completar-perfil Google: estado, 3 efeitos, validações por step, handlers)
+        extraída p/ `src/components/Auth/useRegisterFlow.ts`. Os `renderStepX` ficam no componente
+        consumindo o destructure. RegisterModal **1580 → 1135** (−445). **Verificado: 11/11 handlers
+        byte-idênticos ao HEAD** (handleNext/validateStep*/buildPersonalUpdateData/etc.) + tsc 0 +
+        451/451. ⚠️ smoke ao vivo: cadastro novo (BR/estrangeiro) + completar perfil via Google.
 - [ ] **God object `OrganizerService.ts` (2.992 linhas).** Dividir por domínio:
       `EventService`, `TicketService`, `CouponService`, `VoucherService`,
       `ProductService`, `OrganizationService`, `AuditService`, `UploadService`.
@@ -264,10 +343,29 @@ zerar os erros antigos — ver Bloco 4).
           OrganizerService. **Main 1.321 → 628.** Removido comentário órfão "Dashboard methods".
           220/220 testes, tsc sem erros novos. Cadeia atual: base 10 / reporting 714 /
           catalog 769 / main 628 / types 1.180.
-    - [ ] **Última fatia (opcional):** separar Org de Evento (o head de 628 ainda mistura os
-          dois). Ganho marginal — pode encerrar aqui. Smoke-test do painel ao vivo antes de prod.
-- [ ] **`UserService.ts` (1.231 linhas).** Separar `AuthService` (login/MFA/reset)
-      de `UserService` (profile).
+    - [x] **Última fatia (2026-06-18): Org × Evento separados.** `OrganizerOrganizationService`
+          (organização, membros, auditoria, upload, acesso — 388 linhas; só apiClient +
+          normalizadores, NÃO chama domínio Evento) extraído como mixin intermediário. Cadeia
+          final: Base → Reporting → Catalog → **Organization** → OrganizerService(Evento).
+          **Main 628 → 334.** Verificado via grep que nenhum método de Org chama método de
+          Evento via `this.`. 406/406 testes, tsc 0 erros. **OrganizerService 100% dividido.**
+          (Cadeia: base 10 / reporting 714 / catalog 769 / organization 388 / main 334 / types 1.180.)
+          ⚠️ Smoke-test do painel ao vivo antes de prod (sem cobertura de runtime do serviço).
+- [x] **`UserService.ts` (1.231 linhas) — SPLIT COMPLETO (2026-06-18).** Mesmo padrão
+      do OrganizerService (cadeia de mixins + companion `.types.ts`), API `userService.x`
+      100% preservada (zero call-site tocado; instância única em `services/index.ts`).
+      Métodos auth/profile estavam INTERCALADOS → fatiamento método-a-método por range
+      de linha (via node), não por bloco contíguo. Arquivos:
+  - `UserService.types.ts` (122) — 8 interfaces (LoginResponse, RegisterRequest/Response,
+    RefreshTokenResponse, BalanceTransaction, AuthError, DocumentAvailabilityResult, UserItem),
+    re-exportadas por `UserService.ts` via `export *` (cobre os imports de `AuthError`/`LoginResponse`).
+  - `UserServiceBase.ts` (113) — `protected apiClient` + 3 helpers de erro `protected`
+    (mapAuthErrorMessageToPtBr/parseAuthErrorPayload/handleError), usados pelos dois domínios.
+  - `AuthService.ts` (581) — 20 métodos de auth (login/MFA/Google, register, refresh/logout,
+    reset/forgot, change email/senha, 2FA, availability, isAuthenticated/clearLocalSession).
+  - `UserService.ts` (459) — 15 métodos de perfil/dados (profile, preview cupom/voucher,
+    age-eligibility, tickets/pedidos, getUserByCpf/linkedUsers/createOrLink, avatar).
+  - Cadeia: Base → Auth → User. 225/225 testes, tsc só com os 2 erros pré-existentes.
 - [ ] **Tipos inline → `src/interfaces/`.** `payment.ts` novo; revisar overlap
       `interfaces/checkout.ts` vs `interfaces/order.ts`.
 
@@ -277,14 +375,20 @@ zerar os erros antigos — ver Bloco 4).
 
 - [ ] **Reduzir `"use client"` (297 ocorrências).** Marcar layouts/páginas como
       Server Components onde possível; `"use client"` só nos consumidores.
-- [ ] **`dynamic()` nos steps de checkout** (PaymentStep/InformationStep ~3k LOC
-      cada) — ganho direto de TTI. Idem chart.js (`RevenueChartImpl`), react-pdf.
+- [x] **`dynamic()` em libs pesadas — FEITO/MOOT (2026-06-20).**
+  - chart.js: JÁ era dynamic (`RevenueChart.tsx` envolve `RevenueChartImpl` com `next/dynamic`).
+  - react-pdf: `PdfViewer` agora carregado via `next/dynamic({ssr:false})` no `TermsOfServiceModal`
+    (única importadora) — react-pdf/pdf.js só entra no bundle quando o modal de termos abre.
+  - PaymentStep/InformationStep: **MOOT** — são páginas de rota próprias (`/checkout/informacoes`,
+    `/checkout/pagamento`), já code-split por rota pelo Next. `dynamic()` neles seria redundante.
 - [ ] **Virtualização** de tabelas grandes (registrations, `TicketsSection`)
       com `VirtualList`/react-window.
-- [ ] **`ignoreBuildErrors: true`** (`next.config.ts:32`). NÃO remover ainda —
-      há erros de tipo pré-existentes (487 `any`, 62 `@ts-ignore`/`eslint-disable`).
-      Plano: 1) `tsc --noEmit` no CI como gate não-bloqueante; 2) zerar erros aos
-      poucos; 3) então flipar para `false`.
+- [ ] **`ignoreBuildErrors: true`** (`next.config.ts:32`). **`tsc --noEmit` agora dá 0 erros**
+      (2026-06-18 — corrigidos os 2 pré-existentes: `topicQuillResizeWithSideHandles.ts:122`
+      handleDrag property→método na interface; `useLinkedUsers.ts:25` documentType `string`→
+      `"CPF"|"PASSPORT"` no retorno de `getLinkedUsers`). Ainda há ~487 `any`/62 suppressions, mas
+      esses NÃO são erros de tsc. Flipar p/ `false` agora é viável — confirmar com `next build`
+      (pode pegar mais que `tsc --noEmit`) antes de remover; decisão do usuário (afeta deploy).
 - [ ] **Padrão único de data fetching.** Factory de `useMutation` com optimistic
       (já existe `pending writes` em tickets/categorias; estender a coupons/vouchers).
       Avaliar bundles GET para fluxos críticos (checkout) e evitar waterfalls.
@@ -297,9 +401,49 @@ zerar os erros antigos — ver Bloco 4).
 
 ## 🟢 BLOCO 5 — Testes (cobertura ~2/10)
 
-- [ ] **Caminho de pagamento** (crítico): cupom, taxa, voucher, 3DS, reserva.
-- [ ] **Hooks core:** `useAuth`, `useCheckoutReservation`, `useThreeDS`.
-- [ ] **MSW** para mock de API + testes de integração de React Query.
+> Estratégia antes de refatorar o checkout (decisão 2026-06-18): **testes de
+> CARACTERIZAÇÃO** (golden master) da lógica pura ANTES de mexer nos
+> arquivos-monstro, pra qualquer regressão aparecer vermelha. "checkout não pode
+> ter problema."
+
+- [x] **Caminho de pagamento — lógica pura COBERTA** (crítico): cupom, taxa, voucher,
+      normalização da order, validação de cartão e formatação i18n. (2026-06-18; +176 testes,
+      suíte 225 → 401)
+  - [x] `orderCouponDiscount.test.ts` (52 testes): desconto cupom/voucher, FIXED em
+        centavos, taxa sobre subtotal descontado, voucher=1 unidade de maior valor,
+        normalização de `appliesTo`, condições mín., pricing com cupom/desconto.
+  - [x] `ageCoupon.test.ts` (13): cupom automático de idade + limite de idade do ingresso.
+  - [x] `orderAutoCouponDisplay.test.ts` (9): só QUANTITY escondido pré-pagamento; AGE/DISCOUNT revelados.
+  - [x] `checkoutParticipants.test.ts` (18): payload PATCH participants/products (CPF×passaporte,
+        gênero m/f/outro, respostas array→JSON, slice por reserva). Nota: `mapGender` ainda tem o
+        ramo `PREFER_NOT_TO_SAY` mas é CÓDIGO MORTO — a UI hoje só oferece Masculino/Feminino/Outro.
+  - [x] `checkoutProductStep.test.ts` (13): slots participante↔ingresso (ordem canônica) + auto-select.
+  - [x] `cardValidation.test.ts` (14): Luhn, bandeira, validade (tempo fixo), máscara MM/AA, CVV.
+  - [x] `orderResponseNormalizer.test.ts` (19): `toOrderResponse` EXTRAÍDO de
+        `useCheckoutReservation.ts` p/ `src/lib/orderResponseNormalizer.ts` (lib pura, hook importa
+        de lá). Trava roteamento cupom×voucher (exclusivos), fallbacks de pricing (centavos) e
+        mapeamento de tickets. Achou 1 quirk (appliedDiscount 'voucher' sem objeto voucher seta os
+        dois descontos) — travado como `[quirk]`.
+  - [x] `documentDisplay.test.ts` (16): heurística canônica `isPersonBr` (ordem dos sinais),
+        label/format de documento, telefone i18n.
+  - [x] `postalCode.test.ts` (16): config CEP/ZIP/CAP por país (BR/US/AR/fallback), format/isValid/toBackend.
+  - [x] `phone.test.ts` (16): ISO por nome PT-BR, máscara nacional + strip de DDI, dígitos p/ backend,
+        validação por país, placeholder/maxLength.
+- [x] **MSW (infra) — FEITO (2026-06-20).** `msw@2` instalado (devDep). `src/test/mswServer.ts`:
+      `setupServer` compartilhado + helper opt-in `useMswServer()` (liga listen/reset/close por
+      arquivo). **NÃO** está no setup global de propósito (`onUnhandledRequest:"error"`) — só os
+      testes de integração ligam, mantendo os 436 testes existentes intactos. 443/443, tsc 0.
+- [x] **`useCheckoutReservation` (integração) — FEITO (2026-06-20).** Caracterização da camada de
+      rede do checkout: `src/hooks/__tests__/useCheckoutReservation.integration.test.ts` (7 testes) —
+      reserve/get/pay/coupon/pix-status/cancel: wiring de fetch, header `Idempotency-Key`,
+      normalização `id→orderId`, `OrderApiError` no erro, 404 do cancel tratado como sucesso.
+- [x] **`AuthService` (integração) — FEITO (2026-06-20).** `src/services/user/__tests__/AuthService.integration.test.ts`
+      (8 testes): login (shape aninhado/plano/MFA/endpoint organizer/erro-envelope), register
+      (CPF strip vs PASSPORT cru, phone strip, retorno user+tokens, erro lança). Confirma que o MSW
+      intercepta axios (ApiClient) além de fetch.
+- [~] **3DS / `useThreeDS` (integração)** — DISPENSADO por ora (decisão do usuário 2026-06-20):
+      orquestração do SDK Braspag (DOM/postMessage) exige mock pesado de `window`; ROI baixo.
+- [ ] **Hooks core restantes:** caracterização a nível de componente dos steps conforme a Fase 2 exigir.
 - [x] Sanitizer de conteúdo rico (`richContent.test.ts`).
 
 ---

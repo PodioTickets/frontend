@@ -86,7 +86,7 @@ function SectionHeading({
 
 function Hero() {
   return (
-    <section className="relative overflow-hidden bg-gradient-to-b from-primary-2 to-gray-2">
+    <section className="relative overflow-hidden bg-linear-to-b from-primary-2 to-gray-2 pt-28">
       <div className="relative mx-auto max-w-[1280px] px-4 md:px-0">
         <Reveal>
           <div className="mx-auto flex max-w-[900px] flex-col items-center gap-6 text-center">
@@ -105,7 +105,7 @@ function Hero() {
         </Reveal>
 
         {/* Mockup de dashboards em perspectiva */}
-        <Reveal delay={150} className="relative mt-12 md:mt-16">
+        <Reveal delay={150} className="relative mt-12 md:mt-0">
           <Image
             src={IMG.heroDashboards}
             alt="Painéis da plataforma PódioTicket"
