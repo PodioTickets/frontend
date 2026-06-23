@@ -28,6 +28,7 @@ import {
 import { Pagination } from '../Pagination';
 import { formatDateBR, formatDateBRT, formatTimeBRT } from "@/utils/datetimeBR";
 import { CancelOrderModal } from './CancelOrderModal';
+import { ResendTicketsModal } from './ResendTicketsModal';
 import { OrderApiError } from '@/interfaces/order';
 
 export function PaymentDetailsModal() {
@@ -41,6 +42,9 @@ export function PaymentDetailsModal() {
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [refunding, setRefunding] = useState(false);
   const [downloadingReceipt, setDownloadingReceipt] = useState(false);
+  // Modal de reenvio do pedido por e-mail (overlay local, z-60).
+  const [showResendModal, setShowResendModal] = useState(false);
+  const [resendingEmail, setResendingEmail] = useState(false);
 
   const eventId = data?.eventId as string | undefined;
   const eventName = (data?.eventName as string) || "Evento";
@@ -81,6 +85,23 @@ export function PaymentDetailsModal() {
       toast.error("Erro ao baixar o comprovante. Tente novamente.");
     } finally {
       setDownloadingReceipt(false);
+    }
+  };
+
+  /* Reenvia o e-mail do pedido (todos os ingressos + comprovante) para o
+   * endereço informado, como se fosse o comprador. O backend regera os anexos
+   * a partir do snapshot imutável e aplica o controle de acesso do pedido. */
+  const handleResendEmail = async (email: string) => {
+    if (!registrationId || resendingEmail) return;
+    setResendingEmail(true);
+    try {
+      await organizerService.resendRegistrationEmail(registrationId, email);
+      toast.success("Ingressos reenviados para o e-mail informado.");
+      setShowResendModal(false);
+    } catch {
+      toast.error("Erro ao reenviar os ingressos. Tente novamente.");
+    } finally {
+      setResendingEmail(false);
     }
   };
 
@@ -830,6 +851,13 @@ export function PaymentDetailsModal() {
                         Baixar comprovante
                       </Button>
                     )}
+                    <Button
+                      variant="outline"
+                      onClick={() => setShowResendModal(true)}
+                      className="w-full border-gray-6 text-gray-12"
+                    >
+                      Reenviar por e-mail
+                    </Button>
                     {canRefundOrder && (
                       <Button
                         variant="destructive"
@@ -1296,6 +1324,13 @@ export function PaymentDetailsModal() {
                             Baixar comprovante
                           </Button>
                         )}
+                        <Button
+                          variant={"outline"}
+                          onClick={() => setShowResendModal(true)}
+                          className='border-gray-6 text-gray-12'
+                        >
+                          Reenviar por e-mail
+                        </Button>
                         {canRefundOrder && (
                           <Button
                             variant={"destructive"}
@@ -1322,6 +1357,16 @@ export function PaymentDetailsModal() {
             loading={refunding}
             ticketCount={refundTicketCount}
             refundAmount={refundAmountReais}
+          />
+
+          {/* Reenvio do pedido por e-mail — overlay próprio (z-60), mesmo padrão
+              do CancelOrderModal (estado local, fora do modalStore single-modal). */}
+          <ResendTicketsModal
+            isOpen={showResendModal}
+            onClose={() => setShowResendModal(false)}
+            onConfirm={handleResendEmail}
+            loading={resendingEmail}
+            ticketCount={refundTicketCount}
           />
         </>
       )}

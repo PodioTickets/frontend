@@ -109,7 +109,13 @@ export function useEventRegistrations({
       ]);
       setEvent(eventData);
       if (aggregateStats) {
-        setStats((prev) => mergeRegistrationStatsWithTrendFallback(prev, aggregateStats));
+        // `aggregateStats` (endpoint dedicado) é a FONTE primária dos totais —
+        // inclusive `totalCollected` (Receita Líquida). `prev` entra só como
+        // fallback de tendência (*Change). Passar `prev` como primário (bug
+        // anterior) descartava o totalCollected real, zerando a Receita Líquida
+        // de forma intermitente conforme a ordem das requisições. Mesma ordem
+        // de args do merge em `loadRegistrations`.
+        setStats((prev) => mergeRegistrationStatsWithTrendFallback(aggregateStats, prev));
       }
     } catch {
       setPageError("Erro ao carregar dados do evento");

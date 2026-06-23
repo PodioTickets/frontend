@@ -160,10 +160,15 @@ export default function OrganizerEventsPage() {
     }
   }, []);
 
+  // Descoberta de status disponíveis (1 request por status) roda SÓ quando o
+  // usuário abre o filtro — não no carregamento. Antes rodava no mount, somando
+  // N requests à carga inicial (só `loadEvents` deve rodar no load). Os tabs já
+  // começam todos visíveis (`availableStatuses` default = ALL), então não há
+  // flicker até o refino. Pós-ações (suspender/reativar) seguem refrescando.
   useEffect(() => {
-    if (!authChecked || authLoading) return;
+    if (!authChecked || authLoading || !statusFilterOpen) return;
     void refreshAvailableStatuses();
-  }, [authChecked, authLoading, refreshAvailableStatuses]);
+  }, [statusFilterOpen, authChecked, authLoading, refreshAvailableStatuses]);
 
   // Reseta o filtro se o status atualmente selecionado deixou de existir
   // (ex.: usuário reativou o último evento suspenso enquanto filtrava por
