@@ -72,7 +72,7 @@ export default function Home() {
               Venda ingressos online, acompanhe inscrições e simplifique <br className="hidden md:block" /> a gestão do seu evento esportivo
             </p>
           </div>
-          <Link href={"/lp"}>
+          <Link href={"/crie-seu-evento-na-podioticket"}>
             <Button className="w-max px-8 py-5 font-bold mt-10 md:mt-0">
               Saiba mais
             </Button>

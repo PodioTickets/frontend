@@ -6,9 +6,10 @@ import { LandingPage } from "@/components/Landing/LandingPage";
  * Pensada para ser servida em um subdomínio de marketing — o Header/Footer do
  * site público (do RootLayout) já compõem o chrome desta página.
  *
- * Para apontar um subdomínio próprio (ex.: `sobre.podioticket.com.br`) para esta
- * rota, basta um rewrite no proxy (`src/proxy.ts`) no mesmo padrão dos hosts de
- * organizer/admin — me avise que eu adiciono.
+ * URL pública canônica: `/crie-seu-evento-na-podioticket` (a rota antiga `/lp`
+ * tem redirect 308 em `next.config.ts`). Para apontar um subdomínio próprio
+ * (ex.: `sobre.podioticket.com.br`) para esta rota, basta um rewrite no proxy
+ * (`src/proxy.ts`) no mesmo padrão dos hosts de organizer/admin — me avise.
  */
 const OG_TITLE = "PódioTicket — Plataforma feita para o esporte";
 const OG_DESCRIPTION =

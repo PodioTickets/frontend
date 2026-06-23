@@ -54,6 +54,14 @@ const nextConfig: NextConfig = {
         destination: "/termos-comprador.pdf",
         permanent: false,
       },
+      {
+        // Rota antiga da landing institucional (/lp). Renomeada para a URL
+        // canônica abaixo (melhor SEO e divulgação). 308 permanente: preserva
+        // links já compartilhados e sinaliza a mudança definitiva aos crawlers.
+        source: "/lp",
+        destination: "/crie-seu-evento-na-podioticket",
+        permanent: true,
+      },
     ];
   },
   async headers() {
