@@ -11,16 +11,12 @@ import Image from "next/image";
 import { Dropdown } from "../Dropdown";
 import { ArrowButton } from "../ArrowButton";
 import { SearchBar } from "../SearchBar";
-import { modalitiesColumns } from "@/constants";
 import { eventService } from "@/services";
 import { useModalStore } from "@/stores/modalStore";
 import { formatDateBR } from "@/utils/datetimeBR";
 import { User, LogOut, X } from "lucide-react";
 import { TicketIcon } from "../Icons/TicketIcon";
-import { InfoIcon } from "../Icons/InfoIcon";
-import { TwitterIcon } from "../Icons/TwitterIcon";
 import { InstagramIcon } from "../Icons/InstagramIcon";
-import { FacebookIcon } from "../Icons/FacebookIcon";
 import { UserIcon } from "../Icons/UserIcon";
 import { getAvatarUrl } from "@/utils/avatar";
 import { ImageWithInitialFallback } from "@/components/ImageWithInitialFallback";
@@ -126,10 +122,7 @@ export function Header() {
     };
   }, [mobileMenuOpen]);
 
-  // A landing institucional (/lp) tem seu próprio topo (hero) — sem o header do site.
-  const isLanding = pathname === "/lp" || pathname.startsWith("/lp/");
-
-  if (isOrganizer || isAdmin || isLanding) {
+  if (isOrganizer || isAdmin) {
     return null;
   }
 
