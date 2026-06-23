@@ -61,11 +61,6 @@ export function ResendTicketsModal({
     onConfirm(trimmed);
   };
 
-  const ticketsLabel =
-    ticketCount === 1
-      ? "O ingresso e o comprovante deste pedido serão enviados para o e-mail informado."
-      : `Os ${ticketCount} ingressos e o comprovante deste pedido serão enviados para o e-mail informado.`;
-
   return (
     <AnimatePresence>
       {isOpen && (
@@ -90,10 +85,10 @@ export function ResendTicketsModal({
               <div className="flex flex-col gap-6 w-full">
                 <div className="flex flex-col gap-2 items-center w-full">
                   <p className="font-family-dm-sans font-semibold text-[20px] leading-[1.3] text-gray-12 text-center">
-                    Reenviar ingressos por e-mail
+                    Reenviar ingressos e comprovante
                   </p>
                   <p className="font-family-dm-sans font-normal text-[16px] leading-[1.3] text-gray-11 text-center">
-                    {ticketsLabel}
+                    Após a confirmação do pagamento, os ingressos e o comprovante deste pedido serão enviados para o e-mail informado.
                   </p>
                 </div>
 
