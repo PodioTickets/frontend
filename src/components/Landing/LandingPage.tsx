@@ -23,6 +23,7 @@ const IMG = {
   featureExperience: "/images/landing/feature-experience.png",
   featureVouchers: "/images/landing/feature-vouchers.png",
   featureParticipants: "/images/landing/feature-participants-table.png",
+  featureParticipantsMobile: "/images/landing/feature-participants-table-mobile.png",
   communication: "/images/landing/communication-dashboard.png",
   sports: "/images/landing/sports-devices.jpg",
   ctaTeam: "/images/landing/cta-team.jpg",
@@ -85,7 +86,7 @@ function SectionHeading({
 
 function Hero() {
   return (
-    <section className="relative overflow-hidden bg-gradient-to-b from-primary-2 to-gray-2">
+    <section className="relative overflow-hidden bg-linear-to-b from-primary-2 to-gray-2 pt-14">
       <div className="relative mx-auto max-w-[1280px] px-4 md:px-0">
         <Reveal>
           <div className="mx-auto flex max-w-[900px] flex-col items-center gap-6 text-center">
@@ -104,7 +105,7 @@ function Hero() {
         </Reveal>
 
         {/* Mockup de dashboards em perspectiva */}
-        <Reveal delay={150} className="relative mt-12 md:mt-16">
+        <Reveal delay={150} className="relative mt-12 md:mt-0">
           <Image
             src={IMG.heroDashboards}
             alt="Painéis da plataforma PódioTicket"
@@ -242,7 +243,15 @@ function FeaturesSection() {
             image={IMG.featureParticipants}
             title="Gerencie seus participantes com facilidade"
             description="Tenha todas as informações dos inscritos organizadas. Pesquise atletas, exporte listas, acompanhe pagamentos e mantenha tudo sob controle."
-            className="min-h-[300px] lg:col-span-2 lg:min-h-[450px]"
+            className="max-md:hidden min-h-[300px] lg:col-span-2 lg:min-h-[450px]"
+            imageClassName="object-left-top"
+            sizes="(min-width: 1024px) 1280px, 100vw"
+          />
+          <FeatureCard
+            image={IMG.featureParticipantsMobile}
+            title="Gerencie seus participantes com facilidade"
+            description="Tenha todas as informações dos inscritos organizadas. Pesquise atletas, exporte listas, acompanhe pagamentos e mantenha tudo sob controle."
+            className="min-h-[300px] lg:col-span-2 lg:min-h-[450px] md:hidden"
             imageClassName="object-left-top"
             sizes="(min-width: 1024px) 1280px, 100vw"
           />

@@ -658,6 +658,22 @@ export class OrganizerReportingService extends OrganizerServiceBase {
     return { blob: response.data as unknown as Blob, filename };
   }
 
+  /**
+   * Reenvia o e-mail de confirmação do PEDIDO (todos os ingressos + comprovante)
+   * para o endereço informado — como se fosse o e-mail do comprador. O backend
+   * resolve o pedido a partir da inscrição, regera os anexos a partir do
+   * snapshot imutável e aplica o mesmo controle de acesso dos PDFs do pedido.
+   */
+  async resendRegistrationEmail(
+    registrationId: string,
+    email: string,
+  ): Promise<void> {
+    await this.apiClient.post(
+      `/api/v1/registrations/${registrationId}/resend-email`,
+      { email },
+    );
+  }
+
   async contactOrganizer(
     organizationId: string,
     data: {
