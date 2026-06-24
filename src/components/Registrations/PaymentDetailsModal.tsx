@@ -328,6 +328,7 @@ export function PaymentDetailsModal() {
         ? `${buyerData.firstName} ${buyerData.lastName}`
         : buyerData?.fullName || "Participante",
       email: buyerData?.email || "",
+      avatarUrl: buyerData?.avatarUrl ?? null,
       ticket: registration.ticket?.name || "Ticket",
       category: registration.ticket?.category?.name || "Ingresso avulso",
     }] : registration?.modalities?.map((mod: any, index: number) => ({
@@ -338,6 +339,7 @@ export function PaymentDetailsModal() {
         ? `${buyerData.firstName} ${buyerData.lastName}`
         : buyerData?.fullName || "Participante",
       email: buyerData?.email || "",
+      avatarUrl: buyerData?.avatarUrl ?? null,
       ticket: mod.modality?.name || registration?.ticket?.name || "Ticket",
       category: registration?.ticket?.category?.name || "Ingresso avulso",
     })) || [];
@@ -1273,11 +1275,24 @@ export function PaymentDetailsModal() {
                                 </p>
                               </div>
                               <div className="w-[273px] px-4 flex gap-[10px] items-center">
-                                <div className="size-9 rounded-lg bg-gray-6 flex items-center justify-center shrink-0">
-                                  <span className="text-gray-12 font-semibold text-sm">
-                                    {participant.name.charAt(0).toUpperCase()}
-                                  </span>
-                                </div>
+                                {/* Avatar do participante: imagem real quando
+                                 * `avatarUrl` existir; fallback pra inicial em
+                                 * quadro gray (espelha o layout mobile). */}
+                                {participant.avatarUrl ? (
+                                  <Image
+                                    src={getAvatarUrl(participant.avatarUrl) as string}
+                                    alt={participant.name}
+                                    width={36}
+                                    height={36}
+                                    className="size-9 rounded-lg object-cover shrink-0"
+                                  />
+                                ) : (
+                                  <div className="size-9 rounded-lg bg-gray-6 flex items-center justify-center shrink-0 overflow-hidden">
+                                    <span className="text-gray-12 font-semibold text-sm">
+                                      {participant.name.charAt(0).toUpperCase()}
+                                    </span>
+                                  </div>
+                                )}
                                 <div className="flex flex-col min-w-0 flex-1">
                                   <p className="font-family-dm-sans font-semibold text-[14px] leading-[1.3] text-gray-12 truncate">
                                     {participant.name}

@@ -2,6 +2,7 @@
 import type { Metadata } from "next";
 import { Manrope, DM_Sans } from "next/font/google";
 import { headers } from "next/headers";
+import Script from "next/script";
 import "./globals.css";
 import Providers from "@/components/Providers";
 import { ToasterWrapper } from "@/components/ToasterWrapper";
@@ -101,6 +102,23 @@ export default async function RootLayout({
           <meta name="pt-app-surface" content={appSurfaceForClient} />
         ) : null}
       </head>
+
+      {/* Google tag (gtag.js) — Google Ads AW-18266397975. `afterInteractive`
+          carrega após a hidratação (não bloqueia o first paint) e roda em todas
+          as rotas por estar no root layout. */}
+      <Script
+        id="gtag-js"
+        src="https://www.googletagmanager.com/gtag/js?id=AW-18266397975"
+        strategy="afterInteractive"
+      />
+      <Script id="gtag-init" strategy="afterInteractive">
+        {`
+          window.dataLayer = window.dataLayer || [];
+          function gtag(){dataLayer.push(arguments);}
+          gtag('js', new Date());
+          gtag('config', 'AW-18266397975');
+        `}
+      </Script>
 
       <body suppressHydrationWarning className="scroll-smooth antialiased">
         <AdminAppSurfaceProvider value={isAdminSurface}>
