@@ -9,7 +9,8 @@ import { LoadingAnimation } from "@/components/Loading";
 import { Button } from "@/components/Button";
 import { PencilIcon } from "@/components/Icons/PencilIcon";
 import { AdminCollaboratorDrawer, type AdminMember } from "@/components/Admin/AdminCollaboratorDrawer";
-import { formatDateBR, formatTimeBR } from "@/utils/datetimeBR";
+import { formatDateBRT, formatTimeBRT } from "@/utils/datetimeBR";
+import { UserAvatar } from "@/components/UserAvatar";
 import toast from "react-hot-toast";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -30,7 +31,8 @@ function formatLastAccess(iso: string | null | undefined) {
   if (!iso) return "—";
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return "—";
-  return `${formatDateBR(iso, { day: "2-digit", month: "2-digit", year: "numeric" })} • ${formatTimeBR(iso, { hour: "2-digit", minute: "2-digit" })}`;
+  // lastLoginAt é INSTANTE real → BRT (America/Sao_Paulo).
+  return `${formatDateBRT(iso, { day: "2-digit", month: "2-digit", year: "numeric" })} • ${formatTimeBRT(iso, { hour: "2-digit", minute: "2-digit" })}`;
 }
 
 function memberInitials(m: Member) {
@@ -247,9 +249,12 @@ export default function AdminOrgMembersPage() {
               return (
                 <div key={m.id} className="rounded-xl border border-gray-6 bg-gray-1 p-4 shadow-[0px_2px_6px_0px_rgba(17,17,17,0.08)]">
                   <div className="flex items-start gap-3 min-w-0">
-                    <div className="size-10 rounded-lg bg-gray-5 flex items-center justify-center shrink-0 text-xs font-semibold text-gray-12 font-family-dm-sans">
-                      {memberInitials(m)}
-                    </div>
+                    <UserAvatar
+                      avatarUrl={m.user.avatarUrl}
+                      name={name}
+                      initials={memberInitials(m)}
+                      shape="lg"
+                    />
                     <div className="min-w-0 flex-1">
                       <p className="text-base font-bold text-gray-12 font-family-dm-sans leading-[1.3] break-words">
                         {name || "—"}
@@ -315,9 +320,12 @@ export default function AdminOrgMembersPage() {
                       <tr key={m.id} className="hover:bg-gray-2/80 transition-colors">
                         <td className="py-3 px-4">
                           <div className="flex items-center gap-3 min-w-0">
-                            <div className="size-9 rounded-full bg-gray-5 flex items-center justify-center shrink-0 text-xs font-semibold text-gray-12 font-family-dm-sans">
-                              {memberInitials(m)}
-                            </div>
+                            <UserAvatar
+                              avatarUrl={m.user.avatarUrl}
+                              name={name}
+                              initials={memberInitials(m)}
+                              shape="full"
+                            />
                             <span className="text-sm font-semibold text-gray-12 font-family-dm-sans truncate">
                               {name || "—"}
                             </span>

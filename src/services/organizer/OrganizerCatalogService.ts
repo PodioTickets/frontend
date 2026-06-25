@@ -307,7 +307,7 @@ export class OrganizerCatalogService extends OrganizerReportingService {
     const contentDisposition =
       (response.headers as any)["content-disposition"] ?? "";
     const match = contentDisposition.match(/filename="?([^"]+)"?/);
-    const ext = format === "excel" ? "xlsx" : format === "pdf" ? "pdf" : "csv";
+    const ext = format === "excel" ? "xlsx" : format === "pdf" ? "pdf" : "txt";
     const filename = match?.[1] ?? `inscricoes-${eventId.slice(0, 8)}.${ext}`;
 
     return { blob: response.data as unknown as Blob, filename };

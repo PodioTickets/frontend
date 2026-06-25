@@ -11,7 +11,7 @@ import {
 } from "lucide-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { cn } from "@/utils/cn";
-import { formatTimeBR } from "@/utils/datetimeBR";
+import { formatTimeBRT } from "@/utils/datetimeBR";
 import { Button } from "@/components/Button";
 import { getApiClient } from "@/services/base/ApiClient";
 import { queryKeys } from "@/services/cache/QueryClient";
@@ -76,9 +76,12 @@ function formatDate(iso?: string | null): { date: string; time: string } {
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return { date: "—", time: "" };
   const months = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
+  // occurredAt é INSTANTE real → BRT (America/Sao_Paulo). BRT é UTC-3 fixo; deslocar -3h e
+  // ler os componentes UTC dá os componentes BRT, preservando o formato custom "DD Mon, AAAA".
+  const brt = new Date(d.getTime() - 3 * 60 * 60 * 1000);
   return {
-    date: `${String(d.getUTCDate()).padStart(2, "0")} ${months[d.getUTCMonth()]}, ${d.getUTCFullYear()}`,
-    time: formatTimeBR(iso, { hour: "2-digit", minute: "2-digit" }),
+    date: `${String(brt.getUTCDate()).padStart(2, "0")} ${months[brt.getUTCMonth()]}, ${brt.getUTCFullYear()}`,
+    time: formatTimeBRT(iso, { hour: "2-digit", minute: "2-digit" }),
   };
 }
 

@@ -319,6 +319,74 @@ describe("computeLinkCouponTicketDiscount", () => {
       ),
     ).toBe(50); // clampa nos R$50 do "b"
   });
+
+  it("remaining capa o desconto às N unidades MAIS CARAS (espelha o backend)", () => {
+    // sel = a(100×2), b(50×1) → unidades [100,100,50]. remaining=2 → cobre as 2 de R$100.
+    expect(
+      computeLinkCouponTicketDiscount(
+        { type: "PERCENTAGE", value: 10, remaining: 2 },
+        sel,
+        250,
+        3,
+      ),
+    ).toBe(20); // 10% de (100+100), NÃO de 250
+  });
+
+  it("remaining=1 → cobre só a unidade mais cara", () => {
+    expect(
+      computeLinkCouponTicketDiscount(
+        { type: "PERCENTAGE", value: 50, remaining: 1 },
+        sel,
+        250,
+        3,
+      ),
+    ).toBe(50); // 50% de 100 (a unidade mais cara)
+  });
+
+  it("remaining >= unidades elegíveis → sem efeito (cobre todas)", () => {
+    expect(
+      computeLinkCouponTicketDiscount(
+        { type: "PERCENTAGE", value: 10, remaining: 99 },
+        sel,
+        250,
+        3,
+      ),
+    ).toBe(25); // 10% de 250
+  });
+
+  it("remaining null/ausente → sem limite (compat)", () => {
+    expect(
+      computeLinkCouponTicketDiscount(
+        { type: "PERCENTAGE", value: 10, remaining: null },
+        sel,
+        250,
+        3,
+      ),
+    ).toBe(25);
+  });
+
+  it("remaining=0 (cupom esgotado) → desconto 0", () => {
+    expect(
+      computeLinkCouponTicketDiscount(
+        { type: "PERCENTAGE", value: 10, remaining: 0 },
+        sel,
+        250,
+        3,
+      ),
+    ).toBe(0);
+  });
+
+  it("remaining respeita appliesTo (capa só dentro do escopo)", () => {
+    // só "a" elegível (unidades [100,100]); remaining=1 → 10% de 100.
+    expect(
+      computeLinkCouponTicketDiscount(
+        { type: "PERCENTAGE", value: 10, appliesTo: ["a"], remaining: 1 },
+        sel,
+        250,
+        3,
+      ),
+    ).toBe(10);
+  });
 });
 
 describe("computeTicketPricingWithDiscount", () => {

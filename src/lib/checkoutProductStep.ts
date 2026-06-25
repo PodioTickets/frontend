@@ -74,6 +74,8 @@ export interface AutoSelectedProduct {
   variationId: string;
   quantity: number;
   participantEmail: string;
+  /** Slot (participante↔ingresso) — ver `ProductPatchItem.participantIndex`. */
+  participantIndex: number;
 }
 
 /**
@@ -97,7 +99,13 @@ export function buildAutoSelectedProductsPayload(
     for (const product of getProductsForTicket(slot.ticketId)) {
       const variationId = autoSelectedVariationId(product);
       if (!variationId) continue;
-      payload.push({ productId: product.id, variationId, quantity: 1, participantEmail });
+      payload.push({
+        productId: product.id,
+        variationId,
+        quantity: 1,
+        participantEmail,
+        participantIndex: slot.participantIndex,
+      });
     }
   }
 

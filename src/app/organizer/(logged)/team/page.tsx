@@ -14,7 +14,8 @@ import { SystemAuditLogTab } from "@/components/Organizer/SystemAuditLogTab";
 import { PencilIcon } from "@/components/Icons/PencilIcon";
 import { cn } from "@/utils/cn";
 import { isCurrentUserOrganizationOwner } from "@/utils/organizationOwner";
-import { formatDateBR, formatTimeBR } from "@/utils/datetimeBR";
+import { formatDateBRT, formatTimeBRT } from "@/utils/datetimeBR";
+import { UserAvatar } from "@/components/UserAvatar";
 
 const ITEMS_PER_PAGE = 8;
 
@@ -22,12 +23,13 @@ function formatLastAccess(iso: string | null | undefined) {
   if (!iso) return "—";
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return "—";
-  const date = formatDateBR(iso, {
+  // Último acesso é INSTANTE real → exibe no fuso de Brasília (BRT), não UTC.
+  const date = formatDateBRT(iso, {
     day: "2-digit",
     month: "2-digit",
     year: "numeric",
   });
-  const time = formatTimeBR(iso, {
+  const time = formatTimeBRT(iso, {
     hour: "2-digit",
     minute: "2-digit",
   });
@@ -309,9 +311,12 @@ export default function OrganizerTeamPage() {
                       className="rounded-xl border border-gray-6 bg-gray-1 p-4 shadow-[0px_2px_6px_0px_rgba(17,17,17,0.08)]"
                     >
                       <div className="flex items-start gap-3 min-w-0">
-                        <div className="size-10 rounded-lg bg-gray-5 flex items-center justify-center shrink-0 text-xs font-semibold text-gray-12 font-family-dm-sans">
-                          {memberInitials(m)}
-                        </div>
+                        <UserAvatar
+                          avatarUrl={m.user.avatarUrl}
+                          name={name}
+                          initials={memberInitials(m)}
+                          shape="lg"
+                        />
                         <div className="min-w-0 flex-1">
                           <p className="text-base font-bold text-gray-12 font-family-dm-sans leading-[1.3] wrap-break-word">
                             {name || "—"}
@@ -399,9 +404,12 @@ export default function OrganizerTeamPage() {
                           >
                             <td className="py-3 px-4">
                               <div className="flex items-center gap-3 min-w-0">
-                                <div className="size-9 rounded-full bg-gray-5 flex items-center justify-center shrink-0 text-xs font-semibold text-gray-12 font-family-dm-sans">
-                                  {memberInitials(m)}
-                                </div>
+                                <UserAvatar
+                                  avatarUrl={m.user.avatarUrl}
+                                  name={name}
+                                  initials={memberInitials(m)}
+                                  shape="full"
+                                />
                                 <span className="text-sm font-semibold text-gray-12 font-family-dm-sans truncate">
                                   {name || "—"}
                                 </span>

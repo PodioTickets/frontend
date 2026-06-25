@@ -13,7 +13,7 @@ import { X, ChevronRight } from "lucide-react";
 import { ArrowButton } from "../ArrowButton";
 import { FinanceIcon } from "../Icons/Organizer/FinanceIcon";
 import Image from "next/image";
-import { formatDateBR, formatTimeBR } from "@/utils/datetimeBR";
+import { formatDateBRT, formatTimeBRT } from "@/utils/datetimeBR";
 
 interface TransferDetail {
   id: string;
@@ -96,11 +96,12 @@ export function TransferDetailsDrawer({
 
   const resolvedStatus = data ? statusLabel(data.transfer.status) : transfer.status;
   const resolvedId = data?.transfer.id ?? transfer.id;
+  // createdAt do repasse é INSTANTE real → BRT (America/Sao_Paulo).
   const resolvedDate = data
-    ? formatDateBR(data.transfer.createdAt, { day: "2-digit", month: "long", year: "numeric" })
+    ? formatDateBRT(data.transfer.createdAt, { day: "2-digit", month: "long", year: "numeric" })
     : transfer.requestDate;
   const resolvedTime = data
-    ? formatTimeBR(data.transfer.createdAt, { hour: "2-digit", minute: "2-digit" })
+    ? formatTimeBRT(data.transfer.createdAt, { hour: "2-digit", minute: "2-digit" })
     : transfer.requestTime;
   const grossValue = data ? data.transfer.amount / 100 : transfer.value;
   const feeValue = data ? data.transfer.feeAmount / 100 : 0;
