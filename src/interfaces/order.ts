@@ -166,6 +166,8 @@ export interface PatchProductsRequest {
     variationId?: string;
     quantity: number;
     participantEmail: string;
+    /** Slot (participante↔ingresso) — desambigua produto→inscrição com e-mail duplicado. */
+    participantIndex?: number;
   }>;
 }
 

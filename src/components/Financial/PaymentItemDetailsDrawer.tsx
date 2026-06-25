@@ -25,7 +25,7 @@ import {
   formatDocumentDisplay,
   formatPersonPhone,
 } from "@/utils/documentDisplay";
-import { formatDateBR, formatTimeBR } from "@/utils/datetimeBR";
+import { formatDateBR, formatDateBRT, formatTimeBRT } from "@/utils/datetimeBR";
 
 interface PaymentItemDetailsDrawerProps {
   isOpen: boolean;
@@ -92,10 +92,10 @@ export function PaymentItemDetailsDrawer({
 
   const formatDate = (dateString?: string | null) => {
     if (!dateString) return "—";
-    // UTC, sem shift de fuso. Mantém o formato "dd/mm/yyyy - HH:mm".
-    const day = formatDateBR(dateString, { day: "2-digit", month: "2-digit", year: "numeric" });
+    // purchaseDate é INSTANTE real → BRT (America/Sao_Paulo). Formato "dd/mm/yyyy - HH:mm".
+    const day = formatDateBRT(dateString, { day: "2-digit", month: "2-digit", year: "numeric" });
     if (!day) return dateString;
-    const time = formatTimeBR(dateString, { hour: "2-digit", minute: "2-digit" });
+    const time = formatTimeBRT(dateString, { hour: "2-digit", minute: "2-digit" });
     return `${day} - ${time}`;
   };
 

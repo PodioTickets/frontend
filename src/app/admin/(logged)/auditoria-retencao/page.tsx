@@ -11,7 +11,7 @@ import {
 } from "lucide-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { cn } from "@/utils/cn";
-import { formatTimeBR } from "@/utils/datetimeBR";
+import { formatTimeBRT } from "@/utils/datetimeBR";
 import { Button } from "@/components/Button";
 import { getApiClient } from "@/services/base/ApiClient";
 import { queryKeys } from "@/services/cache/QueryClient";
@@ -78,9 +78,12 @@ function formatDate(iso: string): { date: string; time: string } {
     "Jan", "Fev", "Mar", "Abr", "Mai", "Jun",
     "Jul", "Ago", "Set", "Out", "Nov", "Dez",
   ];
+  // Timestamp do log é INSTANTE real → BRT (America/Sao_Paulo). BRT é UTC-3 fixo;
+  // deslocar -3h e ler os componentes UTC dá os BRT, preservando o formato "DD Mon, AAAA".
+  const brt = new Date(d.getTime() - 3 * 60 * 60 * 1000);
   return {
-    date: `${String(d.getUTCDate()).padStart(2, "0")} ${months[d.getUTCMonth()]}, ${d.getUTCFullYear()}`,
-    time: formatTimeBR(iso, { hour: "2-digit", minute: "2-digit" }),
+    date: `${String(brt.getUTCDate()).padStart(2, "0")} ${months[brt.getUTCMonth()]}, ${brt.getUTCFullYear()}`,
+    time: formatTimeBRT(iso, { hour: "2-digit", minute: "2-digit" }),
   };
 }
 

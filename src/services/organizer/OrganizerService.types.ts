@@ -84,6 +84,7 @@ export interface OrganizationMember {
     mfaEnabled?: boolean;
     documentNumber?: string;
     lastLoginAt?: string | null;
+    avatarUrl?: string | null;
   };
   organization?: Organization;
 }
@@ -205,6 +206,8 @@ export interface OrganizationAuditLogItem {
   ip: string;
   userId?: string;
   userName: string;
+  /** Avatar do ator da ação; null/ausente quando sem conta ou sem foto. */
+  userAvatarUrl?: string | null;
   action: string;
   occurredAt: string;
   metadata?: Record<string, unknown>;
@@ -253,6 +256,15 @@ export function normalizeOrganizationAuditLogItem(
           ? actor.id
           : undefined;
 
+  // Avatar do ator: campo achatado do backend (`userAvatarUrl`) ou aninhado no
+  // `actor`/`user`. Ausente → undefined (cai nas iniciais no componente).
+  const userAvatarUrl =
+    typeof raw.userAvatarUrl === "string"
+      ? raw.userAvatarUrl
+      : typeof actor?.avatarUrl === "string"
+        ? actor.avatarUrl
+        : null;
+
   let metadata: Record<string, unknown> | undefined =
     raw.metadata &&
       typeof raw.metadata === "object" &&
@@ -291,6 +303,7 @@ export function normalizeOrganizationAuditLogItem(
     ip,
     userId,
     userName,
+    userAvatarUrl,
     action,
     occurredAt,
     metadata,

@@ -23,6 +23,12 @@ export type CouponPreviewResult =
       minCartValue?: number | null;
       /** Quantidade mínima de ingressos no carrinho. `null`/ausente = sem condição. */
       minQuantity?: number | null;
+      /**
+       * Uso restante do cupom (`maxUsage − usageCount`) para cupom DISCOUNT — 1 uso
+       * = 1 unidade coberta. `null`/ausente = sem limite. Capa o desconto do preview
+       * às `remaining` unidades mais caras, espelhando o backend (`computePartialCouponDiscount`).
+       */
+      remaining?: number | null;
     }
   | {
       kind: "voucher";
@@ -279,6 +285,7 @@ export function computeLinkCouponTicketDiscount(
         appliesTo?: string[] | null;
         minCartValue?: number | null;
         minQuantity?: number | null;
+        remaining?: number | null;
       }
     | null
     | undefined,
@@ -288,18 +295,34 @@ export function computeLinkCouponTicketDiscount(
 ): number {
   if (!coupon || coupon.value <= 0) return 0;
   if (!couponConditionsMet(coupon, cartSubtotal, cartQuantity)) return 0;
-  // `null`/vazio → sem restrição de modalidade (todos os ingressos).
+  // `null`/vazio → sem restrição de modalidade (todos os ingressos). Expande os
+  // ingressos elegíveis em UNIDADES (preço por unidade) — base do cap por uso restante.
   const allowedSet =
     coupon.appliesTo && coupon.appliesTo.length ? new Set(coupon.appliesTo) : null;
-  const eligibleSubtotal = selected.reduce((sum, t) => {
-    if (allowedSet && !allowedSet.has(t.id)) return sum;
-    return sum + Math.max(0, t.price) * Math.max(0, t.quantity);
-  }, 0);
+  const eligibleUnits: number[] = [];
+  for (const t of selected) {
+    if (allowedSet && !allowedSet.has(t.id)) continue;
+    const qty = Math.max(0, Math.floor(t.quantity));
+    const unit = Math.max(0, t.price);
+    for (let i = 0; i < qty; i++) eligibleUnits.push(unit);
+  }
+  if (eligibleUnits.length === 0) return 0;
+  // Cap por uso RESTANTE: cobre só as `remaining` unidades MAIS CARAS (espelha
+  // `computePartialCouponDiscount` do backend). `null`/ausente = sem limite → todas.
+  const cap =
+    typeof coupon.remaining === "number" && coupon.remaining >= 0
+      ? coupon.remaining
+      : eligibleUnits.length;
+  const coveredUnits =
+    cap >= eligibleUnits.length
+      ? eligibleUnits
+      : [...eligibleUnits].sort((a, b) => b - a).slice(0, cap);
+  const eligibleSubtotal = coveredUnits.reduce((sum, p) => sum + p, 0);
   if (eligibleSubtotal <= 0) return 0;
   if (coupon.type === "PERCENTAGE") {
     return round2(eligibleSubtotal * (coupon.value / 100));
   }
-  // FIXED em centavos → reais, clampado ao subtotal elegível.
+  // FIXED em centavos → reais, clampado ao subtotal elegível (já capado por `remaining`).
   return round2(Math.min(coupon.value / 100, eligibleSubtotal));
 }
 

@@ -103,8 +103,8 @@ describe("buildAutoSelectedProductsPayload", () => {
       (ticketId) => prods[ticketId] ?? [],
     );
     expect(payload).toEqual([
-      { productId: "kit", variationId: "v1", quantity: 1, participantEmail: "a@x.com" },
-      { productId: "kit", variationId: "v1", quantity: 1, participantEmail: "b@x.com" },
+      { productId: "kit", variationId: "v1", quantity: 1, participantEmail: "a@x.com", participantIndex: 0 },
+      { productId: "kit", variationId: "v1", quantity: 1, participantEmail: "b@x.com", participantIndex: 1 },
     ]);
   });
   it("pula slots sem participante correspondente", () => {

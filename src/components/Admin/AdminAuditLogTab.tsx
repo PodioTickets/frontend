@@ -12,8 +12,10 @@ import {
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { cn } from "@/utils/cn";
-import { DatePicker } from "@/components/DatePicker";
+import type { DateRange } from "react-day-picker";
+import { LogDateRangeFilter, dateRangeToParams } from "@/components/LogDateRangeFilter";
 import { Button } from "@/components/Button";
+import { UserAvatar } from "@/components/UserAvatar";
 import { adminService } from "@/services";
 import { queryKeys } from "@/services/cache/QueryClient";
 import type {
@@ -29,7 +31,7 @@ import toast from "react-hot-toast";
 import { AdminAuditLogDetailsDrawer } from "./AdminAuditLogDetailsDrawer";
 import type { AdminAuditChangeDetail } from "@/services/admin/AdminService";
 import { Pagination } from "../Pagination";
-import { formatDateBR, formatTimeBR } from "@/utils/datetimeBR";
+import { formatDateBRT, formatTimeBRT } from "@/utils/datetimeBR";
 
 const ITEMS_PER_PAGE = 20;
 const ORG_PICKER_PAGE_SIZE = 20;
@@ -61,12 +63,13 @@ const KIND_FILTER_OPTIONS: { value: string; label: string }[] = [
 function formatLogDateTime(iso: string) {
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return "—";
-  const date = formatDateBR(iso, {
+  // occurredAt é INSTANTE real → exibe no fuso de Brasília (BRT), não UTC.
+  const date = formatDateBRT(iso, {
     day: "2-digit",
     month: "2-digit",
     year: "numeric",
   });
-  const time = formatTimeBR(iso, {
+  const time = formatTimeBRT(iso, {
     hour: "2-digit",
     minute: "2-digit",
   });
@@ -153,7 +156,7 @@ export function AdminAuditLogTab() {
   const [orgListLoading, setOrgListLoading] = useState(false);
   const [userFilter, setUserFilter] = useState("");
   const [debouncedUserFilter, setDebouncedUserFilter] = useState("");
-  const [dateFilter, setDateFilter] = useState("");
+  const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
   const [kindFilter, setKindFilter] = useState("");
   const [page, setPage] = useState(1);
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -184,7 +187,7 @@ export function AdminAuditLogTab() {
     debouncedSearch,
     selectedOrganizationId,
     debouncedUserFilter,
-    dateFilter,
+    dateRange,
     kindFilter,
   ]);
 
@@ -225,17 +228,20 @@ export function AdminAuditLogTab() {
     setOrgListPage((p) => Math.min(p, orgListTotalPages));
   }, [orgListTotalPages]);
 
+  const dateParams = dateRangeToParams(dateRange);
+  const dateKey = dateParams.from ? `${dateParams.from}_${dateParams.to}` : "";
+
   const auditLogsQuery = useQuery({
     queryKey: queryKeys.admin.auditLogs.list({
       page,
       search: debouncedSearch,
       organizationId: selectedOrganizationId ?? "",
       userFilter: debouncedUserFilter,
-      dateFilter,
+      dateFilter: dateKey,
       kindFilter,
     }),
     queryFn: async () => {
-      const from = dateFilter || undefined;
+      const { from, to } = dateParams;
       const organizationId = selectedOrganizationId ?? undefined;
       const userId = isValidUuidParam(debouncedUserFilter)
         ? debouncedUserFilter.trim()
@@ -247,7 +253,7 @@ export function AdminAuditLogTab() {
         limit: ITEMS_PER_PAGE,
         q: debouncedSearch || undefined,
         from,
-        to: from,
+        to,
         kind: kindFilter.trim() || undefined,
         organizationId,
         userId,
@@ -309,7 +315,7 @@ export function AdminAuditLogTab() {
 
   const filtersActiveForEmptyCopy =
     Boolean(debouncedSearch) ||
-    Boolean(dateFilter) ||
+    Boolean(dateRange) ||
     Boolean(kindFilter) ||
     selectedOrganizationId != null ||
     Boolean(debouncedUserFilter);
@@ -364,21 +370,15 @@ export function AdminAuditLogTab() {
             </select>
           </div>
           <div className="flex w-full sm:w-[220px] shrink-0 gap-1.5 items-stretch">
-            <DatePicker
-              value={dateFilter || null}
-              onChange={(v) => setDateFilter(v?.trim() ?? "")}
-              placeholder="Filtrar por data"
-              fromYear={2000}
-              disablePastDates={false}
-              className={cn(
-                "flex-1 min-w-0 border-gray-6 bg-gray-1 shadow-[0px_2px_6px_0px_rgba(17,17,17,0.08)]",
-                "focus-visible:ring-[3px] focus-visible:ring-gray-4/50 focus-visible:border-gray-4"
-              )}
+            <LogDateRangeFilter
+              value={dateRange}
+              onChange={setDateRange}
+              className="flex-1 min-w-0"
             />
-            {dateFilter ? (
+            {dateRange ? (
               <button
                 type="button"
-                onClick={() => setDateFilter("")}
+                onClick={() => setDateRange(undefined)}
                 className="shrink-0 size-12 rounded-lg border border-gray-6 bg-gray-1 text-gray-11 hover:bg-gray-2 hover:text-gray-12 shadow-[0px_2px_6px_0px_rgba(17,17,17,0.08)] flex items-center justify-center transition-colors"
                 aria-label="Limpar filtro de data"
               >
@@ -648,9 +648,12 @@ export function AdminAuditLogTab() {
                   IP: {row.ip}
                 </p>
                 <div className="flex items-start gap-2.5">
-                  <div className="size-8 rounded-md bg-gray-5 text-xs font-semibold text-gray-12 font-family-dm-sans flex items-center justify-center shrink-0">
-                    {getInitials(row.userName)}
-                  </div>
+                  <UserAvatar
+                    avatarUrl={row.userAvatarUrl}
+                    name={row.userName}
+                    initials={getInitials(row.userName)}
+                    shape="sm"
+                  />
                   <div className="min-w-0 flex-1">
                     <p className="text-sm font-semibold text-gray-12 font-family-dm-sans leading-[1.3] wrap-break-word">
                       {row.userName}

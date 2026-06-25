@@ -839,6 +839,54 @@ export function InformationStep({
     });
   };
 
+  const setParticipantFieldError = (
+    participantIndex: number,
+    field: string,
+    message: string
+  ) => {
+    setFieldErrors((prev) => ({
+      ...prev,
+      [participantIndex]: { ...(prev[participantIndex] || {}), [field]: message },
+    }));
+  };
+
+  /* Documento (CPF p/ BR, doc cru p/ estrangeiro) já usado em OUTRO ingresso
+   * IGUAL (mesmo `ticketId`). Retorna a mensagem de erro ou `null`. Centraliza a
+   * regra usada tanto na validação de submit quanto inline (on-change), pra
+   * barrar a duplicidade assim que o documento é digitado.
+   * Normalização por tipo: CPF → só dígitos; estrangeiro → trim + lower. Só
+   * compara docs do MESMO tipo (BR vs estrangeiro nunca colidem). */
+  const getDuplicateDocError = (
+    index: number,
+    rawDoc: string | undefined,
+    isBr: boolean
+  ): string | null => {
+    const normalizeDoc = (value: string | undefined, br: boolean) => {
+      const trimmed = value?.trim() ?? "";
+      if (!trimmed) return "";
+      return br ? trimmed.replace(/\D/g, "") : trimmed.toLowerCase();
+    };
+    const currentDoc = normalizeDoc(rawDoc, isBr);
+    if (!currentDoc) return null;
+    const currentTicketId = participantsWithRaces.find(
+      (entry) => entry.participantIndex === index
+    )?.ticketId;
+    if (!currentTicketId) return null;
+    const hasDuplicate = participantsWithRaces.some((entry) => {
+      if (entry.participantIndex === index) return false;
+      if (entry.ticketId !== currentTicketId) return false;
+      const other = participants[entry.participantIndex];
+      if (!other) return false;
+      const otherIsBr = isBrazilianCountry(other.nationality);
+      if (otherIsBr !== isBr) return false;
+      return normalizeDoc(other.cpf, otherIsBr) === currentDoc;
+    });
+    if (!hasDuplicate) return null;
+    return isBr
+      ? "Você selecionou dois ingressos iguais para o mesmo CPF."
+      : "Você selecionou dois ingressos iguais para o mesmo documento.";
+  };
+
   const handleInputChange = (
     index: number,
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
@@ -900,6 +948,12 @@ export function InformationStep({
       const trimmed = value.slice(0, 30).trim();
       updateParticipant(index, { cpf: trimmed });
 
+      // Barra duplicidade na hora: documento já usado em outro ingresso igual.
+      if (trimmed.length >= 4) {
+        const dupError = getDuplicateDocError(index, trimmed, false);
+        if (dupError) setParticipantFieldError(index, "cpf", dupError);
+      }
+
       if (trimmed.length >= 4) {
         docLookupTimersRef.current[index] = setTimeout(async () => {
           try {
@@ -920,6 +974,11 @@ export function InformationStep({
     updateParticipant(index, { cpf: masked });
 
     const clean = masked.replace(/\D/g, "");
+    // Barra duplicidade na hora: CPF completo já usado em outro ingresso igual.
+    if (clean.length === 11) {
+      const dupError = getDuplicateDocError(index, masked, true);
+      if (dupError) setParticipantFieldError(index, "cpf", dupError);
+    }
     if (clean.length === 11 && isValidCPF(masked)) {
       try {
         const user = await userService.getUserByCpf(clean);
@@ -1157,6 +1216,14 @@ export function InformationStep({
       } else if (cpf.length > 30) {
         errors.cpf = "Documento deve ter no máximo 30 caracteres";
       }
+    }
+
+    /* Bloqueia dois ingressos IGUAIS (mesmo `ticketId`) com o MESMO documento.
+     * Só roda quando o doc atual está preenchido e sem erro de formato acima
+     * (evita ruído). Mesma regra do check inline (on-change). */
+    if (!errors.cpf) {
+      const dupError = getDuplicateDocError(index, cpf, participantIsBr);
+      if (dupError) errors.cpf = dupError;
     }
 
     if (!birthDate) {

@@ -4,8 +4,10 @@ import { useEffect, useState } from "react";
 import { Search, X, UserRound, Network, Link2 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { cn } from "@/utils/cn";
-import { DatePicker } from "@/components/DatePicker";
+import type { DateRange } from "react-day-picker";
+import { LogDateRangeFilter, dateRangeToParams } from "@/components/LogDateRangeFilter";
 import { Button } from "@/components/Button";
+import { UserAvatar } from "@/components/UserAvatar";
 import { adminService } from "@/services";
 import { queryKeys } from "@/services/cache/QueryClient";
 import {
@@ -16,7 +18,7 @@ import {
 import toast from "react-hot-toast";
 import { AdminUserActivityDetailsDrawer } from "./AdminUserActivityDetailsDrawer";
 import { Pagination } from "../Pagination";
-import { formatDateBR, formatTimeBR } from "@/utils/datetimeBR";
+import { formatDateBRT, formatTimeBRT } from "@/utils/datetimeBR";
 
 const ITEMS_PER_PAGE = 20;
 
@@ -36,12 +38,13 @@ import {
 function formatLogDateTime(iso: string) {
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return "—";
-  const date = formatDateBR(iso, {
+  // occurredAt é INSTANTE real → exibe no fuso de Brasília (BRT), não UTC.
+  const date = formatDateBRT(iso, {
     day: "2-digit",
     month: "2-digit",
     year: "numeric",
   });
-  const time = formatTimeBR(iso, {
+  const time = formatTimeBRT(iso, {
     hour: "2-digit",
     minute: "2-digit",
   });
@@ -65,7 +68,7 @@ export function AdminUserActivityTab() {
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("");
   const [sourceFilter, setSourceFilter] = useState("");
-  const [dateFilter, setDateFilter] = useState("");
+  const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
   const [userFilter, setUserFilter] = useState("");
   const [debouncedUserFilter, setDebouncedUserFilter] = useState("");
   const [ipFilter, setIpFilter] = useState("");
@@ -111,13 +114,16 @@ export function AdminUserActivityTab() {
     return () => clearTimeout(t);
   }, [sessionFilter]);
 
+  const dateParams = dateRangeToParams(dateRange);
+  const dateKey = dateParams.from ? `${dateParams.from}_${dateParams.to}` : "";
+
   const activityQuery = useQuery({
     queryKey: queryKeys.admin.userActivity.list({
       page,
       search: debouncedSearch,
       category: categoryFilter,
       source: sourceFilter,
-      dateFilter,
+      dateFilter: dateKey,
       userFilter: debouncedUserFilter,
       ip: debouncedIpFilter,
       sessionId: debouncedSessionFilter,
@@ -129,7 +135,7 @@ export function AdminUserActivityTab() {
         : undefined;
       const userSearch =
         !userId && debouncedUserFilter ? debouncedUserFilter : undefined;
-      const from = dateFilter || undefined;
+      const { from, to } = dateParams;
       const { items, pagination } = await adminService.getUserActivityLogs({
         page,
         limit: ITEMS_PER_PAGE,
@@ -140,9 +146,9 @@ export function AdminUserActivityTab() {
         userSearch,
         ip: debouncedIpFilter || undefined,
         sessionId: debouncedSessionFilter || undefined,
-        // Data única: `to` é inclusivo até 23:59:59 no backend
+        // Intervalo (ou dia único): `to` é inclusivo até o fim do dia BRT no backend.
         from,
-        to: from,
+        to,
       });
       return {
         items,
@@ -200,7 +206,7 @@ export function AdminUserActivityTab() {
     Boolean(debouncedSearch) ||
     Boolean(categoryFilter) ||
     Boolean(sourceFilter) ||
-    Boolean(dateFilter) ||
+    Boolean(dateRange) ||
     Boolean(debouncedUserFilter) ||
     Boolean(debouncedIpFilter) ||
     Boolean(debouncedSessionFilter);
@@ -281,25 +287,19 @@ export function AdminUserActivityTab() {
             </select>
           </div>
           <div className="flex w-full sm:w-[220px] shrink-0 gap-1.5 items-stretch">
-            <DatePicker
-              value={dateFilter || null}
-              onChange={(v) => {
-                setDateFilter(v?.trim() ?? "");
+            <LogDateRangeFilter
+              value={dateRange}
+              onChange={(range) => {
+                setDateRange(range);
                 setPage(1);
               }}
-              placeholder="Filtrar por data"
-              fromYear={2000}
-              disablePastDates={false}
-              className={cn(
-                "flex-1 min-w-0 border-gray-6 bg-gray-1 shadow-[0px_2px_6px_0px_rgba(17,17,17,0.08)]",
-                "focus-visible:ring-[3px] focus-visible:ring-gray-4/50 focus-visible:border-gray-4"
-              )}
+              className="flex-1 min-w-0"
             />
-            {dateFilter ? (
+            {dateRange ? (
               <button
                 type="button"
                 onClick={() => {
-                  setDateFilter("");
+                  setDateRange(undefined);
                   setPage(1);
                 }}
                 className="shrink-0 size-12 rounded-lg border border-gray-6 bg-gray-1 text-gray-11 hover:bg-gray-2 hover:text-gray-12 shadow-[0px_2px_6px_0px_rgba(17,17,17,0.08)] flex items-center justify-center transition-colors"
@@ -415,9 +415,12 @@ export function AdminUserActivityTab() {
                 </span>
               </div>
               <div className="flex items-start gap-2.5">
-                <div className="size-8 rounded-md bg-gray-5 text-xs font-semibold text-gray-12 font-family-dm-sans flex items-center justify-center shrink-0">
-                  {getInitials(userDisplayName(row))}
-                </div>
+                <UserAvatar
+                  avatarUrl={row.user?.avatarUrl}
+                  name={userDisplayName(row)}
+                  initials={getInitials(userDisplayName(row))}
+                  shape="sm"
+                />
                 <div className="min-w-0 flex-1">
                   <p className="text-sm font-semibold text-gray-12 font-family-dm-sans leading-[1.3] wrap-break-word">
                     {userDisplayName(row)}

@@ -36,6 +36,7 @@ export interface AdminUserActivityUser {
   fullName: string;
   email: string;
   accountType?: string | null;
+  avatarUrl?: string | null;
 }
 
 /**
@@ -700,6 +701,7 @@ export class AdminService {
               fullName: str(u.fullName) ?? "",
               email: str(u.email) ?? "",
               accountType: str(u.accountType),
+              avatarUrl: str(u.avatarUrl),
             }
           : null,
         sessionId: str(r.sessionId),

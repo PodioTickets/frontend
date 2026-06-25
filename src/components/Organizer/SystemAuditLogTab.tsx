@@ -3,11 +3,13 @@
 import { useEffect, useState } from "react";
 import { Search, ChevronLeft, ChevronRight, X } from "lucide-react";
 import { cn } from "@/utils/cn";
-import { DatePicker } from "@/components/DatePicker";
+import type { DateRange } from "react-day-picker";
+import { LogDateRangeFilter, dateRangeToParams } from "@/components/LogDateRangeFilter";
 import { organizerService } from "@/services";
 import type { OrganizationAuditLogItem } from "@/services/organizer/OrganizerService";
 import toast from "react-hot-toast";
-import { formatDateBR, formatTimeBR } from "@/utils/datetimeBR";
+import { formatDateBRT, formatTimeBRT } from "@/utils/datetimeBR";
+import { UserAvatar } from "@/components/UserAvatar";
 
 export type SystemLogEntry = OrganizationAuditLogItem;
 
@@ -46,12 +48,13 @@ function getVisiblePaginationPages(
 function formatLogDateTime(iso: string) {
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return "—";
-  const date = formatDateBR(iso, {
+  // occurredAt é INSTANTE real → exibe no fuso de Brasília (BRT), não UTC.
+  const date = formatDateBRT(iso, {
     day: "2-digit",
     month: "2-digit",
     year: "numeric",
   });
-  const time = formatTimeBR(iso, {
+  const time = formatTimeBRT(iso, {
     hour: "2-digit",
     minute: "2-digit",
   });
@@ -272,7 +275,7 @@ function AuditLogPagination({
 export function SystemAuditLogTab() {
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
-  const [dateFilter, setDateFilter] = useState("");
+  const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
   const [page, setPage] = useState(1);
   const [items, setItems] = useState<OrganizationAuditLogItem[]>([]);
   const [total, setTotal] = useState(0);
@@ -287,7 +290,7 @@ export function SystemAuditLogTab() {
 
   useEffect(() => {
     setPage(1);
-  }, [debouncedSearch, dateFilter]);
+  }, [debouncedSearch, dateRange]);
 
   useEffect(() => {
     let cancelled = false;
@@ -295,14 +298,14 @@ export function SystemAuditLogTab() {
       setLoading(true);
       setForbidden(false);
       try {
-        const from = dateFilter || undefined;
+        const { from, to } = dateRangeToParams(dateRange);
         const { items: nextItems, pagination } =
           await organizerService.getOrganizationAuditLogs({
             page,
             limit: ITEMS_PER_PAGE,
             q: debouncedSearch || undefined,
             from,
-            to: from,
+            to,
           });
         if (cancelled) return;
         setItems(nextItems);
@@ -332,7 +335,7 @@ export function SystemAuditLogTab() {
     return () => {
       cancelled = true;
     };
-  }, [page, debouncedSearch, dateFilter]);
+  }, [page, debouncedSearch, dateRange]);
 
   const safePage = Math.min(page, totalPages);
 
@@ -380,21 +383,15 @@ export function SystemAuditLogTab() {
           />
         </div>
         <div className="flex w-full sm:w-[220px] shrink-0 gap-1.5 items-stretch">
-          <DatePicker
-            value={dateFilter || null}
-            onChange={(v) => setDateFilter(v?.trim() ?? "")}
-            placeholder="Filtrar por data"
-            fromYear={2000}
-            disablePastDates={false}
-            className={cn(
-              "flex-1 min-w-0 border-gray-6 bg-gray-1 shadow-[0px_2px_6px_0px_rgba(17,17,17,0.08)]",
-              "focus-visible:ring-[3px] focus-visible:ring-gray-4/50 focus-visible:border-gray-4"
-            )}
+          <LogDateRangeFilter
+            value={dateRange}
+            onChange={setDateRange}
+            className="flex-1 min-w-0"
           />
-          {dateFilter ? (
+          {dateRange ? (
             <button
               type="button"
-              onClick={() => setDateFilter("")}
+              onClick={() => setDateRange(undefined)}
               className="shrink-0 size-12 rounded-lg border border-gray-6 bg-gray-1 text-gray-11 hover:bg-gray-2 hover:text-gray-12 shadow-[0px_2px_6px_0px_rgba(17,17,17,0.08)] flex items-center justify-center transition-colors"
               aria-label="Limpar filtro de data"
             >
@@ -415,7 +412,7 @@ export function SystemAuditLogTab() {
           </div>
         ) : items.length === 0 ? (
           <div className="rounded-xl border border-gray-6 bg-gray-1 py-14 text-center text-sm text-gray-11 font-family-dm-sans shadow-[0px_2px_6px_0px_rgba(17,17,17,0.08)] px-4">
-            {debouncedSearch || dateFilter
+            {debouncedSearch || dateRange
               ? "Nenhum registro encontrado com os filtros atuais."
               : "Nenhum registro disponível."}
           </div>
@@ -431,9 +428,12 @@ export function SystemAuditLogTab() {
                   IP: {row.ip}
                 </p>
                 <div className="flex items-start gap-2.5">
-                  <div className="size-8 rounded-md bg-gray-5 text-xs font-semibold text-gray-12 font-family-dm-sans flex items-center justify-center shrink-0">
-                    {getInitials(row.userName)}
-                  </div>
+                  <UserAvatar
+                    avatarUrl={row.userAvatarUrl}
+                    name={row.userName}
+                    initials={getInitials(row.userName)}
+                    shape="sm"
+                  />
                   <div className="min-w-0 flex-1">
                     <p className="text-sm font-semibold text-gray-12 font-family-dm-sans leading-[1.3] wrap-break-word">
                       {row.userName}
@@ -503,7 +503,7 @@ export function SystemAuditLogTab() {
                     colSpan={4}
                     className="py-16 text-center text-sm text-gray-11 font-family-dm-sans"
                   >
-                    {debouncedSearch || dateFilter
+                    {debouncedSearch || dateRange
                       ? "Nenhum registro encontrado com os filtros atuais."
                       : "Nenhum registro disponível."}
                   </td>
