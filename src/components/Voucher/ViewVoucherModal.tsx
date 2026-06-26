@@ -8,7 +8,7 @@ import { organizerService } from "@/services";
 import toast from "react-hot-toast";
 import { useClipboard } from "@/hooks/useClipboard";
 import { buildCouponShareLink } from "@/lib/couponShareLink";
-import { formatDateBR } from "@/utils/datetimeBR";
+import { formatDateBRT } from "@/utils/datetimeBR";
 import { CopyIcon } from "@/components/Icons/CopyIcon";
 import { Button } from "@/components/Button";
 import { TicketIcon } from "@/components/Icons/TicketIcon";
@@ -183,9 +183,11 @@ export function ViewVoucherModal() {
     toast.success("CSV baixado com sucesso!");
   };
 
+  // Validade = fim do dia em BRT (instante). Exibir em Brasília → mostra o DIA
+  // escolhido; compatível com dados novos e legados (ver toCivilDayBRT).
   const formatDate = (dateString?: string) => {
     if (!dateString) return "Sem validade";
-    return formatDateBR(dateString, {
+    return formatDateBRT(dateString, {
       day: "2-digit",
       month: "2-digit",
       year: "numeric",

@@ -6,6 +6,7 @@ import { FileText } from "lucide-react";
 import { TicketIcon } from "@/components/Icons/TicketIcon";
 import { Tooltip } from "@/components/Tooltip";
 import { getAvatarUrl } from "@/utils/avatar";
+import { formatDateBRTShort, formatTimeBRT } from "@/utils/datetimeBR";
 import {
   getFinalStatus,
   type RegistrationListRow,
@@ -111,17 +112,16 @@ export function RegistrationRow({
         </div>
       </div>
 
-      {/* Data compra */}
-      <div className="flex h-full items-center p-4 w-[140px]">
-        <p className="font-family-dm-sans font-medium leading-[1.3] text-sm text-gray-12">
-          <span>{registration.createdAt
-            ? (() => {
-              const date = new Date(registration.createdAt);
-              const months = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
-              return `${date.getDate().toString().padStart(2, "0")} ${months[date.getMonth()]}, ${date.getFullYear()}`;
-            })()
-            : "—"}</span>
-        </p>
+      {/* Data compra (instante real → BRT): data + horário embaixo */}
+      <div className="flex flex-col h-full justify-center p-4 w-[140px]">
+        <span className="font-family-dm-sans font-medium leading-[1.3] text-sm text-gray-12">
+          {registration.createdAt ? formatDateBRTShort(registration.createdAt) : "—"}
+        </span>
+        {registration.createdAt && (
+          <span className="font-family-dm-sans font-normal leading-[1.3] text-xs text-gray-11">
+            {formatTimeBRT(registration.createdAt, { hour: "2-digit", minute: "2-digit" })}
+          </span>
+        )}
       </div>
 
       {/* Status */}

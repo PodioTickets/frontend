@@ -8,7 +8,7 @@ import { CopyIcon } from "@/components/Icons/CopyIcon";
 import { PencilIcon } from "@/components/Icons/PencilIcon";
 import { TrashIcon } from "@/components/Icons/TrashIcon";
 import toast from "react-hot-toast";
-import { formatDateBR } from "@/utils/datetimeBR";
+import { formatDateBRT } from "@/utils/datetimeBR";
 import { Plus, ChevronLeft, ChevronRight } from "lucide-react";
 import { useClipboard } from "@/hooks/useClipboard";
 import { buildCouponShareLink } from "@/lib/couponShareLink";
@@ -204,8 +204,10 @@ export function EventCouponsView({
     }).format(value);
   };
 
+  // Validade do cupom = fim do dia em BRT (instante). Exibir em Brasília pra
+  // mostrar o DIA escolhido — funciona p/ dados novos e legados (ver toCivilDayBRT).
   const formatDate = (dateString: string) => {
-    return formatDateBR(dateString, {
+    return formatDateBRT(dateString, {
       day: "2-digit",
       month: "2-digit",
       year: "numeric",

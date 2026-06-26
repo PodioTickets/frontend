@@ -16,6 +16,7 @@ import {
   type RegistrationListRow,
 } from "@/lib/registrations";
 import type { RegistrationsViewProps } from "@/components/Registrations/RegistrationsView";
+import { toCivilDayString } from "@/utils/datetimeBR";
 
 /**
  * Controller da listagem de inscrições do evento — compartilhado entre as páginas
@@ -139,8 +140,8 @@ export function useEventRegistrations({
               : undefined,
           search: searchTerm || undefined,
           ticketIds: selectedTicketIds.length > 0 ? selectedTicketIds : undefined,
-          startDate: appliedDateRange?.from?.toISOString(),
-          endDate: appliedDateRange?.to?.toISOString(),
+          startDate: toCivilDayString(appliedDateRange?.from),
+          endDate: toCivilDayString(appliedDateRange?.to),
         });
         setRegistrations(registrationsData.registrations as RegistrationListRow[]);
         setPagination(registrationsData.pagination);

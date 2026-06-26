@@ -437,6 +437,9 @@ export function OrganizerEditDrawer({ isOpen, onClose, org, onUpdated, mode = "e
   const [pixKeys, setPixKeys] = useState<PixKey[]>([]);
   const [cnpjValue, setCnpjValue] = useState("");
   const [cnpjError, setCnpjError] = useState("");
+  // Tipo de pessoa: PJ usa CNPJ + "Razão social"; PF usa CPF + "Nome completo".
+  // O backend persiste só o `document` (CPF ou CNPJ); o tipo é inferido pelo tamanho.
+  const [personType, setPersonType] = useState<"PF" | "PJ">("PJ");
   const [ownerName, setOwnerName] = useState("");
   const [ownerDocument, setOwnerDocument] = useState("");
   const [fiscalEmail, setFiscalEmail] = useState("");
@@ -456,6 +459,7 @@ export function OrganizerEditDrawer({ isOpen, onClose, org, onUpdated, mode = "e
     if (isCreate) {
       setDetail(null);
       setLoading(false);
+      setPersonType("PJ");
       setCnpjValue("");
       setName("");
       setTradeName("");
@@ -497,7 +501,10 @@ export function OrganizerEditDrawer({ isOpen, onClose, org, onUpdated, mode = "e
         const d: OrgDetail = raw?.data?.organization ?? raw?.organization ?? raw?.data ?? raw;
         setDetail(d);
 
-        setCnpjValue(formatCNPJ(d.document ?? org.document ?? ""));
+        const docRaw = d.document ?? org.document ?? "";
+        const isPf = digits(docRaw).length === 11;
+        setPersonType(isPf ? "PF" : "PJ");
+        setCnpjValue(isPf ? formatCPF(docRaw) : formatCNPJ(docRaw));
         setName(d.name ?? "");
         setTradeName(d.tradeName ?? "");
         setZipCode(formatCEP(d.zipCode));
@@ -664,11 +671,23 @@ export function OrganizerEditDrawer({ isOpen, onClose, org, onUpdated, mode = "e
     setPixKeys((prev) => prev.filter((k) => k.id !== id));
   };
 
+  // Alterna PF/PJ re-aplicando a máscara correta sobre os dígitos já digitados
+  // (CPF corta em 11, CNPJ em 14) e limpa erro de documento pendente.
+  const handlePersonTypeChange = (next: "PF" | "PJ") => {
+    if (next === personType) return;
+    setPersonType(next);
+    const d = digits(cnpjValue);
+    setCnpjValue(next === "PF" ? formatCPF(d.slice(0, 11)) : formatCNPJ(d.slice(0, 14)));
+    if (cnpjError) setCnpjError("");
+  };
+
   const logoUrl = detail?.logoUrl ?? org?.logoUrl ?? null;
   const orgName = isCreate ? (name || "Nova organização") : (name || org?.name || "—");
   const createdAt = detail?.createdAt ?? org?.createdAt;
   const eventCount = detail?._count?.events ?? detail?.eventCount ?? org?.eventCount ?? 0;
-  const cnpj = detail?.document ?? org?.document ?? "";
+  const headerDocDigits = digits(detail?.document ?? org?.document ?? "");
+  const headerDocLabel = headerDocDigits.length === 11 ? "CPF" : "CNPJ";
+  const headerDocFormatted = formatCPFOrCNPJ(headerDocDigits);
   const isActive = detail?.isActive ?? org?.isActive ?? true;
   const drawerTitle = isCreate ? "Criar organizador" : "Editar organizador";
 
@@ -718,9 +737,9 @@ export function OrganizerEditDrawer({ isOpen, onClose, org, onUpdated, mode = "e
                   </div>
                   <div className="flex flex-col gap-3">
                     <p className="font-manrope font-bold text-xl leading-[1.1] text-gray-12">{orgName}</p>
-                    {cnpj && (
+                    {headerDocFormatted && (
                       <p className="text-base font-normal font-family-dm-sans text-gray-11 leading-[1.3]">
-                        CNPJ: {cnpj}
+                        {headerDocLabel}: {headerDocFormatted}
                       </p>
                     )}
                   </div>
@@ -762,19 +781,53 @@ export function OrganizerEditDrawer({ isOpen, onClose, org, onUpdated, mode = "e
               {/* Detalhes da organização */}
               <div className="flex flex-col gap-6">
                 <SectionTitle icon={<Building2 className="size-5" />} label="Detalhes da organização" />
+
+                {/* Tipo de pessoa — alterna os campos de documento/nome abaixo. */}
+                <div className="flex flex-col gap-2">
+                  <label className="text-base font-normal font-family-dm-sans text-gray-12 leading-[1.3]">
+                    Tipo de pessoa
+                  </label>
+                  <div className="flex w-full max-w-[360px] gap-1 rounded-lg border border-gray-6 bg-gray-2 p-1">
+                    {([
+                      { id: "PJ", label: "Pessoa jurídica" },
+                      { id: "PF", label: "Pessoa física" },
+                    ] as const).map((t) => (
+                      <button
+                        key={t.id}
+                        type="button"
+                        onClick={() => handlePersonTypeChange(t.id)}
+                        className={cn(
+                          "h-10 flex-1 rounded-md text-sm font-medium font-family-dm-sans transition-colors",
+                          personType === t.id
+                            ? "bg-gray-1 text-gray-12 shadow-sm"
+                            : "text-gray-11 hover:text-gray-12",
+                        )}
+                      >
+                        {t.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
                 <div className="flex flex-wrap gap-x-4 gap-y-6">
                   <FieldInput
-                    label="CNPJ"
+                    label={personType === "PF" ? "CPF" : "CNPJ"}
                     value={cnpjValue}
                     onChange={(v) => {
-                      setCnpjValue(formatCNPJ(v));
+                      setCnpjValue(personType === "PF" ? formatCPF(v) : formatCNPJ(v));
                       if (cnpjError) setCnpjError("");
                     }}
-                    placeholder="00.000.000/0000-00"
+                    placeholder={personType === "PF" ? "000.000.000-00" : "00.000.000/0000-00"}
                     className="min-w-[284px]"
                     error={cnpjError}
                   />
-                  <FieldInput label="Razão social" value={name} onChange={setName} placeholder="Razão social" className="min-w-[284px]" />
+                  <FieldInput
+                    label={personType === "PF" ? "Nome completo" : "Razão social"}
+                    value={name}
+                    onChange={setName}
+                    placeholder={personType === "PF" ? "Nome completo" : "Razão social"}
+                    className="min-w-[284px]"
+                  />
                   <FieldInput label="Nome fantasia" value={tradeName} onChange={setTradeName} placeholder="Nome fantasia" className="min-w-[284px]" />
                   <FieldInput label="Nome do responsável" value={ownerName} onChange={setOwnerName} placeholder="Nome completo" className="min-w-[284px]" />
                   <FieldInput label="CPF do responsável" value={ownerDocument} onChange={(v) => setOwnerDocument(formatCPF(v))} placeholder="000.000.000-00" className="min-w-[284px]" />

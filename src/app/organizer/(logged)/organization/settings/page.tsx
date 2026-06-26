@@ -411,10 +411,14 @@ export default function OrganizationSettingsPage() {
                         {organizer.name || "Nome da organização"}
                       </p>
                       <p className="font-family-dm-sans leading-[1.3] text-sm md:text-xl text-gray-11">
-                        CNPJ:{" "}
-                        {organizer.document
-                          ? maskCNPJ(organizer.document.replace(/\D/g, ""))
-                          : "00.000.000/0000-00"}
+                        {/* Exibe CPF ou CNPJ conforme o tamanho do documento (PF=11, PJ=14). */}
+                        {(() => {
+                          const docDigits = (organizer.document ?? "").replace(/\D/g, "");
+                          if (!docDigits) return "CNPJ: 00.000.000/0000-00";
+                          return docDigits.length === 11
+                            ? `CPF: ${maskCPF(docDigits)}`
+                            : `CNPJ: ${maskCNPJ(docDigits)}`;
+                        })()}
                       </p>
                     </div>
                   </div>
@@ -497,42 +501,9 @@ export default function OrganizationSettingsPage() {
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 w-full">
-                {/* CNPJ */}
-                <div className="flex flex-col gap-2 items-start">
-                  <label className="font-family-dm-sans font-normal leading-[1.3] text-sm text-gray-12">
-                    CNPJ
-                  </label>
-                  <Input
-                    type="text"
-                    name="document"
-                    value={maskCNPJ(formData.document)}
-                    onChange={(e) => {
-                      const value = e.target.value.replace(/\D/g, "");
-                      setFormData((prev) => ({ ...prev, document: value }));
-                    }}
-                    placeholder="00.000.000/0000-00"
-                    disabled
-                    className="disabled:opacity-50 disabled:cursor-not-allowed placeholder:text-black bg-gray-6"
-                  />
-                </div>
+                {/* CNPJ e Razão social removidos desta tela — dados fiscais geridos pelo admin. */}
 
-                {/* Razão social (nome legal) — vem do cadastro fiscal (campo `name`), read-only */}
-                <div className="flex flex-col gap-2 items-start">
-                  <label className="font-family-dm-sans font-normal leading-[1.3] text-sm text-gray-12">
-                    Razão social
-                  </label>
-                  <Input
-                    type="text"
-                    name="name"
-                    value={organizer.name ?? ""}
-                    placeholder="Digite a razão social"
-                    disabled
-                    className="disabled:opacity-50 disabled:cursor-not-allowed placeholder:text-black bg-gray-6"
-                  />
-                </div>
-
-                {/* Nome fantasia (campo `tradeName`) — editável pelo organizador.
-                    Antes estava rotulado "Razão social" por engano. */}
+                {/* Nome fantasia (campo `tradeName`) — editável pelo organizador. */}
                 <div className="flex flex-col gap-2 items-start">
                   <label className="font-family-dm-sans font-normal leading-[1.3] text-sm text-gray-12">
                     Nome fantasia

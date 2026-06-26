@@ -9,6 +9,7 @@ import {
   loadLastCreateEventWizardPath,
 } from "@/lib/createEventWizardPersistence";
 import { organizerService } from "@/services";
+import { toUtcDate } from "@/utils/datetimeBR";
 
 export const dynamic = "force-dynamic";
 
@@ -42,19 +43,22 @@ function getNextIncompleteStep(event: any, ticketCount: number): string {
   return "/organizer/events/new/information";
 }
 
+// Datas/horas do evento são WALL-CLOCK (backend devolve ISO com `Z`). Ler em UTC
+// (mesmo padrão do EditEventContext/datetimeBR) pra não deslocar dia/hora ao
+// re-hidratar um rascunho existente no fluxo de criação.
 function formatDateOnly(iso: string | null | undefined): string {
-  if (!iso) return "";
-  const d = new Date(iso);
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, "0");
-  const day = String(d.getDate()).padStart(2, "0");
+  const d = toUtcDate(iso);
+  if (!d) return "";
+  const y = d.getUTCFullYear();
+  const m = String(d.getUTCMonth() + 1).padStart(2, "0");
+  const day = String(d.getUTCDate()).padStart(2, "0");
   return `${y}-${m}-${day}`;
 }
 
 function formatTimeOnly(iso: string | null | undefined): string {
-  if (!iso) return "";
-  const d = new Date(iso);
-  return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+  const d = toUtcDate(iso);
+  if (!d) return "";
+  return `${String(d.getUTCHours()).padStart(2, "0")}:${String(d.getUTCMinutes()).padStart(2, "0")}`;
 }
 
 function formatCEP(raw: string | null | undefined): string {
