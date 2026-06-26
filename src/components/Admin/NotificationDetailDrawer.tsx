@@ -8,7 +8,7 @@ import { cn } from "@/utils/cn";
 import { getApiClient } from "@/services/base/ApiClient";
 import { ImageWithInitialFallback } from "@/components/ImageWithInitialFallback";
 import toast from "react-hot-toast";
-import { formatDateBR } from "@/utils/datetimeBR";
+import { formatDateBRT } from "@/utils/datetimeBR";
 import { sanitizeRichHtml } from "@/lib/richContent";
 
 type NotificationStatus = "review" | "sent" | "denied";
@@ -39,7 +39,8 @@ function formatDateShort(iso?: string): string {
   if (!iso) return "—";
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return "—";
-  return formatDateBR(iso, { day: "2-digit", month: "2-digit", year: "numeric" });
+  // occurredAt é INSTANTE real → fuso de Brasília (BRT), não UTC.
+  return formatDateBRT(iso, { day: "2-digit", month: "2-digit", year: "numeric" });
 }
 
 function SectionLabel({ children }: { children: React.ReactNode }) {

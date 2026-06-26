@@ -10,17 +10,18 @@ import {
 } from "@/components/ui/drawer";
 import { X } from "lucide-react";
 import type { AdminAuditLogItem } from "@/services/admin/AdminService";
-import { formatDateBR, formatTimeBR } from "@/utils/datetimeBR";
+import { formatDateBRT, formatTimeBRT } from "@/utils/datetimeBR";
 
 function formatLogDateTime(iso: string) {
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return "—";
-  const date = formatDateBR(iso, {
+  // occurredAt é INSTANTE real → fuso de Brasília (BRT), não UTC (igual à lista).
+  const date = formatDateBRT(iso, {
     day: "2-digit",
     month: "2-digit",
     year: "numeric",
   });
-  const time = formatTimeBR(iso, {
+  const time = formatTimeBRT(iso, {
     hour: "2-digit",
     minute: "2-digit",
     second: "2-digit",
