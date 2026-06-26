@@ -253,12 +253,11 @@ export function RegistrationsView({
                 allowPastDates
                 onSelect={(range) => {
                   setDateRange(range);
-                  const hasTwo = range?.from && range?.to && range.from.getTime() !== range.to.getTime();
-                  const isCleared = !range || (!range.from && !range.to);
-                  if (hasTwo || isCleared) {
-                    setAppliedDateRange(isCleared ? undefined : range ?? undefined);
-                    setPagination((prev) => ({ ...prev, page: 1 }));
-                  }
+                  // Aplica em DIA ÚNICO (só `from` → [from, from]) ou INTERVALO; limpo → remove.
+                  setAppliedDateRange(
+                    range?.from ? (range.to ? range : { from: range.from, to: range.from }) : undefined,
+                  );
+                  setPagination((prev) => ({ ...prev, page: 1 }));
                 }}
                 value={dateRange}
               />
@@ -379,16 +378,11 @@ export function RegistrationsView({
               allowPastDates
               onSelect={(range) => {
                 setDateRange(range);
-                // Só aplica o filtro e busca quando há duas datas diferentes no range (segunda data selecionada) ou foi limpo
-                const hasTwoDifferentDates =
-                  range?.from != null &&
-                  range?.to != null &&
-                  range.from.getTime() !== range.to.getTime();
-                const isCleared = range == null || (range.from == null && range.to == null);
-                if (hasTwoDifferentDates || isCleared) {
-                  setAppliedDateRange(isCleared ? undefined : range ?? undefined);
-                  setPagination((prev) => ({ ...prev, page: 1 }));
-                }
+                // Aplica em DIA ÚNICO (só `from` → [from, from]) ou INTERVALO; limpo → remove.
+                setAppliedDateRange(
+                  range?.from ? (range.to ? range : { from: range.from, to: range.from }) : undefined,
+                );
+                setPagination((prev) => ({ ...prev, page: 1 }));
               }}
               value={dateRange}
             />

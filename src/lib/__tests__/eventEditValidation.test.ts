@@ -64,6 +64,61 @@ describe("validateEventInformation", () => {
     expect(errors.registrationPeriod).toBeDefined();
   });
 
+  it("início das inscrições NA data do evento → erro (deve ser ANTES)", () => {
+    const errors = validateEventInformation({
+      ...validForm(),
+      eventDate: "2026-08-10",
+      registrationStartDate: "2026-08-10",
+    });
+    expect(errors.registrationStartDate).toBe(
+      "A data de início das inscrições deve ser antes da data do evento.",
+    );
+  });
+
+  it("início das inscrições DEPOIS do evento → erro", () => {
+    const errors = validateEventInformation({
+      ...validForm(),
+      eventDate: "2026-08-10",
+      registrationStartDate: "2026-08-11",
+      registrationEndDate: "2026-08-12",
+    });
+    expect(errors.registrationStartDate).toBe(
+      "A data de início das inscrições deve ser antes da data do evento.",
+    );
+  });
+
+  it("início das inscrições ANTES do evento → sem erro de início", () => {
+    const errors = validateEventInformation({
+      ...validForm(),
+      eventDate: "2026-08-10",
+      registrationStartDate: "2026-08-09",
+      registrationEndDate: "2026-08-09",
+    });
+    expect(errors.registrationStartDate).toBeUndefined();
+  });
+
+  it("por HORAS: véspera às 23:59 → ok; dia do evento às 00:00 → erro", () => {
+    const vespera = validateEventInformation({
+      ...validForm(),
+      eventDate: "2026-08-10",
+      registrationStartDate: "2026-08-09",
+      registrationStartTime: "23:59",
+      registrationEndDate: "2026-08-09",
+      registrationEndTime: "23:59",
+    });
+    expect(vespera.registrationStartDate).toBeUndefined();
+
+    const meiaNoiteDoEvento = validateEventInformation({
+      ...validForm(),
+      eventDate: "2026-08-10",
+      registrationStartDate: "2026-08-10",
+      registrationStartTime: "00:00",
+    });
+    expect(meiaNoiteDoEvento.registrationStartDate).toBe(
+      "A data de início das inscrições deve ser antes da data do evento.",
+    );
+  });
+
   it("valida CEP: obrigatório e 8 dígitos", () => {
     expect(validateEventInformation({ ...validForm(), cep: "" }).cep).toBe("CEP é obrigatório");
     expect(validateEventInformation({ ...validForm(), cep: "123" }).cep).toBe("CEP inválido");

@@ -5,6 +5,10 @@ export const REGISTRATION_END_BEFORE_START_TOAST =
 export const DATE_NOT_BEFORE_TODAY_TOAST =
   "Não é permitido selecionar uma data anterior a hoje.";
 
+/** Início das inscrições deve ser anterior à data do evento. */
+export const REGISTRATION_START_NOT_BEFORE_EVENT_TOAST =
+  "A data de início das inscrições deve ser antes da data do evento.";
+
 /** Início do dia atual (horário local) para `minDate` em pickers que não permitem datas passadas. */
 export function getTodayStartLocal(): Date {
   const t = new Date();
@@ -43,6 +47,28 @@ export function isIsoDateStrictlyBefore(
     boundaryDayStart.getDate(),
   );
   return parsed < b;
+}
+
+/**
+ * `true` quando o INSTANTE de início das inscrições (data + HORA) NÃO é anterior ao início
+ * do dia do evento (eventDate às 00:00) — viola "o início deve ser antes da data do evento".
+ * Comparação por DATETIME (por horas): usa `registrationStartTime` (vazio = 00:00). O evento
+ * não tem horário neste form, então a referência é a meia-noite do dia do evento. Usado no
+ * onChange e no submit.
+ */
+export function isRegistrationStartNotBeforeEvent(
+  registrationStartDateYmd: string | undefined,
+  registrationStartTime: string | undefined,
+  eventDateYmd: string | undefined,
+): boolean {
+  const rs = registrationStartDateYmd?.trim();
+  const ed = eventDateYmd?.trim();
+  if (!rs || !ed) return false;
+  const time = registrationStartTime?.trim() || "00:00";
+  const startMs = new Date(`${rs}T${time}:00`).getTime();
+  const eventStartMs = new Date(`${ed}T00:00:00`).getTime();
+  if (Number.isNaN(startMs) || Number.isNaN(eventStartMs)) return false;
+  return startMs >= eventStartMs;
 }
 
 export type RegistrationPeriodFields = {
