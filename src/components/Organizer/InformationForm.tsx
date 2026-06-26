@@ -202,6 +202,26 @@ export function InformationForm({
     onChange({ [name]: value });
     clearRegistrationPeriodError(name);
     if (errors[name]) onErrorsChange((prev) => ({ ...prev, [name]: "" }));
+
+    // A regra "início das inscrições antes da data do evento" é por INSTANTE (data+HORA).
+    // Mudar só a HORA de início precisa reavaliar — senão o erro não aparece/limpa ao
+    // ajustar os minutos (ex.: início no mesmo dia do evento). Espelha o handler de `eventDate`.
+    if (name === "registrationStartTime") {
+      const startBeforeEventViolation = isRegistrationStartNotBeforeEvent(
+        values.registrationStartDate,
+        value,
+        values.eventDate,
+      );
+      if (startBeforeEventViolation) toast.error(REGISTRATION_START_NOT_BEFORE_EVENT_TOAST);
+      onErrorsChange((prev) => ({
+        ...prev,
+        registrationStartDate: startBeforeEventViolation
+          ? REGISTRATION_START_NOT_BEFORE_EVENT_TOAST
+          : prev.registrationStartDate === REGISTRATION_START_NOT_BEFORE_EVENT_TOAST
+            ? ""
+            : prev.registrationStartDate,
+      }));
+    }
   };
 
   const handleDateChange = (name: string, value: string) => {

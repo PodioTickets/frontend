@@ -15,7 +15,7 @@ import { CalendarIcon } from "@/components/Icons/CalendarIcon";
 import { TicketIcon } from "@/components/Icons/TicketIcon";
 import { SelectTicketsFilterModal } from "@/components/Registrations/SelectTicketsFilterModal";
 import { getAvatarUrl } from "@/utils/avatar";
-import { formatDateBRT, formatTimeBRT } from "@/utils/datetimeBR";
+import { formatDateBRT, formatTimeBRT, toCivilDayString } from "@/utils/datetimeBR";
 import type { Event } from "@/interfaces/event";
 import type { RegistrationStats } from "@/services/organizer/OrganizerService";
 import {
@@ -569,8 +569,8 @@ export function RegistrationsView({
                       search: searchTerm || undefined,
                       status: statusFilter !== "all" ? statusFilter : undefined,
                       ticketIds: selectedTicketIds.length > 0 ? selectedTicketIds : undefined,
-                      startDate: appliedDateRange?.from?.toISOString(),
-                      endDate: appliedDateRange?.to?.toISOString(),
+                      startDate: toCivilDayString(appliedDateRange?.from),
+                      endDate: toCivilDayString(appliedDateRange?.to),
                     },
                   })}
                 >
@@ -698,8 +698,8 @@ export function RegistrationsView({
                         search: searchTerm || undefined,
                         status: statusFilter !== "all" ? statusFilter : undefined,
                         ticketIds: selectedTicketIds.length > 0 ? selectedTicketIds : undefined,
-                        startDate: appliedDateRange?.from?.toISOString(),
-                        endDate: appliedDateRange?.to?.toISOString(),
+                        startDate: toCivilDayString(appliedDateRange?.from),
+                        endDate: toCivilDayString(appliedDateRange?.to),
                       },
                     });
                   }}

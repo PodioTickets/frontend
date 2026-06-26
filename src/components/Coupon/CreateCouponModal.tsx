@@ -15,6 +15,7 @@ import { organizerService } from "@/services";
 import { ArrowButton } from "../ArrowButton";
 import { SelectTicketsModal } from "./SelectTicketsModal";
 import { cn } from "@/utils/cn";
+import { toCivilDayBRT } from "@/utils/datetimeBR";
 import { useCpfList } from "@/hooks/useCpfList";
 import { formatCpf as formatCPF } from "@/lib/cpfList";
 
@@ -120,7 +121,7 @@ export function CreateCouponModal() {
       value !== originalValue ||
       appliesTo !== originalAppliesTo ||
       JSON.stringify([...selectedTicketIds].sort()) !== JSON.stringify(originalTicketIds) ||
-      expiryDate !== (c.expiryDate || null) ||
+      expiryDate !== (c.expiryDate ? toCivilDayBRT(c.expiryDate) : null) ||
       expiryEnabled !== !!c.expiryDate ||
       usageLimit !== (c.maxUsage?.toString() || "") ||
       usageLimitEnabled !== !!c.maxUsage ||
@@ -179,7 +180,8 @@ export function CreateCouponModal() {
           setSelectedTicketIds([]);
         }
 
-        setExpiryDate(c.expiryDate || null);
+        // Converte o instante de validade (fim do dia BRT) pro dia civil do picker.
+        setExpiryDate(c.expiryDate ? toCivilDayBRT(c.expiryDate) : null);
         setExpiryEnabled(!!c.expiryDate);
         setUsageLimit(c.maxUsage?.toString() || "");
         setUsageLimitEnabled(!!c.maxUsage);
