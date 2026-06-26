@@ -580,7 +580,7 @@ export function RegistrationsView({
                     },
                   })}
                 >
-                  Exportar TXT
+                  Exportar dados
                 </Button>
               </div>
 
@@ -710,7 +710,7 @@ export function RegistrationsView({
                     });
                   }}
                 >
-                  Exportar TXT
+                  Exportar dados
                 </Button>
               </div>
             </>

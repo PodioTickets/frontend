@@ -220,7 +220,8 @@
       "Bash(awk '/^model Voucher \\\\{/,/^\\\\}/' prisma/schema.prisma)",
       "Bash(awk '/kind.*coupon|kind.*voucher|CouponPreviewResult|couponPreview.*=/{print NR\": \"$0}' src/components/Checkout/ModalitiesStep.tsx)",
       "Bash(grep -rliE \"getStats|aggregateEventRegistrationMetrics|stats.*cancelled|cancelled.*refunded\" src/app/events/__tests__)",
-      "Bash(ls src/app/events/__tests__/*.int.spec.ts)"
+      "Bash(ls src/app/events/__tests__/*.int.spec.ts)",
+      "Bash(awk '/^model Question \\\\{/,/^\\\\}/' prisma/schema.prisma)"
     ]
   },
   "disabledMcpjsonServers": [
