@@ -92,20 +92,6 @@ export class UserService extends AuthService {
           /* não-JSON (ex.: "all" ou string solta) → sem restrição */
         }
       }
-      // [DIAGNÓSTICO TEMPORÁRIO] confirma o que o backend devolve no preview do
-      // cupom — remover após validar o appliesTo. Se `rawAppliesTo` vier
-      // undefined/null, o cupom é tratado como "todos" e desconta ingressos não
-      // cobertos (sintoma reportado).
-      if (typeof window !== "undefined") {
-        // eslint-disable-next-line no-console
-        console.warn("[coupon-preview]", {
-          code: d.code,
-          rawAppliesTo: d.appliesTo,
-          parsedAppliesTo: couponAppliesTo,
-          minCartValue: d.minCartValue,
-          minQuantity: d.minQuantity,
-        });
-      }
       return {
         kind: "coupon",
         code: String(d.code ?? code),
@@ -117,6 +103,9 @@ export class UserService extends AuthService {
         minCartValue:
           typeof d.minCartValue === "number" ? d.minCartValue : null,
         minQuantity: typeof d.minQuantity === "number" ? d.minQuantity : null,
+        // Uso restante (maxUsage − usageCount) p/ cupom DISCOUNT. Ausente/null =
+        // sem limite. Capa o desconto do preview às N unidades mais caras.
+        remaining: typeof d.remaining === "number" ? d.remaining : null,
       };
     } catch {
       return null;

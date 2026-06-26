@@ -12,7 +12,7 @@ import { WizardStepLayout } from "@/components/Organizer/WizardStepLayout";
 import { InformationForm } from "@/components/Organizer/InformationForm";
 import { buildCreateEventBodyFromForm } from "@/lib/createEventDraftSync";
 import { organizerEventEditClientPage } from "@/lib/organizerAudit";
-import { wouldRegistrationEndBeforeStart, REGISTRATION_END_BEFORE_START_TOAST } from "@/utils/registrationPeriod";
+import { wouldRegistrationEndBeforeStart, REGISTRATION_END_BEFORE_START_TOAST, isRegistrationStartNotBeforeEvent, REGISTRATION_START_NOT_BEFORE_EVENT_TOAST } from "@/utils/registrationPeriod";
 import toast from "react-hot-toast";
 
 const INFORMATION_FIELDS = [
@@ -41,7 +41,11 @@ export default function ReviewInformationPage() {
     const newErrors: Record<string, string> = {};
     if (!formData.name.trim()) newErrors.name = "Nome do evento é obrigatório";
     if (!formData.eventDate) newErrors.eventDate = "Data do evento é obrigatória";
-    if (!formData.registrationStartDate?.trim()) newErrors.registrationStartDate = "Data de início das inscrições é obrigatória";
+    if (!formData.registrationStartDate?.trim()) {
+      newErrors.registrationStartDate = "Data de início das inscrições é obrigatória";
+    } else if (isRegistrationStartNotBeforeEvent(formData.registrationStartDate, formData.registrationStartTime, formData.eventDate)) {
+      newErrors.registrationStartDate = REGISTRATION_START_NOT_BEFORE_EVENT_TOAST;
+    }
     if (!formData.registrationEndDate?.trim()) newErrors.registrationEndDate = "Data de encerramento das inscrições é obrigatória";
     if (wouldRegistrationEndBeforeStart(formData)) newErrors.registrationPeriod = REGISTRATION_END_BEFORE_START_TOAST;
     const cepDigits = (formData.cep ?? "").replace(/\D/g, "");

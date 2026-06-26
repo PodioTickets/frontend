@@ -15,7 +15,8 @@ import { cn } from "@/utils/cn";
 import { Button } from "@/components/Button";
 import { getApiClient } from "@/services/base/ApiClient";
 import { queryKeys } from "@/services/cache/QueryClient";
-import { formatDateBR, formatTimeBR } from "@/utils/datetimeBR";
+// createdAt/repasse são INSTANTES reais → BRT (America/Sao_Paulo).
+import { formatDateBRT, formatTimeBRT } from "@/utils/datetimeBR";
 import toast from "react-hot-toast";
 import Image from "next/image";
 import {
@@ -53,12 +54,12 @@ function formatCurrency(cents: number): string {
 function formatDateTime(iso: string): string {
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return "—";
-  const date = formatDateBR(iso, {
+  const date = formatDateBRT(iso, {
     day: "2-digit",
     month: "2-digit",
     year: "numeric",
   });
-  const time = formatTimeBR(iso, {
+  const time = formatTimeBRT(iso, {
     hour: "2-digit",
     minute: "2-digit",
   });
@@ -533,7 +534,7 @@ export default function AdminRepassePage() {
                     if (Number.isNaN(d.getTime())) return "—";
                     const months = ["Jan","Fev","Mar","Abr","Mai","Jun","Jul","Ago","Set","Out","Nov","Dez"];
                     const date = `${String(d.getUTCDate()).padStart(2, "0")} ${months[d.getUTCMonth()]}, ${d.getUTCFullYear()}`;
-                    const time = formatTimeBR(row.createdAt, {
+                    const time = formatTimeBRT(row.createdAt, {
                       hour: "2-digit",
                       minute: "2-digit",
                     });

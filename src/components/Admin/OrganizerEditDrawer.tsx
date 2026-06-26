@@ -19,7 +19,7 @@ import { cn } from "@/utils/cn";
 import toast from "react-hot-toast";
 import { FinanceIcon } from "../Icons/Organizer/FinanceIcon";
 import { lookupCepDigits } from "@/utils/lookupCep";
-import { formatDateBR } from "@/utils/datetimeBR";
+import { formatDateBRT } from "@/utils/datetimeBR";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -67,7 +67,8 @@ function formatDate(iso?: string): string {
   if (!iso) return "—";
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return "—";
-  return formatDateBR(iso);
+  // createdAt é INSTANTE real → BRT (America/Sao_Paulo).
+  return formatDateBRT(iso);
 }
 
 function digits(v: string) { return v.replace(/\D/g, ""); }

@@ -23,6 +23,7 @@ export interface AdminMember {
     lastName?: string;
     email?: string;
     lastLoginAt?: string | null;
+    avatarUrl?: string | null;
   };
 }
 

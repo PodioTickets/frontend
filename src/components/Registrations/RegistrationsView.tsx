@@ -15,7 +15,7 @@ import { CalendarIcon } from "@/components/Icons/CalendarIcon";
 import { TicketIcon } from "@/components/Icons/TicketIcon";
 import { SelectTicketsFilterModal } from "@/components/Registrations/SelectTicketsFilterModal";
 import { getAvatarUrl } from "@/utils/avatar";
-import { formatDateBR, formatTimeBR } from "@/utils/datetimeBR";
+import { formatDateBRT, formatTimeBRT } from "@/utils/datetimeBR";
 import type { Event } from "@/interfaces/event";
 import type { RegistrationStats } from "@/services/organizer/OrganizerService";
 import {
@@ -253,12 +253,11 @@ export function RegistrationsView({
                 allowPastDates
                 onSelect={(range) => {
                   setDateRange(range);
-                  const hasTwo = range?.from && range?.to && range.from.getTime() !== range.to.getTime();
-                  const isCleared = !range || (!range.from && !range.to);
-                  if (hasTwo || isCleared) {
-                    setAppliedDateRange(isCleared ? undefined : range ?? undefined);
-                    setPagination((prev) => ({ ...prev, page: 1 }));
-                  }
+                  // Aplica em DIA ÚNICO (só `from` → [from, from]) ou INTERVALO; limpo → remove.
+                  setAppliedDateRange(
+                    range?.from ? (range.to ? range : { from: range.from, to: range.from }) : undefined,
+                  );
+                  setPagination((prev) => ({ ...prev, page: 1 }));
                 }}
                 value={dateRange}
               />
@@ -379,16 +378,11 @@ export function RegistrationsView({
               allowPastDates
               onSelect={(range) => {
                 setDateRange(range);
-                // Só aplica o filtro e busca quando há duas datas diferentes no range (segunda data selecionada) ou foi limpo
-                const hasTwoDifferentDates =
-                  range?.from != null &&
-                  range?.to != null &&
-                  range.from.getTime() !== range.to.getTime();
-                const isCleared = range == null || (range.from == null && range.to == null);
-                if (hasTwoDifferentDates || isCleared) {
-                  setAppliedDateRange(isCleared ? undefined : range ?? undefined);
-                  setPagination((prev) => ({ ...prev, page: 1 }));
-                }
+                // Aplica em DIA ÚNICO (só `from` → [from, from]) ou INTERVALO; limpo → remove.
+                setAppliedDateRange(
+                  range?.from ? (range.to ? range : { from: range.from, to: range.from }) : undefined,
+                );
+                setPagination((prev) => ({ ...prev, page: 1 }));
               }}
               value={dateRange}
             />
@@ -442,8 +436,9 @@ export function RegistrationsView({
                     const statusClass = isPaid ? "bg-[#21835d] text-primary-1" : isCancelled || isRefunded || isChargeback ? "bg-red-11 text-white" : "bg-yellow-11 text-yellow-1";
                     const fullName = `${registration.user?.firstName || ""} ${registration.user?.lastName || ""}`.trim();
                     const createdDate = registration.createdAt ? new Date(registration.createdAt) : null;
-                    const timeStr = createdDate ? formatTimeBR(registration.createdAt, { hour: "2-digit", minute: "2-digit" }) + "H" : "—";
-                    const dateStr = createdDate ? formatDateBR(registration.createdAt, { day: "2-digit", month: "2-digit", year: "numeric" }) : "—";
+                    // registration.createdAt é INSTANTE real → BRT (America/Sao_Paulo).
+                    const timeStr = createdDate ? formatTimeBRT(registration.createdAt, { hour: "2-digit", minute: "2-digit" }) + "H" : "—";
+                    const dateStr = createdDate ? formatDateBRT(registration.createdAt, { day: "2-digit", month: "2-digit", year: "numeric" }) : "—";
                     const price = registration?.order?.finalAmount != null ? (registration?.order?.finalAmount / 100).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "0,00";
                     return (
                       <div key={registration.id} className="bg-gray-1 border border-gray-6 rounded-lg">
@@ -579,7 +574,7 @@ export function RegistrationsView({
                     },
                   })}
                 >
-                  Exportar CSV
+                  Exportar dados
                 </Button>
               </div>
 
@@ -709,7 +704,7 @@ export function RegistrationsView({
                     });
                   }}
                 >
-                  Exportar CSV
+                  Exportar dados
                 </Button>
               </div>
             </>

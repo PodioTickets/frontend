@@ -1,7 +1,9 @@
 import type { EditEventFormData } from "@/contexts/EditEventContext";
 import {
+  isRegistrationStartNotBeforeEvent,
   wouldRegistrationEndBeforeStart,
   REGISTRATION_END_BEFORE_START_TOAST,
+  REGISTRATION_START_NOT_BEFORE_EVENT_TOAST,
 } from "@/utils/registrationPeriod";
 
 /**
@@ -40,7 +42,12 @@ export function validateEventInformation(
   const errors: Record<string, string> = {};
   if (!formData.name.trim()) errors.name = "Nome do evento é obrigatório";
   if (!formData.eventDate) errors.eventDate = "Data do evento é obrigatória";
-  if (!formData.registrationStartDate?.trim()) errors.registrationStartDate = "Data de início das inscrições é obrigatória";
+  if (!formData.registrationStartDate?.trim()) {
+    errors.registrationStartDate = "Data de início das inscrições é obrigatória";
+  } else if (isRegistrationStartNotBeforeEvent(formData.registrationStartDate, formData.registrationStartTime, formData.eventDate)) {
+    // Início das inscrições deve ser ANTES da data do evento.
+    errors.registrationStartDate = REGISTRATION_START_NOT_BEFORE_EVENT_TOAST;
+  }
   if (!formData.registrationEndDate?.trim()) errors.registrationEndDate = "Data de encerramento das inscrições é obrigatória";
   if (wouldRegistrationEndBeforeStart(formData)) errors.registrationPeriod = REGISTRATION_END_BEFORE_START_TOAST;
 

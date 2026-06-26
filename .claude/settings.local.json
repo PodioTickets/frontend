@@ -211,7 +211,17 @@
       "Bash(cp c1txt *)",
       "PowerShell(npx tsc --noEmit 2>&1 | Select-Object -First 40)",
       "Bash(ls src/app/events/dashboard/__tests__/)",
-      "Bash(grep -rln \"net_revenue\\\\|netRevenue\\\\|queryMetricsAggregate\\\\|CONFIRMED\" src/app/events/dashboard/__tests__/)"
+      "Bash(grep -rln \"net_revenue\\\\|netRevenue\\\\|queryMetricsAggregate\\\\|CONFIRMED\" src/app/events/dashboard/__tests__/)",
+      "Bash(docker info *)",
+      "Bash(awk '/^model Product \\\\{/,/^\\\\}/' prisma/schema.prisma)",
+      "Bash(pnpm test:db:up)",
+      "Bash(pnpm test:db:down)",
+      "Bash(awk '/^enum OrderStatus/,/^\\\\}/' prisma/schema.prisma)",
+      "Bash(awk '/^model Voucher \\\\{/,/^\\\\}/' prisma/schema.prisma)",
+      "Bash(awk '/kind.*coupon|kind.*voucher|CouponPreviewResult|couponPreview.*=/{print NR\": \"$0}' src/components/Checkout/ModalitiesStep.tsx)",
+      "Bash(grep -rliE \"getStats|aggregateEventRegistrationMetrics|stats.*cancelled|cancelled.*refunded\" src/app/events/__tests__)",
+      "Bash(ls src/app/events/__tests__/*.int.spec.ts)",
+      "Bash(awk '/^model Question \\\\{/,/^\\\\}/' prisma/schema.prisma)"
     ]
   },
   "disabledMcpjsonServers": [

@@ -103,6 +103,12 @@ export interface ProductPatchItem {
   variationId?: string;
   quantity: number;
   participantEmail: string;
+  /**
+   * Índice do slot (participante↔ingresso). Desambigua o vínculo produto→inscrição
+   * quando 2 participantes têm o MESMO e-mail (mesma pessoa em 2 ingressos) — o
+   * e-mail sozinho colapsava os produtos numa só inscrição no finalize.
+   */
+  participantIndex: number;
 }
 
 /**
@@ -116,11 +122,19 @@ export function buildProductsPatchPayload(
   participants: Array<{ email?: string; productVariations?: Record<string, string | null> }>,
 ): { products: ProductPatchItem[] } {
   const products: ProductPatchItem[] = [];
-  participants.forEach((p) => {
+  // O índice do forEach é o slot canônico (participante↔ingresso) — mesma ordem de
+  // `reservedTickets`/`participants` no backend. Enviado como `participantIndex`.
+  participants.forEach((p, participantIndex) => {
     if (!p.productVariations) return;
     Object.entries(p.productVariations).forEach(([productId, variationId]) => {
       if (!variationId) return;
-      products.push({ productId, variationId, quantity: 1, participantEmail: p.email ?? "" });
+      products.push({
+        productId,
+        variationId,
+        quantity: 1,
+        participantEmail: p.email ?? "",
+        participantIndex,
+      });
     });
   });
   return { products };

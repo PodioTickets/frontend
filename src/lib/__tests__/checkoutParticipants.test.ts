@@ -121,9 +121,9 @@ describe("buildProductsPatchPayload", () => {
       { email: "b@x.com", productVariations: { p1: "v9" } },
     ]);
     expect(r.products).toEqual([
-      { productId: "p1", variationId: "v1", quantity: 1, participantEmail: "a@x.com" },
-      { productId: "p2", variationId: "v2", quantity: 1, participantEmail: "a@x.com" },
-      { productId: "p1", variationId: "v9", quantity: 1, participantEmail: "b@x.com" },
+      { productId: "p1", variationId: "v1", quantity: 1, participantEmail: "a@x.com", participantIndex: 0 },
+      { productId: "p2", variationId: "v2", quantity: 1, participantEmail: "a@x.com", participantIndex: 0 },
+      { productId: "p1", variationId: "v9", quantity: 1, participantEmail: "b@x.com", participantIndex: 1 },
     ]);
   });
   it("ignora variação nula (produto recusado / sem interesse)", () => {
@@ -131,7 +131,7 @@ describe("buildProductsPatchPayload", () => {
       { email: "a@x.com", productVariations: { p1: null, p2: "v2" } },
     ]);
     expect(r.products).toEqual([
-      { productId: "p2", variationId: "v2", quantity: 1, participantEmail: "a@x.com" },
+      { productId: "p2", variationId: "v2", quantity: 1, participantEmail: "a@x.com", participantIndex: 0 },
     ]);
   });
   it("participante sem productVariations é ignorado; email ausente vira ''", () => {
@@ -140,7 +140,19 @@ describe("buildProductsPatchPayload", () => {
       { productVariations: { p1: "v1" } },
     ]);
     expect(r.products).toEqual([
-      { productId: "p1", variationId: "v1", quantity: 1, participantEmail: "" },
+      { productId: "p1", variationId: "v1", quantity: 1, participantEmail: "", participantIndex: 1 },
+    ]);
+  });
+  it("2 participantes com o MESMO e-mail → participantIndex distingue os slots (bug do produto colapsado)", () => {
+    // Mesma pessoa em 2 ingressos: o e-mail é idêntico, mas o slot (participantIndex)
+    // separa os produtos — o finalize vincula cada produto à inscrição certa.
+    const r = buildProductsPatchPayload([
+      { email: "same@x.com", productVariations: { p1: "v1" } },
+      { email: "same@x.com", productVariations: { p2: "v2" } },
+    ]);
+    expect(r.products).toEqual([
+      { productId: "p1", variationId: "v1", quantity: 1, participantEmail: "same@x.com", participantIndex: 0 },
+      { productId: "p2", variationId: "v2", quantity: 1, participantEmail: "same@x.com", participantIndex: 1 },
     ]);
   });
 });

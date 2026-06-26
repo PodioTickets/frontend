@@ -307,13 +307,19 @@ export function PaymentDetailsModal() {
     ]
     : [];
 
+  // ID curto no MESMO formato da lista de inscrições (`xxxxxx...xxxx`) — antes só
+  // `slice(0,8)` (#e141569e), divergindo da RegistrationsView/RegistrationRow. O `#`
+  // é prefixado no JSX; aqui só o miolo. IDs curtos (≤10) saem inteiros.
+  const formatShortId = (id?: string | null): string =>
+    id ? (id.length > 10 ? `${id.slice(0, 6)}...${id.slice(-4)}` : id) : "—";
+
   const paymentDetailsWithRegistrations = paymentDetails as PaymentDetails & { registrations?: Array<{ id: string; name: string; email: string; ticket?: { id: string; name: string } | null; ticketCategory?: { id: string; name: string } | null }> };
 
   const participants = paymentDetailsWithRegistrations?.registrations && Array.isArray(paymentDetailsWithRegistrations.registrations) && paymentDetailsWithRegistrations.registrations.length > 0
     ? paymentDetailsWithRegistrations.registrations.map((reg: any) => ({
       id: reg.id,
       viewRegistrationId: reg.id as string,
-      registrationId: reg.id?.slice(0, 8) || "—",
+      registrationId: formatShortId(reg.id),
       name: reg.name || "Participante",
       email: reg.email || "",
       avatarUrl: reg.avatarUrl ?? null,
@@ -323,21 +329,23 @@ export function PaymentDetailsModal() {
     : registration?.ticket ? [{
       id: registration.id,
       viewRegistrationId: registration.id as string,
-      registrationId: registration.id?.slice(0, 8) || "—",
+      registrationId: formatShortId(registration.id),
       name: buyerData?.firstName && buyerData?.lastName
         ? `${buyerData.firstName} ${buyerData.lastName}`
         : buyerData?.fullName || "Participante",
       email: buyerData?.email || "",
+      avatarUrl: buyerData?.avatarUrl ?? null,
       ticket: registration.ticket?.name || "Ticket",
       category: registration.ticket?.category?.name || "Ingresso avulso",
     }] : registration?.modalities?.map((mod: any, index: number) => ({
       id: `${registration.id}-${index}`,
       viewRegistrationId: registration.id as string,
-      registrationId: registration.id?.slice(0, 8) || "—",
+      registrationId: formatShortId(registration.id),
       name: buyerData?.firstName && buyerData?.lastName
         ? `${buyerData.firstName} ${buyerData.lastName}`
         : buyerData?.fullName || "Participante",
       email: buyerData?.email || "",
+      avatarUrl: buyerData?.avatarUrl ?? null,
       ticket: mod.modality?.name || registration?.ticket?.name || "Ticket",
       category: registration?.ticket?.category?.name || "Ingresso avulso",
     })) || [];
@@ -1238,7 +1246,7 @@ export function PaymentDetailsModal() {
 
                         {/* Table Header */}
                         <div className="bg-gray-3 border-b border-t border-gray-6 flex h-[44px] items-center">
-                          <div className="w-[120px] px-4">
+                          <div className="w-[160px] px-4">
                             <p className="font-inter font-medium text-[14px] leading-[1.3] text-gray-12">
                               ID inscrição
                             </p>
@@ -1267,17 +1275,30 @@ export function PaymentDetailsModal() {
                               key={participant.id}
                               className="flex items-center h-[60px] border-b last:border-0 border-gray-6"
                             >
-                              <div className="w-[120px] px-4">
+                              <div className="w-[160px] px-4">
                                 <p className="font-family-dm-sans font-semibold text-[14px] leading-[1.3] text-gray-12 truncate">
                                   #{participant.registrationId}
                                 </p>
                               </div>
                               <div className="w-[273px] px-4 flex gap-[10px] items-center">
-                                <div className="size-9 rounded-lg bg-gray-6 flex items-center justify-center shrink-0">
-                                  <span className="text-gray-12 font-semibold text-sm">
-                                    {participant.name.charAt(0).toUpperCase()}
-                                  </span>
-                                </div>
+                                {/* Avatar do participante: imagem real quando
+                                 * `avatarUrl` existir; fallback pra inicial em
+                                 * quadro gray (espelha o layout mobile). */}
+                                {participant.avatarUrl ? (
+                                  <Image
+                                    src={getAvatarUrl(participant.avatarUrl) as string}
+                                    alt={participant.name}
+                                    width={36}
+                                    height={36}
+                                    className="size-9 rounded-lg object-cover shrink-0"
+                                  />
+                                ) : (
+                                  <div className="size-9 rounded-lg bg-gray-6 flex items-center justify-center shrink-0 overflow-hidden">
+                                    <span className="text-gray-12 font-semibold text-sm">
+                                      {participant.name.charAt(0).toUpperCase()}
+                                    </span>
+                                  </div>
+                                )}
                                 <div className="flex flex-col min-w-0 flex-1">
                                   <p className="font-family-dm-sans font-semibold text-[14px] leading-[1.3] text-gray-12 truncate">
                                     {participant.name}
