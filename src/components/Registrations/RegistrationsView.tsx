@@ -597,8 +597,8 @@ export function RegistrationsView({
                       Ingresso
                     </p>
                   </div>
-                  <div className="flex h-full items-center p-4 w-[140px]">
-                    <p className="font-inter font-medium leading-[1.3] text-sm text-gray-12">
+                  <div className="flex h-full items-center justify-center p-4 w-[140px]">
+                    <p className="font-inter font-medium leading-[1.3] text-sm text-gray-12 text-center">
                       Data compra
                     </p>
                   </div>
