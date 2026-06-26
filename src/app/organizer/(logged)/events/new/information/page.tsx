@@ -19,7 +19,7 @@ import { buildCreateEventBodyFromForm } from "@/lib/createEventDraftSync";
 import { useOrganizerPermissions } from "@/contexts/OrganizerPermissionsContext";
 import { useOrganizerAppSurface } from "@/contexts/OrganizerAppSurfaceContext";
 import { organizerExternalHref } from "@/lib/organizerPathPresentation";
-import { wouldRegistrationEndBeforeStart, REGISTRATION_END_BEFORE_START_TOAST } from "@/utils/registrationPeriod";
+import { wouldRegistrationEndBeforeStart, REGISTRATION_END_BEFORE_START_TOAST, isRegistrationStartNotBeforeEvent, REGISTRATION_START_NOT_BEFORE_EVENT_TOAST } from "@/utils/registrationPeriod";
 
 export default function InformacoesPage() {
   const orgNav = useOrganizerNavigate();
@@ -66,7 +66,12 @@ export default function InformacoesPage() {
     const newErrors: Record<string, string> = {};
     if (!formData.name.trim()) newErrors.name = "Nome do evento é obrigatório";
     if (!formData.eventDate) newErrors.eventDate = "Data do evento é obrigatória";
-    if (!formData.registrationStartDate?.trim()) newErrors.registrationStartDate = "Data de início das inscrições é obrigatória";
+    if (!formData.registrationStartDate?.trim()) {
+      newErrors.registrationStartDate = "Data de início das inscrições é obrigatória";
+    } else if (isRegistrationStartNotBeforeEvent(formData.registrationStartDate, formData.registrationStartTime, formData.eventDate)) {
+      // Início das inscrições deve ser ANTES da data do evento.
+      newErrors.registrationStartDate = REGISTRATION_START_NOT_BEFORE_EVENT_TOAST;
+    }
     if (!formData.registrationEndDate?.trim()) newErrors.registrationEndDate = "Data de encerramento das inscrições é obrigatória";
     if (wouldRegistrationEndBeforeStart(formData)) newErrors.registrationPeriod = REGISTRATION_END_BEFORE_START_TOAST;
     const cepDigitsValidation = (formData.cep ?? "").replace(/\D/g, "");

@@ -316,10 +316,14 @@ export default function OrganizationSettingsPage() {
         }
       });
 
-      await organizerService.updateOrganization(updateData);
+      const updatedOrg = await organizerService.updateOrganization(updateData);
 
       toast.success("Configurações atualizadas com sucesso!");
-      loadOrganization();
+      // Usa a resposta do PATCH (estado já persistido) em vez de RE-BUSCAR. Re-buscar fazia:
+      // (1) setLoading(true) → flash do <Loading/> full-screen ("refresh" da página); (2) leitura
+      // imediata da réplica podia vir defasada (lag) e sobrescrever o formData com o valor antigo.
+      // O formData já reflete o que o usuário editou; só sincronizamos o `organizer`.
+      setOrganizer(updatedOrg);
     } catch (error: any) {
       console.error("Error updating organization:", error);
       const errorMessage =
@@ -741,13 +745,11 @@ export default function OrganizationSettingsPage() {
                     name="whatsapp"
                     value={maskWhatsApp(formData.whatsapp)}
                     onChange={(e) => {
-                      const value = e.target.value.replace(/\D/g, "");
+                      const value = e.target.value.replace(/\D/g, "").slice(0, 11);
                       setFormData((prev) => ({ ...prev, whatsapp: value }));
                     }}
                     placeholder="(00) 00000-0000"
                     maxLength={15}
-                    disabled
-                    className="opacity-60 cursor-not-allowed"
                   />
                 </div>
 
@@ -761,19 +763,14 @@ export default function OrganizationSettingsPage() {
                     name="phone"
                     value={maskPhone(formData.phone)}
                     onChange={(e) => {
-                      const value = e.target.value.replace(/\D/g, "");
+                      const value = e.target.value.replace(/\D/g, "").slice(0, 11);
                       setFormData((prev) => ({ ...prev, phone: value }));
                     }}
                     placeholder="(00) 0000-0000"
-                    maxLength={14}
-                    disabled
-                    className="opacity-60 cursor-not-allowed"
+                    maxLength={15}
                   />
                 </div>
               </div>
-              <p className="font-family-dm-sans text-sm text-gray-11">
-                O WhatsApp e o telefone da organização não podem ser alterados por aqui. Para mudar, fale com o suporte.
-              </p>
             </div>
 
             {/* Chave PIX */}

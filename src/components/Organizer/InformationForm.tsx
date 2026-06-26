@@ -24,7 +24,9 @@ import {
   getMinDateForRegistrationEndPicker,
   getTodayStartLocal,
   isIsoDateStrictlyBefore,
+  isRegistrationStartNotBeforeEvent,
   REGISTRATION_END_BEFORE_START_TOAST,
+  REGISTRATION_START_NOT_BEFORE_EVENT_TOAST,
   wouldRegistrationEndBeforeStart,
 } from "@/utils/registrationPeriod";
 import toast from "react-hot-toast";
@@ -218,7 +220,20 @@ export function InformationForm({
         registrationStartTime: hasStart ? values.registrationStartTime?.trim() || "00:00" : "",
       });
       clearRegistrationPeriodError(name);
-      if (errors[name]) onErrorsChange((prev) => ({ ...prev, [name]: "" }));
+      // Regra: início das inscrições (data+hora) deve ser ANTES do dia do evento. Não bloqueia
+      // (deixa selecionar), mas avisa via toast + erro no input. Senão, limpa o erro do campo.
+      const startBeforeEventViolation = isRegistrationStartNotBeforeEvent(
+        value,
+        hasStart ? values.registrationStartTime?.trim() || "00:00" : "",
+        values.eventDate,
+      );
+      if (startBeforeEventViolation) toast.error(REGISTRATION_START_NOT_BEFORE_EVENT_TOAST);
+      onErrorsChange((prev) => ({
+        ...prev,
+        registrationStartDate: startBeforeEventViolation
+          ? REGISTRATION_START_NOT_BEFORE_EVENT_TOAST
+          : "",
+      }));
       return;
     }
 
@@ -246,6 +261,24 @@ export function InformationForm({
     onChange({ [name]: value });
     clearRegistrationPeriodError(name);
     if (errors[name]) onErrorsChange((prev) => ({ ...prev, [name]: "" }));
+
+    // Mudar a data do evento pode (in)validar a regra "início das inscrições antes do evento".
+    if (name === "eventDate") {
+      const startBeforeEventViolation = isRegistrationStartNotBeforeEvent(
+        values.registrationStartDate,
+        values.registrationStartTime,
+        value,
+      );
+      if (startBeforeEventViolation) toast.error(REGISTRATION_START_NOT_BEFORE_EVENT_TOAST);
+      onErrorsChange((prev) => ({
+        ...prev,
+        registrationStartDate: startBeforeEventViolation
+          ? REGISTRATION_START_NOT_BEFORE_EVENT_TOAST
+          : prev.registrationStartDate === REGISTRATION_START_NOT_BEFORE_EVENT_TOAST
+            ? ""
+            : prev.registrationStartDate,
+      }));
+    }
   };
 
   // ── PDF ───────────────────────────────────────────────────────────────────
