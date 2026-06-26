@@ -442,6 +442,8 @@ export function OrganizerEditDrawer({ isOpen, onClose, org, onUpdated, mode = "e
   const [personType, setPersonType] = useState<"PF" | "PJ">("PJ");
   const [ownerName, setOwnerName] = useState("");
   const [ownerDocument, setOwnerDocument] = useState("");
+  // Erro de documento no modo PF (conflito de CPF) — vai no campo "CPF do responsável".
+  const [ownerDocError, setOwnerDocError] = useState("");
   const [fiscalEmail, setFiscalEmail] = useState("");
   const [loadingCep, setLoadingCep] = useState(false);
   // Guarda o último CEP buscado pra não disparar fetch duplicado em re-renders.
@@ -477,6 +479,7 @@ export function OrganizerEditDrawer({ isOpen, onClose, org, onUpdated, mode = "e
       setPixKeys([]);
       setOwnerName("");
       setOwnerDocument("");
+      setOwnerDocError("");
       setFiscalEmail("");
       setShowAddPix(false);
       setNewPix(emptyPix);
@@ -552,15 +555,29 @@ export function OrganizerEditDrawer({ isOpen, onClose, org, onUpdated, mode = "e
   const handleSave = async () => {
     if (!isCreate && !org) return;
     if (loadError) return; // Bloqueia salvar quando o GET falhou para evitar apagar dados reais
+
+    // PF: o documento e o nome da organização SÃO o CPF/Nome do responsável
+    // (mesma pessoa). Não há campos próprios de CPF/Nome completo no form — são
+    // derivados aqui (o backend exige `name` e usa `document` como único).
+    const isPf = personType === "PF";
+    const effectiveName = (isPf ? ownerName : name).trim();
+    const effectiveDocument = isPf ? digits(ownerDocument) : digits(cnpjValue);
+
+    if (isPf) {
+      if (!effectiveName) { toast.error("Informe o nome do responsável."); return; }
+      if (!effectiveDocument) { toast.error("Informe o CPF do responsável."); return; }
+    }
+
     setSaving(true);
     setEmailError("");
     setCnpjError("");
+    setOwnerDocError("");
     try {
       const api = getApiClient();
       const payload = {
-        name,
+        name: effectiveName,
         tradeName,
-        document: digits(cnpjValue) || undefined,
+        document: effectiveDocument || undefined,
         zipCode: digits(zipCode),
         state,
         street,
@@ -620,7 +637,9 @@ export function OrganizerEditDrawer({ isOpen, onClose, org, onUpdated, mode = "e
         /e-?mail.*already\s+exists/.test(norm) ||
         (err?.response?.status === 409 && /e-?mail|usu(?:á|á)rio/.test(norm));
       if (isDocumentConflict) {
-        setCnpjError(apiMsg);
+        // PF não tem campo de CNPJ — o documento é o CPF do responsável.
+        if (personType === "PF") setOwnerDocError(apiMsg);
+        else setCnpjError(apiMsg);
       } else if (isEmailConflict) {
         setEmailError(apiMsg);
       } else {
@@ -810,27 +829,41 @@ export function OrganizerEditDrawer({ isOpen, onClose, org, onUpdated, mode = "e
                 </div>
 
                 <div className="flex flex-wrap gap-x-4 gap-y-6">
-                  <FieldInput
-                    label={personType === "PF" ? "CPF" : "CNPJ"}
-                    value={cnpjValue}
-                    onChange={(v) => {
-                      setCnpjValue(personType === "PF" ? formatCPF(v) : formatCNPJ(v));
-                      if (cnpjError) setCnpjError("");
-                    }}
-                    placeholder={personType === "PF" ? "000.000.000-00" : "00.000.000/0000-00"}
-                    className="min-w-[284px]"
-                    error={cnpjError}
-                  />
-                  <FieldInput
-                    label={personType === "PF" ? "Nome completo" : "Razão social"}
-                    value={name}
-                    onChange={setName}
-                    placeholder={personType === "PF" ? "Nome completo" : "Razão social"}
-                    className="min-w-[284px]"
-                  />
+                  {/* CNPJ + Razão social só pra PJ. Pra PF, o documento e o nome
+                      são o CPF/Nome do responsável (mesma pessoa) — duplicados
+                      internamente no `document`/`name` ao salvar. */}
+                  {personType === "PJ" && (
+                    <>
+                      <FieldInput
+                        label="CNPJ"
+                        value={cnpjValue}
+                        onChange={(v) => {
+                          setCnpjValue(formatCNPJ(v));
+                          if (cnpjError) setCnpjError("");
+                        }}
+                        placeholder="00.000.000/0000-00"
+                        className="min-w-[284px]"
+                        error={cnpjError}
+                      />
+                      <FieldInput
+                        label="Razão social"
+                        value={name}
+                        onChange={setName}
+                        placeholder="Razão social"
+                        className="min-w-[284px]"
+                      />
+                    </>
+                  )}
                   <FieldInput label="Nome fantasia" value={tradeName} onChange={setTradeName} placeholder="Nome fantasia" className="min-w-[284px]" />
-                  <FieldInput label="Nome do responsável" value={ownerName} onChange={setOwnerName} placeholder="Nome completo" className="min-w-[284px]" />
-                  <FieldInput label="CPF do responsável" value={ownerDocument} onChange={(v) => setOwnerDocument(formatCPF(v))} placeholder="000.000.000-00" className="min-w-[284px]" />
+                  <FieldInput label="Nome do responsável" value={ownerName} onChange={(v) => { setOwnerName(v); if (ownerDocError) setOwnerDocError(""); }} placeholder="Nome completo" className="min-w-[284px]" />
+                  <FieldInput
+                    label="CPF do responsável"
+                    value={ownerDocument}
+                    onChange={(v) => { setOwnerDocument(formatCPF(v)); if (ownerDocError) setOwnerDocError(""); }}
+                    placeholder="000.000.000-00"
+                    className="min-w-[284px]"
+                    error={personType === "PF" ? ownerDocError : undefined}
+                  />
                   <FieldInput label="E-mail fiscal" value={fiscalEmail} onChange={setFiscalEmail} placeholder="fiscal@org.com" type="email" className="min-w-[284px]" />
                 </div>
               </div>

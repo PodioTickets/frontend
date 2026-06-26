@@ -114,11 +114,11 @@ export function RegistrationRow({
 
       {/* Data compra (instante real → BRT): data + horário embaixo */}
       <div className="flex flex-col h-full justify-center p-4 w-[140px]">
-        <span className="font-family-dm-sans font-medium leading-[1.3] text-sm text-gray-12">
+        <span className="font-family-dm-sans font-medium leading-[1.3] text-sm text-gray-12 text-center">
           {registration.createdAt ? formatDateBRTShort(registration.createdAt) : "—"}
         </span>
         {registration.createdAt && (
-          <span className="font-family-dm-sans font-normal leading-[1.3] text-xs text-gray-11">
+          <span className="font-family-dm-sans font-normal leading-[1.3] text-xs text-gray-11 text-center">
             {formatTimeBRT(registration.createdAt, { hour: "2-digit", minute: "2-digit" })}
           </span>
         )}

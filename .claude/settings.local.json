@@ -221,7 +221,8 @@
       "Bash(awk '/kind.*coupon|kind.*voucher|CouponPreviewResult|couponPreview.*=/{print NR\": \"$0}' src/components/Checkout/ModalitiesStep.tsx)",
       "Bash(grep -rliE \"getStats|aggregateEventRegistrationMetrics|stats.*cancelled|cancelled.*refunded\" src/app/events/__tests__)",
       "Bash(ls src/app/events/__tests__/*.int.spec.ts)",
-      "Bash(awk '/^model Question \\\\{/,/^\\\\}/' prisma/schema.prisma)"
+      "Bash(awk '/^model Question \\\\{/,/^\\\\}/' prisma/schema.prisma)",
+      "PowerShell(npx tsc --noEmit -p tsconfig.json 2>&1 | Select-Object -First 15)"
     ]
   },
   "disabledMcpjsonServers": [
