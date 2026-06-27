@@ -7,6 +7,7 @@ import { HomeFilters } from "@/components/HomeFilters";
 import { Button } from "@/components/Button";
 import { Dropdown, DropdownOption } from "@/components/Dropdown";
 import { useEventSearch } from "@/hooks/useEventSearch";
+import { eventWindowInstant } from "@/utils/datetimeBR";
 import {
   statusOptions,
   orderOptions,
@@ -584,17 +585,36 @@ function SearchContent() {
       });
     }
 
-    // Filtrar por status
+    // Filtrar por status REAL da inscrição. "Abertas" vs "encerradas" NÃO dá pra
+    // distinguir pelo `status` (ambos são PUBLISHED) — depende da JANELA de inscrição
+    // (datas). Usa o instante em BRT (eventWindowInstant) pra não errar 3h.
     if (statusFilter) {
-      const statusMap: Record<string, string> = {
-        "inscricoes-abertas": "PUBLISHED",
-        "inscricoes-encerradas": "PUBLISHED",
-        "evento-encerrado": "COMPLETED",
+      const nowMs = Date.now();
+      const reached = (iso?: string | null) => {
+        const at = eventWindowInstant(iso);
+        return !!at && nowMs >= at.getTime();
       };
-      const apiStatus = statusMap[statusFilter];
-      if (apiStatus) {
-        filtered = filtered.filter((event) => event.status === apiStatus);
-      }
+      const beforeStart = (iso?: string | null) => {
+        const at = eventWindowInstant(iso);
+        return !!at && nowMs < at.getTime();
+      };
+      filtered = filtered.filter((event) => {
+        const eventPassed = reached(event.eventDate);
+        const regEnded = reached(event.registrationEndDate);
+        const regNotOpenYet = beforeStart(event.registrationStartDate);
+        switch (statusFilter) {
+          case "evento-encerrado":
+            return eventPassed;
+          case "inscricoes-encerradas":
+            // Inscrição fechou, mas o evento ainda não aconteceu.
+            return !eventPassed && regEnded;
+          case "inscricoes-abertas":
+            // Evento futuro com janela aberta (já começou e ainda não encerrou).
+            return !eventPassed && !regEnded && !regNotOpenYet;
+          default:
+            return true;
+        }
+      });
     }
 
     // Ordenar

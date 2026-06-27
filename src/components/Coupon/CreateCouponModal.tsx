@@ -36,6 +36,8 @@ export function CreateCouponModal() {
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [expiryDate, setExpiryDate] = useState<string | null>(null);
   const [expiryEnabled, setExpiryEnabled] = useState(false);
+  // TEMP_HORARIO_TESTE: horário de expiração só pra validar o fuso (BRT). REMOVER depois.
+  const [testExpiryTime, setTestExpiryTime] = useState<string>("");
   const [usageLimit, setUsageLimit] = useState("");
   const [usageLimitEnabled, setUsageLimitEnabled] = useState(false);
   const [usageLimitError, setUsageLimitError] = useState("");
@@ -130,13 +132,19 @@ export function CreateCouponModal() {
       minQuantity !== (c.minQuantity?.toString() || "") ||
       minAge !== (c.minAge?.toString() || "") ||
       maxAge !== (c.maxAge?.toString() || "") ||
-      applyToProducts !== !!c.applyToProducts
+      applyToProducts !== !!c.applyToProducts ||
+      // TEMP_HORARIO_TESTE: deixa salvar quando só o horário muda. REMOVER depois.
+      testExpiryTime !== (c.expiryDate
+        ? new Date(c.expiryDate).toLocaleTimeString("pt-BR", {
+            timeZone: "America/Sao_Paulo", hour: "2-digit", minute: "2-digit", hour12: false,
+          })
+        : "")
     );
   }, [
     isEditing, data, couponType, code, note, discountType, value,
     appliesTo, selectedTicketIds, expiryDate, expiryEnabled,
     usageLimit, usageLimitEnabled, cpfListStatus, cpfList,
-    minQuantity, minAge, maxAge, applyToProducts,
+    minQuantity, minAge, maxAge, applyToProducts, testExpiryTime,
   ]);
 
   // Initialize form when modal opens
@@ -183,6 +191,14 @@ export function CreateCouponModal() {
         // Converte o instante de validade (fim do dia BRT) pro dia civil do picker.
         setExpiryDate(c.expiryDate ? toCivilDayBRT(c.expiryDate) : null);
         setExpiryEnabled(!!c.expiryDate);
+        // TEMP_HORARIO_TESTE: pré-preenche o horário (em BRT) pra validar o round-trip. REMOVER depois.
+        setTestExpiryTime(
+          c.expiryDate
+            ? new Date(c.expiryDate).toLocaleTimeString("pt-BR", {
+                timeZone: "America/Sao_Paulo", hour: "2-digit", minute: "2-digit", hour12: false,
+              })
+            : "",
+        );
         setUsageLimit(c.maxUsage?.toString() || "");
         setUsageLimitEnabled(!!c.maxUsage);
         setCpfListStatus(c.cpfListStatus || "DISABLED");
@@ -425,7 +441,12 @@ export function CreateCouponModal() {
         type: discountType,
         value: discountType === "FIXED" ? Math.round(numericValue * 100) : numericValue,
         note: note.trim() || null,
-        expiryDate: expiryEnabled && expiryDate ? expiryDate : null,
+        // TEMP_HORARIO_TESTE: quando um horário é informado, manda ISO com offset BRT (-03:00)
+        // pro backend respeitar a HORA (sem isso, YYYY-MM-DD vira fim do dia em BRT). REMOVER depois:
+        // voltar para `expiryDate: expiryEnabled && expiryDate ? expiryDate : null`.
+        expiryDate: expiryEnabled && expiryDate
+          ? (testExpiryTime ? `${expiryDate}T${testExpiryTime}:00-03:00` : expiryDate)
+          : null,
         maxUsage: usageLimitEnabled && usageLimit ? parseInt(usageLimit) : null,
         // QUANTITY não suporta restrição por CPF — sempre envia desabilitado/limpo.
         cpfListStatus: couponType === "QUANTITY" ? "DISABLED" : cpfListStatus,
@@ -1259,6 +1280,17 @@ export function CreateCouponModal() {
                                           placeholder="00/00/2026"
                                           className="w-full md:w-auto"
                                         />
+                                        {/* TEMP_HORARIO_TESTE: horário (BRT) só pra validar o fuso. REMOVER depois. */}
+                                        <label className="text-gray-11 text-xs font-family-dm-sans leading-[1.3] mt-2">
+                                          ⏰ Horário de expiração (TESTE de fuso — remover depois)
+                                        </label>
+                                        <input
+                                          type="time"
+                                          value={testExpiryTime}
+                                          onChange={(e) => setTestExpiryTime(e.target.value)}
+                                          className="w-full md:w-auto border border-gray-7 rounded-md px-3 py-2 text-sm text-gray-12 bg-gray-1"
+                                        />
+                                        {/* FIM TEMP_HORARIO_TESTE */}
                                       </div>
                                     )}
                                   </div>
