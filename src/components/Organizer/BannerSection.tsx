@@ -378,7 +378,7 @@ export function BannerSection({
     );
 
   const renderCardListingPreview = () => (
-    <div className="flex flex-col gap-5 w-full max-w-[401px] mx-auto md:mx-0">
+    <div className="flex flex-col gap-5 w-full max-w-[300px] mx-auto md:mx-0">
       <p className="text-gray-12 text-[20px] font-bold font-manrope leading-[1.1]">Prévia</p>
       <div className="bg-gray-2 rounded-lg shadow-[0px_2px_6px_0px_rgba(17,17,17,0.25)] overflow-hidden flex flex-col w-full">
         <div className="relative w-full aspect-square bg-gray-4">

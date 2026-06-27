@@ -1,23 +1,44 @@
 "use client";
 
 import Image from "next/image";
-import { Phone } from "lucide-react";
+import Link from "next/link";
+import { GlobeIcon } from "lucide-react";
 import { Button } from "@/components/Button";
 import { CalendarIcon } from "@/components/Icons/CalendarIcon";
 import { LocationIcon } from "@/components/Icons/LocationIcon";
-import { MessageIcon } from "@/components/Icons/MessageIcon";
 import { ShareIcon } from "@/components/Icons/ShareIcon";
+import { InstagramIcon } from "@/components/Icons/InstagramIcon";
+import { FacebookIcon } from "@/components/Icons/FacebookIcon";
+import { YoutubeIcon } from "@/components/Icons/YoutubeIcon";
+import { TiktokIcon } from "@/components/Icons/TiktokIcon";
 import { ShareModal } from "@/components/ShareModal";
 import type { Event } from "@/interfaces/event";
 import { cn } from "@/utils/cn";
 import { formatDateBR, formatDateTimeBR, eventWindowInstant } from "@/utils/datetimeBR";
-import { resolveCheckoutModalityIconSrc } from "@/utils/checkoutModalityDisplay";
-import {
-  formatBrazilianPhone,
-  getEventOrganizer,
-  phoneDigitsForTel,
-} from "@/utils/organization";
+import { getEventOrganizer } from "@/utils/organization";
 import { useMemo, useState } from "react";
+
+/**
+ * Card de informações do evento usado nas PRÉVIAS do organizador/admin.
+ *
+ * Espelha 1:1 o card inline da página pública do evento (`/events/[slug]`):
+ * mesmas linhas de data ("Acontece em" + "Inscrições até"), endereço completo com
+ * link do mapa, bloco do organizador com NOME FANTASIA (via `getEventOrganizer`,
+ * que prioriza `tradeName`) e REDES SOCIAIS (não telefone — contato não é público).
+ * `isPreview` mantém os mesmos estados visuais, porém sem ações reais (checkout,
+ * compartilhar e denunciar desabilitados).
+ */
+
+const sanitizeUrl = (url: string | null | undefined): string | null => {
+  if (!url) return null;
+  try {
+    const parsed = new URL(url);
+    if (parsed.protocol !== "https:" && parsed.protocol !== "http:") return null;
+    return url;
+  } catch {
+    return null;
+  }
+};
 
 function OrganizerAvatar({
   logoUrl,
@@ -49,6 +70,19 @@ function OrganizerAvatar({
         <span className="text-sm font-semibold text-primary-11">{initial}</span>
       )}
     </div>
+  );
+}
+
+/** Ícone de calendário com "check" — espelha o usado em "Inscrições até" na página pública. */
+function CalendarCheckIcon({ className }: { className?: string }) {
+  return (
+    <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" className={className}>
+      <path d="M6.6665 1.66699V4.16699" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M13.3335 1.66699V4.16699" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M2.5 6.91699C2.5 4.70786 4.29086 2.91699 6.5 2.91699H13.5C15.7091 2.91699 17.5 4.70785 17.5 6.91699V14.3337C17.5 16.5428 15.7091 18.3337 13.5 18.3337H6.5C4.29086 18.3337 2.5 16.5428 2.5 14.3337V6.91699Z" stroke="currentColor" strokeWidth="1" />
+      <path d="M7.5 12.4997L8.83616 13.5686C9.25403 13.9029 9.86103 13.849 10.2134 13.4462L12.5 10.833" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M2.5 7.5H17.5" stroke="currentColor" strokeWidth="1" strokeLinecap="round" />
+    </svg>
   );
 }
 
@@ -102,18 +136,11 @@ function useEventRegistrationUiState(event: Event) {
   }, [event]);
 }
 
+/** dd/mm/aaaa — mesmo formato da página pública do evento ("Acontece em" / "Inscrições até"). */
 function formatDateShort(date: Date) {
   return formatDateBR(date, {
     day: "2-digit",
     month: "2-digit",
-    year: "numeric",
-  });
-}
-
-function formatDateLong(date: Date) {
-  return formatDateBR(date, {
-    day: "2-digit",
-    month: "long",
     year: "numeric",
   });
 }
@@ -209,16 +236,14 @@ function RegistrationCtaBlock({
 
   if (isPreview) {
     return (
-      <>
-        <Button
-          className={cn("w-full", mt)}
-          disabled
-          variant="default"
-          type="button"
-        >
-          Inscreva-se
-        </Button>
-      </>
+      <Button
+        className={cn("w-full", mt)}
+        disabled
+        variant="default"
+        type="button"
+      >
+        Inscreva-se
+      </Button>
     );
   }
 
@@ -233,34 +258,53 @@ function RegistrationCtaBlock({
   );
 }
 
-function ModalitiesList({ event }: { event: Event }) {
+/** Linhas de data + endereço — espelha a página pública do evento. */
+function EventMetaRows({ event, mobile }: { event: Event; mobile?: boolean }) {
+  const mapsUrl = sanitizeUrl(event.googleMapsLink?.trim()) ?? "";
+  const addressText =
+    [`${event.city} - ${event.state}`, event.neighborhood, event.location]
+      .filter(Boolean)
+      .join(", ");
+  const textColor = mobile ? "text-gray-12" : "text-gray-12";
+
   return (
-    <>
-      {event.modalities
-        ?.filter((modality) => modality.isActive)
-        .map((modality) => {
-          const icon = resolveCheckoutModalityIconSrc(
-            modality.template?.icon,
-          );
-          const label = modality.template?.label;
-          if (!icon || !label) return null;
-          return (
-            <div
-              key={modality.id}
-              className="flex items-center gap-2 text-sm font-medium text-gray-12"
-            >
-              <Image
-                src={icon}
-                alt={label}
-                width={20}
-                height={20}
-                draggable={false}
-              />
-              <span className="text-sm">{label}</span>
-            </div>
-          );
-        })}
-    </>
+    <div className={cn("flex flex-col", mobile ? "mb-4 gap-3" : "gap-4")}>
+      <div className={cn("flex items-center gap-2 text-sm font-medium", textColor)}>
+        <CalendarIcon className="size-5 shrink-0" />
+        <span>Acontece em {formatDateShort(new Date(event.eventDate))}</span>
+      </div>
+      {event.registrationEndDate && (
+        <div className={cn("flex items-center gap-2 text-sm font-medium", textColor)}>
+          <CalendarCheckIcon className="size-5 shrink-0 text-gray-12" />
+          <span>
+            Inscrições até {formatDateShort(new Date(event.registrationEndDate))}
+          </span>
+        </div>
+      )}
+      <div className={cn("flex items-center gap-2 font-medium", textColor)}>
+        <LocationIcon className="size-5 shrink-0" />
+        {mapsUrl ? (
+          <Link
+            href={mapsUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-sm underline"
+          >
+            {addressText}
+            {event.zipCode && (
+              <span className="whitespace-nowrap">, {event.zipCode}</span>
+            )}
+          </Link>
+        ) : (
+          <span className="text-sm">
+            {addressText}
+            {event.zipCode && (
+              <span className="whitespace-nowrap">, {event.zipCode}</span>
+            )}
+          </span>
+        )}
+      </div>
+    </div>
   );
 }
 
@@ -276,40 +320,43 @@ function OrganizerBlock({
     ? "mb-4 rounded-lg border border-gray-6 bg-gray-3 p-4"
     : "mt-6 rounded-xl border border-gray-6 bg-gray-3 p-3";
 
+  // Redes sociais — espelha a página pública (substitui o telefone, que não é público).
+  const socialLinks = [
+    { url: sanitizeUrl(event.instagram), icon: InstagramIcon },
+    { url: sanitizeUrl(event.facebook), icon: FacebookIcon },
+    { url: sanitizeUrl(event.youtube), icon: YoutubeIcon },
+    { url: sanitizeUrl(event.tiktok), icon: TiktokIcon },
+    { url: sanitizeUrl(event.website), icon: GlobeIcon },
+  ];
+
   return (
     <div className={boxClass}>
-      <p
-        className={cn(
-          "mb-3 text-sm font-medium text-gray-11",
-          mobile && "text-gray-11",
-        )}
-      >
-        Organizador
-      </p>
+      <p className="mb-3 text-sm font-medium text-gray-11">Organizador</p>
       {organizer ? (
         <div className="space-y-3">
-          <div className="flex items-start gap-3">
+          <div className="flex items-center gap-3">
+            {/* Nome FANTASIA (getEventOrganizer prioriza tradeName). */}
             <OrganizerAvatar logoUrl={organizer.logoUrl} name={organizer.name} />
-            <div className="min-w-0 flex-1">
-              <p
-                className={cn(
-                  "truncate text-sm font-semibold text-gray-12",
-                  mobile && "text-gray-12",
-                )}
-              >
+            <div className="flex min-w-0 flex-1 flex-col gap-1">
+              <p className="truncate text-sm font-semibold text-gray-12">
                 {organizer.name}
               </p>
-              {organizer.phone && (
-                <div className="mt-1 flex items-center gap-1.5">
-                  <Phone className="size-3.5 shrink-0 text-gray-11" />
-                  <a
-                    href={`tel:${phoneDigitsForTel(organizer.phone) || organizer.phone.replace(/\D/g, "")}`}
-                    className="text-xs text-gray-11 transition-colors hover:text-primary-11"
-                  >
-                    {formatBrazilianPhone(organizer.phone)}
-                  </a>
-                </div>
-              )}
+              <div className="flex items-center gap-1">
+                {socialLinks.map(({ url, icon: Icon }, index) => {
+                  if (!url) return null;
+                  return (
+                    <Link
+                      key={index}
+                      href={url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex size-8 items-center justify-center rounded-full border border-gray-6 text-gray-12"
+                    >
+                      <Icon className="size-4" />
+                    </Link>
+                  );
+                })}
+              </div>
             </div>
           </div>
           <Button
@@ -320,11 +367,6 @@ function OrganizerBlock({
               mobile && "bg-gray-1",
             )}
             type="button"
-            onClick={() => {
-              if (organizer.email) {
-                window.location.href = `mailto:${organizer.email}?subject=Contato sobre ${event.name}`;
-              }
-            }}
           >
             Falar com o organizador
           </Button>
@@ -344,6 +386,7 @@ function ShareAndReport({
   onShare: () => void;
 }) {
   if (mobile) {
+    // Página pública (mobile) mostra apenas "Compartilhar".
     return (
       <div className="mt-8 flex flex-col items-center justify-center gap-2 px-4">
         <Button
@@ -356,13 +399,6 @@ function ShareAndReport({
           <ShareIcon className="size-5" />
           Compartilhar
         </Button>
-        <button
-          type="button"
-          disabled
-          className="w-full text-center text-sm font-semibold text-gray-11 underline cursor-not-allowed"
-        >
-          Denunciar evento
-        </button>
       </div>
     );
   }
@@ -396,44 +432,7 @@ export function EventPublicInfoCardMobile(props: EventPublicInfoCardProps) {
       <div className="px-4">
         <div className="relative z-10 mt-10 rounded-2xl px-4 pb-4 pt-6 shadow-[0_5px_10px_rgba(0,0,0,0.3)]">
           <h1 className="mb-4 text-xl font-bold text-gray-12">{event.name}</h1>
-          <div className="mb-4 flex flex-col gap-3">
-            <div className="flex items-center gap-2 text-gray-11">
-              <LocationIcon className="size-5 text-gray-11" />
-              <span className="text-sm">
-                {event.location || `${event.city}, ${event.state}`}
-              </span>
-            </div>
-            <div className="flex items-center gap-2 text-gray-11">
-              <CalendarIcon className="size-5 text-gray-11" />
-              <span className="text-sm">
-                {formatDateShort(new Date(event.eventDate))}
-              </span>
-            </div>
-            {event.modalities
-              ?.filter((m) => m.isActive)
-              .map((modality) => {
-                const icon = resolveCheckoutModalityIconSrc(
-                  modality.template?.icon,
-                );
-                const label = modality.template?.label;
-                if (!icon || !label) return null;
-                return (
-                  <div
-                    key={modality.id}
-                    className="flex items-center gap-2 text-gray-11"
-                  >
-                    <Image
-                      src={icon}
-                      alt={label}
-                      width={20}
-                      height={20}
-                      draggable={false}
-                    />
-                    <span className="text-sm">{label}</span>
-                  </div>
-                );
-              })}
-          </div>
+          <EventMetaRows event={event} mobile />
           <OrganizerBlock event={event} mobile />
           <RegistrationCtaBlock
             event={event}
@@ -463,19 +462,7 @@ export function EventPublicInfoCardDesktop(props: EventPublicInfoCardProps) {
     <div className="w-full">
       <div className="h-full overflow-hidden rounded-xl bg-gray-2 p-5 shadow-[0_5px_10px_rgba(0,0,0,0.3)]">
         <h1 className="mb-4 text-lg font-bold">{event.name}</h1>
-        <div className="flex flex-col gap-4">
-          <div className="flex items-center gap-2 font-medium text-gray-12">
-            <LocationIcon className="size-5" />
-            <span className="text-sm">
-              {event.city}, {event.state}
-            </span>
-          </div>
-          <div className="flex items-center gap-2 text-sm font-medium text-gray-12">
-            <CalendarIcon className="size-5" />
-            <span>{formatDateLong(new Date(event.eventDate))}</span>
-          </div>
-          <ModalitiesList event={event} />
-        </div>
+        <EventMetaRows event={event} />
         <OrganizerBlock event={event} />
         <RegistrationCtaBlock
           event={event}
