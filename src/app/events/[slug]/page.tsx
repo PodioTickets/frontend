@@ -9,7 +9,7 @@ import Link from "next/link";
 import { Button } from "@/components/Button";
 import { EventMap } from "@/components/EventMap";
 import { useEventBySlug } from "@/hooks/useEvent";
-import { formatDateTimeBR } from "@/utils/datetimeBR";
+import { formatDateTimeBR, eventWindowInstant } from "@/utils/datetimeBR";
 import { useQueryClient } from "@tanstack/react-query";
 import { RegistrationCountdown } from "@/components/Event/RegistrationCountdown";
 import { ShareIcon } from "@/components/Icons/ShareIcon";
@@ -198,13 +198,16 @@ export default function EventPage() {
     return null;
   }
 
+  // `registrationOpensAt` (wall-clock UTC) é só pro DISPLAY/countdown-label.
+  // As comparações com o tempo real usam o INSTANTE em BRT (+3h) — senão a janela
+  // abre/fecha 3h cedo no Brasil (ex.: "encerra 09:30" bloqueava às 06:30 BRT).
   const registrationOpensAt = event.registrationStartDate
     ? new Date(event.registrationStartDate)
     : null;
+  const registrationOpensInstant = eventWindowInstant(event.registrationStartDate);
   const registrationsNotOpenYet =
-    !!registrationOpensAt &&
-    !Number.isNaN(registrationOpensAt.getTime()) &&
-    Date.now() < registrationOpensAt.getTime();
+    !!registrationOpensInstant &&
+    Date.now() < registrationOpensInstant.getTime();
 
   const registrationOpensDateText =
     registrationsNotOpenYet && registrationOpensAt
@@ -220,21 +223,15 @@ export default function EventPage() {
   const registrationSlotsSoldOut =
     event.hasRegistrationSlotsAvailable === false;
 
-  const eventRealizationAt = event.eventDate
-    ? new Date(event.eventDate)
-    : null;
+  const eventRealizationInstant = eventWindowInstant(event.eventDate);
   const eventRealizationPassed =
-    !!eventRealizationAt &&
-    !Number.isNaN(eventRealizationAt.getTime()) &&
-    Date.now() >= eventRealizationAt.getTime();
+    !!eventRealizationInstant &&
+    Date.now() >= eventRealizationInstant.getTime();
 
-  const registrationEndsAt = event.registrationEndDate
-    ? new Date(event.registrationEndDate)
-    : null;
+  const registrationEndsInstant = eventWindowInstant(event.registrationEndDate);
   const registrationPeriodEnded =
-    !!registrationEndsAt &&
-    !Number.isNaN(registrationEndsAt.getTime()) &&
-    Date.now() >= registrationEndsAt.getTime();
+    !!registrationEndsInstant &&
+    Date.now() >= registrationEndsInstant.getTime();
 
   const eventSuspendedByOrganizer =
     event.status === "SUSPENDED" || event.isSuspended === true;
@@ -459,7 +456,7 @@ export default function EventPage() {
                   <p className="text-sm text-gray-11 text-center mt-2">
                     Inscrições abrem em{" "}
                     <br /> <RegistrationCountdown
-                      targetDate={registrationOpensAt}
+                      targetDate={registrationOpensInstant}
                       fallbackText={registrationOpensDateText}
                       onExpire={handleRegistrationCountdownExpire}
                       className="font-semibold"
@@ -947,7 +944,7 @@ export default function EventPage() {
                       <p className="text-sm text-gray-11 text-center mt-2">
                         Inscrições abrem em{" "}
                         <br /> <RegistrationCountdown
-                          targetDate={registrationOpensAt}
+                          targetDate={registrationOpensInstant}
                           fallbackText={registrationOpensDateText}
                           onExpire={handleRegistrationCountdownExpire}
                           className="font-semibold"
