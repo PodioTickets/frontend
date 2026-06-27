@@ -596,14 +596,9 @@ export default function TicketDetailsPage() {
                   </p>
                   {/* Instante real → data + horário em BRT (America/Sao_Paulo). */}
                   <div className="flex flex-col items-end gap-0.5">
-                    <p className="text-base font-bold text-gray-12 font-manrope leading-[1.1] text-right">
-                      {order.createdAt ? formatDateBRT(order.createdAt) : "N/A"}
+                    <p className="text-base font-bold text-gray-12 font-manrope leading-[1.1] text-right flex items-center">
+                      {order.createdAt ? formatDateBRT(order.createdAt) : "N/A"} -  {formatTimeBRT(order.createdAt, { hour: "2-digit", minute: "2-digit" })}
                     </p>
-                    {order.createdAt && (
-                      <p className="text-sm font-medium text-gray-11 font-manrope leading-[1.1] text-right">
-                        {formatTimeBRT(order.createdAt, { hour: "2-digit", minute: "2-digit" })}
-                      </p>
-                    )}
                   </div>
                 </div>
 
