@@ -32,8 +32,6 @@ export function CreateVoucherModal() {
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [expiryStatus, setExpiryStatus] = useState<ExpiryStatus>("DISABLED");
   const [expiryDate, setExpiryDate] = useState<string | null>(null);
-  // TEMP_HORARIO_TESTE: horário de expiração só pra validar o fuso (BRT). REMOVER depois.
-  const [testExpiryTime, setTestExpiryTime] = useState<string>("");
   const [applyToProducts, setApplyToProducts] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isMdUp, setIsMdUp] = useState(true);
@@ -103,14 +101,6 @@ export function CreateVoucherModal() {
         setExpiryStatus(v.expiryDate ? "ENABLED" : "DISABLED");
         // Converte o instante de validade (fim do dia BRT) pro dia civil do picker.
         setExpiryDate(v.expiryDate ? toCivilDayBRT(v.expiryDate) : null);
-        // TEMP_HORARIO_TESTE: pré-preenche o horário (em BRT) pra validar o round-trip. REMOVER depois.
-        setTestExpiryTime(
-          v.expiryDate
-            ? new Date(v.expiryDate).toLocaleTimeString("pt-BR", {
-                timeZone: "America/Sao_Paulo", hour: "2-digit", minute: "2-digit", hour12: false,
-              })
-            : "",
-        );
         setCpfListStatus(v.cpfListStatus || "DISABLED");
         setCpfList(v.cpfList || []);
         setApplyToProducts(!!(v as { applyToProducts?: boolean }).applyToProducts);
@@ -232,12 +222,7 @@ export function CreateVoucherModal() {
         name: name.trim(),
         ...(!isEditing && { quantity: quantityNum }),
         appliesTo: appliesTo === "all" ? "all" : selectedTicketIds.length > 0 ? selectedTicketIds : "all",
-        // TEMP_HORARIO_TESTE: com horário informado, manda ISO com offset BRT (-03:00) pro backend
-        // respeitar a HORA (sem isso, YYYY-MM-DD vira fim do dia BRT). REMOVER depois: voltar para
-        // `expiryDate: expiryStatus === "ENABLED" && expiryDate ? expiryDate : null`.
-        expiryDate: expiryStatus === "ENABLED" && expiryDate
-          ? (testExpiryTime ? `${expiryDate}T${testExpiryTime}:00-03:00` : expiryDate)
-          : null, // null é serializado, undefined não
+        expiryDate: expiryStatus === "ENABLED" && expiryDate ? expiryDate : null, // null é serializado, undefined não
         cpfListStatus,
         cpfList: cpfListStatus === "ENABLED" ? cpfList : null,
         applyToProducts,
@@ -798,17 +783,6 @@ export function CreateVoucherModal() {
                                       placeholder="00/00/2026"
                                       className="w-full md:w-auto"
                                     />
-                                    {/* TEMP_HORARIO_TESTE: horário (BRT) só pra validar o fuso. REMOVER depois. */}
-                                    <label className="text-gray-11 text-xs font-family-dm-sans leading-[1.3] mt-2">
-                                      ⏰ Horário de expiração (TESTE de fuso — remover depois)
-                                    </label>
-                                    <input
-                                      type="time"
-                                      value={testExpiryTime}
-                                      onChange={(e) => setTestExpiryTime(e.target.value)}
-                                      className="w-full md:w-auto border border-gray-7 rounded-md px-3 py-2 text-sm text-gray-12 bg-gray-1"
-                                    />
-                                    {/* FIM TEMP_HORARIO_TESTE */}
                                   </div>
                                 )}
                               </div>
