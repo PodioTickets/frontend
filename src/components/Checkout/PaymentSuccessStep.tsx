@@ -145,9 +145,9 @@ export function PaymentSuccessStep({
   // Sem `paymentDate`, mantém o fallback antigo (event.eventDate, wall-clock, sem hora).
   const purchaseStamp = paymentDate
     ? {
-        date: formatDateBRT(paymentDate, { day: "2-digit", month: "2-digit", year: "numeric" }),
-        time: formatTimeBRT(paymentDate, { hour: "2-digit", minute: "2-digit" }),
-      }
+      date: formatDateBRT(paymentDate, { day: "2-digit", month: "2-digit", year: "numeric" }),
+      time: formatTimeBRT(paymentDate, { hour: "2-digit", minute: "2-digit" }),
+    }
     : { date: formatDate(event.eventDate), time: "" };
 
 
@@ -328,15 +328,10 @@ export function PaymentSuccessStep({
                       <p className="font-semibold text-base leading-[1.1] text-gray-12 font-manrope">
                         Data da compra:
                       </p>
-                      <div className="flex flex-col items-end gap-0.5">
-                        <p className="font-bold text-base leading-[1.1] text-gray-12 font-manrope">
-                          {purchaseStamp.date}
-                        </p>
-                        {purchaseStamp.time && (
-                          <p className="font-medium text-sm leading-[1.1] text-gray-11 font-manrope">
-                            {purchaseStamp.time}
-                          </p>
-                        )}
+                      <div className="flex items-end gap-0.5">
+                        <div className="font-bold text-base leading-[1.1] text-gray-12 font-manrope">
+                          {purchaseStamp.date} - {purchaseStamp.time}
+                        </div>
                       </div>
                     </div>
 
@@ -790,15 +785,10 @@ export function PaymentSuccessStep({
                       <p className="font-semibold text-[16px] leading-[1.1] text-gray-12 font-manrope">
                         Data da compra:
                       </p>
-                      <div className="flex flex-col items-end gap-0.5">
-                        <p className="font-bold text-[16px] leading-[1.1] text-gray-12 font-manrope">
-                          {purchaseStamp.date}
-                        </p>
-                        {purchaseStamp.time && (
-                          <p className="font-medium text-sm leading-[1.1] text-gray-11 font-manrope">
-                            {purchaseStamp.time}
-                          </p>
-                        )}
+                      <div className="flex items-end gap-0.5">
+                        <div className="font-bold text-[16px] leading-[1.1] text-gray-12 font-manrope flex items-center">
+                          {purchaseStamp.date} - {purchaseStamp.time}
+                        </div>
                       </div>
                     </div>
 
