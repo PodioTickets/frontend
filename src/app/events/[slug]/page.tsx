@@ -540,12 +540,6 @@ export default function EventPage() {
                 googleMapsLink={mapsUrl}
               />
             </div>
-            <Button
-              variant="ghost"
-              className="underline text-gray-11 font-bold px-0"
-            >
-              Ver no mapa
-            </Button>
           </div>
 
           {/* Strava */}

@@ -899,9 +899,11 @@ export function CreateProductModal() {
                           <span className="md:hidden">Toque para adicionar fotos</span>
                           <span className="hidden md:inline">Arraste uma imagem para este campo ou clique aqui</span>
                         </h1>
-                        <p className="font-family-dm-sans text-gray-11 text-xs md:text-base">
-                          Até 7 fotos · PNG ou JPG, máximo 10MB cada
-                        </p>
+                        <div className="flex flex-col gap-1">
+                          <p className="font-family-dm-sans text-gray-11 text-xs md:text-base">
+                            Envie até 7 fotos - Dimensão recomendada 1:1
+                          </p>
+                        </div>
                       </div>
                     </div>
 

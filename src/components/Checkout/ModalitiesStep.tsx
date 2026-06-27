@@ -43,9 +43,11 @@ interface ModalitiesStepProps {
   /** Voltar pra página do evento — espelha o botão dos demais steps do checkout. */
   onBack?: () => void;
   isSubmitting?: boolean;
+  /** Preview do organizador: desabilita o botão "Próximo" (não há fluxo real). */
+  disableNext?: boolean;
 }
 
-export function ModalitiesStep({ event, onNext, onBack, isSubmitting = false }: ModalitiesStepProps) {
+export function ModalitiesStep({ event, onNext, onBack, isSubmitting = false, disableNext = false }: ModalitiesStepProps) {
   const { raceQuantities } = useCheckout();
   const { isAuthenticated } = useAuth();
   const { openLoginModal } = useLoginModal();
@@ -561,7 +563,7 @@ export function ModalitiesStep({ event, onNext, onBack, isSubmitting = false }: 
             cta={{
               label: "Selecionar",
               onClick: handleNext,
-              disabled: totalParticipants === 0,
+              disabled: totalParticipants === 0 || disableNext,
               loading: isSubmitting,
             }}
           />
@@ -650,6 +652,7 @@ export function ModalitiesStep({ event, onNext, onBack, isSubmitting = false }: 
               event={event}
               onNext={handleNext}
               isSubmitting={isSubmitting}
+              disableNext={disableNext}
               tickets={tickets}
               categorizedTickets={categorizedTickets}
               uncategorizedTickets={uncategorizedTickets}

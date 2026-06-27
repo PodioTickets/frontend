@@ -89,7 +89,7 @@ export default function ReviewTicketsPreviewPage() {
 
       <CheckoutPreviewProvider>
         <CheckoutTimerPreviewProvider>
-          <ModalitiesStep event={previewEvent} onNext={handleNext} />
+          <ModalitiesStep event={previewEvent} onNext={handleNext} disableNext />
         </CheckoutTimerPreviewProvider>
       </CheckoutPreviewProvider>
     </div>

@@ -10,6 +10,7 @@ import {
   useRef,
   useState,
 } from "react";
+import { createPortal } from "react-dom";
 import Cropper, { type Area } from "react-easy-crop";
 import { Button } from "@/components/Button";
 import type { EventImageSpec } from "@/lib/eventImageSpecs";
@@ -81,6 +82,11 @@ export const ImageUploadWithCrop = forwardRef<ImageUploadWithCropRef, ImageUploa
   ) {
     const inputRef = useRef<HTMLInputElement>(null);
     const [open, setOpen] = useState(false);
+    // O modal vai via portal pro `document.body` (escapa ancestrais com `transform`,
+    // ex.: o DrawerContent do vaul, onde `position: fixed` ficaria preso ao painel).
+    // `mounted` evita o portal no SSR (sem `document`).
+    const [mounted, setMounted] = useState(false);
+    useEffect(() => setMounted(true), []);
     const [imageSrc, setImageSrc] = useState<string | null>(null);
     const [crop, setCrop] = useState({ x: 0, y: 0 });
     const [zoom, setZoom] = useState(1);
@@ -241,9 +247,13 @@ export const ImageUploadWithCrop = forwardRef<ImageUploadWithCropRef, ImageUploa
           onChange={handleInputChange}
         />
 
-        {open && imageSrc ? (
+        {open && imageSrc && mounted ? createPortal(
           <div
             className="fixed inset-0 z-100 flex items-center justify-center p-4 bg-black/70"
+            // `pointerEvents: auto` reativa a interação quando renderizado dentro de
+            // um Radix Dialog modal (vaul Drawer), que põe `pointer-events: none` fora
+            // do seu content. Sem isso, o crop abre mas não dá pra mexer.
+            style={{ pointerEvents: "auto" }}
             role="dialog"
             aria-modal="true"
             aria-labelledby="image-crop-title"
@@ -371,7 +381,8 @@ export const ImageUploadWithCrop = forwardRef<ImageUploadWithCropRef, ImageUploa
                 </div>
               </div>
             </div>
-          </div>
+          </div>,
+          document.body,
         ) : null}
       </div>
     );

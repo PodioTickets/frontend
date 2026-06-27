@@ -13,7 +13,25 @@ interface ProductVariation {
   id: string;
   name: string;
   price: number;
+  /** Limite configurado pelo organizador. `0` = ILIMITADO (sentinela do backend). */
   stock: number;
+  /** Restante disponível; só significativo quando `stock > 0`. Pode faltar em respostas legadas. */
+  availableStock?: number;
+}
+
+/**
+ * Variação esgotada para SELEÇÃO pós-compra. Espelha o `isVariationSoldOut` do
+ * checkout: só esgota quando o estoque é LIMITADO (`stock > 0`) e não resta
+ * disponível (`availableStock <= 0`). `stock === 0` é ILIMITADO → nunca esgota.
+ * O backend é a fonte autoritativa (valida no PATCH); aqui é prevenção de UX.
+ */
+function isVariationSoldOut(v: ProductVariation): boolean {
+  const stock = v.stock ?? 0;
+  if (stock <= 0) return false; // ilimitado
+  // Sem dado de disponível (respostas que não trazem o campo) → não bloqueia,
+  // pra não exibir "Esgotado" falso. O backend valida no PATCH de qualquer forma.
+  if (v.availableStock == null) return false;
+  return v.availableStock <= 0;
 }
 
 export interface IncludedProduct {
@@ -139,6 +157,9 @@ export function ProductVariationCard({
       setIsSelecting(false);
       return;
     }
+    // Defesa: não seleciona variação esgotada (o botão já é `disabled`, mas o
+    // PATCH /products seria rejeitado pelo backend de qualquer forma).
+    if (isVariationSoldOut(variation)) return;
     setIsSaving(true);
     try {
       await userService.updateRegistrationProductVariation(
@@ -248,36 +269,40 @@ export function ProductVariationCard({
       {/* Inline variation selector */}
       {isSelecting && (
         <div className="border-t border-gray-6 flex flex-col">
-          {(product.variations ?? []).map((variation, i) => (
-            <button
-              key={variation.id}
-              type="button"
-              onClick={() => handleSelectVariation(variation)}
-              disabled={isSaving}
-              className={cn(
-                "flex items-center gap-2 px-4 py-3 text-left transition-colors hover:bg-gray-3",
-                i < (product.variations!.length - 1) && "border-b border-gray-6",
-                localSelected?.id === variation.id && "bg-gray-3"
-              )}
-            >
-              <Check
+          {(product.variations ?? []).map((variation, i) => {
+            const isCurrent = localSelected?.id === variation.id;
+            // Esgotado só bloqueia OUTRAS variações — a já selecionada continua marcada.
+            const soldOut = !isCurrent && isVariationSoldOut(variation);
+            return (
+              <button
+                key={variation.id}
+                type="button"
+                onClick={() => handleSelectVariation(variation)}
+                disabled={isSaving || soldOut}
                 className={cn(
-                  "size-4 shrink-0",
-                  localSelected?.id === variation.id
-                    ? "text-primary-11 opacity-100"
-                    : "opacity-0"
+                  "flex items-center gap-2 px-4 py-3 text-left transition-colors",
+                  soldOut ? "opacity-50 cursor-not-allowed" : "hover:bg-gray-3",
+                  i < (product.variations!.length - 1) && "border-b border-gray-6",
+                  isCurrent && "bg-gray-3"
                 )}
-              />
-              <span className="text-base font-medium leading-[1.3] text-gray-12 font-family-dm-sans">
-                {variation.name}
-              </span>
-              {variation.stock === 0 && variation.name !== localSelected?.name && (
-                <span className="text-xs text-gray-10 font-family-dm-sans ml-auto">
-                  Esgotado
+              >
+                <Check
+                  className={cn(
+                    "size-4 shrink-0",
+                    isCurrent ? "text-primary-11 opacity-100" : "opacity-0"
+                  )}
+                />
+                <span className="text-base font-medium leading-[1.3] text-gray-12 font-family-dm-sans">
+                  {variation.name}
                 </span>
-              )}
-            </button>
-          ))}
+                {soldOut && (
+                  <span className="text-xs text-gray-10 font-family-dm-sans ml-auto">
+                    Esgotado
+                  </span>
+                )}
+              </button>
+            );
+          })}
         </div>
       )}
     </div>

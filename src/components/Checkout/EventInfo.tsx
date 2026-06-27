@@ -44,9 +44,11 @@ interface EventInfoProps {
   /** Desconto autoritativo (REAIS) do voucher da order — usado quando o desconto
    *  não vem do preview do link. */
   voucherDiscountOverride?: number;
+  /** Preview do organizador: desabilita o botão "Proximo" (não há fluxo real). */
+  disableNext?: boolean;
 }
 
-export function EventInfo({ event, onNext, isSubmitting = false, tickets = [], categorizedTickets = [], uncategorizedTickets = [], appliedCoupon = null, appliedVoucher = null, voucherDiscountOverride = 0 }: EventInfoProps) {
+export function EventInfo({ event, onNext, isSubmitting = false, tickets = [], categorizedTickets = [], uncategorizedTickets = [], appliedCoupon = null, appliedVoucher = null, voucherDiscountOverride = 0, disableNext = false }: EventInfoProps) {
   const { raceQuantities } = useCheckout();
   const [isContactModalOpen, setIsContactModalOpen] = useState(false);
   const pendingCoupon = usePendingCouponSnapshot();
@@ -438,7 +440,7 @@ export function EventInfo({ event, onNext, isSubmitting = false, tickets = [], c
         <Button
           onClick={onNext}
           className="w-full mt-8 font-bold"
-          disabled={totalParticipants === 0}
+          disabled={totalParticipants === 0 || disableNext}
           isLoading={isSubmitting}
         >
           Proximo

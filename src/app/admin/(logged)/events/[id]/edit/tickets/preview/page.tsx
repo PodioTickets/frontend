@@ -93,7 +93,7 @@ export default function EditTicketsCheckoutPreviewPage() {
 
       <CheckoutPreviewProvider>
         <CheckoutTimerPreviewProvider>
-          <ModalitiesStep event={previewEvent} onNext={handleNext} />
+          <ModalitiesStep event={previewEvent} onNext={handleNext} disableNext />
         </CheckoutTimerPreviewProvider>
       </CheckoutPreviewProvider>
     </div>
