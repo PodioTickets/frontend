@@ -16,6 +16,9 @@ export interface Event {
   description: string;
   location: string;
   bannerUrl: string;
+  /** Imagem/ícone do card do evento (logo). Pode vir como logoUrl ou cardImageUrl. */
+  logoUrl?: string | null;
+  cardImageUrl?: string | null;
   city: string;
   state: string;
   country: string;

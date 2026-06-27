@@ -8,7 +8,7 @@ import type { Event } from "@/interfaces/event";
 import { getAvatarUrl } from "@/utils/avatar";
 import { getEventOrganizer } from "@/utils/organization";
 import { cn } from "@/utils/cn";
-import { formatDateBR } from "@/utils/datetimeBR";
+import { formatDateBR, eventWindowInstant } from "@/utils/datetimeBR";
 import { ImageWithInitialFallback } from "@/components/ImageWithInitialFallback";
 
 interface EventCardProps {
@@ -25,25 +25,24 @@ export function EventCard({ event }: EventCardProps) {
     });
   }, [event?.eventDate]);
 
+  // Janela do evento é wall-clock (UTC); comparar com o tempo real exige o
+  // instante em BRT (+3h via eventWindowInstant), senão abre/fecha 3h cedo.
   const eventRealizationPassed = useMemo(() => {
-    if (!event?.eventDate) return false;
-    const at = new Date(event.eventDate);
-    return !Number.isNaN(at.getTime()) && Date.now() >= at.getTime();
+    const at = eventWindowInstant(event?.eventDate);
+    return !!at && Date.now() >= at.getTime();
   }, [event?.eventDate]);
 
   const registrationPeriodEnded = useMemo(() => {
-    if (!event?.registrationEndDate) return false;
-    const at = new Date(event.registrationEndDate);
-    return !Number.isNaN(at.getTime()) && Date.now() >= at.getTime();
+    const at = eventWindowInstant(event?.registrationEndDate);
+    return !!at && Date.now() >= at.getTime();
   }, [event?.registrationEndDate]);
 
   const inscricoesEncerradas = eventRealizationPassed || registrationPeriodEnded;
 
   const inscricoesEmBreve = useMemo(() => {
     if (event.status !== "PUBLISHED" || !event.registrationStartDate) return false;
-    const opens = new Date(event.registrationStartDate);
-    if (Number.isNaN(opens.getTime())) return false;
-    return Date.now() < opens.getTime();
+    const opens = eventWindowInstant(event.registrationStartDate);
+    return !!opens && Date.now() < opens.getTime();
   }, [event.status, event.registrationStartDate]);
 
   const vagasEsgotadas =

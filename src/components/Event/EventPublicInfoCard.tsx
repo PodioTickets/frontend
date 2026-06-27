@@ -10,7 +10,7 @@ import { ShareIcon } from "@/components/Icons/ShareIcon";
 import { ShareModal } from "@/components/ShareModal";
 import type { Event } from "@/interfaces/event";
 import { cn } from "@/utils/cn";
-import { formatDateBR, formatDateTimeBR } from "@/utils/datetimeBR";
+import { formatDateBR, formatDateTimeBR, eventWindowInstant } from "@/utils/datetimeBR";
 import { resolveCheckoutModalityIconSrc } from "@/utils/checkoutModalityDisplay";
 import {
   formatBrazilianPhone,
@@ -54,13 +54,15 @@ function OrganizerAvatar({
 
 function useEventRegistrationUiState(event: Event) {
   return useMemo(() => {
+    // `registrationOpensAt` (wall-clock UTC) é só pro DISPLAY (mostra a hora digitada).
+    // A comparação com o tempo real usa o INSTANTE em BRT (+3h) — senão abre/fecha 3h cedo.
     const registrationOpensAt = event.registrationStartDate
       ? new Date(event.registrationStartDate)
       : null;
+    const registrationOpensInstant = eventWindowInstant(event.registrationStartDate);
     const registrationsNotOpenYet =
-      !!registrationOpensAt &&
-      !Number.isNaN(registrationOpensAt.getTime()) &&
-      Date.now() < registrationOpensAt.getTime();
+      !!registrationOpensInstant &&
+      Date.now() < registrationOpensInstant.getTime();
 
     const registrationOpensDateText =
       registrationsNotOpenYet && registrationOpensAt
@@ -76,21 +78,15 @@ function useEventRegistrationUiState(event: Event) {
     const registrationSlotsSoldOut =
       event.hasRegistrationSlotsAvailable === false;
 
-    const eventRealizationAt = event.eventDate
-      ? new Date(event.eventDate)
-      : null;
+    const eventRealizationInstant = eventWindowInstant(event.eventDate);
     const eventRealizationPassed =
-      !!eventRealizationAt &&
-      !Number.isNaN(eventRealizationAt.getTime()) &&
-      Date.now() >= eventRealizationAt.getTime();
+      !!eventRealizationInstant &&
+      Date.now() >= eventRealizationInstant.getTime();
 
-    const registrationEndsAt = event.registrationEndDate
-      ? new Date(event.registrationEndDate)
-      : null;
+    const registrationEndsInstant = eventWindowInstant(event.registrationEndDate);
     const registrationPeriodEnded =
-      !!registrationEndsAt &&
-      !Number.isNaN(registrationEndsAt.getTime()) &&
-      Date.now() >= registrationEndsAt.getTime();
+      !!registrationEndsInstant &&
+      Date.now() >= registrationEndsInstant.getTime();
 
     const eventSuspendedByOrganizer =
       event.status === "SUSPENDED" || event.isSuspended === true;

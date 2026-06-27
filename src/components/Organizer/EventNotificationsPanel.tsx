@@ -17,7 +17,7 @@ import {
 import { organizerService } from "@/services";
 import type { EventNotificationsPagination } from "@/services";
 import toast from "react-hot-toast";
-import { formatDateBR, formatTimeBR } from "@/utils/datetimeBR";
+import { formatDateBRT, formatTimeBRT } from "@/utils/datetimeBR";
 
 export type {
   EventNotificationRow,
@@ -37,12 +37,14 @@ const STATUS_FILTER_OPTIONS: DropdownOption[] = [
 function formatDateParts(iso: string) {
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return { date: "—", time: "—" };
-  const date = formatDateBR(iso, {
+  // occurredAt é INSTANTE real (envio/ocorrência) → fuso de Brasília (BRT),
+  // não UTC; senão a hora aparece +3h.
+  const date = formatDateBRT(iso, {
     day: "2-digit",
     month: "2-digit",
     year: "numeric",
   });
-  const time = formatTimeBR(iso, {
+  const time = formatTimeBRT(iso, {
     hour: "2-digit",
     minute: "2-digit",
   });

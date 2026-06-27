@@ -14,7 +14,7 @@ import { formatBRL as formatCurrency } from "@/lib/money";
 import { Tooltip } from "@/components/Tooltip";
 import { formatPhoneForCountry } from "@/utils/phone";
 import { isBrazilianCountry } from "@/validators/Auth.validator";
-import { formatDateBR } from "@/utils/datetimeBR";
+import { formatDateBR, formatDateBRT, formatTimeBRT } from "@/utils/datetimeBR";
 import { formatAnswer } from "@/utils/questionAnswer";
 
 interface PaymentSuccessStepProps {
@@ -140,6 +140,15 @@ export function PaymentSuccessStep({
       year: "numeric",
     });
   };
+
+  // "Data da compra" é INSTANTE real → data + horário em BRT (America/Sao_Paulo).
+  // Sem `paymentDate`, mantém o fallback antigo (event.eventDate, wall-clock, sem hora).
+  const purchaseStamp = paymentDate
+    ? {
+      date: formatDateBRT(paymentDate, { day: "2-digit", month: "2-digit", year: "numeric" }),
+      time: formatTimeBRT(paymentDate, { hour: "2-digit", minute: "2-digit" }),
+    }
+    : { date: formatDate(event.eventDate), time: "" };
 
 
   /* Brasileiro quando: (1) country bate com BR/Brasil/Brazil (sinal mais
@@ -319,9 +328,11 @@ export function PaymentSuccessStep({
                       <p className="font-semibold text-base leading-[1.1] text-gray-12 font-manrope">
                         Data da compra:
                       </p>
-                      <p className="font-bold text-base leading-[1.1] text-gray-12 font-manrope">
-                        {formatDate(paymentDate || event.eventDate)}
-                      </p>
+                      <div className="flex items-end gap-0.5">
+                        <div className="font-bold text-base leading-[1.1] text-gray-12 font-manrope">
+                          {purchaseStamp.date} - {purchaseStamp.time}
+                        </div>
+                      </div>
                     </div>
 
                     {/* Payment Method — omitido em pedido gratuito */}
@@ -774,9 +785,11 @@ export function PaymentSuccessStep({
                       <p className="font-semibold text-[16px] leading-[1.1] text-gray-12 font-manrope">
                         Data da compra:
                       </p>
-                      <p className="font-bold text-[16px] leading-[1.1] text-gray-12 font-manrope">
-                        {formatDate(paymentDate || event.eventDate)}
-                      </p>
+                      <div className="flex items-end gap-0.5">
+                        <div className="font-bold text-[16px] leading-[1.1] text-gray-12 font-manrope flex items-center">
+                          {purchaseStamp.date} - {purchaseStamp.time}
+                        </div>
+                      </div>
                     </div>
 
                     {/* Payment Method — omitido em pedido gratuito */}

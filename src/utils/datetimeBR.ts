@@ -41,6 +41,25 @@ export function toUtcDate(value: DateInput): Date | null {
   return Number.isNaN(d.getTime()) ? null : d;
 }
 
+/**
+ * Converte um `Date` vindo de um DATE-PICKER (react-day-picker) — que representa
+ * o DIA CIVIL clicado pelo usuário, ancorado em meia-noite LOCAL — para a string
+ * `YYYY-MM-DD` desse mesmo dia.
+ *
+ * ⚠️ Use os componentes LOCAIS (getFullYear/Month/Date), NÃO `toISOString()`:
+ * `toISOString` converte pra UTC e, dependendo do fuso do navegador, desloca o
+ * dia (ex.: meia-noite local a leste de UTC cai no dia anterior). Como o backend
+ * interpreta esse parâmetro como um DIA CIVIL (fronteiras BRT), enviar o dia
+ * exatamente como foi escolhido elimina o skew de fuso nos filtros.
+ */
+export function toCivilDayString(value: Date | null | undefined): string | undefined {
+  if (!value || Number.isNaN(value.getTime())) return undefined;
+  const year = value.getFullYear();
+  const month = String(value.getMonth() + 1).padStart(2, "0");
+  const day = String(value.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
 const DEFAULT_DATE_OPTS: Intl.DateTimeFormatOptions = {
   day: "2-digit",
   month: "2-digit",
@@ -122,4 +141,65 @@ export function formatTimeBRT(
   options: Intl.DateTimeFormatOptions = DEFAULT_TIME_OPTS,
 ): string {
   return formatInstantBRT(value, options);
+}
+
+/**
+ * Converte um INSTANTE (ISO com `Z`) que representa o FIM de um dia civil em BRT
+ * — ex.: validade de cupom/voucher, gravada no backend como fim do dia BRT em UTC
+ * (`(dia+1)T02:59:59.999Z`) — de volta para o DIA CIVIL `YYYY-MM-DD` em Brasília.
+ * Usado no date-picker (edição) e no dirty-check desses modais.
+ *
+ * Lê sempre no fuso de Brasília (−3h), então é compatível também com o formato
+ * LEGADO (`T23:59:59.999Z`, fim do dia em UTC): ambos resolvem para o mesmo dia.
+ * Date-only `YYYY-MM-DD` passa direto (já é um dia civil, sem shift). Retorna ""
+ * para valores ausentes/ inválidos.
+ */
+export function toCivilDayBRT(value: DateInput): string {
+  if (typeof value === "string" && /^\d{4}-\d{2}-\d{2}$/.test(value.trim())) {
+    return value.trim();
+  }
+  const d = toUtcDate(value);
+  if (!d) return "";
+  const brt = new Date(d.getTime() - 3 * 60 * 60 * 1000);
+  const y = brt.getUTCFullYear();
+  const m = String(brt.getUTCMonth() + 1).padStart(2, "0");
+  const day = String(brt.getUTCDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
+/**
+ * Janela do evento (abertura/encerramento das inscrições, realização) é WALL-CLOCK
+ * gravada como UTC pelo backend (server em UTC: "09:30Z" = 09:30 no horário de
+ * Brasília pretendido). Para COMPARAR com o tempo real (`Date.now()`), o instante
+ * real é esse wall-clock interpretado em BRT (UTC-3) → +3h sobre o valor UTC.
+ *
+ * Sem isso, comparar o wall-clock-UTC direto com `Date.now()` faz a janela abrir/
+ * fechar 3h CEDO no Brasil (ex.: "encerra 09:30" bloqueava às 06:30 BRT).
+ *
+ * ⚠️ Use SÓ para comparação/countdown. O DISPLAY continua nos helpers UTC
+ * (`formatDateTimeBR`), que mostram o wall-clock como digitado (09:30). Retorna
+ * `Date` do instante real, ou `null`.
+ */
+export function eventWindowInstant(value: DateInput): Date | null {
+  const d = toUtcDate(value);
+  if (!d) return null;
+  return new Date(d.getTime() + 3 * 60 * 60 * 1000);
+}
+
+const MONTHS_BR_SHORT = [
+  "Jan", "Fev", "Mar", "Abr", "Mai", "Jun",
+  "Jul", "Ago", "Set", "Out", "Nov", "Dez",
+];
+
+/**
+ * Formata um INSTANTE REAL no formato custom "DD Mon, AAAA" (ex.: "24 Jun, 2026")
+ * no fuso de Brasília — usado nas listas/tabelas de admin/organizador. BRT é UTC-3
+ * fixo; deslocamos −3h e lemos os componentes UTC pra obter o wall-clock de Brasília
+ * sem depender do fuso do runtime. Retorna "" para valores ausentes/ inválidos.
+ */
+export function formatDateBRTShort(value: DateInput): string {
+  const d = toUtcDate(value);
+  if (!d) return "";
+  const brt = new Date(d.getTime() - 3 * 60 * 60 * 1000);
+  return `${String(brt.getUTCDate()).padStart(2, "0")} ${MONTHS_BR_SHORT[brt.getUTCMonth()]}, ${brt.getUTCFullYear()}`;
 }

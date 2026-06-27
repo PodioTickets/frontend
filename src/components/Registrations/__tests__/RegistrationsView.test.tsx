@@ -84,6 +84,6 @@ describe("RegistrationsView", () => {
     renderWithQuery(<RegistrationsView {...makeProps({ registrations })} />);
     expect(screen.getByText("Participante")).toBeInTheDocument(); // cabeçalho da tabela
     expect(screen.getAllByText(/Ana/).length).toBeGreaterThanOrEqual(1); // card mobile + linha desktop
-    expect(screen.getAllByText("Exportar CSV").length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText("Exportar dados").length).toBeGreaterThanOrEqual(1);
   });
 });

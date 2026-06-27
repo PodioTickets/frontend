@@ -484,7 +484,7 @@ export default function OrganizerEventsPage() {
                             <div className="flex items-center gap-3">
                               <div className="size-9 rounded-lg border border-gray-6 overflow-hidden shrink-0 relative">
                                 <ImageWithInitialFallback
-                                  src={event.bannerUrl}
+                                  src={event.logoUrl ?? event.cardImageUrl ?? event.bannerUrl}
                                   alt={event.name}
                                   name={event.name}
                                   fallbackId={event.id}
@@ -693,7 +693,7 @@ export default function OrganizerEventsPage() {
                     <div className="flex items-center gap-2 min-w-0">
                       <div className="size-11 rounded-lg border border-gray-6 overflow-hidden shrink-0 relative">
                         <ImageWithInitialFallback
-                          src={event.bannerUrl}
+                          src={event.logoUrl ?? event.cardImageUrl ?? event.bannerUrl}
                           alt={event.name}
                           name={event.name}
                           fallbackId={event.id}

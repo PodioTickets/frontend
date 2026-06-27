@@ -13,6 +13,7 @@ import { useParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { organizerService } from "@/services";
 import { queryKeys } from "@/services/cache/QueryClient";
+import { toUtcDate } from "@/utils/datetimeBR";
 
 export interface EditEventFormData {
   eventId: string;
@@ -93,20 +94,25 @@ function sameFormData(a: EditEventFormData, b: EditEventFormData): boolean {
   );
 }
 
+// Datas/horas do evento são WALL-CLOCK (o backend devolve ISO com `Z`, ex.:
+// "2026-06-30T00:00:00.000Z"). Ler com getters LOCAIS (getDate/getHours) reaplica
+// o fuso do runtime (−3h no BR) e desloca o dia/hora — daí a data "desconfigurar"
+// pra um dia antes ao abrir o evento. Lemos sempre em UTC (mesmo padrão de
+// datetimeBR.ts) pra preservar o valor escolhido pelo organizador.
 function formatDateForInput(dateString: string | null | undefined) {
-  if (!dateString) return "";
-  const date = new Date(dateString);
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
+  const date = toUtcDate(dateString);
+  if (!date) return "";
+  const year = date.getUTCFullYear();
+  const month = String(date.getUTCMonth() + 1).padStart(2, "0");
+  const day = String(date.getUTCDate()).padStart(2, "0");
   return `${year}-${month}-${day}`;
 }
 
 function formatTimeForInput(dateString: string | null | undefined) {
-  if (!dateString) return "";
-  const date = new Date(dateString);
-  const hours = String(date.getHours()).padStart(2, "0");
-  const minutes = String(date.getMinutes()).padStart(2, "0");
+  const date = toUtcDate(dateString);
+  if (!date) return "";
+  const hours = String(date.getUTCHours()).padStart(2, "0");
+  const minutes = String(date.getUTCMinutes()).padStart(2, "0");
   return `${hours}:${minutes}`;
 }
 

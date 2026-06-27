@@ -6,6 +6,7 @@ import { Button } from "@/components/Button";
 import { Input } from "@/components/Input";
 import { Checkbox } from "@/components/CheckBox";
 import { DatePicker } from "@/components/DatePicker";
+import { toCivilDayBRT } from "@/utils/datetimeBR";
 import { X } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import toast from "react-hot-toast";
@@ -98,7 +99,8 @@ export function CreateVoucherModal() {
         }
 
         setExpiryStatus(v.expiryDate ? "ENABLED" : "DISABLED");
-        setExpiryDate(v.expiryDate || null);
+        // Converte o instante de validade (fim do dia BRT) pro dia civil do picker.
+        setExpiryDate(v.expiryDate ? toCivilDayBRT(v.expiryDate) : null);
         setCpfListStatus(v.cpfListStatus || "DISABLED");
         setCpfList(v.cpfList || []);
         setApplyToProducts(!!(v as { applyToProducts?: boolean }).applyToProducts);

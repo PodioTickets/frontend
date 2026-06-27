@@ -18,6 +18,7 @@ import { Tooltip } from "@/components/Tooltip";
 import { formatPhoneForCountry } from "@/utils/phone";
 import { isBrazilianCountry } from "@/validators/Auth.validator";
 import { formatAnswer } from "@/utils/questionAnswer";
+import { formatDateBRT, formatTimeBRT } from "@/utils/datetimeBR";
 
 export default function TicketDetailsPage() {
   const params = useParams();
@@ -593,9 +594,12 @@ export default function TicketDetailsPage() {
                   <p className="text-base font-semibold text-gray-12 font-manrope leading-[1.1]">
                     Data da compra:
                   </p>
-                  <p className="text-base font-bold text-gray-12 font-manrope leading-[1.1] text-right">
-                    {order.createdAt ? formatDate(order.createdAt) : "N/A"}
-                  </p>
+                  {/* Instante real → data + horário em BRT (America/Sao_Paulo). */}
+                  <div className="flex flex-col items-end gap-0.5">
+                    <p className="text-base font-bold text-gray-12 font-manrope leading-[1.1] text-right flex items-center">
+                      {order.createdAt ? formatDateBRT(order.createdAt) : "N/A"} -  {formatTimeBRT(order.createdAt, { hour: "2-digit", minute: "2-digit" })}
+                    </p>
+                  </div>
                 </div>
 
                 {!isFreeOrder && (
