@@ -411,7 +411,7 @@ export default function OrganizationSettingsPage() {
                     {/* Organization Details - texto menor no mobile (Figma) */}
                     <div className="flex flex-col gap-1 md:gap-2 items-start justify-center relative shrink-0 min-w-0">
                       <p className="font-family-dm-sans font-semibold leading-[1.3] md:font-manrope md:font-bold md:leading-[1.1] text-base md:text-2xl text-gray-12 truncate w-full">
-                        {organizer.name || "Nome da organização"}
+                        {organizer.tradeName || "Nome da organização"}
                       </p>
                       <p className="font-family-dm-sans leading-[1.3] text-sm md:text-xl text-gray-11">
                         {/* Exibe CPF ou CNPJ conforme o tamanho do documento (PF=11, PJ=14). */}
