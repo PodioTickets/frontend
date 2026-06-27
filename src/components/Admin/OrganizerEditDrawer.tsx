@@ -14,6 +14,9 @@ import {
 import { Button } from "@/components/Button";
 import { ImageWithInitialFallback } from "@/components/ImageWithInitialFallback";
 import { getApiClient } from "@/services/base/ApiClient";
+import { organizerService } from "@/services";
+import { ImageUploadWithCrop, type ImageUploadWithCropRef } from "@/components/ImageUploadWithCrop";
+import { EVENT_IMAGE_SPECS } from "@/lib/eventImageSpecs";
 import type { AdminAuditOrganization } from "@/services/admin/AdminService";
 import { cn } from "@/utils/cn";
 import toast from "react-hot-toast";
@@ -417,7 +420,11 @@ export function OrganizerEditDrawer({ isOpen, onClose, org, onUpdated, mode = "e
   const [deactivating, setDeactivating] = useState(false);
   const [reactivating, setReactivating] = useState(false);
   const [showDeactivateModal, setShowDeactivateModal] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const logoCropRef = useRef<ImageUploadWithCropRef>(null);
+  // Logo: corta no modal, faz upload da imagem cortada (URL) e persiste no save
+  // (POST/PATCH `logoUrl`).
+  const [logoUrl, setLogoUrl] = useState<string>("");
+  const [uploadingLogo, setUploadingLogo] = useState(false);
 
   // form fields
   const [name, setName] = useState("");
@@ -464,6 +471,7 @@ export function OrganizerEditDrawer({ isOpen, onClose, org, onUpdated, mode = "e
     if (isCreate) {
       setDetail(null);
       setLoading(false);
+      setLogoUrl("");
       setPersonType("PJ");
       setInitialPersonType("PJ");
       setCnpjValue("");
@@ -508,6 +516,7 @@ export function OrganizerEditDrawer({ isOpen, onClose, org, onUpdated, mode = "e
         const d: OrgDetail = raw?.data?.organization ?? raw?.organization ?? raw?.data ?? raw;
         setDetail(d);
 
+        setLogoUrl(d.logoUrl ?? "");
         const docRaw = d.document ?? org.document ?? "";
         const isPf = digits(docRaw).length === 11;
         setPersonType(isPf ? "PF" : "PJ");
@@ -557,6 +566,21 @@ export function OrganizerEditDrawer({ isOpen, onClose, org, onUpdated, mode = "e
     setShowAddPix(false);
   };
 
+  // Recebe a imagem JÁ CORTADA (modal de crop) e faz upload no endpoint genérico
+  // (auth por cookie). A persistência no org acontece no save (logoUrl no payload).
+  const handleLogoCropped = async (file: File) => {
+    setUploadingLogo(true);
+    try {
+      const url = await organizerService.uploadImage(file);
+      setLogoUrl(url);
+      toast.success("Imagem carregada. Salve para aplicar.");
+    } catch (err: any) {
+      toast.error(err?.message || "Erro ao enviar a imagem.");
+    } finally {
+      setUploadingLogo(false);
+    }
+  };
+
   const handleSave = async () => {
     if (!isCreate && !org) return;
     if (loadError) return; // Bloqueia salvar quando o GET falhou para evitar apagar dados reais
@@ -593,6 +617,8 @@ export function OrganizerEditDrawer({ isOpen, onClose, org, onUpdated, mode = "e
       const payload = {
         name: effectiveName,
         tradeName,
+        // String vazia limpa a logo no update; URL aplica a nova.
+        logoUrl,
         document: effectiveDocument || undefined,
         zipCode: digits(zipCode),
         state,
@@ -721,7 +747,6 @@ export function OrganizerEditDrawer({ isOpen, onClose, org, onUpdated, mode = "e
     if (ownerDocError) setOwnerDocError("");
   };
 
-  const logoUrl = detail?.logoUrl ?? org?.logoUrl ?? null;
   const orgName = isCreate ? (name || "Nova organização") : (name || org?.name || "—");
   const createdAt = detail?.createdAt ?? org?.createdAt;
   const eventCount = detail?._count?.events ?? detail?.eventCount ?? org?.eventCount ?? 0;
@@ -787,25 +812,32 @@ export function OrganizerEditDrawer({ isOpen, onClose, org, onUpdated, mode = "e
 
                 <div className="flex flex-col gap-3">
                   <div className="flex items-center gap-3">
-                    <input
-                      ref={fileInputRef}
-                      type="file"
-                      accept="image/png,image/jpeg"
-                      className="hidden"
-                      onChange={() => toast("Upload de imagem em breve.")}
+                    <ImageUploadWithCrop
+                      ref={logoCropRef}
+                      spec={EVENT_IMAGE_SPECS.organizationLogo}
+                      outputBaseName="organization-logo"
+                      cropShape="round"
+                      maxFileSizeMb={10}
+                      accept="image/jpeg,image/jpg,image/png"
+                      modalTitle="Ajustar logo da organização"
+                      onCropped={(file) => void handleLogoCropped(file)}
+                      onInvalidFile={(msg) => toast.error(msg)}
+                      onCropFailed={(msg) => toast.error(msg)}
                     />
                     <Button
                       type="button"
-                      onClick={() => fileInputRef.current?.click()}
+                      onClick={() => logoCropRef.current?.open()}
+                      disabled={uploadingLogo}
                     >
                       <Plus className="size-4" />
-                      Alterar imagem
+                      {uploadingLogo ? "Enviando..." : "Alterar imagem"}
                     </Button>
                     <Button
                       type="button"
                       variant={"outline"}
-                      onClick={() => toast("Imagem removida.")}
-                      className="text-gray-12 border border-gray-6"
+                      onClick={() => setLogoUrl("")}
+                      disabled={uploadingLogo || !logoUrl}
+                      className="text-gray-12 border border-gray-6 disabled:opacity-50"
                     >
                       Remover imagem
                     </Button>
