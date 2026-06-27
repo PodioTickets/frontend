@@ -357,6 +357,9 @@ export default function OrganizationSettingsPage() {
     label: state.label,
   }));
   const selectedState = BRAZIL_STATES.find((s) => s.id === formData.state);
+  // Pessoa Jurídica = documento com 14 dígitos (CNPJ). PF (11=CPF) esconde CNPJ/Razão social.
+  // Documento ausente cai como PJ (legado) — mantém os campos visíveis.
+  const isPj = (organizer.document ?? "").replace(/\D/g, "").length !== 11;
   return (
     <>
       <div className="min-h-screen bg-gray-2">
@@ -501,7 +504,40 @@ export default function OrganizationSettingsPage() {
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 w-full">
-                {/* CNPJ e Razão social removidos desta tela — dados fiscais geridos pelo admin. */}
+                {/* CNPJ + Razão social: só para Pessoa Jurídica (documento com 14 dígitos).
+                    PF (CPF, 11 dígitos) não tem esses campos — a identidade é o responsável.
+                    Read-only: dados fiscais geridos pelo admin. */}
+                {isPj && (
+                  <>
+                    <div className="flex flex-col gap-2 items-start">
+                      <label className="font-family-dm-sans font-normal leading-[1.3] text-sm text-gray-12">
+                        CNPJ
+                      </label>
+                      <Input
+                        type="text"
+                        name="document"
+                        value={maskCNPJ(formData.document)}
+                        placeholder="00.000.000/0000-00"
+                        disabled
+                        className="disabled:opacity-50 disabled:cursor-not-allowed placeholder:text-black bg-gray-6"
+                      />
+                    </div>
+
+                    <div className="flex flex-col gap-2 items-start">
+                      <label className="font-family-dm-sans font-normal leading-[1.3] text-sm text-gray-12">
+                        Razão social
+                      </label>
+                      <Input
+                        type="text"
+                        name="name"
+                        value={organizer.name ?? ""}
+                        placeholder="Digite a razão social"
+                        disabled
+                        className="disabled:opacity-50 disabled:cursor-not-allowed placeholder:text-black bg-gray-6"
+                      />
+                    </div>
+                  </>
+                )}
 
                 {/* Nome fantasia (campo `tradeName`) — editável pelo organizador. */}
                 <div className="flex flex-col gap-2 items-start">

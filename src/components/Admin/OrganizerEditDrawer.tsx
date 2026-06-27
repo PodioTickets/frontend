@@ -440,6 +440,9 @@ export function OrganizerEditDrawer({ isOpen, onClose, org, onUpdated, mode = "e
   // Tipo de pessoa: PJ usa CNPJ + "Razão social"; PF usa CPF + "Nome completo".
   // O backend persiste só o `document` (CPF ou CNPJ); o tipo é inferido pelo tamanho.
   const [personType, setPersonType] = useState<"PF" | "PJ">("PJ");
+  // Tipo no momento da carga — pra exigir documento válido SÓ quando há conversão
+  // (evita travar edição de orgs legadas sem documento).
+  const [initialPersonType, setInitialPersonType] = useState<"PF" | "PJ">("PJ");
   const [ownerName, setOwnerName] = useState("");
   const [ownerDocument, setOwnerDocument] = useState("");
   // Erro de documento no modo PF (conflito de CPF) — vai no campo "CPF do responsável".
@@ -462,6 +465,7 @@ export function OrganizerEditDrawer({ isOpen, onClose, org, onUpdated, mode = "e
       setDetail(null);
       setLoading(false);
       setPersonType("PJ");
+      setInitialPersonType("PJ");
       setCnpjValue("");
       setName("");
       setTradeName("");
@@ -507,6 +511,7 @@ export function OrganizerEditDrawer({ isOpen, onClose, org, onUpdated, mode = "e
         const docRaw = d.document ?? org.document ?? "";
         const isPf = digits(docRaw).length === 11;
         setPersonType(isPf ? "PF" : "PJ");
+        setInitialPersonType(isPf ? "PF" : "PJ");
         setCnpjValue(isPf ? formatCPF(docRaw) : formatCNPJ(docRaw));
         setName(d.name ?? "");
         setTradeName(d.tradeName ?? "");
@@ -562,10 +567,21 @@ export function OrganizerEditDrawer({ isOpen, onClose, org, onUpdated, mode = "e
     const isPf = personType === "PF";
     const effectiveName = (isPf ? ownerName : name).trim();
     const effectiveDocument = isPf ? digits(ownerDocument) : digits(cnpjValue);
+    // Conversão de tipo (PF↔PJ) exige documento válido do novo tipo — senão o
+    // save "dava sucesso" sem mudar de fato (documento ficava com o tamanho errado).
+    const typeChanged = !isCreate && personType !== initialPersonType;
 
     if (isPf) {
       if (!effectiveName) { toast.error("Informe o nome do responsável."); return; }
-      if (!effectiveDocument) { toast.error("Informe o CPF do responsável."); return; }
+      if (!effectiveDocument) { setOwnerDocError("Informe o CPF do responsável."); return; }
+      if (effectiveDocument.length !== 11) { setOwnerDocError("CPF inválido — deve ter 11 dígitos."); return; }
+    } else {
+      // PJ: documento, se informado, tem que ser CNPJ (14). Na conversão PF→PJ é obrigatório.
+      if (effectiveDocument && effectiveDocument.length !== 14) { setCnpjError("CNPJ inválido — deve ter 14 dígitos."); return; }
+      if (typeChanged) {
+        if (effectiveDocument.length !== 14) { setCnpjError("Informe um CNPJ válido (14 dígitos)."); return; }
+        if (!effectiveName) { toast.error("Informe a razão social."); return; }
+      }
     }
 
     setSaving(true);
@@ -619,11 +635,14 @@ export function OrganizerEditDrawer({ isOpen, onClose, org, onUpdated, mode = "e
       // falha. Regex genérico `email.*cadastrad` cobre "Esse email já foi
       // cadastrado", "email cadastrado", "e-mail já cadastrado" etc.
       const norm = apiMsg.normalize("NFC").toLowerCase();
+      // Código tipado do backend (preferencial — não depende de parsear texto).
+      const errorCode = err?.response?.data?.code as string | undefined;
       // Conflito de DOCUMENTO (CPF/CNPJ) ja cadastrado em outra organizacao ->
-      // erro no input de CNPJ. Tem PRECEDENCIA sobre o conflito de e-mail porque
+      // erro no input do documento. Tem PRECEDENCIA sobre o conflito de e-mail porque
       // a frase "Ja existe uma organizacao cadastrada com este documento..."
       // tambem casaria com o regex amplo de organizacao abaixo.
       const isDocumentConflict =
+        errorCode === "DUPLICATE_DOCUMENT" ||
         /document|cnpj/.test(norm) ||
         (err?.response?.status === 409 && /cpf|cnpj|documento/.test(norm));
       // Cobertura ampla — inclui fallback por status 409 com "email" no texto,
@@ -690,14 +709,16 @@ export function OrganizerEditDrawer({ isOpen, onClose, org, onUpdated, mode = "e
     setPixKeys((prev) => prev.filter((k) => k.id !== id));
   };
 
-  // Alterna PF/PJ re-aplicando a máscara correta sobre os dígitos já digitados
-  // (CPF corta em 11, CNPJ em 14) e limpa erro de documento pendente.
+  // Alterna PF/PJ. CPF e CNPJ são documentos DIFERENTES — não dá pra reaproveitar
+  // os dígitos entre os tipos (senão o CNPJ herdava o CPF de 11 díg. e salvava um
+  // documento inválido). Limpa o campo de documento (PJ digita o CNPJ; PF usa o
+  // CPF do responsável) e os erros pendentes.
   const handlePersonTypeChange = (next: "PF" | "PJ") => {
     if (next === personType) return;
     setPersonType(next);
-    const d = digits(cnpjValue);
-    setCnpjValue(next === "PF" ? formatCPF(d.slice(0, 11)) : formatCNPJ(d.slice(0, 14)));
+    setCnpjValue("");
     if (cnpjError) setCnpjError("");
+    if (ownerDocError) setOwnerDocError("");
   };
 
   const logoUrl = detail?.logoUrl ?? org?.logoUrl ?? null;
