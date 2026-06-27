@@ -167,6 +167,25 @@ export function toCivilDayBRT(value: DateInput): string {
   return `${y}-${m}-${day}`;
 }
 
+/**
+ * Janela do evento (abertura/encerramento das inscrições, realização) é WALL-CLOCK
+ * gravada como UTC pelo backend (server em UTC: "09:30Z" = 09:30 no horário de
+ * Brasília pretendido). Para COMPARAR com o tempo real (`Date.now()`), o instante
+ * real é esse wall-clock interpretado em BRT (UTC-3) → +3h sobre o valor UTC.
+ *
+ * Sem isso, comparar o wall-clock-UTC direto com `Date.now()` faz a janela abrir/
+ * fechar 3h CEDO no Brasil (ex.: "encerra 09:30" bloqueava às 06:30 BRT).
+ *
+ * ⚠️ Use SÓ para comparação/countdown. O DISPLAY continua nos helpers UTC
+ * (`formatDateTimeBR`), que mostram o wall-clock como digitado (09:30). Retorna
+ * `Date` do instante real, ou `null`.
+ */
+export function eventWindowInstant(value: DateInput): Date | null {
+  const d = toUtcDate(value);
+  if (!d) return null;
+  return new Date(d.getTime() + 3 * 60 * 60 * 1000);
+}
+
 const MONTHS_BR_SHORT = [
   "Jan", "Fev", "Mar", "Abr", "Mai", "Jun",
   "Jul", "Ago", "Set", "Out", "Nov", "Dez",

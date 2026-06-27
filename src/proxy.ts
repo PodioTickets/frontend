@@ -479,24 +479,28 @@ export async function proxy(request: NextRequest) {
     "https://www.googleadservices.com",
     // *.doubleclick.net cobre ad./td./googleads.g. (conversão, remarketing, collect).
     "https://*.doubleclick.net",
+    // Pixel de remarketing (`/pagead/1p-user-list/...`) dispara no domínio Google
+    // do país do usuário — público é BR, então o ccTLD é google.com.br (TLD .com.br,
+    // NÃO coberto por *.google.com). Outros países usariam outro ccTLD (não listado).
+    "https://*.google.com.br",
   ];
   const googleTagCsp = googleTagDomains.join(" ");
 
   const cspDirectives = [
     `default-src ${trustedDomains.join(" ")}`,
     /* TODO: migrar para nonce */ `script-src ${trustedDomains.join(" ")} ${isDev ? "'unsafe-eval'" : ""
-    } 'unsafe-inline' blob: https://www.google.com https://maps.googleapis.com https://*.googleapis.com https://*.google.com https://challenges.cloudflare.com https://www.instagram.com https://connect.facebook.net https://platform.twitter.com https://www.tiktok.com https://strava-embeds.com ${braspag3DSCsp} ${googleTagCsp}`,
+    } 'unsafe-inline' blob: https://*.googleapis.com https://*.google.com https://challenges.cloudflare.com https://www.instagram.com https://connect.facebook.net https://platform.twitter.com https://www.tiktok.com https://strava-embeds.com ${braspag3DSCsp} ${googleTagCsp}`,
     `style-src ${trustedDomains.join(
       " "
     )} 'unsafe-inline' https://fonts.googleapis.com https://*.googleapis.com`,
     `font-src ${trustedDomains.join(" ")} data: https://fonts.gstatic.com https://*.google.com`,
     `connect-src ${trustedDomains.join(
       " "
-    )} wss: ws: https://www.google.com https://maps.googleapis.com https://*.googleapis.com https://*.google.com https://www.google-analytics.com https://*.google-analytics.com https://*.analytics.google.com https://challenges.cloudflare.com https://www.facebook.com https://connect.facebook.net ${braspag3DSCsp} ${braspag3DSConnectExtras} ${googleTagCsp}`,
+    )} wss: ws: https://*.googleapis.com https://*.google.com https://*.google-analytics.com https://*.analytics.google.com https://challenges.cloudflare.com https://www.facebook.com https://connect.facebook.net ${braspag3DSCsp} ${braspag3DSConnectExtras} ${googleTagCsp}`,
     // 3DS challenge abre iframe do ACS do banco emissor (Itaú, Bradesco, Nubank, etc).
     // Cada banco usa seu próprio domínio — domínios Braspag/Cardinal cobrem o fluxo 3DS;
     // origens adicionais de embeds listadas explicitamente (sem https: genérico).
-    `frame-src 'self' https://www.youtube.com https://www.google.com https://maps.google.com https://*.google.com https://*.googleapis.com https://www.strava.com https://*.strava.com https://strava-embeds.com https://challenges.cloudflare.com https://www.instagram.com https://www.facebook.com https://platform.twitter.com https://www.tiktok.com ${braspag3DSCsp} https://www.googletagmanager.com https://*.doubleclick.net`,
+    `frame-src 'self' https://www.youtube.com https://*.google.com https://*.googleapis.com https://www.strava.com https://*.strava.com https://strava-embeds.com https://challenges.cloudflare.com https://www.instagram.com https://www.facebook.com https://platform.twitter.com https://www.tiktok.com ${braspag3DSCsp} https://www.googletagmanager.com https://*.doubleclick.net`,
     `img-src ${trustedDomains.join(" ")} data: blob: https://cdn.podioticket.com.br https://*.google.com https://*.googleapis.com https://*.gstatic.com https://*.googleusercontent.com https://www.instagram.com https://*.cdninstagram.com https://*.fbcdn.net https://www.facebook.com https://*.strava.com https://strava-embeds.com https://apata.io https://*.apata.io ${googleTagCsp}`,
     `media-src ${trustedDomains.join(" ")} data: blob:`,
     // worker-src e child-src: workers internos do Turnstile usam blob URLs

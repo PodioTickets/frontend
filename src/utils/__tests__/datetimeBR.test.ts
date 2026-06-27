@@ -9,6 +9,7 @@ import {
   formatTimeBRT,
   toCivilDayString,
   toCivilDayBRT,
+  eventWindowInstant,
 } from "../datetimeBR";
 
 /**
@@ -94,6 +95,28 @@ describe("datetimeBR", () => {
       expect(toCivilDayBRT(null)).toBe("");
       expect(toCivilDayBRT(undefined)).toBe("");
       expect(toCivilDayBRT("not-a-date")).toBe("");
+    });
+  });
+
+  // ── Janela do evento (wall-clock UTC) → instante real BRT (+3h) p/ comparação ─
+  describe("eventWindowInstant", () => {
+    it("'encerra 09:30' (wall-clock 09:30Z) → instante real 12:30Z (09:30 BRT)", () => {
+      // Sem o +3h, comparar 09:30Z com Date.now() fecharia a inscrição às 06:30 BRT.
+      expect(eventWindowInstant("2026-06-26T09:30:00.000Z")?.toISOString()).toBe(
+        "2026-06-26T12:30:00.000Z",
+      );
+    });
+
+    it("vira o dia quando o wall-clock é de madrugada (00:30Z → 03:30Z)", () => {
+      expect(eventWindowInstant("2026-06-27T00:30:00.000Z")?.toISOString()).toBe(
+        "2026-06-27T03:30:00.000Z",
+      );
+    });
+
+    it("ausente/ inválido → null", () => {
+      expect(eventWindowInstant(null)).toBeNull();
+      expect(eventWindowInstant(undefined)).toBeNull();
+      expect(eventWindowInstant("not-a-date")).toBeNull();
     });
   });
 
