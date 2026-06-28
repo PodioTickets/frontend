@@ -134,7 +134,7 @@ export function EventCard({ event }: EventCardProps) {
           </p>
           <div className="flex items-center gap-1">
             <LocationIcon className="size-5 shrink-0 text-[#202020]" />
-            <span className="font-family-dm-sans text-sm leading-[1.3] text-[#202020]">
+            <span className="font-family-dm-sans text-sm leading-[1.3] text-[#202020] line-clamp-1 truncate">
               {event.city}, {event.state}
             </span>
           </div>
