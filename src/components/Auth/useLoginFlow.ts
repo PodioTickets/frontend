@@ -78,7 +78,16 @@ export function useLoginFlow() {
     if (typeof window === "undefined") return;
     const params = new URLSearchParams(window.location.search);
     if (params.get("googleMfa") === "1") {
-      window.history.replaceState(null, "", window.location.pathname);
+      // Remove só a flag e preserva o resto da query (ex.: `eventId` do checkout).
+      // O passo 2FA do Google agora volta PARA a rota de origem em vez da home,
+      // então limpar a query inteira apagaria parâmetros essenciais da página.
+      params.delete("googleMfa");
+      const qs = params.toString();
+      window.history.replaceState(
+        null,
+        "",
+        window.location.pathname + (qs ? `?${qs}` : "") + window.location.hash,
+      );
       openLoginModal();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -228,10 +237,11 @@ export function useLoginFlow() {
       closeLoginModal();
       setFormData({ email: "", password: "" });
       setErrors({});
-      // MFA do Google: o callback redirecionou pra `/?googleMfa=1` e o destino
-      // original ficou no storage. Concluído o 2FA, volta pra lá (ex.: checkout
-      // com a quantidade já selecionada). Só navega se houver destino salvo —
-      // MFA de e-mail/senha não salva e mantém o comportamento atual (só fecha).
+      // MFA do Google: o callback abriu este passo (via store) já na rota de
+      // origem e re-salvou o destino no storage. Concluído o 2FA, garante a volta
+      // pra lá (ex.: checkout com a quantidade já selecionada). Só navega se houver
+      // destino salvo — MFA de e-mail/senha não salva e mantém o comportamento
+      // atual (só fecha).
       const returnTo = readReturnPath();
       if (returnTo) {
         clearReturnPath();
