@@ -54,12 +54,12 @@ export function RequestTransferModal() {
     };
   }, [isOpen]);
 
-  // API pode enviar em centavos; normalizar para exibição em reais
-  const rawBalance = data?.availableBalance ?? 125000;
-  const availableBalance = rawBalance > 10000 && Number.isInteger(rawBalance) ? rawBalance / 100 : rawBalance;
-  const processingAmount = data?.processingAmount != null
-    ? (data.processingAmount > 10000 && Number.isInteger(data.processingAmount) ? data.processingAmount / 100 : data.processingAmount)
-    : null;
+  // O backend SEMPRE envia em CENTAVOS (saldoParaSaque). Converte pra reais p/ exibição.
+  // Antes havia uma heurística `> 10000` que NÃO dividia saldos <= R$100,00 (10000 centavos)
+  // por 100, mostrando o valor 100x inflado (ex.: 8998 centavos virava "R$ 8.998,00").
+  const rawBalance = data?.availableBalance ?? 0;
+  const availableBalance = rawBalance / 100;
+  const processingAmount = data?.processingAmount != null ? data.processingAmount / 100 : null;
   const displayBankName = selectedAccount?.bank || "Conta PIX";
   const displayPixKey = selectedAccount?.pixKey || data?.pixKey || "—";
 
