@@ -10,6 +10,7 @@ import { getEventOrganizer } from "@/utils/organization";
 import { cn } from "@/utils/cn";
 import { formatDateBR, eventWindowInstant } from "@/utils/datetimeBR";
 import { ImageWithInitialFallback } from "@/components/ImageWithInitialFallback";
+import { CityStateLabel } from "./CityStateLabel";
 
 interface EventCardProps {
   event: Event;
@@ -132,11 +133,15 @@ export function EventCard({ event }: EventCardProps) {
           <p className="truncate font-manrope text-base font-bold leading-[1.1] text-[#202020]">
             {event.name}
           </p>
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-1 min-w-0">
             <LocationIcon className="size-5 shrink-0 text-[#202020]" />
-            <span className="font-family-dm-sans text-sm leading-[1.3] text-[#202020] line-clamp-1 truncate">
-              {event.city}, {event.state}
-            </span>
+            {/* Só a cidade trunca; o estado fica colado no "…" (medição em canvas,
+                ver CityStateLabel) — CSS puro deixaria um vão antes da vírgula. */}
+            <CityStateLabel
+              city={event.city ?? ""}
+              state={event.state ?? ""}
+              className="font-family-dm-sans text-sm leading-[1.3] text-[#202020]"
+            />
           </div>
         </div>
 
