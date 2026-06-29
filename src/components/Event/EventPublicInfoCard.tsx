@@ -112,10 +112,14 @@ function useEventRegistrationUiState(event: Event) {
     const registrationSlotsSoldOut =
       event.hasRegistrationSlotsAvailable === false;
 
+    // "Evento realizado" só UM DIA depois da data do evento (não no instante de
+    // início) — mesma regra da página /events/[slug]. Durante o dia do evento e as
+    // 24h seguintes, NÃO é marcado como realizado (cai em "Inscrições encerradas").
+    const ONE_DAY_MS = 24 * 60 * 60 * 1000;
     const eventRealizationInstant = eventWindowInstant(event.eventDate);
     const eventRealizationPassed =
       !!eventRealizationInstant &&
-      Date.now() >= eventRealizationInstant.getTime();
+      Date.now() >= eventRealizationInstant.getTime() + ONE_DAY_MS;
 
     const registrationEndsInstant = eventWindowInstant(event.registrationEndDate);
     const registrationPeriodEnded =

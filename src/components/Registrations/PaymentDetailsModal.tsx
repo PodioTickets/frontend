@@ -449,6 +449,68 @@ export function PaymentDetailsModal() {
     }
   };
 
+  /* Cancelamento de pedido GRATUITO (sem estorno). Rota própria (`cancelFreeOrder`)
+   * — não há Cielo nem taxa. Em sucesso: marca cancelado localmente, fecha e
+   * notifica a lista (mesmo canal `orderRefunded` do estorno — efeito é o mesmo:
+   * pedido sai de ativo). */
+  const handleConfirmCancelFreeOrder = async () => {
+    const orderId = paymentDetails?.orderId;
+    if (!eventId || !orderId) {
+      toast.error("Pedido não encontrado.");
+      return;
+    }
+    setRefunding(true);
+    try {
+      await organizerService.cancelFreeOrder(
+        eventId,
+        orderId,
+        "Pedido cancelado pelo organizador via painel",
+      );
+      toast.success("Pedido cancelado com sucesso.");
+      setPaymentDetails((prev) =>
+        prev?.payment
+          ? { ...prev, payment: { ...prev.payment, status: "CANCELLED" } }
+          : prev,
+      );
+      setShowCancelModal(false);
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(
+          new CustomEvent("orderRefunded", { detail: { orderId, eventId } }),
+        );
+      }
+    } catch (err: unknown) {
+      const e = err as {
+        code?: string;
+        response?: { status?: number; data?: { code?: string; message?: string } };
+        message?: string;
+      };
+      const code = e?.code ?? e?.response?.data?.code;
+      const status = e?.response?.status;
+      if (code === "ORDER_ALREADY_CANCELLED") {
+        toast.error("Este pedido já foi cancelado.");
+        setPaymentDetails((prev) =>
+          prev?.payment
+            ? { ...prev, payment: { ...prev.payment, status: "CANCELLED" } }
+            : prev,
+        );
+        setShowCancelModal(false);
+      } else if (code === "ORDER_HAS_PAYMENT") {
+        // Não deveria acontecer (o botão só aparece em free order), mas guard.
+        toast.error("Este pedido tem valor pago — use o estorno.");
+      } else if (status === 403) {
+        toast.error("Você não tem permissão financeira para cancelar este pedido.");
+      } else {
+        toast.error(
+          e?.response?.data?.message ||
+            (err instanceof OrderApiError ? err.message : null) ||
+            "Não foi possível cancelar o pedido. Tente novamente.",
+        );
+      }
+    } finally {
+      setRefunding(false);
+    }
+  };
+
   const goToParticipantDetails = (registrationIdForView: string) => {
     if (!registrationId) return;
     const paymentReturnPayload = {
@@ -506,6 +568,11 @@ export function PaymentDetailsModal() {
    * autorização (`financial`) é garantida pelo backend (403 → toast). */
   const canRefundOrder =
     !isFreeOrder && paymentDetails?.payment?.status === "PAID";
+  /* Pedido GRATUITO (R$0) confirmado: não há o que estornar, mas o organizador
+   * pode CANCELAR (rota própria — sem Cielo/taxa). Mutuamente exclusivo com
+   * `canRefundOrder` (este exige `isFreeOrder`, aquele exige `!isFreeOrder`). */
+  const canCancelFreeOrder =
+    isFreeOrder && paymentDetails?.payment?.status === "PAID";
   const refundTicketCount = participants.length;
   const refundAmountReais = (paymentInfo.totalAmount ?? 0) / 100;
 
@@ -866,13 +933,13 @@ export function PaymentDetailsModal() {
                     >
                       Reenviar por e-mail
                     </Button>
-                    {canRefundOrder && (
+                    {(canRefundOrder || canCancelFreeOrder) && (
                       <Button
                         variant="destructive"
                         onClick={() => setShowCancelModal(true)}
                         className="w-full"
                       >
-                        Cancelar pedido
+                        {canCancelFreeOrder ? "Cancelar pedido" : "Estornar pedido"}
                       </Button>
                     )}
                   </div>
@@ -1352,12 +1419,12 @@ export function PaymentDetailsModal() {
                         >
                           Reenviar por e-mail
                         </Button>
-                        {canRefundOrder && (
+                        {(canRefundOrder || canCancelFreeOrder) && (
                           <Button
                             variant={"destructive"}
                             onClick={() => setShowCancelModal(true)}
                           >
-                            Cancelar pedido
+                            {canCancelFreeOrder ? "Cancelar pedido" : "Estornar pedido"}
                           </Button>
                         )}
                       </div>
@@ -1374,10 +1441,16 @@ export function PaymentDetailsModal() {
           <CancelOrderModal
             isOpen={showCancelModal}
             onClose={() => setShowCancelModal(false)}
-            onConfirm={handleConfirmCancelOrder}
+            onConfirm={
+              canCancelFreeOrder
+                ? handleConfirmCancelFreeOrder
+                : handleConfirmCancelOrder
+            }
             loading={refunding}
             ticketCount={refundTicketCount}
             refundAmount={refundAmountReais}
+            /* Free order: cancelamento puro — esconde valor de reembolso + taxa 2%. */
+            isFreeCancel={canCancelFreeOrder}
           />
 
           {/* Reenvio do pedido por e-mail — overlay próprio (z-60), mesmo padrão

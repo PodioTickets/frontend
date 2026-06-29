@@ -86,7 +86,7 @@ function MobileAdvancedSearch() {
     searchParams.get("priceMin") ? parseInt(searchParams.get("priceMin")!) : 0,
     searchParams.get("priceMax")
       ? parseInt(searchParams.get("priceMax")!)
-      : 10000,
+      : 1000,
   ]);
 
   const searchQuery = searchParams.get("q") || undefined;
@@ -111,6 +111,10 @@ function MobileAdvancedSearch() {
     startDate,
     endDate,
     modalities: modalities.length > 0 ? modalities : undefined,
+    // Preço (reais) → filtro server-side. Presente na URL só quando o usuário
+    // mexeu no slider (piso > 0 / teto < 1000), então é seguro repassar direto.
+    minPrice: priceMin ? parseInt(priceMin) : undefined,
+    maxPrice: priceMax ? parseInt(priceMax) : undefined,
     page: currentPage,
     limit: 20,
   });
@@ -125,6 +129,8 @@ function MobileAdvancedSearch() {
     effectiveLocation.state,
     effectiveLocation.city,
     searchParams.get("modalities"),
+    priceMin,
+    priceMax,
   ]);
 
   const hasFilters = useMemo(() => {
@@ -187,7 +193,7 @@ function MobileAdvancedSearch() {
   };
 
   const formatPriceRange = () => {
-    if (priceRange[0] === 0 && priceRange[1] === 10000) {
+    if (priceRange[0] === 0 && priceRange[1] === 1000) {
       return "Todos os preços";
     }
     const formatCurrency = (value: number) => {
@@ -214,7 +220,7 @@ function MobileAdvancedSearch() {
     if (selectedDateRange?.from) params.set("dateFrom", selectedDateRange.from.toISOString().split("T")[0]);
     if (selectedDateRange?.to) params.set("dateTo", selectedDateRange.to.toISOString().split("T")[0]);
     if (priceRange[0] > 0) params.set("priceMin", priceRange[0].toString());
-    if (priceRange[1] < 10000) params.set("priceMax", priceRange[1].toString());
+    if (priceRange[1] < 1000) params.set("priceMax", priceRange[1].toString());
     router.push(`/search?${params.toString()}`);
   };
 
@@ -223,7 +229,7 @@ function MobileAdvancedSearch() {
     setSelectedCityApi(null);
     setSelectedModalities([]);
     setSelectedDateRange(undefined);
-    setPriceRange([0, 10000]);
+    setPriceRange([0, 1000]);
     router.push("/search");
   };
 
@@ -421,7 +427,7 @@ function MobileAdvancedSearch() {
               <div className="p-4">
                 <PriceRangeSlider
                   min={0}
-                  max={10000}
+                  max={1000}
                   defaultValue={priceRange}
                   onChange={setPriceRange}
                 />
@@ -534,6 +540,10 @@ function SearchContent() {
     endDate,
     includePast: includePast || undefined,
     modalities: modalities.length > 0 ? modalities : undefined,
+    // Preço (reais) → filtro server-side (ver useEventSearch). Substitui o filtro
+    // client-side antigo, que comparava `event.price` (nunca retornado) e não funcionava.
+    minPrice: priceMin ? parseInt(priceMin) : undefined,
+    maxPrice: priceMax ? parseInt(priceMax) : undefined,
     page: currentPage,
     limit: 20,
   });
@@ -550,6 +560,8 @@ function SearchContent() {
     dateTo,
     includePast,
     searchParams.get("modalities"),
+    priceMin,
+    priceMax,
   ]);
 
   const initialDateRange = useMemo(() => {
@@ -564,26 +576,15 @@ function SearchContent() {
 
   const initialPriceRange = useMemo(() => {
     const min = priceMin ? parseInt(priceMin) : 0;
-    const max = priceMax ? parseInt(priceMax) : 10000;
+    const max = priceMax ? parseInt(priceMax) : 1000;
     return [min, max] as [number, number];
   }, [priceMin, priceMax]);
 
-  // Filtrar por status e ordenar (modalidades e preço são filtrados na API)
+  // Filtrar por status e ordenar. Preço e modalidades são filtrados na API
+  // (server-side) — o filtro de preço client-side antigo comparava `event.price`,
+  // que o endpoint nunca retorna, então não funcionava.
   const filteredEvents = useMemo(() => {
     let filtered = [...events];
-
-    // Filtrar por preço
-    const hasPriceFilter =
-      (priceMin && parseInt(priceMin) > 0) ||
-      (priceMax && parseInt(priceMax) < 10000);
-    if (hasPriceFilter) {
-      filtered = filtered.filter((event) => {
-        const eventPrice = (event as any).price || 0;
-        const min = priceMin ? parseInt(priceMin) : 0;
-        const max = priceMax ? parseInt(priceMax) : 10000;
-        return eventPrice >= min && eventPrice <= max;
-      });
-    }
 
     // Filtrar por status REAL da inscrição. "Abertas" vs "encerradas" NÃO dá pra
     // distinguir pelo `status` (ambos são PUBLISHED) — depende da JANELA de inscrição

@@ -428,10 +428,18 @@ export function RegistrationsView({
                   {registrations.map((registration) => {
                     const finalStatus = getFinalStatus(registration);
                     const paymentStatus = registration.order?.payment?.status;
-                    const isPaid = finalStatus === "CONFIRMED" || finalStatus === "COMPLETED" || paymentStatus === "PAID";
                     const isCancelled = finalStatus === "CANCELLED" || paymentStatus === "FAILED";
                     const isRefunded = finalStatus === "REFUNDED";
                     const isChargeback = finalStatus === "CHARGEBACK";
+                    // "Pago" só sem estado terminal — senão free order cancelado
+                    // (pagamento R$0 segue PAID) apareceria como "Pago". Ver RegistrationRow.
+                    const isPaid =
+                      !isCancelled &&
+                      !isRefunded &&
+                      !isChargeback &&
+                      (finalStatus === "CONFIRMED" ||
+                        finalStatus === "COMPLETED" ||
+                        paymentStatus === "PAID");
                     const statusLabel = isPaid ? "Pago" : isCancelled ? "Cancelado" : isRefunded ? "Estornado" : isChargeback ? "ChargeBack" : "Pendente";
                     const statusClass = isPaid ? "bg-[#21835d] text-primary-1" : isCancelled || isRefunded || isChargeback ? "bg-red-11 text-white" : "bg-yellow-11 text-yellow-1";
                     const fullName = `${registration.user?.firstName || ""} ${registration.user?.lastName || ""}`.trim();

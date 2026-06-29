@@ -23,6 +23,8 @@ export function useEventSearch(params: SearchEventsParams = {}) {
         endDate: params.endDate,
         includePast: params.includePast,
         modalities: modalitiesKey,
+        minPrice: params.minPrice,
+        maxPrice: params.maxPrice,
         page,
         limit,
       },
@@ -36,6 +38,8 @@ export function useEventSearch(params: SearchEventsParams = {}) {
       params.endDate,
       params.includePast,
       modalitiesKey,
+      params.minPrice,
+      params.maxPrice,
       page,
       limit,
     ]

@@ -104,3 +104,114 @@ export function eventInformationHasChanges(
     (k) => (formData[k] ?? "") !== (initialFormData[k] ?? ""),
   );
 }
+
+/**
+ * Tradução do nome do campo do BACKEND (DTO de `PATCH /events/:id`) para a CHAVE
+ * de erro do formulário (que o `InformationForm` renderiza inline). A maioria
+ * casa 1:1; as exceções são o endereço, que o form chama de outro jeito:
+ *   - backend `zipCode`  → input `cep`
+ *   - backend `location` → input `street`
+ * Campos sem slot inline (neighborhood, redes sociais, description, slug…) ficam
+ * de fora de propósito → caem no toast geral.
+ */
+const BACKEND_FIELD_TO_FORM_ERROR_KEY: Record<string, string> = {
+  name: "name",
+  eventDate: "eventDate",
+  registrationStartDate: "registrationStartDate",
+  registrationEndDate: "registrationEndDate",
+  zipCode: "cep",
+  location: "street",
+  city: "city",
+  state: "state",
+  googleMapsLink: "googleMapsLink",
+  contactEmail: "contactEmail",
+};
+
+/** Mensagem PT-BR exibida no input para cada erro de validação vindo do backend. */
+const FORM_FIELD_ERROR_MESSAGE: Record<string, string> = {
+  name: "Nome do evento inválido.",
+  eventDate: "Data do evento inválida.",
+  registrationStartDate: "Data de início das inscrições inválida.",
+  registrationEndDate: "Data de encerramento das inscrições inválida.",
+  cep: "CEP inválido.",
+  street: "Endereço inválido.",
+  city: "Cidade inválida.",
+  state: "Estado inválido.",
+  googleMapsLink: "URL do Google Maps inválida (use http(s)://).",
+  contactEmail: "E-mail de atendimento inválido.",
+};
+
+export interface MappedBackendErrors {
+  /** Erros por CHAVE de campo do formulário (para `setErrors`). */
+  fieldErrors: Record<string, string>;
+  /** Mensagem para toast quando o erro não pertence a um campo do form. */
+  generalMessage?: string;
+}
+
+/**
+ * Converte a resposta de erro do `updateEvent` (backend) em erros de campo +
+ * mensagem geral, garantindo COBERTURA de todos os casos conhecidos:
+ *  - 400 "Validation failed" → mapeia `details[].property` (ou o prefixo das
+ *    strings em `errors[]`) para os inputs; o que não tem slot vira toast.
+ *  - 409 DUPLICATE_VALUE (slug, derivado do nome) → erro no campo `name`.
+ *  - 403/404/permissão/kit/"No fields to update" → mensagem geral (toast).
+ */
+export function mapEventBackendErrors(error: unknown): MappedBackendErrors {
+  const e = error as {
+    response?: { status?: number; data?: Record<string, unknown> };
+    message?: string;
+  };
+  const data = e?.response?.data ?? {};
+  const fieldErrors: Record<string, string> = {};
+  let hadUnmappableField = false;
+
+  const addByBackendField = (backendField: string): void => {
+    const key = BACKEND_FIELD_TO_FORM_ERROR_KEY[backendField];
+    if (!key) {
+      hadUnmappableField = true;
+      return;
+    }
+    if (!fieldErrors[key]) {
+      fieldErrors[key] = FORM_FIELD_ERROR_MESSAGE[key] ?? "Campo inválido.";
+    }
+  };
+
+  // 1) Erros de validação por campo (preferimos `details[].property`).
+  const details = (data as { details?: unknown }).details;
+  const errorsArr = (data as { errors?: unknown }).errors;
+  if (Array.isArray(details)) {
+    for (const d of details) {
+      const prop = (d as { property?: unknown })?.property;
+      if (typeof prop === "string" && prop) addByBackendField(prop);
+    }
+  } else if (Array.isArray(errorsArr)) {
+    // Fallback: "campo mensagem..." → o 1º token é o nome do campo.
+    for (const msg of errorsArr) {
+      if (typeof msg === "string" && msg.trim()) addByBackendField(msg.trim().split(/\s+/)[0]);
+    }
+  }
+
+  // 2) Slug duplicado: o slug é gerado a partir do nome → destaca o campo `name`.
+  const code = (data as { code?: unknown }).code;
+  const rawMsg = typeof (data as { message?: unknown }).message === "string"
+    ? ((data as { message: string }).message)
+    : "";
+  if (code === "DUPLICATE_VALUE" || /slug/i.test(rawMsg)) {
+    fieldErrors.name = "Já existe um evento com esse nome. Escolha outro.";
+  }
+
+  // 3) Mensagem geral: usada quando não há campo a destacar, ou para reforçar
+  //    quando houve erro sem slot inline.
+  let generalMessage: string | undefined;
+  if (Object.keys(fieldErrors).length === 0) {
+    generalMessage =
+      (Array.isArray(errorsArr) && typeof errorsArr[0] === "string" ? errorsArr[0] : "") ||
+      rawMsg ||
+      e?.message ||
+      "Não foi possível salvar o evento. Tente novamente.";
+  } else if (hadUnmappableField) {
+    generalMessage = "Corrija os campos destacados. Alguns campos extras também precisam de atenção.";
+  }
+
+  return { fieldErrors, generalMessage };
+}

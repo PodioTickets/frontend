@@ -4,8 +4,14 @@ import {
   validateEventInformation,
   isEventInformationValid,
   eventInformationHasChanges,
+  mapEventBackendErrors,
   INFORMATION_FIELDS,
 } from "../eventEditValidation";
+
+/** Monta um erro estilo axios (`error.response.data`). */
+function axiosError(status: number, data: Record<string, unknown>) {
+  return { response: { status, data } };
+}
 
 /** Form base 100% válido — cada teste invalida só um campo. */
 function validForm(): EditEventFormData {
@@ -177,5 +183,84 @@ describe("eventInformationHasChanges", () => {
     const f = validForm();
     expect(INFORMATION_FIELDS).not.toContain("description");
     expect(eventInformationHasChanges({ ...f, description: "nova" }, f, false)).toBe(false);
+  });
+});
+
+describe("mapEventBackendErrors", () => {
+  it("mapeia validação por campo (details[].property) → chaves do form", () => {
+    const { fieldErrors } = mapEventBackendErrors(
+      axiosError(400, {
+        message: "Validation failed",
+        details: [
+          { property: "contactEmail", message: "contactEmail must be an email" },
+          { property: "googleMapsLink", message: "googleMapsLink must be a valid URL" },
+        ],
+      }),
+    );
+    expect(fieldErrors.contactEmail).toBeTruthy();
+    expect(fieldErrors.googleMapsLink).toBeTruthy();
+  });
+
+  it("traduz nomes de endereço do backend (zipCode→cep, location→street)", () => {
+    const { fieldErrors } = mapEventBackendErrors(
+      axiosError(400, {
+        message: "Validation failed",
+        details: [
+          { property: "zipCode", message: "zipCode must be a string" },
+          { property: "location", message: "location must be a string" },
+        ],
+      }),
+    );
+    expect(fieldErrors.cep).toBeTruthy();
+    expect(fieldErrors.street).toBeTruthy();
+    expect(fieldErrors.zipCode).toBeUndefined();
+    expect(fieldErrors.location).toBeUndefined();
+  });
+
+  it("fallback: extrai o campo do prefixo das strings de errors[]", () => {
+    const { fieldErrors } = mapEventBackendErrors(
+      axiosError(400, {
+        message: "Validation failed",
+        errors: ["eventDate must be a valid ISO 8601 date string"],
+      }),
+    );
+    expect(fieldErrors.eventDate).toBeTruthy();
+  });
+
+  it("slug duplicado (DUPLICATE_VALUE) → erro no campo name", () => {
+    const { fieldErrors } = mapEventBackendErrors(
+      axiosError(409, {
+        code: "DUPLICATE_VALUE",
+        message: "Valor já cadastrado para: slug. Verifique os dados e tente novamente.",
+      }),
+    );
+    expect(fieldErrors.name).toBeTruthy();
+  });
+
+  it("campo sem slot inline (instagram) → sem fieldErrors, vai pro toast", () => {
+    const { fieldErrors, generalMessage } = mapEventBackendErrors(
+      axiosError(400, {
+        message: "Validation failed",
+        details: [{ property: "instagram", message: "instagram must be a string" }],
+      }),
+    );
+    expect(Object.keys(fieldErrors)).toHaveLength(0);
+    expect(generalMessage).toBeTruthy();
+  });
+
+  it("erro de negócio (403 permissão) → mensagem geral, sem fieldErrors", () => {
+    const { fieldErrors, generalMessage } = mapEventBackendErrors(
+      axiosError(403, { message: "Missing permission: edit_event" }),
+    );
+    expect(Object.keys(fieldErrors)).toHaveLength(0);
+    expect(generalMessage).toContain("edit_event");
+  });
+
+  it("404 não encontrado → mensagem geral", () => {
+    const { fieldErrors, generalMessage } = mapEventBackendErrors(
+      axiosError(404, { message: "Evento não encontrado", code: "RECORD_NOT_FOUND" }),
+    );
+    expect(Object.keys(fieldErrors)).toHaveLength(0);
+    expect(generalMessage).toBe("Evento não encontrado");
   });
 });

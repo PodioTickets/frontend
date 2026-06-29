@@ -882,7 +882,18 @@ export function TicketCategoryCard({
 
   const headerThumbItem = categoryCarouselItems[0] ?? null;
 
-  const handleToggle = useCallback(() => setIsExpanded((prev) => !prev), []);
+  // Categoria com ALGUM ingresso selecionado não pode fechar: fica sempre aberta.
+  // `expanded` força o display aberto e o toggle vira no-op enquanto houver seleção
+  // (cobre também a volta à tela com quantidades persistidas em outra categoria).
+  const hasSelectedTicket = useMemo(
+    () => validTickets.some((t) => (raceQuantities[t.id] || 0) > 0),
+    [validTickets, raceQuantities],
+  );
+  const expanded = isExpanded || hasSelectedTicket;
+  const handleToggle = useCallback(() => {
+    if (hasSelectedTicket) return;
+    setIsExpanded((prev) => !prev);
+  }, [hasSelectedTicket]);
 
   const handleDecrease = useCallback((ticketId: string) => {
     const currentQuantity = raceQuantities[ticketId] || 0;
@@ -946,11 +957,11 @@ export function TicketCategoryCard({
       <div className="w-full md:hidden">
         <div className="border border-gray-6 rounded-xl overflow-hidden bg-gray-1">
           <div
-            className="flex items-center justify-between gap-3 px-3 py-4 cursor-pointer"
+            className={`flex items-center justify-between gap-3 px-3 py-4 ${hasSelectedTicket ? "cursor-default" : "cursor-pointer"}`}
             onClick={handleToggle}
           >
             <div className="flex flex-1 items-center gap-3 min-w-0">
-              {showCategoryLevelKit && headerThumbItem && !isExpanded ? (
+              {showCategoryLevelKit && headerThumbItem && !expanded ? (
                 <div className="size-20 shrink-0 rounded-lg border border-gray-6 overflow-hidden relative bg-gray-2">
                   <ImageWithInitialFallback
                     src={headerThumbItem.src}
@@ -968,7 +979,7 @@ export function TicketCategoryCard({
                 <h1 className="text-lg font-bold text-gray-12 font-manrope break-normal line-clamp-2">
                   {categoryName}
                 </h1>
-                {!isExpanded ? (
+                {!expanded ? (
                   <div className="flex flex-wrap items-center gap-1 text-base">
                     <p className="text-gray-11 font-family-dm-sans leading-[1.3]">A partir de:</p>
                     <span className="text-gray-12 font-bold font-manrope">
@@ -983,12 +994,12 @@ export function TicketCategoryCard({
                 ) : null}
               </div>
             </div>
-            <ArrowButton isOpen={isExpanded} />
+            <ArrowButton isOpen={expanded} />
           </div>
 
           <div
             className="overflow-hidden transition-all duration-200 ease-out"
-            style={{ maxHeight: isExpanded ? "10000px" : "0", opacity: isExpanded ? 1 : 0 }}
+            style={{ maxHeight: expanded ? "10000px" : "0", opacity: expanded ? 1 : 0 }}
           >
             <div className="px-4 pb-6 border-t border-gray-6 flex flex-col gap-6 pt-6">
               {categoryDescription?.trim() ? (
@@ -1032,11 +1043,11 @@ export function TicketCategoryCard({
       <div className="hidden md:block w-full">
         <div className="rounded-xl border border-gray-6 overflow-hidden bg-gray-1">
           <div
-            className="flex items-center w-full justify-between gap-3 border-b border-gray-6 px-4 py-4 cursor-pointer hover:bg-gray-2/80 transition-colors"
+            className={`flex items-center w-full justify-between gap-3 border-b border-gray-6 px-4 py-4 transition-colors ${hasSelectedTicket ? "cursor-default" : "cursor-pointer hover:bg-gray-2/80"}`}
             onClick={handleToggle}
           >
             <div className="flex flex-1 items-center gap-3 min-w-0">
-              {showCategoryLevelKit && headerThumbItem && !isExpanded ? (
+              {showCategoryLevelKit && headerThumbItem && !expanded ? (
                 <div className="size-20 shrink-0 rounded-lg border border-gray-6 overflow-hidden relative bg-gray-2">
                   <ImageWithInitialFallback
                     src={headerThumbItem.src}
@@ -1054,7 +1065,7 @@ export function TicketCategoryCard({
                 <h1 className="text-xl font-bold font-manrope text-gray-12 truncate max-w-[600px]">
                   {categoryName}
                 </h1>
-                {!isExpanded ? (
+                {!expanded ? (
                   <div className="flex items-center gap-1 text-base">
                     <p className="text-gray-11 font-family-dm-sans leading-[1.3]">A partir de:</p>
                     <span className="text-gray-12 font-bold font-manrope leading-[1.1]">
@@ -1069,12 +1080,12 @@ export function TicketCategoryCard({
                 ) : null}
               </div>
             </div>
-            <ArrowButton isOpen={isExpanded} className="text-gray-12 size-4" />
+            <ArrowButton isOpen={expanded} className="text-gray-12 size-4" />
           </div>
 
           <div
             className="overflow-hidden transition-all duration-200 ease-out"
-            style={{ maxHeight: isExpanded ? "10000px" : "0", opacity: isExpanded ? 1 : 0 }}
+            style={{ maxHeight: expanded ? "10000px" : "0", opacity: expanded ? 1 : 0 }}
           >
             <div className="px-4 pb-7 pt-6 flex flex-col gap-6">
               {categoryDescription?.trim() ? (

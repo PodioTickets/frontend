@@ -1,29 +1,22 @@
 "use client";
 
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import Image from "next/image";
+import { EventCard } from "@/components/Event/Card";
+import { EventPublicInfoCardDesktop } from "@/components/Event/EventPublicInfoCard";
+import type { Event } from "@/interfaces/event";
 import { userService, organizerService } from "@/services";
 import { surfaceHeader } from "@/lib/authSurface";
 import { Button } from "@/components/Button";
 import { ArrowButton } from "@/components/ArrowButton";
-import { CalendarIcon } from "@/components/Icons/CalendarIcon";
-import { LocationIcon } from "@/components/Icons/LocationIcon";
-import { ShareIcon } from "@/components/Icons/ShareIcon";
 import {
   ImageUploadWithCrop,
   type ImageUploadWithCropRef,
 } from "@/components/ImageUploadWithCrop";
 import { EVENT_IMAGE_SPECS } from "@/lib/eventImageSpecs";
-import { ImageWithInitialFallback } from "@/components/ImageWithInitialFallback";
 import toast from "react-hot-toast";
-import { formatDateBR } from "@/utils/datetimeBR";
 
 // ─── helpers ────────────────────────────────────────────────────────────────
-
-function formatDate(dateString: string) {
-  if (!dateString) return "";
-  return formatDateBR(dateString);
-}
 
 function StatusPill({ done }: { done: boolean }) {
   if (done) {
@@ -71,6 +64,13 @@ interface BannerSectionProps {
   /** Organizer preview data */
   organizer: BannerSectionOrganizerData;
   /**
+   * Evento real (contexto de edição) usado como BASE da prévia — garante que os
+   * cards renderizados sejam os MESMOS de produção (organizador/datas/status
+   * corretos). Ausente no fluxo "novo evento" → cai num sintético com os campos
+   * do form. Os valores vivos do form e a imagem em preview são sobrepostos.
+   */
+  previewEvent?: Event | null;
+  /**
    * Called after image is uploaded to storage.
    * Parent is responsible for persisting to the event (updateEvent).
    */
@@ -95,6 +95,7 @@ export function BannerSection({
   city,
   state,
   organizer,
+  previewEvent,
   onBannerUploaded,
   onCardUploaded,
   onNext,
@@ -114,12 +115,55 @@ export function BannerSection({
   useEffect(() => { if (bannerUrl) setBannerPreview(bannerUrl); }, [bannerUrl]);
   useEffect(() => { if (cardImageUrl) setCardPreview(cardImageUrl); }, [cardImageUrl]);
 
-  const eventLocation = street && city && state ? `${street}, ${city}, ${state}` : "";
-  const listingLocation = city && state ? `${city}, ${state}` : eventLocation;
-  // Local no formato do card da página pública do evento: "Cidade - UF, rua".
-  const infoCardLocation = city && state
-    ? [`${city} - ${state}`, street].filter(Boolean).join(", ")
-    : eventLocation;
+  /**
+   * `event` que alimenta os cards REAIS (EventCard + EventPublicInfoCardDesktop)
+   * na prévia. Em edição parte do evento real (organizador/datas/status corretos);
+   * no fluxo "novo" cai num sintético com defaults. Sempre sobrepõe os valores
+   * VIVOS do form e a imagem em PREVIEW (data: URL durante o upload).
+   */
+  const cardEvent = useMemo(() => {
+    const base = (previewEvent ?? {}) as Record<string, unknown>;
+    return {
+      // EDIÇÃO: herda TODOS os campos reais (zipCode, neighborhood, redes sociais,
+      // isSuspended, etc.) que o EventPublicInfoCardDesktop usa. NOVO: base vazio →
+      // tudo vem dos defaults/overlays abaixo.
+      ...base,
+      id: (base.id as string) ?? "preview",
+      slug: (base.slug as string) ?? "preview",
+      status: (base.status as string) ?? "PUBLISHED",
+      hasRegistrationSlotsAvailable:
+        (base.hasRegistrationSlotsAvailable as boolean) ?? true,
+      // Fallback de organizador (fluxo novo): o logo já vem como URL completa em
+      // `organizer.logoSrc`; getAvatarUrl é idempotente para URLs http(s).
+      organizer:
+        base.organizer ??
+        (base.organization
+          ? undefined
+          : { id: "org-preview", name: organizer.name, user: { avatarUrl: organizer.logoSrc } }),
+      // Valores vivos do form (refletem edições não salvas); fallback ao base.
+      name: eventName || (base.name as string) || "Nome do evento",
+      city: city || (base.city as string) || "",
+      state: state || (base.state as string) || "",
+      location: street || (base.location as string) || "",
+      eventDate: eventDate || (base.eventDate as string) || "",
+      // Imagem do card/banner: preview vivo > já salvo > evento base.
+      logoUrl: cardPreview || cardImageUrl || (base.logoUrl as string) || "",
+      bannerUrl: bannerPreview || bannerUrl || (base.bannerUrl as string) || "",
+    } as unknown as Event;
+  }, [
+    previewEvent,
+    eventName,
+    city,
+    state,
+    street,
+    eventDate,
+    cardPreview,
+    cardImageUrl,
+    bannerPreview,
+    bannerUrl,
+    organizer.name,
+    organizer.logoSrc,
+  ]);
 
   const uploadImageFile = useCallback(async (file: File): Promise<string> => {
     const apiUrl = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:3333").replace(/\/$/, "");
@@ -293,56 +337,9 @@ export function BannerSection({
           </div>
 
           <div className="w-auto md:w-72 flex flex-col gap-4 shrink-0 xl:sticky xl:top-4 mx-auto xl:mx-0">
-            {/* Espelha o card lateral da página pública do evento (events/[slug]). */}
-            <div className="rounded-xl overflow-hidden bg-gray-2 p-5 shadow-[0_5px_10px_rgba(0,0,0,0.3)]">
-              <h1 className="text-lg font-bold mb-4">{eventName || "Nome do evento"}</h1>
-              <div className="flex flex-col gap-4">
-                {eventDate && (
-                  <p className="flex items-center gap-2 text-sm text-gray-12 font-medium">
-                    <CalendarIcon className="size-5 shrink-0" />
-                    <span>Acontece em {formatDate(eventDate)}</span>
-                  </p>
-                )}
-                {infoCardLocation && (
-                  <p className="flex items-center gap-2 text-gray-12 font-medium">
-                    <LocationIcon className="size-5 shrink-0" />
-                    <span className="text-sm underline">{infoCardLocation}</span>
-                  </p>
-                )}
-              </div>
-
-              <div className="bg-gray-3 border border-gray-6 rounded-xl p-3 mt-6">
-                <p className="text-sm font-medium text-gray-11 mb-3">Organizador</p>
-                <div className="space-y-3">
-                  <div className="flex items-center gap-3">
-                    <div className="relative shrink-0 size-10 rounded-full overflow-hidden bg-primary-10/20 flex items-center justify-center">
-                      {organizer.logoSrc ? (
-                        <Image src={organizer.logoSrc} alt="" width={40} height={40} className="size-full object-cover" unoptimized />
-                      ) : (
-                        <span className="text-primary-11 font-semibold text-sm">
-                          {(organizer.name?.charAt(0) || "O").toUpperCase()}
-                        </span>
-                      )}
-                    </div>
-                    <div className="flex-1 min-w-0 flex flex-col gap-1">
-                      <p className="text-sm font-semibold text-gray-12 truncate">{organizer.name}</p>
-                    </div>
-                  </div>
-                  <Button variant="outline" disabled className="w-full text-gray-12 border-gray-6">
-                    Falar com o organizador
-                  </Button>
-                </div>
-              </div>
-
-              <Button disabled className="w-full mt-8">Inscreva-se</Button>
-            </div>
-            <div className="flex flex-col items-center justify-center gap-4">
-              <Button variant="outline" className="mt-8 text-gray-11 border-gray-6">
-                <ShareIcon className="size-5" />
-                Compartilhar
-              </Button>
-              <p className="underline font-semibold text-gray-11 text-sm cursor-pointer">Denunciar evento</p>
-            </div>
+            {/* Card lateral REAL da página pública do evento (events/[slug]) — em
+                modo prévia (sem checkout). Garante paridade 1:1. */}
+            <EventPublicInfoCardDesktop event={cardEvent} isPreview />
           </div>
         </div>
       </div>
@@ -378,48 +375,13 @@ export function BannerSection({
     );
 
   const renderCardListingPreview = () => (
-    <div className="flex flex-col gap-5 w-full max-w-[300px] mx-auto md:mx-0">
+    // Largura igual à do card na home (carrossel usa 240px) — a prévia estava em
+    // 300px, maior do que aparece pro usuário.
+    <div className="flex flex-col gap-5 w-full max-w-[240px] mx-auto md:mx-0">
       <p className="text-gray-12 text-[20px] font-bold font-manrope leading-[1.1]">Prévia</p>
-      <div className="bg-gray-2 rounded-lg shadow-[0px_2px_6px_0px_rgba(17,17,17,0.25)] overflow-hidden flex flex-col w-full">
-        <div className="relative w-full aspect-square bg-gray-4">
-          {cardPreview ? <Image src={cardPreview} alt="" fill className="object-cover rounded-t-lg" sizes="300px" unoptimized={cardPreview.startsWith("data:")} /> : null}
-        </div>
-        <div className="border-b border-gray-6 flex flex-col gap-3 pt-4 pb-3 px-3">
-          <p className="text-gray-12 text-base font-bold font-manrope leading-[1.1] truncate">{eventName || "Nome do evento"}</p>
-          {listingLocation ? (
-            <div className="flex gap-1 items-center min-w-0">
-              <LocationIcon className="size-5 text-gray-12 shrink-0" />
-              <p className="text-gray-12 text-base font-normal font-family-dm-sans leading-[1.3] truncate">{listingLocation}</p>
-            </div>
-          ) : null}
-        </div>
-        <div className="flex flex-col gap-4 pt-3 w-full">
-          <div className="flex flex-col gap-3 px-3">
-            <div className="flex gap-1 items-center min-w-0">
-              {organizer.logoSrc ? (
-                <ImageWithInitialFallback src={organizer.logoSrc} alt={organizer.name} name={organizer.name} width={20} height={20} className="size-5 rounded-full shrink-0 object-cover" fallbackId="org-logo-card" />
-              ) : (
-                <div className="size-5 rounded-full bg-gray-6 shrink-0" />
-              )}
-              <p className="text-gray-12 text-base font-normal font-family-dm-sans leading-[1.3] truncate">{organizer.name}</p>
-            </div>
-            {eventDate ? (
-              <div className="flex gap-1 items-center">
-                <CalendarIcon className="size-5 text-gray-12 shrink-0" />
-                <p className="text-gray-12 text-base font-normal font-family-dm-sans">{formatDate(eventDate)}</p>
-              </div>
-            ) : null}
-          </div>
-          <div className="flex w-full justify-start pr-3">
-            <div className="inline-flex items-center gap-1 border-t border-r border-primary-6 bg-[#c4e8d1] rounded-tr-2xl px-3 py-3">
-              <div className="border border-primary-12 bg-primary-5 rounded-full p-1">
-                <div className="bg-primary-12 rounded-full size-1" />
-              </div>
-              <p className="text-primary-12 text-sm font-semibold font-family-dm-sans leading-[1.3] whitespace-nowrap">Inscrições abertas</p>
-            </div>
-          </div>
-        </div>
-      </div>
+      {/* Card de listagem REAL (o mesmo das listas/busca), em modo prévia: sem
+          navegação e aceitando a imagem em upload (data:). Paridade 1:1. */}
+      <EventCard event={cardEvent} preview />
     </div>
   );
 
