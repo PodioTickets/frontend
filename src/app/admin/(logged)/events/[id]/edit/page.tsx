@@ -14,8 +14,8 @@ import { buildCreateEventBodyFromForm } from "@/lib/createEventDraftSync";
 import { organizerEventEditClientPage } from "@/lib/organizerAudit";
 import {
   validateEventInformation,
-  isEventInformationValid,
   eventInformationHasChanges,
+  mapEventBackendErrors,
 } from "@/lib/eventEditValidation";
 import toast from "react-hot-toast";
 
@@ -59,25 +59,28 @@ export default function EditInformationPage() {
       // num único ato — botão volta a ficar desabilitado até o usuário editar.
       commitInitialFormData(resolvedPdfUrl ? { regulationUrl: resolvedPdfUrl } : undefined);
       toast.success("Informações salvas com sucesso!");
-    } catch (error: any) {
-      let errorMessage = "Erro ao salvar evento";
-      if (error.response?.data?.message) {
-        errorMessage = error.response.data.message;
-      } else if (error.response?.data?.errors?.length) {
-        errorMessage = error.response.data.errors.map((e: any) => e.message || e).join(", ");
-      } else if (error.message) {
-        errorMessage = error.message;
+    } catch (error: unknown) {
+      // Mapeia os erros do backend pros inputs (cobertura completa: validação por
+      // campo, slug duplicado→nome, e demais casos→toast). Ver mapEventBackendErrors.
+      const { fieldErrors, generalMessage } = mapEventBackendErrors(error);
+      if (Object.keys(fieldErrors).length > 0) {
+        setErrors((prev) => ({ ...prev, ...fieldErrors }));
+        toast.error(generalMessage || "Corrija os erros destacados no formulário.");
+      } else {
+        toast.error(generalMessage || "Erro ao salvar evento");
       }
-      toast.error(errorMessage);
     } finally {
       setSaving(false);
     }
   };
 
 
-  const isFormValid = isEventInformationValid(formData);
   const hasChanges = eventInformationHasChanges(formData, initialFormData, hasPendingPdf);
-  const canSave = isFormValid && hasChanges;
+  // Salvar habilita com QUALQUER mudança. A validade é checada no submit
+  // (`validateForm` → erros nos inputs) e os erros do backend são mapeados pros
+  // campos no catch. Antes era gated por `isEventInformationValid` (TODOS os
+  // obrigatórios), o que travava o botão com qualquer campo legado vazio.
+  const canSave = hasChanges;
 
   /* Descarta as edições locais re-aplicando o baseline (`initialFormData`) sobre
    * o `formData`. Necessário porque o `EditEventProvider` vive no LAYOUT (acima

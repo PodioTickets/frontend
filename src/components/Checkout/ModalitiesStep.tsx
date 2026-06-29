@@ -427,8 +427,12 @@ export function ModalitiesStep({ event, onNext, onBack, isSubmitting = false, di
   // de idade são calculados client-side, então não usam esse fallback.
   // "Ao continuar" (cupom pendente) só quando o cupom de link cobre a seleção —
   // ticket fora do `appliesTo` esconde o cupom por inteiro (paridade com voucher).
+  // Gated no `couponData` (preview REAL do backend), não no código da URL: quando
+  // o cupom está esgotado considerando vendas + reservas ativas, o preview vem
+  // null → couponData null → a linha "Cupom X" some. (QUANTITY/AGE têm couponData
+  // presente, então seguem aparecendo.)
   const couponPending =
-    !!pendingCoupon && !voucherData && (!useLinkCoupon || linkCouponCoversSelection);
+    !!couponData && !voucherData && (!useLinkCoupon || linkCouponCoversSelection);
 
   // Agrupa ingressos para exibição
   const groupedTickets = useMemo(() => {

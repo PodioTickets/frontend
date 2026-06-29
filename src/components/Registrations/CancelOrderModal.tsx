@@ -13,6 +13,11 @@ interface CancelOrderModalProps {
   ticketCount: number;
   /** Valor integral do reembolso em REAIS (já dividido por 100). */
   refundAmount: number;
+  /**
+   * Pedido GRATUITO (R$0): é cancelamento puro, não estorno. Esconde o texto de
+   * reembolso/taxa de 2% (não há valor pago) e ajusta o título.
+   */
+  isFreeCancel?: boolean;
 }
 
 function formatPrice(value: number): string {
@@ -36,6 +41,7 @@ export function CancelOrderModal({
   loading = false,
   ticketCount,
   refundAmount,
+  isFreeCancel = false,
 }: CancelOrderModalProps) {
   const ticketsLabel =
     ticketCount === 1
@@ -66,18 +72,25 @@ export function CancelOrderModal({
               <div className="flex flex-col gap-6 items-center w-full">
                 <div className="flex flex-col gap-4 items-center justify-center w-full">
                   <p className="font-family-dm-sans font-semibold text-[20px] leading-[1.3] text-gray-12">
-                    Cancelar pedido?
+                    {isFreeCancel ? "Cancelar pedido?" : "Estornar pedido?"}
                   </p>
-                  <p className="font-family-dm-sans font-normal text-[16px] leading-[1.3] text-gray-11 text-center">
-                    O participante receberá o valor integral de{" "}
-                    <span className="font-bold text-gray-12">
-                      {formatPrice(refundAmount)}
-                    </span>
-                    . Para processar o reembolso, o valor já repassado e a taxa
-                    de cancelamento de{" "}
-                    <span className="font-bold text-gray-12">2%</span> serão
-                    descontados do seu financeiro.
-                  </p>
+                  {isFreeCancel ? (
+                    <p className="font-family-dm-sans font-normal text-[16px] leading-[1.3] text-gray-11 text-center">
+                      Este pedido é gratuito — não há valor a reembolsar. O pedido
+                      e seus ingressos serão cancelados.
+                    </p>
+                  ) : (
+                    <p className="font-family-dm-sans font-normal text-[16px] leading-[1.3] text-gray-11 text-center">
+                      O participante receberá o valor integral de{" "}
+                      <span className="font-bold text-gray-12">
+                        {formatPrice(refundAmount)}
+                      </span>
+                      . Para processar o reembolso, o valor já repassado e a taxa
+                      de cancelamento de{" "}
+                      <span className="font-bold text-gray-12">2%</span> serão
+                      descontados do seu financeiro.
+                    </p>
+                  )}
                 </div>
                 <div className="bg-gray-2 border border-gray-6 rounded-lg p-4 w-full flex items-center gap-3">
                   <TicketIcon className="size-6 text-red-11 shrink-0" />
@@ -101,7 +114,7 @@ export function CancelOrderModal({
                   isLoading={loading}
                   className="flex-1 h-12"
                 >
-                  Cancelar pedido
+                  {isFreeCancel ? "Cancelar pedido" : "Estornar pedido"}
                 </Button>
               </div>
             </div>

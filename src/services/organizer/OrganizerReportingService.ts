@@ -423,6 +423,33 @@ export class OrganizerReportingService extends OrganizerServiceBase {
     return response.data;
   }
 
+  /**
+   * Cancela um pedido GRATUITO (finalAmount 0) pelo ORGANIZADOR com permissão
+   * financeira — SEM estorno (nada foi pago: sem Cielo, sem taxa de 2%). Marca o
+   * pedido como cancelado, cancela as inscrições e reverte cupom/voucher.
+   * - `reason` é obrigatório (≥ 3 chars) — vai pro audit log.
+   * - Rejeita pedido com valor pago: 409 `ORDER_HAS_PAYMENT` (use `refundOrder`).
+   */
+  async cancelFreeOrder(
+    eventId: string,
+    orderId: string,
+    reason: string,
+  ): Promise<{
+    orderId: string;
+    paymentId?: string | null;
+    cancelledAt: string;
+  }> {
+    const { data: response } = await this.apiClient.post<{
+      message: string;
+      data: {
+        orderId: string;
+        paymentId?: string | null;
+        cancelledAt: string;
+      };
+    }>(`/api/v1/events/${eventId}/repasse/orders/${orderId}/cancel`, { reason });
+    return response.data;
+  }
+
   async getEventChargebacks(
     eventId: string,
     params?: {

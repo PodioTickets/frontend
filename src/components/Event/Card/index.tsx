@@ -14,9 +14,13 @@ import { CityStateLabel } from "./CityStateLabel";
 
 interface EventCardProps {
   event: Event;
+  /** Modo prévia (ex.: tela de editar banner): renderiza o MESMO card, mas sem
+   *  navegação (sem `<Link>`) e com imagem nativa, aceitando `data:` URLs do
+   *  upload em andamento. Default false → comportamento idêntico ao de produção. */
+  preview?: boolean;
 }
 
-export function EventCard({ event }: EventCardProps) {
+export function EventCard({ event, preview = false }: EventCardProps) {
   const formattedDate = useMemo(() => {
     if (!event?.eventDate) return "";
     return formatDateBR(event.eventDate, {
@@ -111,8 +115,7 @@ export function EventCard({ event }: EventCardProps) {
 
   const eventImg = (event as any).logoUrl;
 
-  return (
-    <Link href={`/events/${event.slug}`} className="block">
+  const cardInner = (
       <div className="flex w-full flex-col overflow-hidden rounded-lg border border-[#cecece] bg-[#f9f9f9] shadow-[0_2px_6px_0_rgba(17,17,17,0.3)] transition-transform duration-200 hover:scale-[1.01]">
         {/* Imagem sempre quadrada */}
         <div className="relative aspect-square w-full shrink-0 bg-gray-4">
@@ -125,6 +128,9 @@ export function EventCard({ event }: EventCardProps) {
             sizes="(max-width: 768px) 65vw, 300px"
             className="size-full border-0 object-cover"
             letterClassName="text-6xl"
+            // Prévia mostra `data:` URLs (upload em andamento) — next/image rejeita
+            // data URLs; `nativeImg` cai num <img> simples.
+            nativeImg={preview}
           />
         </div>
 
@@ -190,6 +196,14 @@ export function EventCard({ event }: EventCardProps) {
           </div>
         </div>
       </div>
+  );
+
+  // Prévia não navega (sem slug real / contexto de edição); produção mantém o Link.
+  return preview ? (
+    <div className="block">{cardInner}</div>
+  ) : (
+    <Link href={`/events/${event.slug}`} className="block">
+      {cardInner}
     </Link>
   );
 }

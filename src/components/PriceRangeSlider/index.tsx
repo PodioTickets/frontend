@@ -10,7 +10,7 @@ interface PriceRangeSliderProps {
 
 export function PriceRangeSlider({
   min = 0,
-  max = 10000,
+  max = 1000,
   defaultValue = [min, max],
   onChange,
 }: PriceRangeSliderProps) {

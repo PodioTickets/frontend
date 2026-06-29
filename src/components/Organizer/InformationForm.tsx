@@ -65,9 +65,11 @@ function formatCEP(value: string): string {
   return n.length <= 5 ? n : `${n.slice(0, 5)}-${n.slice(5, 8)}`;
 }
 
+// Placeholder dos campos de data: dia/mês zerados + ano ATUAL ("00/00/2026").
+// É o estado "sem data" exibido quando o campo está vazio/resetado (ex.: o
+// encerramento das inscrições ao mudar o início pra depois do fim).
 function getCurrentDatePlaceholder(): string {
-  const d = new Date();
-  return `${String(d.getDate()).padStart(2, "0")}/${String(d.getMonth() + 1).padStart(2, "0")}/${d.getFullYear()}`;
+  return `00/00/${new Date().getFullYear()}`;
 }
 
 interface ViaCEPResponse {
@@ -233,23 +235,45 @@ export function InformationForm({
         return;
       }
       const hasStart = Boolean(value?.trim());
-      onChange({
-        registrationStartDate: value,
-        registrationEndDate: "",
-        registrationEndTime: "",
-        registrationStartTime: hasStart ? values.registrationStartTime?.trim() || "00:00" : "",
-      });
-      clearRegistrationPeriodError(name);
-      // Regra: início das inscrições (data+hora) deve ser ANTES do dia do evento. Não bloqueia
-      // (deixa selecionar), mas avisa via toast + erro no input. Senão, limpa o erro do campo.
+      const nextStartTime = hasStart ? values.registrationStartTime?.trim() || "00:00" : "";
+      // Início ANTES do encerramento → mantém o encerramento. Início DEPOIS (fim
+      // ficaria inválido) OU início removido → LIMPA o encerramento (data + hora)
+      // para VAZIO (placeholder "DD/MM/AAAA"), pra o usuário reescolher. Não há
+      // período válido a preservar nesse caso.
+      const hadEnd = Boolean(values.registrationEndDate?.trim());
+      const endNowInvalid =
+        hadEnd &&
+        wouldRegistrationEndBeforeStart({
+          ...values,
+          registrationStartDate: value,
+          registrationStartTime: nextStartTime,
+        } as any);
+      const clearEnd = !hasStart || endNowInvalid;
+      onChange(
+        clearEnd
+          ? {
+              registrationStartDate: value,
+              registrationStartTime: nextStartTime,
+              registrationEndDate: "",
+              registrationEndTime: "",
+            }
+          : {
+              registrationStartDate: value,
+              registrationStartTime: nextStartTime,
+            },
+      );
+      // Sem toast: o encerramento é apenas resetado (silenciosamente) quando
+      // ficaria anterior ao novo início — o campo volta ao placeholder vazio.
+      // Período fica sempre resolvido aqui (ou era válido, ou limpamos o fim).
       const startBeforeEventViolation = isRegistrationStartNotBeforeEvent(
         value,
-        hasStart ? values.registrationStartTime?.trim() || "00:00" : "",
+        nextStartTime,
         values.eventDate,
       );
       if (startBeforeEventViolation) toast.error(REGISTRATION_START_NOT_BEFORE_EVENT_TOAST);
       onErrorsChange((prev) => ({
         ...prev,
+        registrationPeriod: "",
         registrationStartDate: startBeforeEventViolation
           ? REGISTRATION_START_NOT_BEFORE_EVENT_TOAST
           : "",
