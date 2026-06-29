@@ -15,6 +15,7 @@ import type { DateRange } from "react-day-picker";
 import Link from "next/link";
 import { useEventLocationFacets } from "@/hooks/useEventLocationFacets";
 import { LocationCascadePicker } from "@/components/LocationCascadePicker";
+import { useQueryClient } from "@tanstack/react-query";
 
 interface HomeFiltersProps {
   initialState?: string | null;
@@ -72,6 +73,7 @@ export function HomeFilters({
 }: HomeFiltersProps = {}) {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const queryClient = useQueryClient();
   const { facets, isLoading: facetsLoading } = useEventLocationFacets();
 
   const [selectedModalities, setSelectedModalities] =
@@ -236,6 +238,11 @@ export function HomeFilters({
 
     const queryString = params.toString();
     router.push(`/search${queryString ? `?${queryString}` : ""}`);
+
+    // Garante refetch a CADA clique no botão de pesquisar, mesmo quando os
+    // filtros não mudaram (router.push pra mesma URL é no-op e não dispara
+    // a query). Invalida por prefixo todas as variantes de "events-search".
+    queryClient.invalidateQueries({ queryKey: ["events-search"] });
   }, [
     searchParams,
     selectedStateApi,
@@ -244,6 +251,7 @@ export function HomeFilters({
     selectedDateRange,
     priceRange,
     router,
+    queryClient,
   ]);
 
   return (
