@@ -29,6 +29,13 @@ export function PriceRangeSlider({
   const isEditingMin = useRef(false);
   const isEditingMax = useRef(false);
   const wasDragging = useRef(false);
+  // Último valor confirmado — usado pra propagar ao pai (onChange) só no FIM do
+  // arrasto, evitando re-render do componente pai a cada mousemove.
+  const valuesRef = useRef<[number, number]>(values);
+  // Posição "viva" durante o arrasto, atualizada SÍNCRONA (sem depender do
+  // setState/efeito) — garante que o valor final ao soltar seja exato mesmo se
+  // o último animation frame não chegou a rodar antes do mouseup.
+  const dragValuesRef = useRef<[number, number]>(values);
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat("pt-BR", {
@@ -74,6 +81,7 @@ export function PriceRangeSlider({
     (type: "min" | "max") => (e: React.MouseEvent) => {
       e.preventDefault();
       e.stopPropagation();
+      dragValuesRef.current = valuesRef.current; // semente do arrasto
       isDragging.current = type;
       document.body.style.userSelect = "none";
     },
@@ -84,6 +92,7 @@ export function PriceRangeSlider({
     (type: "min" | "max") => (e: React.TouchEvent) => {
       e.preventDefault();
       e.stopPropagation();
+      dragValuesRef.current = valuesRef.current; // semente do arrasto
       isDragging.current = type;
       document.body.style.userSelect = "none";
     },
@@ -91,20 +100,38 @@ export function PriceRangeSlider({
   );
 
   useEffect(() => {
-    const handleMove = (clientX: number) => {
-      if (!isDragging.current || !sliderRef.current) return;
+    // Coalescência por animation frame: mousemove dispara muitas vezes por
+    // frame; processamos no máximo 1 atualização por quadro (~60fps), usando
+    // sempre a posição mais recente. Elimina o travamento do arrasto.
+    let pendingX: number | null = null;
+    let rafId: number | null = null;
+
+    const processMove = () => {
+      rafId = null;
+      if (pendingX === null || !isDragging.current || !sliderRef.current) return;
 
       const rect = sliderRef.current.getBoundingClientRect();
       const percentage = Math.max(
         0,
-        Math.min(100, ((clientX - rect.left) / rect.width) * 100)
+        Math.min(100, ((pendingX - rect.left) / rect.width) * 100)
       );
       const value = Math.round(min + (percentage / 100) * (max - min));
 
-      if (isDragging.current === "min") {
-        handleMinChange(value);
-      } else if (isDragging.current === "max") {
-        handleMaxChange(value);
+      // Clampa contra o par "vivo" e atualiza o ref de forma síncrona; o
+      // setValues abaixo só serve pro render (thumb/inputs acompanham).
+      const [curMin, curMax] = dragValuesRef.current;
+      const next: [number, number] =
+        isDragging.current === "min"
+          ? [Math.max(min, Math.min(value, curMax - 0.01)), curMax]
+          : [curMin, Math.min(max, Math.max(value, curMin + 0.01))];
+      dragValuesRef.current = next;
+      setValues(next);
+    };
+
+    const handleMove = (clientX: number) => {
+      pendingX = clientX;
+      if (rafId === null) {
+        rafId = requestAnimationFrame(processMove);
       }
     };
 
@@ -122,44 +149,43 @@ export function PriceRangeSlider({
       }
     };
 
-    const handleMouseUp = () => {
-      if (isDragging.current) {
-        wasDragging.current = true;
-        isDragging.current = null;
-        document.body.style.userSelect = "";
-        // Reset flag after a short delay
-        setTimeout(() => {
-          wasDragging.current = false;
-        }, 150);
+    // Fim do arrasto: faz flush do último movimento pendente, depois propaga o
+    // valor FINAL pro pai (única vez). É aqui que o `onChange` corre — não a
+    // cada pixel.
+    const endDrag = () => {
+      if (!isDragging.current) return;
+      if (rafId !== null) {
+        cancelAnimationFrame(rafId);
+        rafId = null;
+        processMove(); // garante que a última posição seja aplicada
       }
-    };
-
-    const handleTouchEnd = () => {
-      if (isDragging.current) {
-        wasDragging.current = true;
-        isDragging.current = null;
-        document.body.style.userSelect = "";
-        // Reset flag after a short delay
-        setTimeout(() => {
-          wasDragging.current = false;
-        }, 150);
-      }
+      pendingX = null;
+      const final = dragValuesRef.current;
+      wasDragging.current = true;
+      isDragging.current = null;
+      document.body.style.userSelect = "";
+      onChange?.(final);
+      // Reset flag after a short delay
+      setTimeout(() => {
+        wasDragging.current = false;
+      }, 150);
     };
 
     // Always add listeners, they check isDragging internally
     document.addEventListener("mousemove", handleMouseMove);
-    document.addEventListener("mouseup", handleMouseUp);
+    document.addEventListener("mouseup", endDrag);
     document.addEventListener("touchmove", handleTouchMove, { passive: false });
-    document.addEventListener("touchend", handleTouchEnd);
+    document.addEventListener("touchend", endDrag);
 
     return () => {
+      if (rafId !== null) cancelAnimationFrame(rafId);
       document.removeEventListener("mousemove", handleMouseMove);
-      document.removeEventListener("mouseup", handleMouseUp);
+      document.removeEventListener("mouseup", endDrag);
       document.removeEventListener("touchmove", handleTouchMove);
-      document.removeEventListener("touchend", handleTouchEnd);
+      document.removeEventListener("touchend", endDrag);
       document.body.style.userSelect = "";
     };
-  }, [min, max, handleMinChange, handleMaxChange]);
+  }, [min, max, onChange]);
 
   const parseInputToNumber = (value: string): number => {
     if (!value || value.trim() === "") return 0;
@@ -257,6 +283,7 @@ export function PriceRangeSlider({
 
   // Sync inputs when values change externally (from slider drag)
   useEffect(() => {
+    valuesRef.current = values; // mantém o ref atualizado p/ o commit no fim do arrasto
     if (!isEditingMin.current) {
       setMinInput(formatNumberToCurrency(values[0]));
     }

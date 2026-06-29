@@ -2,6 +2,7 @@
 
 import { useSearchParams, useRouter } from "next/navigation";
 import { useMemo, Suspense, useState, useEffect } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { EventCard } from "@/components/Event/Card";
 import { HomeFilters } from "@/components/HomeFilters";
 import { Button } from "@/components/Button";
@@ -31,6 +32,7 @@ import type { DateRange } from "react-day-picker";
 function MobileAdvancedSearch() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const queryClient = useQueryClient();
   const [currentPage, setCurrentPage] = useState(1);
   const { facets, isLoading: facetsLoading } = useEventLocationFacets();
 
@@ -222,6 +224,8 @@ function MobileAdvancedSearch() {
     if (priceRange[0] > 0) params.set("priceMin", priceRange[0].toString());
     if (priceRange[1] < 1000) params.set("priceMax", priceRange[1].toString());
     router.push(`/search?${params.toString()}`);
+    // Refetch a cada clique em "Pesquisar", mesmo sem mudança de filtro.
+    queryClient.invalidateQueries({ queryKey: ["events-search"] });
   };
 
   const handleClearAll = () => {

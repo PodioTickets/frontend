@@ -50,7 +50,12 @@ export function useEventSearch(params: SearchEventsParams = {}) {
     () => eventService.searchEvents(params),
     {
       enabled: true,
-      staleTime: 2 * 60 * 1000,
+      // "Menos cache" (política do projeto): qualquer mudança de filtro busca
+      // dados frescos. Sem janela de 2min mascarando o backend. O clique no
+      // botão de pesquisar (HomeFilters) ainda invalida explicitamente esta
+      // query p/ garantir refetch mesmo quando os filtros não mudaram.
+      staleTime: 0,
+      refetchOnMount: "always",
       gcTime: 5 * 60 * 1000,
     }
   );
