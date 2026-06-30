@@ -23,6 +23,8 @@ import toast from "react-hot-toast";
 import { FinanceIcon } from "../Icons/Organizer/FinanceIcon";
 import { lookupCepDigits } from "@/utils/lookupCep";
 import { formatDateBRT } from "@/utils/datetimeBR";
+import { getCpfValidationMessage } from "@/utils/cpf";
+import { getCnpjValidationMessage } from "@/utils/cnpj";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -99,6 +101,34 @@ function formatCPFOrCNPJ(v?: string | null): string {
   if (!v) return "";
   const d = digits(v);
   return d.length <= 11 ? formatCPF(d) : formatCNPJ(d);
+}
+
+/** Aplica máscara de CPF/CNPJ à chave PIX só quando o tipo é documento. */
+function maskPixKey(keyType: string, value: string): string {
+  if (keyType === "CPF") return formatCPF(value);
+  if (keyType === "CNPJ") return formatCNPJ(value);
+  return value;
+}
+
+/** Placeholder da chave PIX conforme o tipo selecionado. */
+function pixKeyPlaceholder(keyType: string): string {
+  if (keyType === "CPF") return "000.000.000-00";
+  if (keyType === "CNPJ") return "00.000.000/0000-00";
+  if (keyType === "EMAIL") return "email@exemplo.com";
+  if (keyType === "PHONE") return "(00) 00000-0000";
+  return "Digite a chave PIX";
+}
+
+/**
+ * Valida a chave PIX quando o tipo é documento (CPF/CNPJ) — mesma validação do
+ * checkout (`getCpfValidationMessage`/`getCnpjValidationMessage`). Demais tipos
+ * (e-mail/telefone/aleatória) não passam por validação de documento aqui.
+ * Retorna a mensagem de erro ou null.
+ */
+function getPixKeyValidationMessage(keyType: string, key: string): string | null {
+  if (keyType === "CPF") return getCpfValidationMessage(key);
+  if (keyType === "CNPJ") return getCnpjValidationMessage(key);
+  return null;
 }
 
 function formatPhone(v?: string | null): string {
@@ -275,6 +305,8 @@ function PixKeyCard({
 }) {
   const [expanded, setExpanded] = useState(false);
   const typeLabel = PIX_KEY_LABELS[pixKey.keyType] ?? pixKey.keyType;
+  // Chave de documento é persistida só com dígitos — formata p/ exibição.
+  const keyDisplay = maskPixKey(pixKey.keyType, pixKey.key);
 
   return (
     <div className="rounded-lg border border-gray-6">
@@ -289,7 +321,7 @@ function PixKeyCard({
           </p>
           <div className="flex items-center gap-1 text-base leading-[1.3]">
             <span className="font-normal font-family-dm-sans text-gray-11">Chave pix ({typeLabel}):</span>
-            <span className="font-medium font-family-dm-sans text-gray-12">{pixKey.key}</span>
+            <span className="font-medium font-family-dm-sans text-gray-12">{keyDisplay}</span>
           </div>
         </div>
         <ChevronRight
@@ -304,7 +336,7 @@ function PixKeyCard({
         <div className="px-5 pb-5 flex flex-col gap-6">
           <div className="flex flex-wrap gap-x-4 gap-y-6">
             <FieldInput label="Tipo de Chave" value={typeLabel} readOnly className="min-w-[290px]" />
-            <FieldInput label="Chave cadastrada" value={pixKey.key} readOnly className="min-w-[290px]" />
+            <FieldInput label="Chave cadastrada" value={keyDisplay} readOnly className="min-w-[290px]" />
             <FieldInput label="Nome do titular" value={pixKey.accountHolderName ?? ""} readOnly className="min-w-[290px]" />
             <FieldInput label="CPF/CNPJ do titular" value={formatCPFOrCNPJ(pixKey.accountHolderDocument)} readOnly className="min-w-[290px]" />
             <FieldInput label="Banco" value={pixKey.bankName ?? ""} readOnly className="min-w-[290px]" />
@@ -463,6 +495,7 @@ export function OrganizerEditDrawer({ isOpen, onClose, org, onUpdated, mode = "e
   const [showAddPix, setShowAddPix] = useState(false);
   const emptyPix = { keyType: "", key: "", bankName: "", accountHolderName: "", accountHolderDocument: "" };
   const [newPix, setNewPix] = useState(emptyPix);
+  const [pixKeyError, setPixKeyError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -555,14 +588,26 @@ export function OrganizerEditDrawer({ isOpen, onClose, org, onUpdated, mode = "e
 
   const handleAddPix = () => {
     if (!newPix.key.trim()) {
-      toast.error("Informe a chave PIX.");
+      setPixKeyError("Informe a chave PIX.");
       return;
     }
+    // Valida CPF/CNPJ da chave (mesma validação do checkout) quando o tipo é documento.
+    const keyError = getPixKeyValidationMessage(newPix.keyType, newPix.key);
+    if (keyError) {
+      setPixKeyError(keyError);
+      return;
+    }
+    // Chave de documento é persistida só com dígitos (formato canônico de PIX).
+    const normalizedKey =
+      newPix.keyType === "CPF" || newPix.keyType === "CNPJ"
+        ? digits(newPix.key)
+        : newPix.key.trim();
     setPixKeys((prev) => [
       ...prev,
-      { id: `new-${Date.now()}`, key: newPix.key.trim(), keyType: newPix.keyType, isDefault: false, bankName: newPix.bankName.trim(), accountHolderName: newPix.accountHolderName.trim(), accountHolderDocument: newPix.accountHolderDocument },
+      { id: `new-${Date.now()}`, key: normalizedKey, keyType: newPix.keyType, isDefault: false, bankName: newPix.bankName.trim(), accountHolderName: newPix.accountHolderName.trim(), accountHolderDocument: newPix.accountHolderDocument },
     ]);
     setNewPix(emptyPix);
+    setPixKeyError(null);
     setShowAddPix(false);
   };
 
@@ -1004,7 +1049,7 @@ export function OrganizerEditDrawer({ isOpen, onClose, org, onUpdated, mode = "e
                     <Button
                       type="button"
                       variant="outline"
-                      onClick={() => setShowAddPix(true)}
+                      onClick={() => { setShowAddPix(true); setPixKeyError(null); }}
                       className="flex items-center gap-1.5 text-gray-12 border border-gray-6"
                     >
                       <Plus className="size-4" />
@@ -1039,7 +1084,11 @@ export function OrganizerEditDrawer({ isOpen, onClose, org, onUpdated, mode = "e
                         </label>
                         <InlineSelect
                           value={newPix.keyType}
-                          onChange={(v) => setNewPix((p) => ({ ...p, keyType: v }))}
+                          onChange={(v) => {
+                            // Reformata a chave já digitada conforme o novo tipo e limpa o erro.
+                            setNewPix((p) => ({ ...p, keyType: v, key: maskPixKey(v, p.key) }));
+                            setPixKeyError(null);
+                          }}
                           placeholder="Selecione o tipo"
                           options={[
                             { id: "CPF", label: "CPF" },
@@ -1054,8 +1103,12 @@ export function OrganizerEditDrawer({ isOpen, onClose, org, onUpdated, mode = "e
                       <FieldInput
                         label="Chave PIX"
                         value={newPix.key}
-                        onChange={(v) => setNewPix((p) => ({ ...p, key: v }))}
-                        placeholder="Digite a chave PIX"
+                        onChange={(v) => {
+                          setNewPix((p) => ({ ...p, key: maskPixKey(p.keyType, v) }));
+                          if (pixKeyError) setPixKeyError(null);
+                        }}
+                        placeholder={pixKeyPlaceholder(newPix.keyType)}
+                        error={pixKeyError ?? undefined}
                         className="min-w-[200px]"
                       />
                       <FieldInput
@@ -1084,7 +1137,7 @@ export function OrganizerEditDrawer({ isOpen, onClose, org, onUpdated, mode = "e
                     <div className="flex items-center gap-2 justify-end">
                       <Button
                         variant="outline"
-                        onClick={() => { setShowAddPix(false); setNewPix(emptyPix); }}
+                        onClick={() => { setShowAddPix(false); setNewPix(emptyPix); setPixKeyError(null); }}
                         className="h-9 px-4 text-gray-12 border border-gray-6"
                       >
                         Cancelar
