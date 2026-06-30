@@ -6,7 +6,8 @@ import { Button } from "@/components/Button";
 import { Input } from "@/components/Input";
 import { Checkbox } from "@/components/CheckBox";
 import { DatePicker } from "@/components/DatePicker";
-import { toCivilDayBRT } from "@/utils/datetimeBR";
+import { TimePicker } from "@/components/TimePicker";
+import { toCivilDayBRT, formatTimeBRT } from "@/utils/datetimeBR";
 import { X } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import toast from "react-hot-toast";
@@ -32,6 +33,8 @@ export function CreateVoucherModal() {
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [expiryStatus, setExpiryStatus] = useState<ExpiryStatus>("DISABLED");
   const [expiryDate, setExpiryDate] = useState<string | null>(null);
+  // Horário opcional da validade (`HH:mm` BRT). Vazio = fim do dia (23:59 BRT).
+  const [expiryTime, setExpiryTime] = useState<string | null>(null);
   const [applyToProducts, setApplyToProducts] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isMdUp, setIsMdUp] = useState(true);
@@ -101,6 +104,7 @@ export function CreateVoucherModal() {
         setExpiryStatus(v.expiryDate ? "ENABLED" : "DISABLED");
         // Converte o instante de validade (fim do dia BRT) pro dia civil do picker.
         setExpiryDate(v.expiryDate ? toCivilDayBRT(v.expiryDate) : null);
+        setExpiryTime(v.expiryDate ? formatTimeBRT(v.expiryDate) : null);
         setCpfListStatus(v.cpfListStatus || "DISABLED");
         setCpfList(v.cpfList || []);
         setApplyToProducts(!!(v as { applyToProducts?: boolean }).applyToProducts);
@@ -116,6 +120,7 @@ export function CreateVoucherModal() {
         setShowAdvanced(false);
         setExpiryStatus("DISABLED");
         setExpiryDate(null);
+        setExpiryTime(null);
         setCpfListStatus("DISABLED");
         setCpfList([]);
         setApplyToProducts(false);
@@ -222,7 +227,11 @@ export function CreateVoucherModal() {
         name: name.trim(),
         ...(!isEditing && { quantity: quantityNum }),
         appliesTo: appliesTo === "all" ? "all" : selectedTicketIds.length > 0 ? selectedTicketIds : "all",
-        expiryDate: expiryStatus === "ENABLED" && expiryDate ? expiryDate : null, // null é serializado, undefined não
+        // Com horário → instante ISO exato (BRT, UTC-3); sem horário → dia civil
+        // (backend assume fim do dia BRT). null é serializado, undefined não.
+        expiryDate: expiryStatus === "ENABLED" && expiryDate
+          ? (expiryTime ? new Date(`${expiryDate}T${expiryTime}:00-03:00`).toISOString() : expiryDate)
+          : null,
         cpfListStatus,
         cpfList: cpfListStatus === "ENABLED" ? cpfList : null,
         applyToProducts,
@@ -758,7 +767,7 @@ export function CreateVoucherModal() {
                                     <Checkbox
                                       checked={expiryStatus === "DISABLED"}
                                       onCheckedChange={(checked) => {
-                                        if (checked) { setExpiryStatus("DISABLED"); setExpiryDate(null); }
+                                        if (checked) { setExpiryStatus("DISABLED"); setExpiryDate(null); setExpiryTime(null); }
                                       }}
                                     />
                                     <span className="text-sm font-family-dm-sans leading-[1.3] text-gray-12">Desabilitar</span>
@@ -772,17 +781,29 @@ export function CreateVoucherModal() {
                                   </label>
                                 </div>
                                 {expiryStatus === "ENABLED" && (
-                                  <div className="flex flex-col gap-2">
-                                    <label className="text-gray-12 text-base font-family-dm-sans leading-[1.3]">
-                                      Expira em:
-                                    </label>
-                                    <DatePicker
-                                      value={expiryDate || undefined}
-                                      onChange={setExpiryDate}
-                                      minDate={minSelectableExpiryDate}
-                                      placeholder="00/00/2026"
-                                      className="w-full md:w-auto"
-                                    />
+                                  <div className="flex flex-col gap-2 md:flex-row md:gap-4">
+                                    <div className="flex flex-col gap-2">
+                                      <label className="text-gray-12 text-base font-family-dm-sans leading-[1.3]">
+                                        Expira em:
+                                      </label>
+                                      <DatePicker
+                                        value={expiryDate || undefined}
+                                        onChange={setExpiryDate}
+                                        minDate={minSelectableExpiryDate}
+                                        placeholder="00/00/2026"
+                                        className="w-full md:w-auto"
+                                      />
+                                    </div>
+                                    <div className="flex flex-col gap-2">
+                                      <label className="text-gray-12 text-base font-family-dm-sans leading-[1.3]">
+                                        Horário (opcional):
+                                      </label>
+                                      <TimePicker
+                                        value={expiryTime || undefined}
+                                        onChange={setExpiryTime}
+                                        placeholder="23:59"
+                                      />
+                                    </div>
                                   </div>
                                 )}
                               </div>
