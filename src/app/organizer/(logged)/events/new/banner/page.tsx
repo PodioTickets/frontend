@@ -8,6 +8,7 @@ import { organizerService } from "@/services";
 import { useWizardAuth } from "@/hooks/useWizardAuth";
 import { useCreateEvent } from "@/contexts/CreateEventContext";
 import { useAuth } from "@/hooks/useAuth";
+import { useOrganizerPermissions } from "@/contexts/OrganizerPermissionsContext";
 import { Loading } from "@/components/Loading";
 import { BannerSection, type BannerSectionOrganizerData } from "@/components/Organizer/BannerSection";
 import { WizardStepLayout } from "@/components/Organizer/WizardStepLayout";
@@ -35,6 +36,7 @@ export default function BannerPage() {
   const orgNav = useOrganizerNavigate();
   const appSurface = useOrganizerAppSurface();
   const { isAuthenticated, user } = useAuth();
+  const { organization: org } = useOrganizerPermissions();
   const { formData, updateFormData } = useCreateEvent();
   const { authChecked } = useWizardAuth();
   const [syncingEvent, setSyncingEvent] = useState(false);
@@ -90,15 +92,23 @@ export default function BannerPage() {
     orgNav.push("/organizer/events/new/tickets");
   };
 
-  const orgName =
+  // Card de organizador na prévia mostra o NOME FANTASIA (tradeName), igual aos
+  // fluxos de edição/review (que derivam de `getEventOrganizer(event)`). Antes o
+  // create usava o nome do usuário (conta) → card exibia o nome errado.
+  // Precedência: nome fantasia → razão social → nome do usuário (fallback).
+  const userName =
     [user?.firstName, user?.lastName].filter(Boolean).join(" ").trim() ||
     user?.firstName?.trim() ||
-    "Organizador";
+    "";
 
   const organizer: BannerSectionOrganizerData = {
-    name: orgName,
-    logoSrc: user?.avatarUrl ? getAvatarUrl(user.avatarUrl) : null,
-    document: user?.documentNumber,
+    name: org?.tradeName?.trim() || org?.name?.trim() || userName || "Organizador",
+    logoSrc: org?.logoUrl
+      ? getAvatarUrl(org.logoUrl)
+      : user?.avatarUrl
+        ? getAvatarUrl(user.avatarUrl)
+        : null,
+    document: org?.document ?? user?.documentNumber,
   };
 
   const backHref = organizerExternalHref("/organizer/events/new/information", appSurface);
