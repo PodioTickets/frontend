@@ -7,7 +7,6 @@ import { Input } from "@/components/Input";
 import { Radio } from "@/components/Radio";
 import { Checkbox } from "@/components/CheckBox";
 import { DatePicker } from "@/components/DatePicker";
-import { TimePicker } from "@/components/TimePicker";
 import { X, Plus, Info } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import toast from "react-hot-toast";
@@ -16,7 +15,7 @@ import { organizerService } from "@/services";
 import { ArrowButton } from "../ArrowButton";
 import { SelectTicketsModal } from "./SelectTicketsModal";
 import { cn } from "@/utils/cn";
-import { toCivilDayBRT, formatTimeBRT } from "@/utils/datetimeBR";
+import { toCivilDayBRT } from "@/utils/datetimeBR";
 import { useCpfList } from "@/hooks/useCpfList";
 import { formatCpf as formatCPF } from "@/lib/cpfList";
 
@@ -36,8 +35,6 @@ export function CreateCouponModal() {
   const [showSelectTicketsModal, setShowSelectTicketsModal] = useState(false);
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [expiryDate, setExpiryDate] = useState<string | null>(null);
-  // Horário opcional da validade (`HH:mm` BRT). Vazio = fim do dia (23:59 BRT).
-  const [expiryTime, setExpiryTime] = useState<string | null>(null);
   const [expiryEnabled, setExpiryEnabled] = useState(false);
   const [usageLimit, setUsageLimit] = useState("");
   const [usageLimitEnabled, setUsageLimitEnabled] = useState(false);
@@ -125,7 +122,6 @@ export function CreateCouponModal() {
       appliesTo !== originalAppliesTo ||
       JSON.stringify([...selectedTicketIds].sort()) !== JSON.stringify(originalTicketIds) ||
       expiryDate !== (c.expiryDate ? toCivilDayBRT(c.expiryDate) : null) ||
-      expiryTime !== (c.expiryDate ? formatTimeBRT(c.expiryDate) : null) ||
       expiryEnabled !== !!c.expiryDate ||
       usageLimit !== (c.maxUsage?.toString() || "") ||
       usageLimitEnabled !== !!c.maxUsage ||
@@ -138,7 +134,7 @@ export function CreateCouponModal() {
     );
   }, [
     isEditing, data, couponType, code, note, discountType, value,
-    appliesTo, selectedTicketIds, expiryDate, expiryTime, expiryEnabled,
+    appliesTo, selectedTicketIds, expiryDate, expiryEnabled,
     usageLimit, usageLimitEnabled, cpfListStatus, cpfList,
     minQuantity, minAge, maxAge, applyToProducts,
   ]);
@@ -186,7 +182,6 @@ export function CreateCouponModal() {
 
         // Converte o instante de validade (fim do dia BRT) pro dia civil do picker.
         setExpiryDate(c.expiryDate ? toCivilDayBRT(c.expiryDate) : null);
-        setExpiryTime(c.expiryDate ? formatTimeBRT(c.expiryDate) : null);
         setExpiryEnabled(!!c.expiryDate);
         setUsageLimit(c.maxUsage?.toString() || "");
         setUsageLimitEnabled(!!c.maxUsage);
@@ -220,7 +215,6 @@ export function CreateCouponModal() {
         setSelectedTicketIds([]);
         setShowAdvanced(false);
         setExpiryDate(null);
-        setExpiryTime(null);
         setExpiryEnabled(false);
         setUsageLimit("");
         setUsageLimitEnabled(false);
@@ -431,11 +425,7 @@ export function CreateCouponModal() {
         type: discountType,
         value: discountType === "FIXED" ? Math.round(numericValue * 100) : numericValue,
         note: note.trim() || null,
-        // Com horário → instante ISO exato (BRT, UTC-3); sem horário → dia civil
-        // (backend assume fim do dia BRT). Mantém o comportamento atual sem hora.
-        expiryDate: expiryEnabled && expiryDate
-          ? (expiryTime ? new Date(`${expiryDate}T${expiryTime}:00-03:00`).toISOString() : expiryDate)
-          : null,
+        expiryDate: expiryEnabled && expiryDate ? expiryDate : null,
         maxUsage: usageLimitEnabled && usageLimit ? parseInt(usageLimit) : null,
         // QUANTITY não suporta restrição por CPF — sempre envia desabilitado/limpo.
         cpfListStatus: couponType === "QUANTITY" ? "DISABLED" : cpfListStatus,
@@ -1258,29 +1248,17 @@ export function CreateCouponModal() {
                                       </label>
                                     </div>
                                     {expiryEnabled && (
-                                      <div className="flex flex-col gap-2 md:flex-row md:gap-4">
-                                        <div className="flex flex-col gap-2">
-                                          <label className="text-gray-12 text-base font-family-dm-sans leading-[1.3]">
-                                            Expira em:
-                                          </label>
-                                          <DatePicker
-                                            value={expiryDate || undefined}
-                                            onChange={setExpiryDate}
-                                            minDate={minSelectableExpiryDate}
-                                            placeholder="00/00/2026"
-                                            className="w-full md:w-auto"
-                                          />
-                                        </div>
-                                        <div className="flex flex-col gap-2">
-                                          <label className="text-gray-12 text-base font-family-dm-sans leading-[1.3]">
-                                            Horário (opcional):
-                                          </label>
-                                          <TimePicker
-                                            value={expiryTime || undefined}
-                                            onChange={setExpiryTime}
-                                            placeholder="23:59"
-                                          />
-                                        </div>
+                                      <div className="flex flex-col gap-2">
+                                        <label className="text-gray-12 text-base font-family-dm-sans leading-[1.3]">
+                                          Expira em:
+                                        </label>
+                                        <DatePicker
+                                          value={expiryDate || undefined}
+                                          onChange={setExpiryDate}
+                                          minDate={minSelectableExpiryDate}
+                                          placeholder="00/00/2026"
+                                          className="w-full md:w-auto"
+                                        />
                                       </div>
                                     )}
                                   </div>
