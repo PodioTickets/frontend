@@ -23,6 +23,7 @@ import {
   type RegistrationListRow,
   type RegistrationStatusBadge,
 } from "@/lib/registrations";
+import { formatShortId } from "@/utils/shortId";
 import { RegistrationsStatsCards } from "./RegistrationsStatsCards";
 import { RegistrationRow } from "./RegistrationRow";
 
@@ -503,7 +504,7 @@ export function RegistrationsView({
                               className="block min-w-0 max-w-full"
                             >
                               <p className="font-family-dm-sans font-medium text-sm text-gray-12 truncate cursor-help">
-                                ID inscrição: {registration.id?.length > 10 ? `#${registration.id.slice(0, 6)}...${registration.id.slice(-4)}` : registration.id}
+                                ID inscrição: {formatShortId(registration.id)}
                               </p>
                             </Tooltip>
                           </div>

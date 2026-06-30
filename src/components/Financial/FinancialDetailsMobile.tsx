@@ -7,6 +7,7 @@ import { PixIcon } from "@/components/Icons/PixIcon";
 import { PaymentIcon } from "react-svg-credit-card-payment-icons";
 import { ArrowButton } from "../ArrowButton";
 import { getAvatarUrl } from "@/utils/avatar";
+import { formatShortId } from "@/utils/shortId";
 
 /**
  * Body mobile compartilhado entre os drawers de Estornados / Chargebacks.
@@ -251,7 +252,7 @@ export function FinancialDetailsMobile({
 
                     {/* ID Pedido */}
                     <p className="font-family-dm-sans font-medium text-sm leading-[1.3] text-gray-12 truncate w-full">
-                      ID Pedido: {item.orderId.slice(0, 6)}...{item.orderId.slice(-4)}
+                      ID Pedido: {formatShortId(item.orderId)}
                     </p>
 
                     {/* Valor */}

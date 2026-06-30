@@ -29,6 +29,7 @@ import { ImageWithInitialFallback } from "../ImageWithInitialFallback";
 import { Button } from "../Button";
 import { formatAnswer } from "@/utils/questionAnswer";
 import { isSemInteresseVariation } from "@/utils/semInteresseVariation";
+import { formatShortId } from "@/utils/shortId";
 
 /** Badge exibido quando o organizador trocou a variação do produto do
  *  participante (snapshot `variationEdited: true`). */
@@ -694,7 +695,7 @@ export function ViewRegistrationModal() {
                       <div className="flex items-center justify-between pb-6">
                         <div className="flex flex-col gap-5 max-w-[70%]">
                           <div className="flex flex-col gap-2">
-                            <p className="font-family-dm-sans font-normal text-sm leading-[1.3] text-gray-12 truncate">ID: <span className="text-gray-11">#{currentRegistration.id}</span></p>
+                            <p className="font-family-dm-sans font-normal text-sm leading-[1.3] text-gray-12 truncate">ID: <span className="text-gray-11">{formatShortId(currentRegistration.id)}</span></p>
                             <p className="font-family-dm-sans font-normal text-base leading-[1.3] text-gray-12">
                               Participante
                             </p>

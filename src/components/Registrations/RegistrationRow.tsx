@@ -12,6 +12,7 @@ import {
   type RegistrationListRow,
   type RegistrationStatusBadge,
 } from "@/lib/registrations";
+import { formatShortId } from "@/utils/shortId";
 
 /**
  * Linha da tabela de inscrições (compartilhada admin/organizer). Antes
@@ -74,7 +75,7 @@ export function RegistrationRow({
           }
         >
           <p className="font-inter font-semibold leading-[1.3] text-sm text-gray-12 cursor-default">
-            #{registration.id?.slice(0, 6)}...{registration.id?.slice(-4)}
+            {formatShortId(registration.id)}
           </p>
         </Tooltip>
       </div>

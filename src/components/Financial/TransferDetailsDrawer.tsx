@@ -14,6 +14,7 @@ import { ArrowButton } from "../ArrowButton";
 import { FinanceIcon } from "../Icons/Organizer/FinanceIcon";
 import Image from "next/image";
 import { formatDateBRT, formatTimeBRT } from "@/utils/datetimeBR";
+import { formatShortId } from "@/utils/shortId";
 
 interface TransferDetail {
   id: string;
@@ -189,7 +190,7 @@ export function TransferDetailsDrawer({
             <div className="hidden md:flex mb-7 items-start flex-col gap-3 text-[16px]">
               <div className="flex items-center gap-1">
                 <span className="text-gray-11 font-family-dm-sans font-normal">ID do repasse:</span>
-                <span className="text-gray-12 font-manrope font-semibold">{resolvedId}</span>
+                <span className="text-gray-12 font-manrope font-semibold">{formatShortId(resolvedId)}</span>
               </div>
               <div className="flex items-center gap-4">
                 <div className="flex items-center gap-1">
@@ -215,7 +216,7 @@ export function TransferDetailsDrawer({
               </div>
               <div className="flex items-center gap-6 text-[13px]">
                 <span className="text-gray-11 font-family-dm-sans">
-                  ID: {resolvedId}
+                  ID: {formatShortId(resolvedId)}
                 </span>
                 <span className={`inline-flex items-center justify-center px-2 py-0.5 rounded text-[12px] font-family-dm-sans font-normal ${getStatusBadge(resolvedStatus)}`}>
                   {resolvedStatus}

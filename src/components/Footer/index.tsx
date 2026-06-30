@@ -11,6 +11,7 @@ import { withOrganizerPathPrefix } from "@/lib/organizerPathPresentation";
 import { useAdminAppSurface } from "@/contexts/AdminAppSurfaceContext";
 import { withAdminPathPrefix } from "@/lib/adminPathPresentation";
 import { YoutubeIcon } from "../Icons/YoutubeIcon";
+import { publicSiteHref } from "@/lib/organizerHostNavigation";
 
 export function Footer() {
   const pathname = usePathname();
@@ -104,6 +105,22 @@ export function Footer() {
         </div>
 
 
+        {/* Política de privacidade e Termos de uso */}
+        <div className="flex items-center justify-center gap-4 mb-4">
+          <Link
+            href={publicSiteHref("/privacy")}
+            className="text-gray-2 text-xs underline hover:text-white transition-colors"
+          >
+            Política de privacidade
+          </Link>
+          <Link
+            href={publicSiteHref("/terms")}
+            className="text-gray-2 text-xs underline hover:text-white transition-colors"
+          >
+            Termos de uso
+          </Link>
+        </div>
+
         {/* Copyright Mobile */}
         <p className="text-white text-xs text-center">
           © {currentYear} - Todos os direitos reservados para PódioTicket
@@ -168,7 +185,23 @@ export function Footer() {
           </div>
         </div>
 
-        <p className="text-[#B4B4B4] text-sm text-center mt-10">
+        {/* Política de privacidade e Termos de uso */}
+        <div className="flex items-center justify-center gap-6 mt-10">
+          <Link
+            href={publicSiteHref("/privacy")}
+            className="text-[#B4B4B4] text-sm underline hover:text-white transition-colors"
+          >
+            Política de privacidade
+          </Link>
+          <Link
+            href={publicSiteHref("/terms")}
+            className="text-[#B4B4B4] text-sm underline hover:text-white transition-colors"
+          >
+            Termos de uso
+          </Link>
+        </div>
+
+        <p className="text-[#B4B4B4] text-sm text-center mt-6">
           © {currentYear} - Todos os direitos reservados para PódioTicket
           <br /> Atendimento: suporte@podioticket.com.br | +55 11 94086-8733
           <br /> CNPJ: 65.174.909/0001-01

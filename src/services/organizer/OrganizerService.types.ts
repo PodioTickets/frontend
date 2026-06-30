@@ -905,6 +905,9 @@ export interface Installment {
   paymentId?: string; // ID do pagamento (UUID)
   orderId?: string; // ID do pedido (UUID)
   registrationId?: string; // ID da inscrição (UUID)
+  installmentNumber?: number; // posição da parcela (1..totalInstallments)
+  totalInstallments?: number; // total de parcelas do pedido
+  isLastInstallment?: boolean;
   amount: number;
   dueDate: string;
   status: "PENDING" | "RECEIVED";
