@@ -1,7 +1,7 @@
 // Conteúdo da Política de Privacidade + Cookies (gerado do .docx oficial).
-export type PrivacyBlock = { type: "h1" | "h2" | "h3" | "p" | "li" | "kv"; text: string; label?: string };
+import type { LegalBlock } from "@/components/LegalDocument";
 
-export const privacyPolicy: PrivacyBlock[] = [
+export const privacyPolicy: LegalBlock[] = [
   {
     "type": "h1",
     "text": "Política de Privacidade"
