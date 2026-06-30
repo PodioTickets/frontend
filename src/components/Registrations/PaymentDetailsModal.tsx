@@ -307,11 +307,11 @@ export function PaymentDetailsModal() {
     ]
     : [];
 
-  // ID curto no MESMO formato da lista de inscrições (`xxxxxx...xxxx`) — antes só
-  // `slice(0,8)` (#e141569e), divergindo da RegistrationsView/RegistrationRow. O `#`
-  // é prefixado no JSX; aqui só o miolo. IDs curtos (≤10) saem inteiros.
+  // ID curto = 1º segmento do UUID (8 chars), mesmo formato do helper
+  // `shortId`/`formatShortId` usado nos painéis (RegistrationsView/RegistrationRow).
+  // O `#` é prefixado no JSX; aqui só o miolo. IDs curtos (≤10) saem inteiros.
   const formatShortId = (id?: string | null): string =>
-    id ? (id.length > 10 ? `${id.slice(0, 6)}...${id.slice(-4)}` : id) : "—";
+    id ? (id.length > 10 ? id.slice(0, 8) : id) : "—";
 
   const paymentDetailsWithRegistrations = paymentDetails as PaymentDetails & { registrations?: Array<{ id: string; name: string; email: string; ticket?: { id: string; name: string } | null; ticketCategory?: { id: string; name: string } | null }> };
 
@@ -637,7 +637,7 @@ export function PaymentDetailsModal() {
                   <div className="flex flex-col gap-3">
                     <h2 className="font-manrope font-bold text-xl text-gray-12">Detalhes do pedido</h2>
                     <p className="font-family-dm-sans font-normal text-base text-gray-11">
-                      ID do pedido: <span className="text-gray-12">#{paymentDetails?.orderId}</span>
+                      ID do pedido: <span className="text-gray-12">#{formatShortId(paymentDetails?.orderId)}</span>
                     </p>
                   </div>
                   {/* Buyer info list */}
@@ -978,7 +978,7 @@ export function PaymentDetailsModal() {
                           ID do pedido:
                         </p>
                         <p className="font-family-dm-sans font-normal text-[16px] leading-[1.3] text-gray-12">
-                          #{paymentDetails?.orderId}
+                          #{formatShortId(paymentDetails?.orderId)}
                         </p>
                       </div>
 

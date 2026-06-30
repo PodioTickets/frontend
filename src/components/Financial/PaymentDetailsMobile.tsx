@@ -10,6 +10,7 @@ import { TicketIcon } from "@/components/Icons/TicketIcon";
 import { PaymentIcon } from "react-svg-credit-card-payment-icons";
 import { ArrowButton } from "../ArrowButton";
 import { XCircleIcon } from "lucide-react";
+import { formatShortId } from "@/utils/shortId";
 
 /**
  * Body mobile do comprovante de pagamento (`PaymentItemDetailsDrawer`).
@@ -268,7 +269,7 @@ export function PaymentDetailsMobile({
 
           <div className="flex gap-1 items-center font-family-dm-sans text-base leading-[1.3] flex-wrap">
             <span className="text-gray-11">ID do pedido:</span>
-            <span className="text-gray-12 break-all">{orderId}</span>
+            <span className="text-gray-12 break-all">{formatShortId(orderId)}</span>
           </div>
 
           {/* Lista vertical de campos do comprador */}

@@ -26,6 +26,7 @@ import {
   formatPersonPhone,
 } from "@/utils/documentDisplay";
 import { formatDateBR, formatDateBRT, formatTimeBRT } from "@/utils/datetimeBR";
+import { formatShortId } from "@/utils/shortId";
 
 interface PaymentItemDetailsDrawerProps {
   isOpen: boolean;
@@ -322,7 +323,7 @@ export function PaymentItemDetailsDrawer({
                 ID do pedido:
               </p>
               <p className="font-family-dm-sans font-normal text-[16px] leading-[1.3] text-gray-12">
-                #{paymentDetails.orderId}
+                {formatShortId(paymentDetails.orderId)}
               </p>
             </div>
 

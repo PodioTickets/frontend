@@ -16,6 +16,7 @@ import { formatPhoneForCountry } from "@/utils/phone";
 import { isBrazilianCountry } from "@/validators/Auth.validator";
 import { formatDateBR, formatDateBRT, formatTimeBRT } from "@/utils/datetimeBR";
 import { formatAnswer } from "@/utils/questionAnswer";
+import { formatShortId } from "@/utils/shortId";
 
 interface PaymentSuccessStepProps {
   event: Event;
@@ -308,7 +309,7 @@ export function PaymentSuccessStep({
                       </div>
                       <div className="flex flex-col items-end">
                         <p className="font-bold text-base leading-[1.1] text-gray-12 font-manrope">
-                          #{orderNumber}
+                          {formatShortId(orderNumber)}
                         </p>
                       </div>
                     </div>
@@ -765,7 +766,7 @@ export function PaymentSuccessStep({
                       </div>
                       <div className="flex flex-col items-end">
                         <p className="font-semibold text-[16px] leading-[1.1] text-gray-12 font-manrope">
-                          #{orderNumber}
+                          {formatShortId(orderNumber)}
                         </p>
                       </div>
                     </div>

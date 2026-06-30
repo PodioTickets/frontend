@@ -25,6 +25,7 @@ import { Button } from "../Button";
 import { Tooltip } from "../Tooltip";
 import { Pagination } from "../Pagination";
 import { formatDateBR } from "@/utils/datetimeBR";
+import { formatShortId } from "@/utils/shortId";
 
 interface AwaitingReleaseDrawerProps {
   isOpen: boolean;
@@ -298,7 +299,7 @@ export function AwaitingReleaseDrawer({
                             )}
                           </div>
                         </div>
-                        <p className="font-family-dm-sans font-medium text-sm text-gray-12">ID Pedido: {item.orderId}</p>
+                        <p className="font-family-dm-sans font-medium text-sm text-gray-12">ID Pedido: {formatShortId(item.orderId)}</p>
                         <div className="bg-gray-2 border border-gray-6 rounded-lg h-[34px] flex items-center px-3">
                           <p className="font-family-dm-sans font-medium text-sm text-gray-12">Previsão de liberação: {formatDate(item.releaseDate)}</p>
                         </div>
@@ -464,7 +465,7 @@ export function AwaitingReleaseDrawer({
                             className="block min-w-0 max-w-full"
                           >
                             <p className="font-inter font-semibold leading-[1.3] text-sm text-gray-12 truncate cursor-help">
-                              #{item.orderId.slice(0, 6)}...{item.orderId.slice(-4)}
+                              {formatShortId(item.orderId)}
                             </p>
                           </Tooltip>
                           <p className="font-inter font-semibold leading-[1.3] text-sm text-gray-12">
