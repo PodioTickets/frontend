@@ -46,15 +46,6 @@ const nextConfig: NextConfig = {
   async redirects() {
     return [
       {
-        // /terms entrega direto o PDF estático dos termos (abre no viewer nativo
-        // do browser). É o link público canônico — usado no footer do login do
-        // organizador via publicSiteHref("/terms"). 307 (não-permanente) pra não
-        // cachear no browser caso vire uma página real depois.
-        source: "/terms",
-        destination: "/termos-comprador.pdf",
-        permanent: false,
-      },
-      {
         // Rota antiga da landing institucional (/lp). Renomeada para a URL
         // canônica abaixo (melhor SEO e divulgação). 308 permanente: preserva
         // links já compartilhados e sinaliza a mudança definitiva aos crawlers.
