@@ -518,6 +518,14 @@ export function EventFinancialView({
         eventId={eventId}
         eventName={event?.name}
         categoryName="Nome da categoria"
+        onNavigatePrev={() => {
+          setIsInstallmentsOpen(false);
+          setIsAwaitingReleaseOpen(true);
+        }}
+        onNavigateNext={() => {
+          setIsInstallmentsOpen(false);
+          setIsRefundedOpen(true);
+        }}
       />
 
       {/* Refunded Drawer */}

@@ -618,3 +618,106 @@ input[type="number"] {
   line-height: 1.4;
   font-weight: 600;
 }
+
+/*
+ * Listas (Quill 2.x). O reset global `* { padding: 0; margin: 0 }` zera o
+ * indent nativo de <ol>/<ul>/<li>, e como `@tailwindcss/typography` não está
+ * instalado a classe `prose` não cobre. Quill 2.x sempre emite `<ol>` com
+ * `<li data-list="bullet|ordered">` (o data-list controla o tipo do marcador).
+ *
+ * No editor (.ql-editor) o Quill insere um `<span class="ql-ui">` runtime que
+ * carrega o bullet/contador via `::before` — mas esconde-se aqui pra evitar
+ * duplicar com o nosso `::before`, que é a única fonte que funciona no HTML
+ * salvo (`.topic-rich-html`), onde `.ql-ui` não existe.
+ */
+.ql-editor ol,
+.ql-editor ul,
+.topic-rich-html ol,
+.topic-rich-html ul {
+  padding-left: 1.5em;
+  list-style: none;
+  counter-reset: list-0 list-1 list-2 list-3 list-4 list-5 list-6 list-7 list-8 list-9;
+}
+
+.ql-editor li,
+.topic-rich-html li {
+  display: list-item;
+  list-style: none;
+  padding-left: 1.5em;
+  position: relative;
+}
+
+/* Quill injeta esse span em cada <li> dentro do editor — escondemos pra que o
+ * bullet venha do nosso ::before (consistente com a página pública). */
+.ql-editor li > .ql-ui {
+  display: none;
+}
+
+.ql-editor li[data-list=bullet]::before,
+.topic-rich-html li[data-list=bullet]::before {
+  content: '\2022';
+  display: inline-block;
+  width: 1.2em;
+  margin-left: -1.5em;
+  margin-right: 0.3em;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.ql-editor li[data-list=ordered],
+.topic-rich-html li[data-list=ordered] {
+  counter-increment: list-0;
+}
+
+.ql-editor li[data-list=ordered]::before,
+.topic-rich-html li[data-list=ordered]::before {
+  content: counter(list-0, decimal) '. ';
+  display: inline-block;
+  width: 1.2em;
+  margin-left: -1.5em;
+  margin-right: 0.3em;
+  text-align: right;
+  white-space: nowrap;
+}
+
+/* Indent aninhado (botão "indent right" do Quill). Cada nível adiciona ~1.5em
+ * de padding-left no <li> e troca o tipo do marcador (alpha → roman → decimal). */
+.ql-editor li.ql-indent-1,
+.topic-rich-html li.ql-indent-1 {
+  padding-left: 4.5em;
+}
+.ql-editor li.ql-indent-2,
+.topic-rich-html li.ql-indent-2 {
+  padding-left: 7.5em;
+}
+.ql-editor li.ql-indent-3,
+.topic-rich-html li.ql-indent-3 {
+  padding-left: 10.5em;
+}
+
+.ql-editor li[data-list=ordered].ql-indent-1,
+.topic-rich-html li[data-list=ordered].ql-indent-1 {
+  counter-increment: list-1;
+}
+.ql-editor li[data-list=ordered].ql-indent-1::before,
+.topic-rich-html li[data-list=ordered].ql-indent-1::before {
+  content: counter(list-1, lower-alpha) '. ';
+}
+
+.ql-editor li[data-list=ordered].ql-indent-2,
+.topic-rich-html li[data-list=ordered].ql-indent-2 {
+  counter-increment: list-2;
+}
+.ql-editor li[data-list=ordered].ql-indent-2::before,
+.topic-rich-html li[data-list=ordered].ql-indent-2::before {
+  content: counter(list-2, lower-roman) '. ';
+}
+
+.ql-editor li[data-list=ordered].ql-indent-3,
+.topic-rich-html li[data-list=ordered].ql-indent-3 {
+  counter-increment: list-3;
+}
+.ql-editor li[data-list=ordered].ql-indent-3::before,
+.topic-rich-html li[data-list=ordered].ql-indent-3::before {
+  content: counter(list-3, decimal) '. ';
+}
