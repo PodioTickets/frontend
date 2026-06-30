@@ -489,7 +489,7 @@ export function InstallmentsDrawer({
                         <div className="flex flex-1 h-full items-center min-h-px min-w-px p-4">
                           <div className="flex items-center justify-center w-full">
                             <p className="font-inter font-semibold leading-[1.3] text-sm text-gray-12">
-                              {installment.releaseDate}
+                              Próx. {installment.releaseDate}
                             </p>
                           </div>
                         </div>
