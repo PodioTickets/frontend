@@ -21,6 +21,7 @@ import {
   type ImageUploadWithCropRef,
 } from "@/components/ImageUploadWithCrop";
 import { EVENT_IMAGE_SPECS } from "@/lib/eventImageSpecs";
+import { usePendingImageUpload } from "@/hooks/usePendingImageUpload";
 import { TwoFASection } from "@/components/TwoFASection";
 
 export default function OrganizerSettingsPage() {
@@ -32,14 +33,15 @@ export default function OrganizerSettingsPage() {
   const [authChecked, setAuthChecked] = useState(false);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [uploadingImage, setUploadingImage] = useState(false);
   const avatarCropRef = useRef<ImageUploadWithCropRef>(null);
+  // Foto de perfil em STAGING — só persiste no "Salvar alterações". [[usePendingImageUpload]]
+  const pendingAvatar = usePendingImageUpload(getAvatarUrl);
   const [formData, setFormData] = useState({
     name: "",
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const userFullName = user ? `${user?.firstName} ${user?.lastName ?? ""}`.trim() : "";
-  const hasChanges = formData.name !== userFullName;
+  const hasChanges = formData.name !== userFullName || pendingAvatar.isDirty;
 
   useEffect(() => {
     if (authLoading) return;
@@ -85,32 +87,9 @@ export default function OrganizerSettingsPage() {
     }
   };
 
-  const uploadProfileAvatar = async (file: File) => {
-    setUploadingImage(true);
-    try {
-      await userService.uploadAvatar(file);
-      toast.success("Imagem atualizada com sucesso!");
-      window.location.reload();
-    } catch (error: any) {
-      console.error("Error uploading image:", error);
-      toast.error("Erro ao fazer upload da imagem");
-    } finally {
-      setUploadingImage(false);
-    }
-  };
-
-  const handleRemoveImage = async () => {
-    setUploadingImage(true);
-    try {
-      await userService.removeAvatar();
-      await refetchUser();
-      toast.success("Imagem removida com sucesso!");
-    } catch (error: any) {
-      console.error("Error removing image:", error);
-      toast.error(error?.message || "Erro ao remover imagem.");
-    } finally {
-      setUploadingImage(false);
-    }
+  // Apenas STAGING — a foto só vai pro backend no handleSubmit ("Salvar alterações").
+  const handleRemoveImage = () => {
+    pendingAvatar.stageRemove();
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -125,11 +104,21 @@ export default function OrganizerSettingsPage() {
     setSaving(true);
     try {
       if (!user?.id) throw new Error("Usuário não encontrado");
-      const parts = formData.name.trim().split(/\s+/);
-      const firstName = parts[0] ?? "";
-      const lastName = parts.slice(1).join(" ") || "";
-      await userService.updateUser(user.id, { firstName, lastName });
+      // Nome: só faz PATCH se mudou (evita escrita desnecessária em save de foto-only).
+      if (formData.name.trim() !== userFullName) {
+        const parts = formData.name.trim().split(/\s+/);
+        const firstName = parts[0] ?? "";
+        const lastName = parts.slice(1).join(" ") || "";
+        await userService.updateUser(user.id, { firstName, lastName });
+      }
+      // Foto em staging → persiste agora: novo arquivo (upload) ou remoção.
+      if (pendingAvatar.file) {
+        await userService.uploadAvatar(pendingAvatar.file);
+      } else if (pendingAvatar.removed) {
+        await userService.removeAvatar();
+      }
       await refetchUser();
+      pendingAvatar.reset();
 
       toast.success("Configurações atualizadas com sucesso!");
     } catch (error: any) {
@@ -178,7 +167,7 @@ export default function OrganizerSettingsPage() {
             <div className="flex gap-[16px] items-end relative shrink-0 w-full">
               <div className="relative shrink-0 size-[96px] rounded-full overflow-hidden">
                 <ImageWithInitialFallback
-                  src={user?.avatarUrl ? getAvatarUrl(user?.avatarUrl) : null}
+                  src={pendingAvatar.resolveSrc(user?.avatarUrl)}
                   alt="Profile"
                   name={user?.firstName && user?.lastName
                     ? `${user.firstName} ${user.lastName}`
@@ -193,14 +182,18 @@ export default function OrganizerSettingsPage() {
                 <div className="flex gap-[17px] items-center relative shrink-0">
                   <Button
                     onClick={() => avatarCropRef.current?.open()}
-                    disabled={uploadingImage}
+                    disabled={saving}
                   >
                     <Plus className="size-6" />
-                    {uploadingImage ? "Enviando..." : "Alterar imagem"}
+                    Alterar imagem
                   </Button>
                   <Button
                     onClick={handleRemoveImage}
-                    disabled={uploadingImage || !user?.avatarUrl}
+                    disabled={
+                      saving ||
+                      pendingAvatar.removed ||
+                      (!user?.avatarUrl && !pendingAvatar.file)
+                    }
                     variant="outline"
                     className="border-[1.5px] border-gray-6 flex gap-2 items-center justify-center px-[32px] py-[20px] rounded-[8px] shrink-0 font-manrope font-bold leading-[1.1] text-[16px] text-gray-12"
                   >
@@ -324,7 +317,7 @@ export default function OrganizerSettingsPage() {
             maxFileSizeMb={10}
             accept="image/jpeg,image/jpg,image/png"
             modalTitle="Ajustar foto de perfil"
-            onCropped={(file) => void uploadProfileAvatar(file)}
+            onCropped={(file) => pendingAvatar.stageFile(file)}
             onInvalidFile={(msg) => toast.error(msg)}
             onCropFailed={(msg) => toast.error(msg)}
           />
