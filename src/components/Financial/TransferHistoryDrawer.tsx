@@ -21,6 +21,7 @@ import toast from "react-hot-toast";
 import { Pagination } from "../Pagination";
 // createdAt do repasse é INSTANTE real → BRT (America/Sao_Paulo).
 import { formatDateBRT, formatTimeBRT } from "@/utils/datetimeBR";
+import { formatShortId } from "@/utils/shortId";
 
 interface TransferHistoryDrawerProps {
   isOpen: boolean;
@@ -84,7 +85,7 @@ export function TransferHistoryDrawer({
     const formattedTime = formatTimeBRT(transfer.createdAt, { hour: "2-digit", minute: "2-digit" });
     const id = transfer.id
     return {
-      id: `#${id.slice(0, 6)}...${id.slice(-4)}`,
+      id: formatShortId(id),
       requestDate: formattedDate,
       requestTime: formattedTime,
       value: transfer.amount / 100, // Converter de centavos

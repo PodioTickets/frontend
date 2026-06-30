@@ -22,6 +22,7 @@ import Image from "next/image";
 import { getAvatarUrl } from "@/utils/avatar";
 import { Tooltip } from "../Tooltip";
 import { formatDateBR } from "@/utils/datetimeBR";
+import { formatShortId } from "@/utils/shortId";
 
 interface InstallmentsDrawerProps {
   isOpen: boolean;
@@ -86,28 +87,53 @@ export function InstallmentsDrawer({
     }
   };
 
-  const formatInstallmentForDisplay = (installment: Installment, registrationId?: string) => {
-    const formattedDate = formatDateBR(installment.dueDate, { day: "2-digit", month: "2-digit", year: "numeric" });
-    const paymentId = installment.paymentId || installment.orderId;
+  // Agrupa as parcelas pendentes por pedido → 1 linha por pedido (e não 1 por
+  // parcela). Lib. = data da 1ª liberação pendente; Próx. = a liberação seguinte
+  // (quando existe). Valor = total pendente do pedido.
+  const groupInstallmentsByOrder = (items: Installment[]) => {
+    const fmt = (d: string) =>
+      formatDateBR(d, { day: "2-digit", month: "2-digit", year: "numeric" });
 
-    return {
-      orderId: paymentId || "",
-      transactionId: installment.id,
-      buyer: {
-        name: `${installment.buyer.firstName} ${installment.buyer.lastName}`,
-        email: installment.buyer.email,
-        avatar: installment.buyer.avatarUrl,
-      },
-      releaseDate: formattedDate,
-      nextReleaseDate: formattedDate,
-      // Parcela é sempre cartão de crédito (PIX/boleto não parcelam).
-      paymentMethod: "CREDIT_CARD",
-      value: installment.amount / 100, // Converter de centavos
-      installment: "1/1", // Será preenchido pela API
-    };
+    const byOrder = new Map<string, Installment[]>();
+    for (const inst of items) {
+      const key = inst.orderId || inst.paymentId || inst.id;
+      const group = byOrder.get(key);
+      if (group) group.push(inst);
+      else byOrder.set(key, [inst]);
+    }
+
+    return Array.from(byOrder.values()).map((group) => {
+      const sorted = [...group].sort(
+        (a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime(),
+      );
+      const first = sorted[0];
+      const next = sorted[1]; // próxima liberação após a 1ª (pode não existir)
+      const totalAmount = sorted.reduce((sum, i) => sum + i.amount, 0);
+      const pendingCount = sorted.length;
+      const totalInstallments = first.totalInstallments ?? pendingCount;
+      // Mantém o id completo (pagamento/pedido) p/ o lookup de detalhes — o
+      // encurtamento é só visual na renderização.
+      const lookupId = first.paymentId || first.orderId || "";
+
+      return {
+        orderId: lookupId,
+        transactionId: first.id,
+        buyer: {
+          name: `${first.buyer.firstName} ${first.buyer.lastName}`,
+          email: first.buyer.email,
+          avatar: first.buyer.avatarUrl,
+        },
+        releaseDate: fmt(first.dueDate),
+        nextReleaseDate: next ? fmt(next.dueDate) : null,
+        // Parcela é sempre cartão de crédito (PIX/boleto não parcelam).
+        paymentMethod: "CREDIT_CARD",
+        value: totalAmount / 100, // Converter de centavos
+        installment: `${pendingCount}/${totalInstallments}`,
+      };
+    });
   };
 
-  const displayInstallments = installments.map((i) => formatInstallmentForDisplay(i));
+  const displayInstallments = groupInstallmentsByOrder(installments);
 
   const filteredInstallments = searchQuery.trim()
     ? displayInstallments.filter((d) => {
@@ -283,7 +309,7 @@ export function InstallmentsDrawer({
                             <CardIcon className="size-5 text-gray-12" />
                           </div>
                         </div>
-                        <p className="font-family-dm-sans font-medium text-sm text-gray-12">ID Pedido: {installment.orderId}</p>
+                        <p className="font-family-dm-sans font-medium text-sm text-gray-12">ID Pedido: {formatShortId(installment.orderId)}</p>
                         <div className="bg-gray-2 border border-gray-6 rounded-lg h-[34px] flex items-center px-3">
                           <p className="font-family-dm-sans font-medium text-sm text-gray-12">Próxima liberação: {installment.releaseDate}</p>
                         </div>
@@ -448,7 +474,7 @@ export function InstallmentsDrawer({
                             className="block min-w-0 max-w-full"
                           >
                             <p className="font-inter font-semibold leading-[1.3] text-sm text-gray-12 truncate cursor-help">
-                              #{installment.orderId.slice(0, 6)}...{installment.orderId.slice(-4)}
+                              {formatShortId(installment.orderId)}
                             </p>
                           </Tooltip>
                           <p className="font-inter font-semibold leading-[1.3] text-sm text-gray-12">
@@ -483,9 +509,11 @@ export function InstallmentsDrawer({
                             <p className="font-inter font-semibold leading-[1.3] text-sm text-gray-12">
                               Lib. {installment.releaseDate}
                             </p>
-                            <p className="font-inter font-normal leading-[1.3] text-sm text-gray-11">
-                              Próx. {installment.nextReleaseDate}
-                            </p>
+                            {installment.nextReleaseDate && (
+                              <p className="font-inter font-normal leading-[1.3] text-sm text-gray-11">
+                                Próx. {installment.nextReleaseDate}
+                              </p>
+                            )}
                           </div>
                         </div>
 

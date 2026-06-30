@@ -261,15 +261,27 @@ export class OrganizerReportingService extends OrganizerServiceBase {
     releaseToday: number;
     totalTransactions: number;
   }> {
+    // O backend responde { data: { installments, metrics: { totalPending,
+    // totalCount } } }. Antes líamos campos planos (totalPending/totalTransactions)
+    // que vinham `undefined` → "R$ NaN" no card de total. Mapeamos de `metrics`,
+    // com fallback ao formato plano por segurança.
     const { data: response } = await this.apiClient.get<{
       data: {
-        installments: Installment[];
-        totalPending: number;
-        releaseToday: number;
-        totalTransactions: number;
+        installments?: Installment[];
+        metrics?: { totalPending?: number; totalCount?: number };
+        totalPending?: number;
+        releaseToday?: number;
+        totalTransactions?: number;
       };
     }>(`/api/v1/events/${eventId}/financial/installments`);
-    return response.data;
+    const d = response.data ?? {};
+    const installments = d.installments ?? [];
+    return {
+      installments,
+      totalPending: d.metrics?.totalPending ?? d.totalPending ?? 0,
+      releaseToday: d.releaseToday ?? 0,
+      totalTransactions: d.metrics?.totalCount ?? d.totalTransactions ?? installments.length,
+    };
   }
 
   async getEventPendingReleases(
