@@ -120,7 +120,38 @@ export default async function RootLayout({
         `}
       </Script>
 
+      {/* Meta Pixel (Facebook) — pixel GLOBAL do site (id 1004789278922764).
+          `afterInteractive` (igual o gtag): roda em TODAS as rotas por estar no
+          root layout. Coexiste com o pixel POR-EVENTO (lib/metaPixel.ts via
+          `trackSingle`): o snippet base é idempotente (`if(f.fbq)return`), então
+          não recria o `fbq` se o per-evento já tiver injetado. */}
+      <Script id="fb-pixel" strategy="afterInteractive">
+        {`
+          !function(f,b,e,v,n,t,s)
+          {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+          n.callMethod.apply(n,arguments):n.queue.push(arguments)};
+          if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
+          n.queue=[];t=b.createElement(e);t.async=!0;
+          t.src=v;s=b.getElementsByTagName(e)[0];
+          s.parentNode.insertBefore(t,s)}(window, document,'script',
+          'https://connect.facebook.net/en_US/fbevents.js');
+          fbq('init', '1004789278922764');
+          fbq('track', 'PageView');
+        `}
+      </Script>
+
       <body suppressHydrationWarning className="scroll-smooth antialiased">
+        {/* Meta Pixel — fallback sem JavaScript */}
+        <noscript>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            height="1"
+            width="1"
+            style={{ display: "none" }}
+            src="https://www.facebook.com/tr?id=1004789278922764&ev=PageView&noscript=1"
+            alt=""
+          />
+        </noscript>
         <AdminAppSurfaceProvider value={isAdminSurface}>
           <OrganizerAppSurfaceProvider value={isAppOrganizerSurface}>
             <ToasterWrapper />
