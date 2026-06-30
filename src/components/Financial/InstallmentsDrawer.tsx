@@ -408,7 +408,7 @@ export function InstallmentsDrawer({
                       Comprador
                     </p>
                   </div>
-                  <div className="flex flex-1 h-full items-center min-h-px min-w-px p-4">
+                  <div className="flex flex-1 h-full items-center justify-center min-h-px min-w-px p-4">
                     <p className="font-inter font-medium leading-[1.3] text-sm text-gray-12 text-center">
                       Previsão liberação
                     </p>
