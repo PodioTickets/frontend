@@ -116,7 +116,7 @@ export function Footer() {
             href="/terms"
             className="text-gray-2 text-xs underline hover:text-white transition-colors"
           >
-            Termos de uso
+            Termos de Utilização
           </Link>
         </div>
 
@@ -196,7 +196,7 @@ export function Footer() {
             href="/terms"
             className="text-[#B4B4B4] text-sm underline hover:text-white transition-colors"
           >
-            Termos de uso
+            Termos de Utilização
           </Link>
         </div>
 
