@@ -15,6 +15,7 @@ import type { DateRange } from "react-day-picker";
 import Link from "next/link";
 import { useEventLocationFacets } from "@/hooks/useEventLocationFacets";
 import { LocationCascadePicker } from "@/components/LocationCascadePicker";
+import { useQueryClient } from "@tanstack/react-query";
 
 interface HomeFiltersProps {
   initialState?: string | null;
@@ -68,10 +69,11 @@ export function HomeFilters({
   initialLocation = null,
   initialModalities = [],
   initialDateRange = undefined,
-  initialPriceRange = [0, 10000],
+  initialPriceRange = [0, 1000],
 }: HomeFiltersProps = {}) {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const queryClient = useQueryClient();
   const { facets, isLoading: facetsLoading } = useEventLocationFacets();
 
   const [selectedModalities, setSelectedModalities] =
@@ -156,7 +158,7 @@ export function HomeFilters({
   );
 
   const isAllPrices = useMemo(() => {
-    return priceRange[0] === 0 && priceRange[1] === 10000;
+    return priceRange[0] === 0 && priceRange[1] === 1000;
   }, [priceRange]);
 
   const formatPriceRange = useCallback(() => {
@@ -232,10 +234,15 @@ export function HomeFilters({
     }
 
     if (priceRange[0] > 0) params.set("priceMin", priceRange[0].toString());
-    if (priceRange[1] < 10000) params.set("priceMax", priceRange[1].toString());
+    if (priceRange[1] < 1000) params.set("priceMax", priceRange[1].toString());
 
     const queryString = params.toString();
     router.push(`/search${queryString ? `?${queryString}` : ""}`);
+
+    // Garante refetch a CADA clique no botão de pesquisar, mesmo quando os
+    // filtros não mudaram (router.push pra mesma URL é no-op e não dispara
+    // a query). Invalida por prefixo todas as variantes de "events-search".
+    queryClient.invalidateQueries({ queryKey: ["events-search"] });
   }, [
     searchParams,
     selectedStateApi,
@@ -244,6 +251,7 @@ export function HomeFilters({
     selectedDateRange,
     priceRange,
     router,
+    queryClient,
   ]);
 
   return (
@@ -385,7 +393,7 @@ export function HomeFilters({
         >
           <PriceRangeSlider
             min={0}
-            max={10000}
+            max={1000}
             defaultValue={priceRange}
             onChange={handlePriceRangeChange}
           />

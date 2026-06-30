@@ -16,6 +16,10 @@ export interface SearchEventsParams {
   endDate?: string;
   includePast?: boolean;
   modalities?: string[];
+  /** Filtro de preço em REAIS (slider 0–1000). Evento entra se tiver algum
+   *  ingresso/lote no intervalo. Omitidos quando o slider está no padrão. */
+  minPrice?: number;
+  maxPrice?: number;
   page?: number;
   limit?: number;
 }
@@ -74,6 +78,8 @@ export class EventService {
       endDate,
       includePast,
       modalities,
+      minPrice,
+      maxPrice,
       page = 1,
       limit = 20,
     } = params || {};
@@ -88,6 +94,8 @@ export class EventService {
         endDate,
         includePast: includePast !== undefined ? String(includePast) : undefined,
         modalities: modalities && modalities.length > 0 ? modalities.join(",") : undefined,
+        minPrice,
+        maxPrice,
         page,
         limit,
       },

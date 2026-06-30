@@ -261,15 +261,27 @@ export class OrganizerReportingService extends OrganizerServiceBase {
     releaseToday: number;
     totalTransactions: number;
   }> {
+    // O backend responde { data: { installments, metrics: { totalPending,
+    // totalCount } } }. Antes líamos campos planos (totalPending/totalTransactions)
+    // que vinham `undefined` → "R$ NaN" no card de total. Mapeamos de `metrics`,
+    // com fallback ao formato plano por segurança.
     const { data: response } = await this.apiClient.get<{
       data: {
-        installments: Installment[];
-        totalPending: number;
-        releaseToday: number;
-        totalTransactions: number;
+        installments?: Installment[];
+        metrics?: { totalPending?: number; totalCount?: number };
+        totalPending?: number;
+        releaseToday?: number;
+        totalTransactions?: number;
       };
     }>(`/api/v1/events/${eventId}/financial/installments`);
-    return response.data;
+    const d = response.data ?? {};
+    const installments = d.installments ?? [];
+    return {
+      installments,
+      totalPending: d.metrics?.totalPending ?? d.totalPending ?? 0,
+      releaseToday: d.releaseToday ?? 0,
+      totalTransactions: d.metrics?.totalCount ?? d.totalTransactions ?? installments.length,
+    };
   }
 
   async getEventPendingReleases(
@@ -420,6 +432,33 @@ export class OrganizerReportingService extends OrganizerServiceBase {
         refundedAt: string;
       };
     }>(`/api/v1/events/${eventId}/repasse/orders/${orderId}/refund`, { reason });
+    return response.data;
+  }
+
+  /**
+   * Cancela um pedido GRATUITO (finalAmount 0) pelo ORGANIZADOR com permissão
+   * financeira — SEM estorno (nada foi pago: sem Cielo, sem taxa de 2%). Marca o
+   * pedido como cancelado, cancela as inscrições e reverte cupom/voucher.
+   * - `reason` é obrigatório (≥ 3 chars) — vai pro audit log.
+   * - Rejeita pedido com valor pago: 409 `ORDER_HAS_PAYMENT` (use `refundOrder`).
+   */
+  async cancelFreeOrder(
+    eventId: string,
+    orderId: string,
+    reason: string,
+  ): Promise<{
+    orderId: string;
+    paymentId?: string | null;
+    cancelledAt: string;
+  }> {
+    const { data: response } = await this.apiClient.post<{
+      message: string;
+      data: {
+        orderId: string;
+        paymentId?: string | null;
+        cancelledAt: string;
+      };
+    }>(`/api/v1/events/${eventId}/repasse/orders/${orderId}/cancel`, { reason });
     return response.data;
   }
 

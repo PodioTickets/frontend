@@ -3,12 +3,12 @@
 import { useState, useEffect, useMemo } from "react";
 import {
   Drawer,
-  DrawerClose,
   DrawerContent,
   DrawerHeader,
   DrawerTitle,
 } from "@/components/ui/drawer";
-import { X, Ticket, CheckCircle, Copy, XCircleIcon } from "lucide-react";
+import { Ticket, CheckCircle, Copy, XCircleIcon } from "lucide-react";
+import { ArrowButton } from "../ArrowButton";
 import { PaymentIcon } from "react-svg-credit-card-payment-icons";
 import { PixIcon } from "@/components/Icons/PixIcon";
 import { CardIcon } from "@/components/Icons/CardIcon";
@@ -26,6 +26,7 @@ import {
   formatPersonPhone,
 } from "@/utils/documentDisplay";
 import { formatDateBR, formatDateBRT, formatTimeBRT } from "@/utils/datetimeBR";
+import { formatShortId } from "@/utils/shortId";
 
 interface PaymentItemDetailsDrawerProps {
   isOpen: boolean;
@@ -298,17 +299,19 @@ export function PaymentItemDetailsDrawer({
           onCopy={handleCopy}
         />
 
-        {/* Desktop header — padrão do PaymentDetailsModal (Inscrições): só título + close. */}
+        {/* Desktop header — seta de voltar à esquerda + título (sem X). */}
         <DrawerHeader className="hidden md:block border-b border-gray-6 px-5 py-3">
-          <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <button
+              onClick={onClose}
+              aria-label="Voltar"
+              className="size-8 flex items-center justify-center rounded-lg hover:bg-gray-3 transition-colors cursor-pointer rotate-180"
+            >
+              <ArrowButton isOpen={false} />
+            </button>
             <h2 className="font-family-dm-sans font-semibold text-[20px] leading-[1.3] text-gray-12">
               Detalhes de pagamento
             </h2>
-            <DrawerClose asChild>
-              <button className="size-8 flex items-center justify-center rounded-lg hover:bg-gray-3 transition-colors cursor-pointer">
-                <X className="size-5 text-gray-11" />
-              </button>
-            </DrawerClose>
           </div>
         </DrawerHeader>
 
@@ -322,7 +325,7 @@ export function PaymentItemDetailsDrawer({
                 ID do pedido:
               </p>
               <p className="font-family-dm-sans font-normal text-[16px] leading-[1.3] text-gray-12">
-                #{paymentDetails.orderId}
+                {formatShortId(paymentDetails.orderId)}
               </p>
             </div>
 

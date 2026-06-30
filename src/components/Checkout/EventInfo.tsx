@@ -334,8 +334,11 @@ export function EventInfo({ event, onNext, isSubmitting = false, tickets = [], c
   // não cobre a seleção (desconto 0), a linha do voucher simplesmente não aparece.
   // O "ao continuar" do cupom também só vale quando ele cobre a seleção — ticket
   // fora do `appliesTo` esconde o cupom por inteiro (paridade com voucher).
+  // Gated no `couponData` (preview REAL do backend), não no código da URL: cupom
+  // esgotado (vendas + reservas ativas) → preview null → couponData null → a linha
+  // "Cupom X" some. (QUANTITY/AGE têm couponData presente e seguem aparecendo.)
   const couponPending =
-    !!pendingCoupon && !useVoucher && (!useLinkCoupon || linkCouponCoversSelection);
+    !!couponData && !useVoucher && (!useLinkCoupon || linkCouponCoversSelection);
 
   const totalParticipants = useMemo(() => {
     let participants = 0;

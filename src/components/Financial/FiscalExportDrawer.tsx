@@ -31,6 +31,7 @@ import { Tooltip } from "../Tooltip";
 import { ImageWithInitialFallback } from "../ImageWithInitialFallback";
 import { isPersonBr, formatDocumentDisplay } from "@/utils/documentDisplay";
 import { formatDateBRT, formatTimeBRT } from "@/utils/datetimeBR";
+import { formatShortId } from "@/utils/shortId";
 
 type PaymentDetailsItem = {
   orderId: string;
@@ -367,7 +368,7 @@ export function FiscalExportDrawer({
                           className="block min-w-0 max-w-full"
                         >
                           <p className="font-inter font-semibold leading-[1.3] text-sm text-gray-12 truncate cursor-help">
-                            #{order.id.slice(0, 6)}...{order.id.slice(-4)}
+                            {formatShortId(order.id)}
                           </p>
                         </Tooltip>
                       </Cell>

@@ -58,6 +58,7 @@ export default function EditBannerPage() {
         city={formData.city}
         state={formData.state}
         organizer={organizer}
+        previewEvent={event as Event}
         onBannerUploaded={handleBannerUploaded}
         onCardUploaded={handleCardUploaded}
       />

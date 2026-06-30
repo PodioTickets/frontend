@@ -23,6 +23,7 @@ import {
   type RegistrationListRow,
   type RegistrationStatusBadge,
 } from "@/lib/registrations";
+import { formatShortId } from "@/utils/shortId";
 import { RegistrationsStatsCards } from "./RegistrationsStatsCards";
 import { RegistrationRow } from "./RegistrationRow";
 
@@ -428,10 +429,18 @@ export function RegistrationsView({
                   {registrations.map((registration) => {
                     const finalStatus = getFinalStatus(registration);
                     const paymentStatus = registration.order?.payment?.status;
-                    const isPaid = finalStatus === "CONFIRMED" || finalStatus === "COMPLETED" || paymentStatus === "PAID";
                     const isCancelled = finalStatus === "CANCELLED" || paymentStatus === "FAILED";
                     const isRefunded = finalStatus === "REFUNDED";
                     const isChargeback = finalStatus === "CHARGEBACK";
+                    // "Pago" só sem estado terminal — senão free order cancelado
+                    // (pagamento R$0 segue PAID) apareceria como "Pago". Ver RegistrationRow.
+                    const isPaid =
+                      !isCancelled &&
+                      !isRefunded &&
+                      !isChargeback &&
+                      (finalStatus === "CONFIRMED" ||
+                        finalStatus === "COMPLETED" ||
+                        paymentStatus === "PAID");
                     const statusLabel = isPaid ? "Pago" : isCancelled ? "Cancelado" : isRefunded ? "Estornado" : isChargeback ? "ChargeBack" : "Pendente";
                     const statusClass = isPaid ? "bg-[#21835d] text-primary-1" : isCancelled || isRefunded || isChargeback ? "bg-red-11 text-white" : "bg-yellow-11 text-yellow-1";
                     const fullName = `${registration.user?.firstName || ""} ${registration.user?.lastName || ""}`.trim();
@@ -495,7 +504,7 @@ export function RegistrationsView({
                               className="block min-w-0 max-w-full"
                             >
                               <p className="font-family-dm-sans font-medium text-sm text-gray-12 truncate cursor-help">
-                                ID inscrição: {registration.id?.length > 10 ? `#${registration.id.slice(0, 6)}...${registration.id.slice(-4)}` : registration.id}
+                                ID inscrição: {formatShortId(registration.id)}
                               </p>
                             </Tooltip>
                           </div>

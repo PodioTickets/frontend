@@ -15,6 +15,7 @@ import { RegistrationCountdown } from "@/components/Event/RegistrationCountdown"
 import { ShareIcon } from "@/components/Icons/ShareIcon";
 import { ShareModal } from "@/components/ShareModal";
 import { ContactOrganizerFlow } from "@/components/Event/ContactOrganizerFlow";
+import { PODIO_SUPPORT_WHATSAPP } from "@/components/Event/ContactSubjectModal";
 import { Fragment, useState, useEffect, useMemo, useRef } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useLoginModal } from "@/stores/modalStore";
@@ -223,10 +224,15 @@ export default function EventPage() {
   const registrationSlotsSoldOut =
     event.hasRegistrationSlotsAvailable === false;
 
+  // "Evento realizado" só UM DIA depois da data do evento (não no instante de
+  // início). Durante o dia do evento e as 24h seguintes ele NÃO é marcado como
+  // realizado — cai em "Inscrições encerradas" se for o caso. `eventWindowInstant`
+  // já dá o instante real em BRT do wall-clock do evento; somamos 24h.
+  const ONE_DAY_MS = 24 * 60 * 60 * 1000;
   const eventRealizationInstant = eventWindowInstant(event.eventDate);
   const eventRealizationPassed =
     !!eventRealizationInstant &&
-    Date.now() >= eventRealizationInstant.getTime();
+    Date.now() >= eventRealizationInstant.getTime() + ONE_DAY_MS;
 
   const registrationEndsInstant = eventWindowInstant(event.registrationEndDate);
   const registrationPeriodEnded =
@@ -237,6 +243,12 @@ export default function EventPage() {
     event.status === "SUSPENDED" || event.isSuspended === true;
 
   const mapsUrl = sanitizeUrl(event.googleMapsLink?.trim()) ?? ""
+
+  // "Denunciar evento" → WhatsApp do suporte PodioTickets (mesmo número do contato),
+  // com mensagem pré-preenchida identificando o evento (nome + slug).
+  const reportWhatsappUrl = `https://wa.me/${PODIO_SUPPORT_WHATSAPP}?text=${encodeURIComponent(
+    `Olá! Gostaria de denunciar o evento "${event.name}" (/events/${event.slug}).`,
+  )}`;
 
   const safeStravaId = event.stravaRouteId && /^\d+$/.test(event.stravaRouteId)
     ? event.stravaRouteId
@@ -961,9 +973,14 @@ export default function EventPage() {
                     Compartilhar
                   </Button>
 
-                  <h1 className="underline font-semibold text-gray-11 text-sm cursor-pointer">
+                  <a
+                    href={reportWhatsappUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="underline font-semibold text-gray-11 text-sm cursor-pointer hover:text-gray-12 transition-colors"
+                  >
                     Denunciar evento
-                  </h1>
+                  </a>
                 </div>
               </div>
             </div>

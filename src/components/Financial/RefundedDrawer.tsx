@@ -23,6 +23,7 @@ import { Tooltip } from "../Tooltip";
 import { BookIcon } from "../Icons/BookIcon";
 import { FinancialDetailsMobile, type FinancialDetailsItem } from "./FinancialDetailsMobile";
 import { formatDateBRT, formatTimeBRT } from "@/utils/datetimeBR";
+import { formatShortId } from "@/utils/shortId";
 
 interface RefundedDrawerProps {
   isOpen: boolean;
@@ -315,7 +316,7 @@ export function RefundedDrawer({
                               className="block min-w-0 max-w-full"
                             >
                               <p className="font-inter font-semibold leading-[1.3] text-sm text-gray-12 truncate cursor-help">
-                                #{displayItem.orderId.slice(0, 6)}...{displayItem.orderId.slice(-4)}
+                                {formatShortId(displayItem.orderId)}
                               </p>
                             </Tooltip>
                           </div>

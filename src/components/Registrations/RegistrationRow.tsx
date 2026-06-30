@@ -12,6 +12,7 @@ import {
   type RegistrationListRow,
   type RegistrationStatusBadge,
 } from "@/lib/registrations";
+import { formatShortId } from "@/utils/shortId";
 
 /**
  * Linha da tabela de inscrições (compartilhada admin/organizer). Antes
@@ -38,10 +39,20 @@ export function RegistrationRow({
   const refundType = registration.order?.payment?.refundType;
 
   const statusBadge = getStatusBadge(finalStatus);
-  const isPaid = finalStatus === "CONFIRMED" || finalStatus === "COMPLETED" || paymentStatus === "PAID";
   const isCancelled = finalStatus === "CANCELLED" || paymentStatus === "FAILED";
   const isRefunded = finalStatus === "REFUNDED" || paymentStatus === "REFUNDED" || (paymentMetadata && refundType === "REFUND");
   const isChargeback = finalStatus === "CHARGEBACK" || paymentStatus === "CHARGEBACK" || (paymentMetadata && refundType === "CHARGEBACK");
+  // "Pago" só quando NÃO há estado terminal de cancelamento/estorno/chargeback.
+  // Sem este guard, um pedido CANCELLED cujo pagamento permanece PAID (ex.: free
+  // order cancelado — o pagamento de R$0 não vira REFUNDED) aparecia como "Pago",
+  // pois `paymentStatus === "PAID"` sobrepunha o status cancelado da inscrição.
+  const isPaid =
+    !isCancelled &&
+    !isRefunded &&
+    !isChargeback &&
+    (finalStatus === "CONFIRMED" ||
+      finalStatus === "COMPLETED" ||
+      paymentStatus === "PAID");
 
   // Avatar com fallback para primeira letra
   const fullName = `${registration.user?.firstName || ""} ${registration.user?.lastName || ""}`.trim();
@@ -64,7 +75,7 @@ export function RegistrationRow({
           }
         >
           <p className="font-inter font-semibold leading-[1.3] text-sm text-gray-12 cursor-default">
-            #{registration.id?.slice(0, 6)}...{registration.id?.slice(-4)}
+            {formatShortId(registration.id)}
           </p>
         </Tooltip>
       </div>
