@@ -3,14 +3,14 @@
 import { useState, useEffect } from "react";
 import {
   Drawer,
-  DrawerClose,
   DrawerContent,
   DrawerHeader,
   DrawerTitle,
 } from "@/components/ui/drawer";
-import { X, ChevronLeft, ChevronRight, FileText, Search } from "lucide-react";
+import { ChevronLeft, ChevronRight, FileText, Search } from "lucide-react";
 import { CalendarIcon } from "@/components/Icons/CalendarIcon";
-import { CardIcon } from "@/components/Icons/CardIcon";
+import { PixIcon } from "@/components/Icons/PixIcon";
+import { PaymentIcon } from "react-svg-credit-card-payment-icons";
 import { PaymentItemDetailsDrawer } from "./PaymentItemDetailsDrawer";
 import { ArrowButton } from "../ArrowButton";
 import { DetailsIcon } from "../Icons/DetailsIcon";
@@ -33,8 +33,6 @@ interface InstallmentsDrawerProps {
   eventId: string;
   eventName?: string;
   categoryName?: string;
-  onNavigatePrev?: () => void;
-  onNavigateNext?: () => void;
 }
 
 export function InstallmentsDrawer({
@@ -46,8 +44,6 @@ export function InstallmentsDrawer({
   eventId,
   eventName = "Maratona 2024",
   categoryName = "Nome da categoria",
-  onNavigatePrev,
-  onNavigateNext,
 }: InstallmentsDrawerProps) {
   const [currentPage, setCurrentPage] = useState(1);
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
@@ -88,8 +84,8 @@ export function InstallmentsDrawer({
   };
 
   // Agrupa as parcelas pendentes por pedido → 1 linha por pedido (e não 1 por
-  // parcela). Lib. = data da 1ª liberação pendente; Próx. = a liberação seguinte
-  // (quando existe). Valor = total pendente do pedido.
+  // parcela). Previsão = só a PRÓXIMA liberação (parcela pendente mais antiga).
+  // "Parcelado" = nº dessa próxima parcela / total. Valor = total pendente.
   const groupInstallmentsByOrder = (items: Installment[]) => {
     const fmt = (d: string) =>
       formatDateBR(d, { day: "2-digit", month: "2-digit", year: "numeric" });
@@ -106,29 +102,27 @@ export function InstallmentsDrawer({
       const sorted = [...group].sort(
         (a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime(),
       );
-      const first = sorted[0];
-      const next = sorted[1]; // próxima liberação após a 1ª (pode não existir)
+      const next = sorted[0]; // próxima liberação = parcela pendente mais antiga
       const totalAmount = sorted.reduce((sum, i) => sum + i.amount, 0);
-      const pendingCount = sorted.length;
-      const totalInstallments = first.totalInstallments ?? pendingCount;
+      const totalInstallments = next.totalInstallments ?? sorted.length;
+      const installmentNumber = next.installmentNumber ?? 1;
       // Mantém o id completo (pagamento/pedido) p/ o lookup de detalhes — o
       // encurtamento é só visual na renderização.
-      const lookupId = first.paymentId || first.orderId || "";
+      const lookupId = next.paymentId || next.orderId || "";
 
       return {
         orderId: lookupId,
-        transactionId: first.id,
+        transactionId: next.id,
         buyer: {
-          name: `${first.buyer.firstName} ${first.buyer.lastName}`,
-          email: first.buyer.email,
-          avatar: first.buyer.avatarUrl,
+          name: `${next.buyer.firstName} ${next.buyer.lastName}`,
+          email: next.buyer.email,
+          avatar: next.buyer.avatarUrl,
         },
-        releaseDate: fmt(first.dueDate),
-        nextReleaseDate: next ? fmt(next.dueDate) : null,
+        releaseDate: fmt(next.dueDate),
         // Parcela é sempre cartão de crédito (PIX/boleto não parcelam).
         paymentMethod: "CREDIT_CARD",
         value: totalAmount / 100, // Converter de centavos
-        installment: `${pendingCount}/${totalInstallments}`,
+        installment: `${installmentNumber}/${totalInstallments}`,
       };
     });
   };
@@ -199,22 +193,13 @@ export function InstallmentsDrawer({
           <DrawerHeader className="hidden md:block border-b border-gray-6 px-5 py-3">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-5">
-                <div className="flex items-center gap-1">
-                  <button
-                    onClick={onNavigatePrev}
-                    disabled={!onNavigatePrev}
-                    className="size-9 flex items-center justify-center border border-gray-6 rounded-full hover:bg-gray-3 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed rotate-180"
-                  >
-                    <ArrowButton isOpen={false} />
-                  </button>
-                  <button
-                    onClick={onNavigateNext}
-                    disabled={!onNavigateNext}
-                    className="size-9 flex items-center justify-center border border-gray-6 rounded-full hover:bg-gray-3 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    <ArrowButton isOpen={false} />
-                  </button>
-                </div>
+                <button
+                  onClick={onClose}
+                  aria-label="Voltar"
+                  className="size-9 flex items-center justify-center border border-gray-6 rounded-full hover:bg-gray-3 transition-colors cursor-pointer rotate-180"
+                >
+                  <ArrowButton isOpen={false} />
+                </button>
                 <div className="flex items-center gap-2">
                   <div className="w-[32px] h-[32px] p-1 rounded-lg bg-[#CAF1F6] flex items-center justify-center">
                     <CalendarIcon className="size-6 text-gray-12" />
@@ -224,11 +209,6 @@ export function InstallmentsDrawer({
                   </h2>
                 </div>
               </div>
-              <DrawerClose asChild>
-                <button className="size-8 flex items-center justify-center rounded-lg hover:bg-gray-3 transition-colors cursor-pointer">
-                  <X className="size-6 text-gray-12" />
-                </button>
-              </DrawerClose>
             </div>
           </DrawerHeader>
 
@@ -304,9 +284,11 @@ export function InstallmentsDrawer({
                             </div>
                           </div>
                           <div className="shrink-0">
-                            {/* Parcela = sempre cartão de crédito (PIX/boleto não
-                                parcelam) → ícone de cartão, não PIX. */}
-                            <CardIcon className="size-5 text-gray-12" />
+                            {installment.paymentMethod === "PIX" ? (
+                              <PixIcon className="size-5 text-gray-12" />
+                            ) : (
+                              <PaymentIcon type="Generic" className="size-8 text-gray-12" />
+                            )}
                           </div>
                         </div>
                         <p className="font-family-dm-sans font-medium text-sm text-gray-12">ID Pedido: {formatShortId(installment.orderId)}</p>
@@ -503,25 +485,24 @@ export function InstallmentsDrawer({
                           </div>
                         </div>
 
-                        {/* Previsão liberação */}
+                        {/* Previsão liberação — só a próxima liberação */}
                         <div className="flex flex-1 h-full items-center min-h-px min-w-px p-4">
-                          <div className="flex flex-col items-center w-full">
+                          <div className="flex items-center justify-center w-full">
                             <p className="font-inter font-semibold leading-[1.3] text-sm text-gray-12">
-                              Lib. {installment.releaseDate}
+                              {installment.releaseDate}
                             </p>
-                            {installment.nextReleaseDate && (
-                              <p className="font-inter font-normal leading-[1.3] text-sm text-gray-11">
-                                Próx. {installment.nextReleaseDate}
-                              </p>
-                            )}
                           </div>
                         </div>
 
-                        {/* Pagamento — parcela é sempre cartão de crédito
-                            (PIX/boleto não parcelam) → ícone de cartão. */}
+                        {/* Pagamento — ícone real do cartão (ou PIX), igual aos
+                            outros painéis. */}
                         <div className="flex flex-1 h-full items-center min-h-px min-w-px p-4 px-0">
                           <div className="flex items-center gap-2 justify-center w-full">
-                            <CardIcon className="size-5 text-gray-12" />
+                            {installment.paymentMethod === "PIX" ? (
+                              <PixIcon className="size-5 text-gray-12" />
+                            ) : (
+                              <PaymentIcon type="Generic" className="size-8 text-gray-12" />
+                            )}
                           </div>
                         </div>
 
