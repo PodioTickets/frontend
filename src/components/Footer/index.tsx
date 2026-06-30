@@ -108,7 +108,7 @@ export function Footer() {
         {/* Política de privacidade e Termos de uso */}
         <div className="flex items-center justify-center gap-4 mb-4">
           <Link
-            href={publicSiteHref("/privacy")}
+            href="/privacy"
             className="text-gray-2 text-xs underline hover:text-white transition-colors"
           >
             Política de privacidade
@@ -188,7 +188,7 @@ export function Footer() {
         {/* Política de privacidade e Termos de uso */}
         <div className="flex items-center justify-center gap-6 mt-10">
           <Link
-            href={publicSiteHref("/privacy")}
+            href="/privacy"
             className="text-[#B4B4B4] text-sm underline hover:text-white transition-colors"
           >
             Política de privacidade
