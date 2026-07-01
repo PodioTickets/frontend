@@ -32,6 +32,7 @@ import {
   type ImageUploadWithCropRef,
 } from "@/components/ImageUploadWithCrop";
 import { EVENT_IMAGE_SPECS } from "@/lib/eventImageSpecs";
+import { usePendingImageUpload } from "@/hooks/usePendingImageUpload";
 import { isCurrentUserOrganizationOwner } from "@/utils/organizationOwner";
 import { HotelsIcon } from "@/components/Icons/Organizer/HotelsIcon";
 import { FinanceIcon } from "@/components/Icons/Organizer/FinanceIcon";
@@ -75,6 +76,10 @@ export default function OrganizationSettingsPage() {
   const [uploadingImage, setUploadingImage] = useState(false);
   const [organizer, setOrganizer] = useState<Organization | null>(null);
   const logoCropRef = useRef<ImageUploadWithCropRef>(null);
+  // Logo em STAGING: o corte só fica em memória (preview local); a persistência
+  // acontece no "Salvar alteração". Evita manter a foto nova quando o usuário
+  // não salva. [[usePendingImageUpload]]
+  const pendingLogo = usePendingImageUpload(getAvatarUrl);
 
   const [formData, setFormData] = useState({
     // Detalhes da organização
@@ -180,39 +185,9 @@ export default function OrganizationSettingsPage() {
     }
   };
 
-  const uploadOrganizationLogo = async (file: File) => {
-    setUploadingImage(true);
-    try {
-      const imageUrl = await organizerService.uploadImage(file);
-      await organizerService.updateOrganizationLogo(imageUrl);
-      toast.success("Imagem atualizada com sucesso!");
-      loadOrganization();
-    } catch (error: any) {
-      console.error("Error uploading image:", error);
-      const errorMessage =
-        error.message ||
-        error.response?.data?.message ||
-        "Erro ao fazer upload da imagem";
-      toast.error(errorMessage);
-    } finally {
-      setUploadingImage(false);
-    }
-  };
-
-  const handleRemoveImage = async () => {
-    try {
-      // Remover logo definindo como string vazia ou null
-      await organizerService.updateOrganizationLogo("");
-      toast.success("Imagem removida com sucesso!");
-      loadOrganization();
-    } catch (error: any) {
-      console.error("Error removing image:", error);
-      const errorMessage =
-        error.message ||
-        error.response?.data?.message ||
-        "Erro ao remover imagem";
-      toast.error(errorMessage);
-    }
+  // Apenas faz STAGING — a logo só é enviada/persistida no handleSubmit ("Salvar").
+  const handleRemoveImage = () => {
+    pendingLogo.stageRemove();
   };
 
   // Máscaras progressivas (aplicam durante a digitação)
@@ -316,14 +291,26 @@ export default function OrganizationSettingsPage() {
         }
       });
 
-      const updatedOrg = await organizerService.updateOrganization(updateData);
+      let finalOrg = await organizerService.updateOrganization(updateData);
+
+      // Persiste a logo em staging SÓ agora (no salvar). Novo arquivo → faz o
+      // upload p/ obter a URL e aplica; remoção → aplica string vazia. A resposta
+      // já traz o `organizer` atualizado (com/sem logo).
+      if (pendingLogo.file) {
+        setUploadingImage(true);
+        const imageUrl = await organizerService.uploadImage(pendingLogo.file);
+        finalOrg = await organizerService.updateOrganizationLogo(imageUrl);
+      } else if (pendingLogo.removed) {
+        finalOrg = await organizerService.updateOrganizationLogo("");
+      }
 
       toast.success("Configurações atualizadas com sucesso!");
       // Usa a resposta do PATCH (estado já persistido) em vez de RE-BUSCAR. Re-buscar fazia:
       // (1) setLoading(true) → flash do <Loading/> full-screen ("refresh" da página); (2) leitura
       // imediata da réplica podia vir defasada (lag) e sobrescrever o formData com o valor antigo.
       // O formData já reflete o que o usuário editou; só sincronizamos o `organizer`.
-      setOrganizer(updatedOrg);
+      setOrganizer(finalOrg);
+      pendingLogo.reset();
     } catch (error: any) {
       console.error("Error updating organization:", error);
       const errorMessage =
@@ -333,6 +320,7 @@ export default function OrganizationSettingsPage() {
       toast.error(errorMessage);
     } finally {
       setSaving(false);
+      setUploadingImage(false);
     }
   };
 
@@ -392,11 +380,7 @@ export default function OrganizationSettingsPage() {
                     {/* Logo - menor no mobile (Figma ~40px) */}
                     <div className="relative shrink-0 size-10 md:size-24 rounded-full bg-gray-6">
                       <ImageWithInitialFallback
-                        src={
-                          organizer.logoUrl?.trim()
-                            ? getAvatarUrl(organizer.logoUrl)
-                            : null
-                        }
+                        src={pendingLogo.resolveSrc(organizer.logoUrl)}
                         alt={organizer.name || "Organização"}
                         name={organizer.name || "Organização"}
                         fallbackId={organizer.id}
@@ -412,16 +396,6 @@ export default function OrganizationSettingsPage() {
                     <div className="flex flex-col gap-1 md:gap-2 items-start justify-center relative shrink-0 min-w-0">
                       <p className="font-family-dm-sans font-semibold leading-[1.3] md:font-manrope md:font-bold md:leading-[1.1] text-base md:text-2xl text-gray-12 truncate w-full">
                         {organizer.tradeName || "Nome da organização"}
-                      </p>
-                      <p className="font-family-dm-sans leading-[1.3] text-sm md:text-xl text-gray-11">
-                        {/* Exibe CPF ou CNPJ conforme o tamanho do documento (PF=11, PJ=14). */}
-                        {(() => {
-                          const docDigits = (organizer.document ?? "").replace(/\D/g, "");
-                          if (!docDigits) return "CNPJ: 00.000.000/0000-00";
-                          return docDigits.length === 11
-                            ? `CPF: ${maskCPF(docDigits)}`
-                            : `CNPJ: ${maskCNPJ(docDigits)}`;
-                        })()}
                       </p>
                     </div>
                   </div>
@@ -474,16 +448,21 @@ export default function OrganizationSettingsPage() {
                   <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center w-full">
                     <Button
                       onClick={() => logoCropRef.current?.open()}
-                      disabled={uploadingImage}
+                      disabled={uploadingImage || saving}
                       size="default"
                       className="w-full sm:w-auto px-6 py-3 h-11 font-manrope font-bold text-base"
                     >
                       <Plus className="size-5" />
-                      {uploadingImage ? "Enviando..." : "Alterar imagem"}
+                      Alterar imagem
                     </Button>
                     <Button
                       onClick={handleRemoveImage}
-                      disabled={uploadingImage || !organizer.logoUrl}
+                      disabled={
+                        uploadingImage ||
+                        saving ||
+                        pendingLogo.removed ||
+                        (!organizer.logoUrl && !pendingLogo.file)
+                      }
                       variant="outline"
                       className="w-full sm:w-auto px-6 py-3 h-11 border-gray-6 text-gray-12 font-manrope font-bold text-base"
                     >
@@ -965,7 +944,7 @@ export default function OrganizationSettingsPage() {
               maxFileSizeMb={10}
               accept="image/jpeg,image/jpg,image/png"
               modalTitle="Ajustar logo da organização"
-              onCropped={(file) => void uploadOrganizationLogo(file)}
+              onCropped={(file) => pendingLogo.stageFile(file)}
               onInvalidFile={(msg) => toast.error(msg)}
               onCropFailed={(msg) => toast.error(msg)}
             />

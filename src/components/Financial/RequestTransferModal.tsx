@@ -62,6 +62,7 @@ export function RequestTransferModal() {
   const processingAmount = data?.processingAmount != null ? data.processingAmount / 100 : null;
   const displayBankName = selectedAccount?.bank || "Conta PIX";
   const displayPixKey = selectedAccount?.pixKey || data?.pixKey || "—";
+  const displayHolder = selectedAccount?.holder || "—";
 
   const handleUseAll = () => {
     setAmount(availableBalance.toFixed(2).replace(".", ","));
@@ -271,12 +272,17 @@ export function RequestTransferModal() {
                               <Building2 className="size-6 text-gray-12" />
                             </div>
                             <div className="flex flex-col gap-1 min-w-0">
-                              <p className="font-family-dm-sans font-semibold text-base text-gray-12">
+                              <p className="font-family-dm-sans font-semibold text-base text-gray-12 select-text cursor-text">
                                 {displayBankName}
                               </p>
-                              <p className="font-family-dm-sans font-normal text-sm text-gray-11">
-                                Chave: {displayPixKey}
-                              </p>
+                              <div className="flex items-center gap-3 flex-wrap text-sm">
+                                <span className="font-family-dm-sans font-normal text-gray-11">
+                                  Titular: <span className="font-semibold text-gray-12 select-text cursor-text">{displayHolder}</span>
+                                </span>
+                                <span className="font-family-dm-sans font-normal text-gray-11">
+                                  Chave: <span className="font-semibold text-gray-12 select-text cursor-text">{displayPixKey}</span>
+                                </span>
+                              </div>
                             </div>
                           </div>
                           <button
@@ -394,9 +400,16 @@ export function RequestTransferModal() {
                             <div className="w-8 h-8 rounded-lg bg-[#ebe4ff] flex items-center justify-center shrink-0">
                               <FinanceIcon className="size-6 text-gray-12" />
                             </div>
-                            <div className="flex flex-col">
-                              <p className="font-family-dm-sans font-semibold text-[16px] leading-[1.3] text-gray-12">{displayBankName}</p>
-                              <p className="font-family-dm-sans font-normal text-[16px] leading-[1.3] text-gray-11">Chave: {displayPixKey}</p>
+                            <div className="flex flex-col gap-0.5">
+                              <p className="font-family-dm-sans font-semibold text-[16px] leading-[1.3] text-gray-12 select-text cursor-text">{displayBankName}</p>
+                              <div className="flex items-center gap-4 flex-wrap text-[16px] leading-[1.3]">
+                                <span className="font-family-dm-sans font-normal text-gray-11">
+                                  Titular: <span className="font-semibold text-gray-12 select-text cursor-text">{displayHolder}</span>
+                                </span>
+                                <span className="font-family-dm-sans font-normal text-gray-11">
+                                  Chave: <span className="font-semibold text-gray-12 select-text cursor-text">{displayPixKey}</span>
+                                </span>
+                              </div>
                             </div>
                           </div>
                           <button

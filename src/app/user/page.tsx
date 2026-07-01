@@ -41,6 +41,7 @@ import {
   type ImageUploadWithCropRef,
 } from "@/components/ImageUploadWithCrop";
 import { EVENT_IMAGE_SPECS } from "@/lib/eventImageSpecs";
+import { usePendingImageUpload } from "@/hooks/usePendingImageUpload";
 import { COUNTRIES_PT_BR } from "@/data/countries";
 import { ImageWithInitialFallback } from "@/components/ImageWithInitialFallback";
 import { TwoFASection } from "@/components/TwoFASection";
@@ -137,7 +138,9 @@ export default function UserProfilePage() {
   const { openChangeEmailModal } = useChangeEmailModal();
   const { openChangePasswordModal } = useChangePasswordModal();
   const avatarCropRef = useRef<ImageUploadWithCropRef>(null);
-  const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
+  // Foto de perfil em STAGING — só persiste no "Salvar alterações". Antes o corte
+  // já enviava ao backend, mantendo a foto mesmo sem salvar. [[usePendingImageUpload]]
+  const pendingAvatar = usePendingImageUpload(getAvatarUrl);
   const [isSavingProfile, setIsSavingProfile] = useState(false);
   const [authChecked, setAuthChecked] = useState(false);
 
@@ -370,33 +373,9 @@ export default function UserProfilePage() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [showNationalityDropdown]);
 
-  const uploadUserAvatar = async (file: File) => {
-    setIsUploadingAvatar(true);
-    try {
-      await userService.uploadAvatar(file);
-      toast.success("Foto de perfil atualizada com sucesso!");
-      await refetchUser();
-    } catch (error: any) {
-      console.error("Error uploading avatar:", error);
-      toast.error(
-        error?.message || "Erro ao atualizar foto de perfil. Tente novamente."
-      );
-    } finally {
-      setIsUploadingAvatar(false);
-    }
-  };
-
-  const handleRemoveAvatar = async () => {
-    setIsUploadingAvatar(true);
-    try {
-      await userService.removeAvatar();
-      await refetchUser();
-      toast.success("Imagem removida com sucesso!");
-    } catch (error: any) {
-      toast.error(error?.message || "Erro ao remover imagem.");
-    } finally {
-      setIsUploadingAvatar(false);
-    }
+  // Apenas STAGING — a foto só vai pro backend no handleSavePersonalData ("Salvar").
+  const handleRemoveAvatar = () => {
+    pendingAvatar.stageRemove();
   };
 
   // Mask functions
@@ -493,42 +472,47 @@ export default function UserProfilePage() {
   const handleSavePersonalData = async () => {
     if (!user) return;
 
-    const errors: Record<string, string> = {};
+    // Nada a salvar (nem dados nem foto) → no-op.
+    if (!isProfileDirty && !pendingAvatar.isDirty) return;
 
-    const fullNameTrimmed = fullNameInput.trim();
-    const nameParts = fullNameTrimmed.split(/\s+/).filter(Boolean);
-    if (!fullNameTrimmed) {
-      errors.firstName = "Nome completo é obrigatório";
-    } else if (nameParts.length < 2) {
-      errors.firstName = "Informe nome e sobrenome";
+    // Validação só importa quando os DADOS mudaram. Save de foto-only não deve
+    // ser bloqueado por um campo legado inválido (ex.: telefone fora do formato).
+    if (isProfileDirty) {
+      const errors: Record<string, string> = {};
+
+      const fullNameTrimmed = fullNameInput.trim();
+      const nameParts = fullNameTrimmed.split(/\s+/).filter(Boolean);
+      if (!fullNameTrimmed) {
+        errors.firstName = "Nome completo é obrigatório";
+      } else if (nameParts.length < 2) {
+        errors.firstName = "Informe nome e sobrenome";
+      }
+
+      if (!formData.phone?.trim()) {
+        errors.phone = "Telefone é obrigatório";
+      } else if (!isPhoneValidForCountry(formData.phone, formData.nationality)) {
+        // Valida formato conforme o país selecionado (libphonenumber-js),
+        // alinhando o perfil ao modal de cadastro e ao checkout.
+        errors.phone = "Informe um telefone válido";
+      }
+
+      const userIsBr = isBrazilianCountry(formData.nationality);
+      if (!formData.documentNumber?.trim()) {
+        errors.documentNumber = userIsBr ? "CPF é obrigatório" : "Documento é obrigatório";
+      } else if (userIsBr) {
+        const cpfError = getCpfValidationMessage(formData.documentNumber);
+        if (cpfError) errors.documentNumber = cpfError;
+      } else {
+        const len = formData.documentNumber.trim().length;
+        if (len < 4) errors.documentNumber = "Documento deve ter pelo menos 4 caracteres";
+        else if (len > 30) errors.documentNumber = "Documento deve ter no máximo 30 caracteres";
+      }
+
+      if (Object.keys(errors).length > 0) {
+        setFormErrors(errors);
+        return;
+      }
     }
-
-    if (!formData.phone?.trim()) {
-      errors.phone = "Telefone é obrigatório";
-    } else if (!isPhoneValidForCountry(formData.phone, formData.nationality)) {
-      // Valida formato conforme o país selecionado (libphonenumber-js),
-      // alinhando o perfil ao modal de cadastro e ao checkout.
-      errors.phone = "Informe um telefone válido";
-    }
-
-    const userIsBr = isBrazilianCountry(formData.nationality);
-    if (!formData.documentNumber?.trim()) {
-      errors.documentNumber = userIsBr ? "CPF é obrigatório" : "Documento é obrigatório";
-    } else if (userIsBr) {
-      const cpfError = getCpfValidationMessage(formData.documentNumber);
-      if (cpfError) errors.documentNumber = cpfError;
-    } else {
-      const len = formData.documentNumber.trim().length;
-      if (len < 4) errors.documentNumber = "Documento deve ter pelo menos 4 caracteres";
-      else if (len > 30) errors.documentNumber = "Documento deve ter no máximo 30 caracteres";
-    }
-
-    if (Object.keys(errors).length > 0) {
-      setFormErrors(errors);
-      return;
-    }
-
-    if (!isProfileDirty) return;
 
     setFormErrors({});
 
@@ -582,8 +566,20 @@ export default function UserProfilePage() {
         updateData.gender = formatGenderToBackend(formData.gender);
       }
 
-      await userService.updateUser(user.id, updateData);
+      // Atualiza os dados pessoais só se mudaram (evita PATCH desnecessário em save de foto-only).
+      if (isProfileDirty) {
+        await userService.updateUser(user.id, updateData);
+      }
+
+      // Foto em staging → persiste agora: novo arquivo (upload) ou remoção.
+      if (pendingAvatar.file) {
+        await userService.uploadAvatar(pendingAvatar.file);
+      } else if (pendingAvatar.removed) {
+        await userService.removeAvatar();
+      }
+
       await refetchUser();
+      pendingAvatar.reset();
 
       /* A idade exibida nos cards de limite de idade do /checkout/ingressos vem
        * do endpoint de elegibilidade (`useAgeCouponEligibility`, staleTime 60s).
@@ -639,7 +635,7 @@ export default function UserProfilePage() {
             <div className="flex flex-col gap-6 items-center px-4 py-0 md:flex-row md:items-end md:gap-4 md:px-0">
               <div className="relative size-24 shrink-0 overflow-hidden rounded-full">
                 <ImageWithInitialFallback
-                  src={getAvatarUrl(user?.avatarUrl)}
+                  src={pendingAvatar.resolveSrc(user?.avatarUrl)}
                   alt="Profile"
                   fill
                   sizes="36px"
@@ -654,16 +650,20 @@ export default function UserProfilePage() {
                     variant="default"
                     className="w-full h-11 gap-2 px-5 bg-primary-11 text-primary-2 hover:bg-primary-10 font-bold text-base font-manrope"
                     onClick={() => avatarCropRef.current?.open()}
-                    disabled={isUploadingAvatar}
+                    disabled={isSavingProfile}
                   >
                     <Plus className="size-5" />
-                    {isUploadingAvatar ? "Enviando..." : "Alterar imagem"}
+                    Alterar imagem
                   </Button>
                   <Button
                     variant="outline"
                     className="w-full h-11 gap-2 px-5 text-gray-12 border-[1.5px] border-gray-6 font-bold text-base font-manrope"
                     onClick={handleRemoveAvatar}
-                    disabled={isUploadingAvatar || !user?.avatarUrl}
+                    disabled={
+                      isSavingProfile ||
+                      pendingAvatar.removed ||
+                      (!user?.avatarUrl && !pendingAvatar.file)
+                    }
                   >
                     Remover imagem
                   </Button>
@@ -674,16 +674,20 @@ export default function UserProfilePage() {
                     variant="default"
                     className="h-10 gap-2 px-5"
                     onClick={() => avatarCropRef.current?.open()}
-                    disabled={isUploadingAvatar}
+                    disabled={isSavingProfile}
                   >
                     <Plus className="size-5" />
-                    {isUploadingAvatar ? "Enviando..." : "Alterar imagem"}
+                    Alterar imagem
                   </Button>
                   <Button
                     variant="outline"
                     className="h-10 text-gray-12 gap-2 px-5 border-gray-6"
                     onClick={handleRemoveAvatar}
-                    disabled={isUploadingAvatar || !user?.avatarUrl}
+                    disabled={
+                      isSavingProfile ||
+                      pendingAvatar.removed ||
+                      (!user?.avatarUrl && !pendingAvatar.file)
+                    }
                   >
                     Remover imagem
                   </Button>
@@ -1012,7 +1016,7 @@ export default function UserProfilePage() {
                 className="w-full h-11 gap-2 px-5 bg-primary-11 text-primary-2 hover:bg-primary-10 font-bold text-base font-manrope"
                 onClick={handleSavePersonalData}
                 disabled={
-                  !isProfileDirty || !user || isSavingProfile
+                  (!isProfileDirty && !pendingAvatar.isDirty) || !user || isSavingProfile
                 }
               >
                 {isSavingProfile ? "Salvando..." : "Salvar alterações"}
@@ -1025,7 +1029,7 @@ export default function UserProfilePage() {
                 className="h-12 gap-2 px-5"
                 onClick={handleSavePersonalData}
                 disabled={
-                  !isProfileDirty || !user || isSavingProfile
+                  (!isProfileDirty && !pendingAvatar.isDirty) || !user || isSavingProfile
                 }
               >
                 {isSavingProfile ? "Salvando..." : "Salvar alterações"}
@@ -1127,7 +1131,7 @@ export default function UserProfilePage() {
           maxFileSizeMb={10}
           accept="image/jpeg,image/jpg,image/png"
           modalTitle="Ajustar foto de perfil"
-          onCropped={(file) => void uploadUserAvatar(file)}
+          onCropped={(file) => pendingAvatar.stageFile(file)}
           onInvalidFile={(msg) => toast.error(msg)}
           onCropFailed={(msg) => toast.error(msg)}
         />

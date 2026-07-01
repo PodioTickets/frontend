@@ -573,6 +573,15 @@ export function PaymentDetailsModal() {
    * `canRefundOrder` (este exige `isFreeOrder`, aquele exige `!isFreeOrder`). */
   const canCancelFreeOrder =
     isFreeOrder && paymentDetails?.payment?.status === "PAID";
+  /* Pedido em estado TERMINAL (estornado/cancelado/charge-back): nenhuma ação de
+   * pós-venda faz sentido. Lê o `status` VIVO de `paymentDetails` — após o
+   * estorno/cancelamento o handler atualiza esse status otimisticamente, então
+   * o botão "Reenviar por e-mail" some na hora (sem refresh). */
+  const isOrderInactive =
+    paymentDetails?.payment?.status === "REFUNDED" ||
+    paymentDetails?.payment?.status === "CANCELLED" ||
+    paymentDetails?.payment?.status === "CHARGEBACK";
+  const canResendEmail = !isOrderInactive;
   const refundTicketCount = participants.length;
   const refundAmountReais = (paymentInfo.totalAmount ?? 0) / 100;
 
@@ -926,13 +935,15 @@ export function PaymentDetailsModal() {
                         Baixar comprovante
                       </Button>
                     )}
-                    <Button
-                      variant="outline"
-                      onClick={() => setShowResendModal(true)}
-                      className="w-full border-gray-6 text-gray-12"
-                    >
-                      Reenviar por e-mail
-                    </Button>
+                    {canResendEmail && (
+                      <Button
+                        variant="outline"
+                        onClick={() => setShowResendModal(true)}
+                        className="w-full border-gray-6 text-gray-12"
+                      >
+                        Reenviar por e-mail
+                      </Button>
+                    )}
                     {(canRefundOrder || canCancelFreeOrder) && (
                       <Button
                         variant="destructive"
@@ -1412,13 +1423,15 @@ export function PaymentDetailsModal() {
                             Baixar comprovante
                           </Button>
                         )}
-                        <Button
-                          variant={"outline"}
-                          onClick={() => setShowResendModal(true)}
-                          className='border-gray-6 text-gray-12'
-                        >
-                          Reenviar por e-mail
-                        </Button>
+                        {canResendEmail && (
+                          <Button
+                            variant={"outline"}
+                            onClick={() => setShowResendModal(true)}
+                            className='border-gray-6 text-gray-12'
+                          >
+                            Reenviar por e-mail
+                          </Button>
+                        )}
                         {(canRefundOrder || canCancelFreeOrder) && (
                           <Button
                             variant={"destructive"}
