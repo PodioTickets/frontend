@@ -21,8 +21,12 @@ import { useCitiesByState } from "@/hooks/useCitiesByState";
 import { userService } from "@/services";
 import {
   DATE_NOT_BEFORE_TODAY_TOAST,
+  EVENT_DATE_NOT_BEFORE_REGISTRATION_END_TOAST,
+  getMaxDateForRegistrationEndPicker,
+  getMinDateForEventPicker,
   getMinDateForRegistrationEndPicker,
   getTodayStartLocal,
+  isEventDateBeforeRegistrationEnd,
   isIsoDateStrictlyBefore,
   isRegistrationStartNotBeforeEvent,
   REGISTRATION_END_BEFORE_START_TOAST,
@@ -286,6 +290,12 @@ export function InformationForm({
         toast.error(DATE_NOT_BEFORE_TODAY_TOAST);
         return;
       }
+      // Encerramento não pode ser DEPOIS do evento (evento não acontece antes das
+      // inscrições fecharem). `isEventDateBeforeRegistrationEnd(eventDate, novoFim)`.
+      if (value?.trim() && isEventDateBeforeRegistrationEnd(values.eventDate, value)) {
+        toast.error(EVENT_DATE_NOT_BEFORE_REGISTRATION_END_TOAST);
+        return;
+      }
       const hasEnd = Boolean(value?.trim());
       const nextEndTime = hasEnd ? values.registrationEndTime?.trim() || "00:00" : "";
       if (wouldRegistrationEndBeforeStart({ ...values, registrationEndDate: value, registrationEndTime: nextEndTime } as any)) {
@@ -300,6 +310,11 @@ export function InformationForm({
 
     if (name === "eventDate" && value?.trim() && isIsoDateStrictlyBefore(value, todayStart)) {
       toast.error(DATE_NOT_BEFORE_TODAY_TOAST);
+      return;
+    }
+    // Data do evento não pode ser ANTES do encerramento das inscrições.
+    if (name === "eventDate" && value?.trim() && isEventDateBeforeRegistrationEnd(value, values.registrationEndDate)) {
+      toast.error(EVENT_DATE_NOT_BEFORE_REGISTRATION_END_TOAST);
       return;
     }
     onChange({ [name]: value });
@@ -443,7 +458,7 @@ export function InformationForm({
               className="w-full md:w-max"
               hideIcon={false}
               openAtCurrentMonth
-              minDate={getTodayStartLocal()}
+              minDate={getMinDateForEventPicker(values.registrationEndDate)}
             />
           </div>
           <div className="flex items-start gap-2">
@@ -481,7 +496,7 @@ export function InformationForm({
             <label className="text-gray-12 text-base font-family-dm-sans">Data de encerramento das inscrições</label>
             <div className="flex gap-3 items-end w-full">
               <div className="min-w-0 flex-1 md:flex-none">
-                <DatePicker value={values.registrationEndDate} onChange={(v) => handleDateChange("registrationEndDate", v || "")} placeholder={getCurrentDatePlaceholder()} className="w-full md:w-max" error={!!errors.registrationEndDate} openAtCurrentMonth minDate={getMinDateForRegistrationEndPicker(values.registrationStartDate)} />
+                <DatePicker value={values.registrationEndDate} onChange={(v) => handleDateChange("registrationEndDate", v || "")} placeholder={getCurrentDatePlaceholder()} className="w-full md:w-max" error={!!errors.registrationEndDate} openAtCurrentMonth minDate={getMinDateForRegistrationEndPicker(values.registrationStartDate)} maxDate={getMaxDateForRegistrationEndPicker(values.eventDate)} />
               </div>
               <div className="w-[112px] shrink-0 md:w-auto">
                 <TimePicker

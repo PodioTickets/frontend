@@ -196,6 +196,24 @@ export function useEventRegistrations({
     statusFilter,
   ]);
 
+  /* Estorno/cancelamento de pedido acontece no PaymentDetailsModal (montado FORA
+   * dos providers da página — [[feedback_modals_outside_providers]]), que notifica
+   * via `window` event `orderRefunded`. Sem escutar aqui, a LISTA e as STATS só
+   * atualizavam no refresh. Refaz a busca (traz status + stats novos do backend). */
+  useEffect(() => {
+    if (!authChecked || !eventId) return;
+    // `Event` (DOM) está sombreado pelo import de `@/interfaces/event`; usamos
+    // `CustomEvent` (não sombreado) e castamos p/ `EventListener` no add/remove.
+    const handler = (e: CustomEvent<{ eventId?: string }>) => {
+      const detail = e.detail;
+      // Ignora eventos de outro evento (guarda contra múltiplas telas montadas).
+      if (detail?.eventId && detail.eventId !== eventId) return;
+      void loadRegistrations();
+    };
+    window.addEventListener("orderRefunded", handler as EventListener);
+    return () => window.removeEventListener("orderRefunded", handler as EventListener);
+  }, [authChecked, eventId, loadRegistrations]);
+
   const hasActiveFilters =
     searchTerm.trim().length > 0 ||
     statusFilter !== "all" ||

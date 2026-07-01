@@ -1,7 +1,9 @@
 import type { EditEventFormData } from "@/contexts/EditEventContext";
 import {
+  isEventDateBeforeRegistrationEnd,
   isRegistrationStartNotBeforeEvent,
   wouldRegistrationEndBeforeStart,
+  EVENT_DATE_NOT_BEFORE_REGISTRATION_END_TOAST,
   REGISTRATION_END_BEFORE_START_TOAST,
   REGISTRATION_START_NOT_BEFORE_EVENT_TOAST,
 } from "@/utils/registrationPeriod";
@@ -50,6 +52,10 @@ export function validateEventInformation(
   }
   if (!formData.registrationEndDate?.trim()) errors.registrationEndDate = "Data de encerramento das inscrições é obrigatória";
   if (wouldRegistrationEndBeforeStart(formData)) errors.registrationPeriod = REGISTRATION_END_BEFORE_START_TOAST;
+  // Data do evento não pode ser anterior ao encerramento das inscrições.
+  if (isEventDateBeforeRegistrationEnd(formData.eventDate, formData.registrationEndDate)) {
+    errors.eventDate = EVENT_DATE_NOT_BEFORE_REGISTRATION_END_TOAST;
+  }
 
   const cepDigits = cepDigitsOf(formData);
   if (!cepDigits) {
