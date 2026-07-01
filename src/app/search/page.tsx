@@ -786,7 +786,7 @@ function SearchContent() {
             </div>
           ) : (
             <>
-              <div className="flex flex-wrap justify-center gap-6">
+              <div className="flex flex-wrap justify-start gap-6">
                 {filteredEvents.map((event) => (
                   <EventCard key={event.id} event={event} />
                 ))}
