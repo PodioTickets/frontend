@@ -3,11 +3,12 @@
 import { useState, useEffect } from "react";
 import {
   Drawer,
+  DrawerClose,
   DrawerContent,
   DrawerHeader,
   DrawerTitle,
 } from "@/components/ui/drawer";
-import { ChevronLeft, ChevronRight, FileText, Search } from "lucide-react";
+import { X, ChevronLeft, ChevronRight, FileText, Search } from "lucide-react";
 import { CalendarIcon } from "@/components/Icons/CalendarIcon";
 import { PixIcon } from "@/components/Icons/PixIcon";
 import { PaymentIcon } from "react-svg-credit-card-payment-icons";
@@ -33,6 +34,8 @@ interface InstallmentsDrawerProps {
   eventId: string;
   eventName?: string;
   categoryName?: string;
+  onNavigatePrev?: () => void;
+  onNavigateNext?: () => void;
 }
 
 export function InstallmentsDrawer({
@@ -44,6 +47,8 @@ export function InstallmentsDrawer({
   eventId,
   eventName = "Maratona 2024",
   categoryName = "Nome da categoria",
+  onNavigatePrev,
+  onNavigateNext,
 }: InstallmentsDrawerProps) {
   const [currentPage, setCurrentPage] = useState(1);
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
@@ -193,13 +198,22 @@ export function InstallmentsDrawer({
           <DrawerHeader className="hidden md:block border-b border-gray-6 px-5 py-3">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-5">
-                <button
-                  onClick={onClose}
-                  aria-label="Voltar"
-                  className="size-9 flex items-center justify-center border border-gray-6 rounded-full hover:bg-gray-3 transition-colors cursor-pointer rotate-180"
-                >
-                  <ArrowButton isOpen={false} />
-                </button>
+                <div className="flex items-center gap-1">
+                  <button
+                    onClick={onNavigatePrev}
+                    disabled={!onNavigatePrev}
+                    className="size-9 flex items-center justify-center border border-gray-6 rounded-full hover:bg-gray-3 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed rotate-180"
+                  >
+                    <ArrowButton isOpen={false} />
+                  </button>
+                  <button
+                    onClick={onNavigateNext}
+                    disabled={!onNavigateNext}
+                    className="size-9 flex items-center justify-center border border-gray-6 rounded-full hover:bg-gray-3 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <ArrowButton isOpen={false} />
+                  </button>
+                </div>
                 <div className="flex items-center gap-2">
                   <div className="w-[32px] h-[32px] p-1 rounded-lg bg-[#CAF1F6] flex items-center justify-center">
                     <CalendarIcon className="size-6 text-gray-12" />
@@ -209,6 +223,11 @@ export function InstallmentsDrawer({
                   </h2>
                 </div>
               </div>
+              <DrawerClose asChild>
+                <button className="size-8 flex items-center justify-center rounded-lg hover:bg-gray-3 transition-colors cursor-pointer">
+                  <X className="size-6 text-gray-12" />
+                </button>
+              </DrawerClose>
             </div>
           </DrawerHeader>
 
@@ -287,7 +306,7 @@ export function InstallmentsDrawer({
                             {installment.paymentMethod === "PIX" ? (
                               <PixIcon className="size-5 text-gray-12" />
                             ) : (
-                              <PaymentIcon type="Generic" className="size-8 text-gray-12" />
+                              <PaymentIcon type="Generic" format="flatRounded" className="size-8 text-gray-12" />
                             )}
                           </div>
                         </div>
@@ -501,7 +520,7 @@ export function InstallmentsDrawer({
                             {installment.paymentMethod === "PIX" ? (
                               <PixIcon className="size-5 text-gray-12" />
                             ) : (
-                              <PaymentIcon type="Generic" className="size-8 text-gray-12" />
+                              <PaymentIcon type="Generic" format="flatRounded" className="size-8 text-gray-12" />
                             )}
                           </div>
                         </div>

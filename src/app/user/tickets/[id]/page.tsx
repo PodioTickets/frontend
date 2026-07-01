@@ -19,6 +19,7 @@ import { formatPhoneForCountry } from "@/utils/phone";
 import { isBrazilianCountry } from "@/validators/Auth.validator";
 import { formatAnswer } from "@/utils/questionAnswer";
 import { formatDateBRT, formatTimeBRT } from "@/utils/datetimeBR";
+import { shortId } from "@/utils/shortId";
 
 export default function TicketDetailsPage() {
   const params = useParams();
@@ -577,7 +578,7 @@ export default function TicketDetailsPage() {
                     Número do pedido:
                   </p>
                   <p className="text-base font-semibold text-gray-12 font-manrope leading-[1.1] md:text-right">
-                    #{order.id || "N/A"}
+                    #{shortId(order.id) || "N/A"}
                   </p>
                 </div>
 

@@ -85,9 +85,9 @@ function MobileAdvancedSearch() {
       : undefined
   );
   const [priceRange, setPriceRange] = useState<[number, number]>([
-    searchParams.get("priceMin") ? parseInt(searchParams.get("priceMin")!) : 0,
+    searchParams.get("priceMin") ? parseFloat(searchParams.get("priceMin")!) : 0,
     searchParams.get("priceMax")
-      ? parseInt(searchParams.get("priceMax")!)
+      ? parseFloat(searchParams.get("priceMax")!)
       : 1000,
   ]);
 
@@ -115,8 +115,8 @@ function MobileAdvancedSearch() {
     modalities: modalities.length > 0 ? modalities : undefined,
     // Preço (reais) → filtro server-side. Presente na URL só quando o usuário
     // mexeu no slider (piso > 0 / teto < 1000), então é seguro repassar direto.
-    minPrice: priceMin ? parseInt(priceMin) : undefined,
-    maxPrice: priceMax ? parseInt(priceMax) : undefined,
+    minPrice: priceMin ? parseFloat(priceMin) : undefined,
+    maxPrice: priceMax ? parseFloat(priceMax) : undefined,
     page: currentPage,
     limit: 20,
   });
@@ -546,8 +546,8 @@ function SearchContent() {
     modalities: modalities.length > 0 ? modalities : undefined,
     // Preço (reais) → filtro server-side (ver useEventSearch). Substitui o filtro
     // client-side antigo, que comparava `event.price` (nunca retornado) e não funcionava.
-    minPrice: priceMin ? parseInt(priceMin) : undefined,
-    maxPrice: priceMax ? parseInt(priceMax) : undefined,
+    minPrice: priceMin ? parseFloat(priceMin) : undefined,
+    maxPrice: priceMax ? parseFloat(priceMax) : undefined,
     page: currentPage,
     limit: 20,
   });
@@ -579,8 +579,8 @@ function SearchContent() {
   }, [dateFrom, dateTo]);
 
   const initialPriceRange = useMemo(() => {
-    const min = priceMin ? parseInt(priceMin) : 0;
-    const max = priceMax ? parseInt(priceMax) : 1000;
+    const min = priceMin ? parseFloat(priceMin) : 0;
+    const max = priceMax ? parseFloat(priceMax) : 1000;
     return [min, max] as [number, number];
   }, [priceMin, priceMax]);
 

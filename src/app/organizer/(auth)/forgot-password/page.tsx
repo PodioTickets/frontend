@@ -7,7 +7,6 @@ import { Input } from "@/components/Input";
 import { Button } from "@/components/Button";
 import { OtpCodeInput } from "@/components/OtpCodeInput";
 import { Mail, ArrowLeft, Lock, Eye, EyeOff } from "lucide-react";
-import Image from "next/image";
 import { useForgotPassword } from "@/hooks/useForgotPassword";
 import { useResetPassword } from "@/hooks/useResetPassword";
 import { forgotPasswordStep1Schema, resetPasswordSchema } from "@/validators/Auth.validator";
@@ -166,14 +165,14 @@ export default function OrganizerForgotPasswordPage() {
           </button>
         )}
 
-        <div className="w-[258px] h-11 relative shrink-0">
-          <Image
-            src="/images/logo_horizontal_black.png"
+        <div className="h-11 flex items-center shrink-0">
+          {/* Logo do organizador — mesma do login (org-login-dark.svg) p/ manter
+              consistência de marca no fluxo de autenticação do organizador. */}
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/images/org-login-dark.svg"
             alt="Pódio Ticket"
-            width={258}
-            height={44}
-            className="object-contain"
-            priority
+            className="h-11 w-auto"
           />
         </div>
 

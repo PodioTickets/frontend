@@ -573,6 +573,15 @@ export function PaymentDetailsModal() {
    * `canRefundOrder` (este exige `isFreeOrder`, aquele exige `!isFreeOrder`). */
   const canCancelFreeOrder =
     isFreeOrder && paymentDetails?.payment?.status === "PAID";
+  /* Pedido em estado TERMINAL (estornado/cancelado/charge-back): nenhuma ação de
+   * pós-venda faz sentido. Lê o `status` VIVO de `paymentDetails` — após o
+   * estorno/cancelamento o handler atualiza esse status otimisticamente, então
+   * o botão "Reenviar por e-mail" some na hora (sem refresh). */
+  const isOrderInactive =
+    paymentDetails?.payment?.status === "REFUNDED" ||
+    paymentDetails?.payment?.status === "CANCELLED" ||
+    paymentDetails?.payment?.status === "CHARGEBACK";
+  const canResendEmail = !isOrderInactive;
   const refundTicketCount = participants.length;
   const refundAmountReais = (paymentInfo.totalAmount ?? 0) / 100;
 
@@ -686,7 +695,7 @@ export function PaymentDetailsModal() {
                             {isCardPayment ? (
                               <div className="size-10 shrink-0 flex items-center justify-center">
                                 {paymentInfo.cardBrand ? (
-                                  <PaymentIcon type={paymentInfo.cardBrand as any} className="size-10" />
+                                  <PaymentIcon type={paymentInfo.cardBrand as any} format="flatRounded" className="size-10" />
                                 ) : (
                                   <CardIcon className="size-6 text-gray-12" />
                                 )}
@@ -926,13 +935,15 @@ export function PaymentDetailsModal() {
                         Baixar comprovante
                       </Button>
                     )}
-                    <Button
-                      variant="outline"
-                      onClick={() => setShowResendModal(true)}
-                      className="w-full border-gray-6 text-gray-12"
-                    >
-                      Reenviar por e-mail
-                    </Button>
+                    {canResendEmail && (
+                      <Button
+                        variant="outline"
+                        onClick={() => setShowResendModal(true)}
+                        className="w-full border-gray-6 text-gray-12"
+                      >
+                        Reenviar por e-mail
+                      </Button>
+                    )}
                     {(canRefundOrder || canCancelFreeOrder) && (
                       <Button
                         variant="destructive"
@@ -1134,7 +1145,7 @@ export function PaymentDetailsModal() {
                               {isCardPayment ? (
                                 <div className="size-[36px] relative shrink-0">
                                   {paymentInfo.cardBrand ? (
-                                    <PaymentIcon type={paymentInfo.cardBrand as any} className="size-9" />
+                                    <PaymentIcon type={paymentInfo.cardBrand as any} format="flatRounded" className="size-9" />
                                   ) : (
                                     <div className="size-9 flex items-center justify-center border border-gray-6 rounded">
                                       <CardIcon className="size-6" />
@@ -1412,13 +1423,15 @@ export function PaymentDetailsModal() {
                             Baixar comprovante
                           </Button>
                         )}
-                        <Button
-                          variant={"outline"}
-                          onClick={() => setShowResendModal(true)}
-                          className='border-gray-6 text-gray-12'
-                        >
-                          Reenviar por e-mail
-                        </Button>
+                        {canResendEmail && (
+                          <Button
+                            variant={"outline"}
+                            onClick={() => setShowResendModal(true)}
+                            className='border-gray-6 text-gray-12'
+                          >
+                            Reenviar por e-mail
+                          </Button>
+                        )}
                         {(canRefundOrder || canCancelFreeOrder) && (
                           <Button
                             variant={"destructive"}

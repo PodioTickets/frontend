@@ -10,8 +10,12 @@ export const metadata: Metadata = {
 };
 
 export default function PrivacyPage() {
-  const title =
-    privacyPolicy.find((b) => b.type === "h1")?.text ?? "Política de Privacidade";
   const body = privacyPolicy.filter((b) => b.type !== "h1");
-  return <LegalDocument title={title} blocks={body} />;
+  return (
+    <LegalDocument
+      title="Política de privacidade"
+      blocks={body}
+      updatedAt="01/01/2026"
+    />
+  );
 }

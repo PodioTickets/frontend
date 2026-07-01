@@ -70,6 +70,30 @@ describe("validateEventInformation", () => {
     expect(errors.registrationPeriod).toBeDefined();
   });
 
+  it("data do evento ANTES do encerramento das inscrições → erro em eventDate", () => {
+    const errors = validateEventInformation({
+      ...validForm(),
+      eventDate: "2026-06-20",
+      registrationStartDate: "2026-06-01",
+      registrationEndDate: "2026-07-01", // encerra DEPOIS do evento → inválido
+    });
+    expect(errors.eventDate).toBe(
+      "A data do evento não pode ser anterior ao encerramento das inscrições.",
+    );
+  });
+
+  it("encerramento das inscrições NO mesmo dia do evento → sem erro de data", () => {
+    const errors = validateEventInformation({
+      ...validForm(),
+      eventDate: "2026-08-10",
+      registrationStartDate: "2026-06-01",
+      registrationEndDate: "2026-08-10", // mesmo dia é permitido
+      registrationEndTime: "10:00",
+    });
+    expect(errors.eventDate).toBeUndefined();
+    expect(errors.registrationPeriod).toBeUndefined();
+  });
+
   it("início das inscrições NA data do evento → erro (deve ser ANTES)", () => {
     const errors = validateEventInformation({
       ...validForm(),

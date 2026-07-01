@@ -289,7 +289,7 @@ export function PaymentDetailsMobile({
                 {paymentMethod === "PIX" ? (
                   <PixIcon className="size-10 text-gray-12" />
                 ) : cardBrand ? (
-                  <PaymentIcon type={cardBrand as any} className="size-10" />
+                  <PaymentIcon type={cardBrand as any} format="flatRounded" className="size-10" />
                 ) : (
                   <CardIcon className="size-10 text-gray-12" />
                 )}

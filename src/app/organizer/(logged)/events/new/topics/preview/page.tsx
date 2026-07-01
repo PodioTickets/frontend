@@ -8,23 +8,14 @@ import { userService, organizerService } from "@/services";
 import { useCreateEvent } from "@/contexts/CreateEventContext";
 import { Button } from "@/components/Button";
 import { ArrowButton } from "@/components/ArrowButton";
-import { EventMap } from "@/components/EventMap";
-import { ImageWithInitialFallback } from "@/components/ImageWithInitialFallback";
-import { Download } from "lucide-react";
 import { Loading } from "@/components/Loading";
 import {
   getEnabledTopicsSorted,
   readTopicsPreviewDraft,
   topicSectionRowsToPreviewSections,
 } from "@/lib/eventTopicSections";
-import { normalizeTopicHtmlAnchorHrefs } from "@/lib/normalizeTopicHtmlLinks";
-import { TopicRichContent } from "@/components/TopicRichContent";
 import type { Event } from "@/interfaces/event";
-import {
-  EventPublicInfoCardDesktop,
-  EventPublicInfoCardMobile,
-} from "@/components/Event/EventPublicInfoCard";
-import { TopicsPreviewKitsSection } from "@/components/Event/TopicsPreviewKitsSection";
+import { EventTopicsPreviewContent } from "@/components/Event/EventTopicsPreviewContent";
 
 export const dynamic = "force-dynamic";
 
@@ -135,101 +126,13 @@ export default function PreviewEventPage() {
             </Button>
           </div>
 
-          {/* Content */}
-          <div className="flex w-full flex-col items-start gap-[52px] px-0 lg:px-0">
-            <div className="flex w-full flex-col gap-8 md:flex-row md:items-start">
-              <div className="w-full min-w-0 md:flex-1">
-                <div className="relative h-[404px] w-full overflow-hidden rounded-2xl shadow-[0px_8px_16px_0px_rgba(17,17,17,0.5)] md:h-[400px]">
-                  <ImageWithInitialFallback
-                    src={event?.bannerUrl}
-                    alt={event?.name || "Event banner"}
-                    name={event?.name || "Evento"}
-                    fill
-                    sizes="(max-width: 768px) 100vw, (max-width: 1200px) 75vw, 66vw"
-                    className="size-full rounded-2xl border-transparent border-0"
-                    letterClassName="text-7xl font-bold"
-                  />
-                </div>
-              </div>
-              {eventTyped && (
-                <div className="hidden w-full shrink-0 md:block md:w-1/4">
-                  <EventPublicInfoCardDesktop
-                    event={eventTyped}
-                    isPreview
-                  />
-                </div>
-              )}
-            </div>
-            {eventTyped && (
-              <div className="w-full md:hidden">
-                <EventPublicInfoCardMobile event={eventTyped} isPreview />
-              </div>
-            )}
-
-            <div className="flex w-3/4 flex-col items-start rounded-xl -mt-20">
-              {topicSections.map((section, index) => (
-                <div
-                  key={section.id}
-                  className={`border-b border-gray-8 w-full ${index === 0 ? "pb-10" : "py-10"}`}
-                >
-                  <div className="flex flex-col gap-6 items-start">
-                    <h2 className="text-gray-12 text-2xl font-bold font-manrope leading-[1.1]">
-                      {section.title}
-                    </h2>
-                    <TopicRichContent
-                      html={normalizeTopicHtmlAnchorHrefs(section.content)}
-                      className="topic-rich-html w-full text-gray-11 text-sm prose prose-sm max-w-none"
-                    />
-
-                  </div>
-                </div>
-              ))}
-
-              {/* Regulamento — espelha a página pública do evento (vem logo
-                  após os tópicos, quando houver regulationUrl). */}
-              {event?.regulationUrl && (
-                <div className="border-b border-gray-8 py-10 w-full">
-                  <div className="flex flex-col gap-6 items-start">
-                    <h2 className="text-gray-12 text-2xl font-bold font-manrope leading-[1.1]">
-                      Regulamento
-                    </h2>
-                    <a
-                      href={event.regulationUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-sm text-primary-11 font-medium underline hover:text-primary-10"
-                    >
-                      <Button variant="outline" className="text-gray-12 border-gray-6">
-                        Ler regulamento
-                      </Button>
-                    </a>
-                  </div>
-                </div>
-              )}
-
-              {/* Kits */}
-              <TopicsPreviewKitsSection kits={kits} />
-
-              {/* Mapa */}
-              {event?.city && event?.state && (
-                <div className="flex flex-col gap-6 items-start py-10 w-full">
-                  <h2 className="text-gray-12 text-2xl font-bold font-manrope leading-[1.1]">
-                    Onde acontecerá o evento
-                  </h2>
-                  <div className="h-[310px] relative rounded-xl w-full overflow-hidden">
-                    <div className="w-full h-full rounded-xl">
-                      <EventMap city={event.city} state={event.state} title={event.name} googleMapsLink={event.googleMapsLink} />
-                    </div>
-                  </div>
-                  <Button disabled variant="outline" className="border-gray-6 text-gray-12 text-base font-bold px-11 h-12">
-                    <p className="text-gray-12 text-base font-bold font-manrope leading-[1.1]">
-                      Ver no mapa
-                    </p>
-                  </Button>
-                </div>
-              )}
-            </div>
-          </div>
+          {/* Content — idêntico à tela pública do evento (banner + tópicos). */}
+          <EventTopicsPreviewContent
+            event={event}
+            eventTyped={eventTyped}
+            topicSections={topicSections}
+            kits={kits}
+          />
 
           {/* Action Button */}
           <div className="flex w-full max-w-[1280px] flex-col items-end justify-center px-0 lg:px-8">

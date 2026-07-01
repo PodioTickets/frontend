@@ -76,7 +76,7 @@ function TeamPaginationBar({
       className={cn(
         "flex items-center gap-2 min-w-0",
         isMobile &&
-          "justify-center w-full max-w-full overflow-x-auto py-4 [&::-webkit-scrollbar]:hidden",
+        "justify-center w-full max-w-full overflow-x-auto py-4 [&::-webkit-scrollbar]:hidden",
         !isMobile && "justify-end px-4 py-5 border-t border-gray-6"
       )}
       style={
@@ -273,7 +273,6 @@ export default function OrganizerTeamPage() {
           <SystemAuditLogTab />
         ) : (
           <>
-            {/* Search (Figma mobile 3033:115549) */}
             <div className="rounded-xl border border-gray-6 bg-gray-1 p-3 md:p-4 shadow-[0px_2px_6px_0px_rgba(17,17,17,0.08)] mb-4 md:mb-5">
               <h2 className="text-base font-bold text-gray-12 font-manrope leading-[1.1] mb-3 md:hidden">
                 Lista de colaboradores
@@ -301,7 +300,7 @@ export default function OrganizerTeamPage() {
               ) : (
                 pageSlice.map((m) => {
                   const name =
-                    `${m.user.firstName} ${m.user.lastName}`.trim();
+                    `${m.user.firstName} ${m?.user?.lastName ? m?.user?.lastName : " "}`.trim();
                   const last = formatLastAccess(
                     m.user.lastLoginAt ?? m.updatedAt
                   );
@@ -396,7 +395,7 @@ export default function OrganizerTeamPage() {
                     ) : (
                       pageSlice.map((m) => {
                         const name =
-                          `${m.user.firstName} ${m.user.lastName}`.trim();
+                          `${m.user.firstName} ${m?.user?.lastName ? m?.user?.lastName : " "}`.trim();
                         return (
                           <tr
                             key={m.id}

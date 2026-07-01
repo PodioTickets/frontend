@@ -40,7 +40,8 @@ const sanitizeUrl = (url: string | null | undefined): string | null => {
   if (!url) return null;
   try {
     const parsed = new URL(url);
-    if (parsed.protocol !== 'https:' && parsed.protocol !== 'http:') return null;
+    if (parsed.protocol !== "https:" && parsed.protocol !== "http:")
+      return null;
     return url;
   } catch {
     return null;
@@ -61,7 +62,7 @@ function OrganizerAvatar({
     <div
       className={cn(
         "relative shrink-0 size-10 rounded-full overflow-hidden bg-primary-10/20 flex items-center justify-center",
-        className
+        className,
       )}
     >
       {logoUrl?.trim() ? (
@@ -93,7 +94,9 @@ export default function EventPage() {
    * re-avaliado e a UI mude do estado "Em breve!" para "Inscreva-se".
    */
   const handleRegistrationCountdownExpire = () => {
-    void queryClient.invalidateQueries({ queryKey: ["event", "slug", eventSlug] });
+    void queryClient.invalidateQueries({
+      queryKey: ["event", "slug", eventSlug],
+    });
   };
 
   const topicSections = useMemo(() => {
@@ -205,7 +208,9 @@ export default function EventPage() {
   const registrationOpensAt = event.registrationStartDate
     ? new Date(event.registrationStartDate)
     : null;
-  const registrationOpensInstant = eventWindowInstant(event.registrationStartDate);
+  const registrationOpensInstant = eventWindowInstant(
+    event.registrationStartDate,
+  );
   const registrationsNotOpenYet =
     !!registrationOpensInstant &&
     Date.now() < registrationOpensInstant.getTime();
@@ -213,12 +218,13 @@ export default function EventPage() {
   const registrationOpensDateText =
     registrationsNotOpenYet && registrationOpensAt
       ? formatDateTimeBR(registrationOpensAt, {
-        day: "numeric",
-        month: "long",
-        ...(registrationOpensAt.getUTCFullYear() !== new Date().getUTCFullYear()
-          ? { year: "numeric" }
-          : {}),
-      })
+          day: "numeric",
+          month: "long",
+          ...(registrationOpensAt.getUTCFullYear() !==
+          new Date().getUTCFullYear()
+            ? { year: "numeric" }
+            : {}),
+        })
       : "";
 
   const registrationSlotsSoldOut =
@@ -242,20 +248,22 @@ export default function EventPage() {
   const eventSuspendedByOrganizer =
     event.status === "SUSPENDED" || event.isSuspended === true;
 
-  const mapsUrl = sanitizeUrl(event.googleMapsLink?.trim()) ?? ""
+  const mapsUrl = sanitizeUrl(event.googleMapsLink?.trim()) ?? "";
 
   // "Denunciar evento" → WhatsApp do suporte PodioTickets (mesmo número do contato),
   // com mensagem pré-preenchida identificando o evento (nome + slug).
   const reportWhatsappUrl = `https://wa.me/${PODIO_SUPPORT_WHATSAPP}?text=${encodeURIComponent(
-    `Olá! Gostaria de denunciar o evento "${event.name}" (/events/${event.slug}).`,
+    `Olá! Gostaria de denunciar o evento "${event.name}".`,
   )}`;
 
-  const safeStravaId = event.stravaRouteId && /^\d+$/.test(event.stravaRouteId)
-    ? event.stravaRouteId
-    : null;
+  const safeStravaId =
+    event.stravaRouteId && /^\d+$/.test(event.stravaRouteId)
+      ? event.stravaRouteId
+      : null;
 
   // Banner visível (desktop): controla a coluna esquerda (banner + tópicos).
-  const hasBanner = !!event.bannerUrl && event.bannerUrl.trim() !== "" && !imageError;
+  const hasBanner =
+    !!event.bannerUrl && event.bannerUrl.trim() !== "" && !imageError;
 
   return (
     <>
@@ -286,7 +294,7 @@ export default function EventPage() {
                 alt={event.name}
                 fill
                 className="object-cover rounded-xl border-0"
-                style={{ position: 'absolute' }}
+                style={{ position: "absolute" }}
                 onError={(e) => {
                   setImageError(true);
                 }}
@@ -318,13 +326,37 @@ export default function EventPage() {
             </h1>
 
             <div className="flex flex-col gap-3 mb-4">
-
               <div className="flex items-center gap-2 text-gray-12">
-                <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M13.3335 1.66699V4.16699" stroke="#202020" strokeWidth="1" strokeLinecap="round" />
-                  <path d="M6.6665 1.66699V4.16699" stroke="#202020" strokeWidth="1" strokeLinecap="round" />
-                  <path d="M2.5 6.91699C2.5 4.70786 4.29086 2.91699 6.5 2.91699H13.5C15.7091 2.91699 17.5 4.70785 17.5 6.91699V14.3337C17.5 16.5428 15.7091 18.3337 13.5 18.3337H6.5C4.29086 18.3337 2.5 16.5428 2.5 14.3337V6.91699Z" stroke="#202020" strokeWidth="1" />
-                  <path d="M2.5 7.5H17.5" stroke="#202020" strokeWidth="1" strokeLinecap="round" />
+                <svg
+                  width="20"
+                  height="20"
+                  viewBox="0 0 20 20"
+                  fill="none"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <path
+                    d="M13.3335 1.66699V4.16699"
+                    stroke="#202020"
+                    strokeWidth="1"
+                    strokeLinecap="round"
+                  />
+                  <path
+                    d="M6.6665 1.66699V4.16699"
+                    stroke="#202020"
+                    strokeWidth="1"
+                    strokeLinecap="round"
+                  />
+                  <path
+                    d="M2.5 6.91699C2.5 4.70786 4.29086 2.91699 6.5 2.91699H13.5C15.7091 2.91699 17.5 4.70785 17.5 6.91699V14.3337C17.5 16.5428 15.7091 18.3337 13.5 18.3337H6.5C4.29086 18.3337 2.5 16.5428 2.5 14.3337V6.91699Z"
+                    stroke="#202020"
+                    strokeWidth="1"
+                  />
+                  <path
+                    d="M2.5 7.5H17.5"
+                    stroke="#202020"
+                    strokeWidth="1"
+                    strokeLinecap="round"
+                  />
                 </svg>
 
                 <span className="text-sm">
@@ -332,22 +364,72 @@ export default function EventPage() {
                 </span>
               </div>
               <div className="flex items-center gap-2 text-gray-12">
-                <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M6.6665 1.66699V4.16699" stroke="#202020" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" />
-                  <path d="M13.3335 1.66699V4.16699" stroke="#202020" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" />
-                  <path d="M2.5 6.91699C2.5 4.70786 4.29086 2.91699 6.5 2.91699H13.5C15.7091 2.91699 17.5 4.70785 17.5 6.91699V14.3337C17.5 16.5428 15.7091 18.3337 13.5 18.3337H6.5C4.29086 18.3337 2.5 16.5428 2.5 14.3337V6.91699Z" stroke="#202020" strokeWidth="1" />
-                  <path d="M7.5 12.4997L8.83616 13.5686C9.25403 13.9029 9.86103 13.849 10.2134 13.4462L12.5 10.833" stroke="#202020" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" />
-                  <path d="M2.5 7.5H17.5" stroke="#202020" stroke-width="1" strokeLinecap="round" />
+                <svg
+                  width="20"
+                  height="20"
+                  viewBox="0 0 20 20"
+                  fill="none"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <path
+                    d="M6.6665 1.66699V4.16699"
+                    stroke="#202020"
+                    strokeWidth="1"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                  <path
+                    d="M13.3335 1.66699V4.16699"
+                    stroke="#202020"
+                    strokeWidth="1"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                  <path
+                    d="M2.5 6.91699C2.5 4.70786 4.29086 2.91699 6.5 2.91699H13.5C15.7091 2.91699 17.5 4.70785 17.5 6.91699V14.3337C17.5 16.5428 15.7091 18.3337 13.5 18.3337H6.5C4.29086 18.3337 2.5 16.5428 2.5 14.3337V6.91699Z"
+                    stroke="#202020"
+                    strokeWidth="1"
+                  />
+                  <path
+                    d="M7.5 12.4997L8.83616 13.5686C9.25403 13.9029 9.86103 13.849 10.2134 13.4462L12.5 10.833"
+                    stroke="#202020"
+                    strokeWidth="1"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                  <path
+                    d="M2.5 7.5H17.5"
+                    stroke="#202020"
+                    stroke-width="1"
+                    strokeLinecap="round"
+                  />
                 </svg>
 
-                {event.registrationEndDate && <span className="text-sm">
-                  Inscrições até {formatDate(new Date(event.registrationEndDate))}
-                </span>}
+                {event.registrationEndDate && (
+                  <span className="text-sm">
+                    Inscrições até{" "}
+                    {formatDate(new Date(event.registrationEndDate))}
+                  </span>
+                )}
               </div>
               <div className="flex items-center gap-2 text-gray-12">
                 <LocationIcon className="size-5 text-gray-12 shrink-0" />
-                <Link href={mapsUrl} target="_blank" rel="noopener noreferrer" className="text-sm underline">
-                  {[`${event.city} - ${event.state}`, event.neighborhood, event.location].filter(Boolean).join(", ")}{event.zipCode && <span className="whitespace-nowrap">, {event.zipCode}</span>}
+                <Link
+                  href={mapsUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-sm underline"
+                >
+                  {[
+                    `${event.city} - ${event.state}`,
+                    event.neighborhood,
+                    event.location,
+                  ]
+                    .filter(Boolean)
+                    .join(", ")}
+                  {event.zipCode && (
+                    <span className="whitespace-nowrap">, {event.zipCode}</span>
+                  )}
                 </Link>
               </div>
             </div>
@@ -357,27 +439,28 @@ export default function EventPage() {
                 const organizer = getEventOrganizer(event);
                 if (!organizer) return null;
 
-
                 const socialLinks = [
                   { url: sanitizeUrl(event.instagram), icon: InstagramIcon },
                   { url: sanitizeUrl(event.facebook), icon: FacebookIcon },
                   { url: sanitizeUrl(event.youtube), icon: YoutubeIcon },
                   { url: sanitizeUrl(event.tiktok), icon: TiktokIcon },
                   { url: sanitizeUrl(event.website), icon: GlobeIcon },
-                ]
-
+                ];
 
                 return (
                   <>
                     <div className="flex items-center gap-3 mb-3">
-                      <OrganizerAvatar logoUrl={organizer.logoUrl} name={organizer.name} />
+                      <OrganizerAvatar
+                        logoUrl={organizer.logoUrl}
+                        name={organizer.name}
+                      />
                       <div className="flex-1 min-w-0 flex flex-col gap-1">
                         <p className="text-sm font-semibold text-gray-12">
                           {organizer.name}
                         </p>
                         <div className="flex items-center gap-1">
                           {socialLinks.map(({ url, icon: Icon }, index) => {
-                            if (!url) return null
+                            if (!url) return null;
 
                             return (
                               <Link
@@ -389,7 +472,7 @@ export default function EventPage() {
                               >
                                 <Icon className="size-4" />
                               </Link>
-                            )
+                            );
                           })}
                         </div>
                       </div>
@@ -423,7 +506,11 @@ export default function EventPage() {
                 </>
               ) : registrationPeriodEnded ? (
                 <>
-                  <Button className="w-full mb-3 bg-gray-4 text-gray-10 border-0 disabled:opacity-100 disabled:cursor-not-allowed" disabled variant="outline">
+                  <Button
+                    className="w-full mb-3 bg-gray-4 text-gray-10 border-0 disabled:opacity-100 disabled:cursor-not-allowed"
+                    disabled
+                    variant="outline"
+                  >
                     Inscrições encerradas!
                   </Button>
                   <p className="text-sm text-gray-11 text-center mt-2">
@@ -440,7 +527,8 @@ export default function EventPage() {
                     Inscreva-se
                   </Button>
                   <p className="text-sm text-gray-11 text-center mt-2">
-                    As inscrições para este evento não estão disponíveis no momento.
+                    As inscrições para este evento não estão disponíveis no
+                    momento.
                   </p>
                 </>
               ) : registrationSlotsSoldOut ? (
@@ -466,8 +554,8 @@ export default function EventPage() {
                     Em breve!
                   </Button>
                   <p className="text-sm text-gray-11 text-center mt-2">
-                    Inscrições abrem em{" "}
-                    <br /> <RegistrationCountdown
+                    Inscrições abrem em <br />{" "}
+                    <RegistrationCountdown
                       targetDate={registrationOpensInstant}
                       fallbackText={registrationOpensDateText}
                       onExpire={handleRegistrationCountdownExpire}
@@ -493,18 +581,23 @@ export default function EventPage() {
             <ShareIcon className="size-5" />
             Compartilhar
           </Button>
+
+          <a
+            href={reportWhatsappUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="underline font-semibold text-gray-11 text-sm cursor-pointer hover:text-gray-12 transition-colors"
+          >
+            Denunciar evento
+          </a>
         </div>
-
-
 
         {/* Apenas tópicos habilitados (sem descrição do evento). */}
         <div className="px-4 space-y-4 mt-10">
           {topicSections.map((section, index) => {
             return (
               <Fragment key={section.id}>
-                <div
-                  className={`${index === 0 ? "mb-4" : "my-4"}`}
-                >
+                <div className={`${index === 0 ? "mb-4" : "my-4"}`}>
                   <h2 className="text-lg font-bold text-gray-12 mb-3">
                     {section.title}
                   </h2>
@@ -512,7 +605,6 @@ export default function EventPage() {
                     html={normalizeTopicHtmlAnchorHrefs(section.content)}
                     className="topic-rich-html text-sm text-gray-11 mb-3 prose prose-sm max-w-none"
                   />
-
                 </div>
                 <div className="w-full h-px bg-gray-6" />
               </Fragment>
@@ -575,32 +667,102 @@ export default function EventPage() {
         </div>
 
         <div
-          className={`fixed bottom-0 left-0 right-0 bg-gray-2 border-t border-gray-6 shadow-lg px-4 py-4 z-50 md:hidden transition-all duration-300 ease-in-out ${showFixedButton
-            ? "translate-y-0 opacity-100"
-            : "translate-y-full opacity-0 pointer-events-none"
-            }`}
+          className={`fixed bottom-0 left-0 right-0 bg-gray-2 border-t border-gray-6 shadow-lg px-4 py-4 z-50 md:hidden transition-all duration-300 ease-in-out ${
+            showFixedButton
+              ? "translate-y-0 opacity-100"
+              : "translate-y-full opacity-0 pointer-events-none"
+          }`}
         >
           <div className="flex flex-col gap-4 max-w-[1280px] mx-auto">
-            <h1 className="font-semibold font-family-manrope truncate">{event.name}</h1>
+            <h1 className="font-semibold font-family-manrope truncate">
+              {event.name}
+            </h1>
             <div className="flex w-full justify-between gap-1">
               <div className="flex items-center gap-1 text-gray-12">
-                <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" className="shrink-0">
-                  <path d="M13.3335 1.66699V4.16699" stroke="#202020" strokeWidth="1" strokeLinecap="round" />
-                  <path d="M6.6665 1.66699V4.16699" stroke="#202020" strokeWidth="1" strokeLinecap="round" />
-                  <path d="M2.5 6.91699C2.5 4.70786 4.29086 2.91699 6.5 2.91699H13.5C15.7091 2.91699 17.5 4.70785 17.5 6.91699V14.3337C17.5 16.5428 15.7091 18.3337 13.5 18.3337H6.5C4.29086 18.3337 2.5 16.5428 2.5 14.3337V6.91699Z" stroke="#202020" strokeWidth="1" />
-                  <path d="M2.5 7.5H17.5" stroke="#202020" strokeWidth="1" strokeLinecap="round" />
+                <svg
+                  width="20"
+                  height="20"
+                  viewBox="0 0 20 20"
+                  fill="none"
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="shrink-0"
+                >
+                  <path
+                    d="M13.3335 1.66699V4.16699"
+                    stroke="#202020"
+                    strokeWidth="1"
+                    strokeLinecap="round"
+                  />
+                  <path
+                    d="M6.6665 1.66699V4.16699"
+                    stroke="#202020"
+                    strokeWidth="1"
+                    strokeLinecap="round"
+                  />
+                  <path
+                    d="M2.5 6.91699C2.5 4.70786 4.29086 2.91699 6.5 2.91699H13.5C15.7091 2.91699 17.5 4.70785 17.5 6.91699V14.3337C17.5 16.5428 15.7091 18.3337 13.5 18.3337H6.5C4.29086 18.3337 2.5 16.5428 2.5 14.3337V6.91699Z"
+                    stroke="#202020"
+                    strokeWidth="1"
+                  />
+                  <path
+                    d="M2.5 7.5H17.5"
+                    stroke="#202020"
+                    strokeWidth="1"
+                    strokeLinecap="round"
+                  />
                 </svg>
-                <span className="text-xs">Acontece em {formatDate(new Date(event.eventDate))}</span>
+                <span className="text-xs">
+                  Acontece em {formatDate(new Date(event.eventDate))}
+                </span>
               </div>
               <div className="flex items-center gap-1 text-gray-12">
-                <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" className="shrink-0">
-                  <path d="M6.6665 1.66699V4.16699" stroke="#202020" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" />
-                  <path d="M13.3335 1.66699V4.16699" stroke="#202020" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" />
-                  <path d="M2.5 6.91699C2.5 4.70786 4.29086 2.91699 6.5 2.91699H13.5C15.7091 2.91699 17.5 4.70785 17.5 6.91699V14.3337C17.5 16.5428 15.7091 18.3337 13.5 18.3337H6.5C4.29086 18.3337 2.5 16.5428 2.5 14.3337V6.91699Z" stroke="#202020" strokeWidth="1" />
-                  <path d="M7.5 12.4997L8.83616 13.5686C9.25403 13.9029 9.86103 13.849 10.2134 13.4462L12.5 10.833" stroke="#202020" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" />
-                  <path d="M2.5 7.5H17.5" stroke="#202020" strokeWidth="1" strokeLinecap="round" />
+                <svg
+                  width="20"
+                  height="20"
+                  viewBox="0 0 20 20"
+                  fill="none"
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="shrink-0"
+                >
+                  <path
+                    d="M6.6665 1.66699V4.16699"
+                    stroke="#202020"
+                    strokeWidth="1"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                  <path
+                    d="M13.3335 1.66699V4.16699"
+                    stroke="#202020"
+                    strokeWidth="1"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                  <path
+                    d="M2.5 6.91699C2.5 4.70786 4.29086 2.91699 6.5 2.91699H13.5C15.7091 2.91699 17.5 4.70785 17.5 6.91699V14.3337C17.5 16.5428 15.7091 18.3337 13.5 18.3337H6.5C4.29086 18.3337 2.5 16.5428 2.5 14.3337V6.91699Z"
+                    stroke="#202020"
+                    strokeWidth="1"
+                  />
+                  <path
+                    d="M7.5 12.4997L8.83616 13.5686C9.25403 13.9029 9.86103 13.849 10.2134 13.4462L12.5 10.833"
+                    stroke="#202020"
+                    strokeWidth="1"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                  <path
+                    d="M2.5 7.5H17.5"
+                    stroke="#202020"
+                    strokeWidth="1"
+                    strokeLinecap="round"
+                  />
                 </svg>
-                {event.registrationEndDate && <span className="text-xs">Inscrições até {formatDate(new Date(event.registrationEndDate))}</span>}
+                {event.registrationEndDate && (
+                  <span className="text-xs">
+                    Inscrições até{" "}
+                    {formatDate(new Date(event.registrationEndDate))}
+                  </span>
+                )}
               </div>
             </div>
 
@@ -619,7 +781,11 @@ export default function EventPage() {
               </>
             ) : registrationPeriodEnded ? (
               <>
-                <Button className="w-full bg-gray-4 text-gray-10 border-0 disabled:opacity-100 disabled:cursor-not-allowed" disabled variant="outline">
+                <Button
+                  className="w-full bg-gray-4 text-gray-10 border-0 disabled:opacity-100 disabled:cursor-not-allowed"
+                  disabled
+                  variant="outline"
+                >
                   Inscrições encerradas!
                 </Button>
                 <p className="text-sm text-gray-11 text-center mt-2">
@@ -636,7 +802,8 @@ export default function EventPage() {
                   Inscreva-se
                 </Button>
                 <p className="text-sm text-gray-11 text-center mt-2">
-                  As inscrições para este evento não estão disponíveis no momento.
+                  As inscrições para este evento não estão disponíveis no
+                  momento.
                 </p>
               </>
             ) : registrationSlotsSoldOut ? (
@@ -662,8 +829,8 @@ export default function EventPage() {
                   Em breve!
                 </Button>
                 <p className="text-sm text-gray-11 text-center mt-2">
-                  Inscrições abrem em{" "}
-                  <br /> <RegistrationCountdown
+                  Inscrições abrem em <br />{" "}
+                  <RegistrationCountdown
                     targetDate={registrationOpensAt}
                     fallbackText={registrationOpensDateText}
                     onExpire={handleRegistrationCountdownExpire}
@@ -713,7 +880,7 @@ export default function EventPage() {
                     alt={event.name}
                     fill
                     sizes="(max-width: 768px) 100vw, (max-width: 1200px) 75vw, 66vw"
-                    style={{ position: 'absolute' }}
+                    style={{ position: "absolute" }}
                     onError={() => setImageError(true)}
                     onLoad={() => setImageError(false)}
                     className="object-cover rounded-xl"
@@ -753,7 +920,10 @@ export default function EventPage() {
                       rel="noopener noreferrer"
                       className="text-sm text-primary-11 font-medium underline hover:text-primary-10"
                     >
-                      <Button variant="outline" className="text-gray-12 border-gray-6">
+                      <Button
+                        variant="outline"
+                        className="text-gray-12 border-gray-6"
+                      >
                         Ler regulamento
                       </Button>
                     </a>
@@ -812,24 +982,79 @@ export default function EventPage() {
                   <div className="flex flex-col gap-4">
                     <h1 className="flex items-center gap-2 text-sm text-gray-12 font-medium">
                       <CalendarIcon className="size-5" />{" "}
-                      <span>Acontece em {formatDate(new Date(event.eventDate))}</span>
+                      <span>
+                        Acontece em {formatDate(new Date(event.eventDate))}
+                      </span>
                     </h1>
                     {event.registrationEndDate && (
                       <div className="flex items-center gap-2 text-sm text-gray-12 font-medium">
-                        <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" className="shrink-0">
-                          <path d="M6.6665 1.66699V4.16699" stroke="#202020" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" />
-                          <path d="M13.3335 1.66699V4.16699" stroke="#202020" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" />
-                          <path d="M2.5 6.91699C2.5 4.70786 4.29086 2.91699 6.5 2.91699H13.5C15.7091 2.91699 17.5 4.70785 17.5 6.91699V14.3337C17.5 16.5428 15.7091 18.3337 13.5 18.3337H6.5C4.29086 18.3337 2.5 16.5428 2.5 14.3337V6.91699Z" stroke="#202020" strokeWidth="1" />
-                          <path d="M7.5 12.4997L8.83616 13.5686C9.25403 13.9029 9.86103 13.849 10.2134 13.4462L12.5 10.833" stroke="#202020" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" />
-                          <path d="M2.5 7.5H17.5" stroke="#202020" strokeWidth="1" strokeLinecap="round" />
+                        <svg
+                          width="20"
+                          height="20"
+                          viewBox="0 0 20 20"
+                          fill="none"
+                          xmlns="http://www.w3.org/2000/svg"
+                          className="shrink-0"
+                        >
+                          <path
+                            d="M6.6665 1.66699V4.16699"
+                            stroke="#202020"
+                            strokeWidth="1"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          />
+                          <path
+                            d="M13.3335 1.66699V4.16699"
+                            stroke="#202020"
+                            strokeWidth="1"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          />
+                          <path
+                            d="M2.5 6.91699C2.5 4.70786 4.29086 2.91699 6.5 2.91699H13.5C15.7091 2.91699 17.5 4.70785 17.5 6.91699V14.3337C17.5 16.5428 15.7091 18.3337 13.5 18.3337H6.5C4.29086 18.3337 2.5 16.5428 2.5 14.3337V6.91699Z"
+                            stroke="#202020"
+                            strokeWidth="1"
+                          />
+                          <path
+                            d="M7.5 12.4997L8.83616 13.5686C9.25403 13.9029 9.86103 13.849 10.2134 13.4462L12.5 10.833"
+                            stroke="#202020"
+                            strokeWidth="1"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          />
+                          <path
+                            d="M2.5 7.5H17.5"
+                            stroke="#202020"
+                            strokeWidth="1"
+                            strokeLinecap="round"
+                          />
                         </svg>
-                        <span>Inscrições até {formatDate(new Date(event.registrationEndDate))}</span>
+                        <span>
+                          Inscrições até{" "}
+                          {formatDate(new Date(event.registrationEndDate))}
+                        </span>
                       </div>
                     )}
                     <h1 className="flex items-center gap-2 text-gray-12 font-medium">
                       <LocationIcon className="size-5 shrink-0" />{" "}
-                      <Link href={mapsUrl} target="_blank" rel="noopener noreferrer" className="text-sm underline">
-                        {[`${event.city} - ${event.state}`, event.neighborhood, event.location].filter(Boolean).join(", ")}{event.zipCode && <span className="whitespace-nowrap">, {event.zipCode}</span>}
+                      <Link
+                        href={mapsUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-sm underline"
+                      >
+                        {[
+                          `${event.city} - ${event.state}`,
+                          event.neighborhood,
+                          event.location,
+                        ]
+                          .filter(Boolean)
+                          .join(", ")}
+                        {event.zipCode && (
+                          <span className="whitespace-nowrap">
+                            , {event.zipCode}
+                          </span>
+                        )}
                       </Link>
                     </h1>
                   </div>
@@ -844,8 +1069,14 @@ export default function EventPage() {
                       if (!organizer) return null;
 
                       const socialLinks = [
-                        { url: sanitizeUrl(event.instagram), icon: InstagramIcon },
-                        { url: sanitizeUrl(event.facebook), icon: FacebookIcon },
+                        {
+                          url: sanitizeUrl(event.instagram),
+                          icon: InstagramIcon,
+                        },
+                        {
+                          url: sanitizeUrl(event.facebook),
+                          icon: FacebookIcon,
+                        },
                         { url: sanitizeUrl(event.youtube), icon: YoutubeIcon },
                         { url: sanitizeUrl(event.tiktok), icon: TiktokIcon },
                         { url: sanitizeUrl(event.website), icon: GlobeIcon },
@@ -854,26 +1085,31 @@ export default function EventPage() {
                       return (
                         <div className="space-y-3">
                           <div className="flex items-center gap-3">
-                            <OrganizerAvatar logoUrl={organizer.logoUrl} name={organizer.name} />
+                            <OrganizerAvatar
+                              logoUrl={organizer.logoUrl}
+                              name={organizer.name}
+                            />
                             <div className="flex-1 min-w-0 flex flex-col gap-1">
                               <p className="text-sm font-semibold text-gray-12 truncate">
                                 {organizer.name}
                               </p>
                               <div className="flex items-center gap-1">
-                                {socialLinks.map(({ url, icon: Icon }, index) => {
-                                  if (!url) return null;
-                                  return (
-                                    <Link
-                                      key={index}
-                                      href={url}
-                                      target="_blank"
-                                      rel="noopener noreferrer"
-                                      className="border border-gray-6 size-8 rounded-full text-gray-12 flex items-center justify-center"
-                                    >
-                                      <Icon className="size-4" />
-                                    </Link>
-                                  );
-                                })}
+                                {socialLinks.map(
+                                  ({ url, icon: Icon }, index) => {
+                                    if (!url) return null;
+                                    return (
+                                      <Link
+                                        key={index}
+                                        href={url}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="border border-gray-6 size-8 rounded-full text-gray-12 flex items-center justify-center"
+                                      >
+                                        <Icon className="size-4" />
+                                      </Link>
+                                    );
+                                  },
+                                )}
                               </div>
                             </div>
                           </div>
@@ -905,7 +1141,11 @@ export default function EventPage() {
                     </>
                   ) : registrationPeriodEnded ? (
                     <>
-                      <Button className="w-full mt-8 bg-gray-4 text-gray-10 border-0 disabled:opacity-100 disabled:cursor-not-allowed" disabled variant="outline">
+                      <Button
+                        className="w-full mt-8 bg-gray-4 text-gray-10 border-0 disabled:opacity-100 disabled:cursor-not-allowed"
+                        disabled
+                        variant="outline"
+                      >
                         Inscrições encerradas!
                       </Button>
                       <p className="text-sm text-gray-11 text-center mt-2">
@@ -922,7 +1162,8 @@ export default function EventPage() {
                         Inscreva-se
                       </Button>
                       <p className="text-sm text-gray-11 text-center mt-2">
-                        As inscrições para este evento não estão disponíveis no momento.
+                        As inscrições para este evento não estão disponíveis no
+                        momento.
                       </p>
                     </>
                   ) : registrationSlotsSoldOut ? (
@@ -948,8 +1189,8 @@ export default function EventPage() {
                         Em breve!
                       </Button>
                       <p className="text-sm text-gray-11 text-center mt-2">
-                        Inscrições abrem em{" "}
-                        <br /> <RegistrationCountdown
+                        Inscrições abrem em <br />{" "}
+                        <RegistrationCountdown
                           targetDate={registrationOpensInstant}
                           fallbackText={registrationOpensDateText}
                           onExpire={handleRegistrationCountdownExpire}
@@ -958,7 +1199,10 @@ export default function EventPage() {
                       </p>
                     </>
                   ) : (
-                    <Button onClick={handleCheckoutClick} className="w-full mt-8">
+                    <Button
+                      onClick={handleCheckoutClick}
+                      className="w-full mt-8"
+                    >
                       Inscreva-se
                     </Button>
                   )}
@@ -1005,3 +1249,4 @@ export default function EventPage() {
     </>
   );
 }
+
