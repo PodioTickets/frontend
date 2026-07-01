@@ -26,19 +26,9 @@ export function EventCarousel({ items = 20 }: EventCarouselProps) {
     if (!el) return;
     const w = el.clientWidth || 1;
 
-    if (w < 768) {
-      // Mobile/tablet pequeno: card menor + peek do próximo (~1.5).
-      setPerView(Math.max(1.3, w / (240 + GAP)));
-    } else {
-      // Desktop: card com a MESMA largura da /search (grid responsivo dentro de
-      // max-w-1280: 2/3/4/5 colunas, gap-6, px-4 / lg:px-8). Mantém full-bleed
-      // (mais cards rolam), mas cada card = largura do card da busca.
-      const cols = w >= 1536 ? 5 : w >= 1280 ? 4 : w >= 1024 ? 3 : 2;
-      const pad = w >= 1024 ? 64 : 32;
-      const content = Math.min(w, 1280) - pad;
-      const cardW = Math.max(160, (content - (cols - 1) * 24) / cols);
-      setPerView(Math.max(1.1, (w + GAP) / (cardW + GAP)));
-    }
+    // Card com largura FIXA de 308px (EventCard); perView = quantos cabem + peek.
+    const cardW = 308;
+    setPerView(Math.max(1.1, (w + GAP) / (cardW + GAP)));
     const max = el.scrollWidth - el.clientWidth;
     setCanPrev(el.scrollLeft > 1);
     setCanNext(el.scrollLeft < max - 1);
@@ -80,8 +70,10 @@ export function EventCarousel({ items = 20 }: EventCarouselProps) {
     el.scrollTo({ left: pageCount > 1 ? (i / (pageCount - 1)) * max : 0, behavior: "smooth" });
   };
 
+  // Slide com a largura fixa do card (308px); `max-w-full` no card cuida do mobile.
   const slideStyle = {
-    flex: `0 0 calc((100% - ${(perView - 1) * GAP}px) / ${perView})`,
+    flex: "0 0 308px",
+    maxWidth: "100%",
     minWidth: 0,
   };
 
