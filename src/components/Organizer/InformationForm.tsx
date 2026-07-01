@@ -258,10 +258,14 @@ export function InformationForm({
       onErrorsChange((prev) => ({
         ...prev,
         registrationStartDate: startBeforeEvent ? REGISTRATION_START_NOT_BEFORE_EVENT_TOAST : "",
+<<<<<<< HEAD
         // Um erro por vez: quando o próprio início já viola "antes do evento",
         // o "encerramento antes do início" é consequência redundante do mesmo
         // início tardio — não exibimos as duas mensagens pro mesmo input.
         registrationPeriod: !startBeforeEvent && endBeforeStart ? REGISTRATION_END_BEFORE_START_TOAST : "",
+=======
+        registrationPeriod: endBeforeStart ? REGISTRATION_END_BEFORE_START_TOAST : "",
+>>>>>>> 3cb53d4 (fix: itens 01/07)
       }));
       return;
     }
@@ -451,6 +455,7 @@ export function InformationForm({
         <div className="flex flex-col md:flex-row md:flex-wrap gap-9 md:gap-[72px] items-stretch md:items-start">
           <div className="flex flex-col gap-3 md:gap-[12px] min-w-0">
             <label className="text-gray-12 text-base font-family-dm-sans">Data de início das inscrições</label>
+<<<<<<< HEAD
             {/* Wrapper md:w-max trava a largura da coluna no grupo de inputs; a
                 mensagem de erro (w-0 min-w-full) contribui 0 pra largura intrínseca
                 e só QUEBRA dentro dela — sem empurrar o campo de encerramento. */}
@@ -466,6 +471,18 @@ export function InformationForm({
                     className="w-full md:w-max"
                   />
                 </div>
+=======
+            <div className="flex gap-3 items-end w-full">
+              <div className="min-w-0 flex-1 md:flex-none">
+                <DatePicker value={values.registrationStartDate} onChange={(v) => handleDateChange("registrationStartDate", v || "")} placeholder={getCurrentDatePlaceholder()} className="w-full md:w-max" error={!!errors.registrationStartDate} disablePastDates={false} />
+              </div>
+              <div className="w-[112px] shrink-0 md:w-auto">
+                <TimePicker
+                  value={values.registrationStartDate?.trim() ? values.registrationStartTime?.trim() || "00:00" : values.registrationStartTime || ""}
+                  onChange={(v) => handleTimeChange("registrationStartTime", v)}
+                  className="w-full md:w-max"
+                />
+>>>>>>> 3cb53d4 (fix: itens 01/07)
               </div>
               {errors.registrationStartDate && <p className="text-red-10 text-sm w-0 min-w-full">{errors.registrationStartDate}</p>}
             </div>
@@ -473,6 +490,7 @@ export function InformationForm({
 
           <div className="flex flex-col gap-3 md:gap-[12px] min-w-0">
             <label className="text-gray-12 text-base font-family-dm-sans">Data de encerramento das inscrições</label>
+<<<<<<< HEAD
             {/* Mesmo padrão da coluna de início: erro quebra dentro da largura dos
                 inputs (w-0 min-w-full) sem esticar a coluna. */}
             <div className="flex flex-col gap-2 w-full md:w-max">
@@ -487,6 +505,18 @@ export function InformationForm({
                     className="w-full md:w-max"
                   />
                 </div>
+=======
+            <div className="flex gap-3 items-end w-full">
+              <div className="min-w-0 flex-1 md:flex-none">
+                <DatePicker value={values.registrationEndDate} onChange={(v) => handleDateChange("registrationEndDate", v || "")} placeholder={getCurrentDatePlaceholder()} className="w-full md:w-max" error={!!errors.registrationEndDate} disablePastDates={false} />
+              </div>
+              <div className="w-[112px] shrink-0 md:w-auto">
+                <TimePicker
+                  value={values.registrationEndDate?.trim() ? values.registrationEndTime?.trim() || "00:00" : values.registrationEndTime || ""}
+                  onChange={(v) => handleTimeChange("registrationEndTime", v)}
+                  className="w-full md:w-max"
+                />
+>>>>>>> 3cb53d4 (fix: itens 01/07)
               </div>
               {errors.registrationEndDate && <p className="text-red-10 text-sm w-0 min-w-full">{errors.registrationEndDate}</p>}
             </div>

@@ -117,7 +117,12 @@ export function EventCarousel({ items = 20 }: EventCarouselProps) {
           <div key={event.id} data-slide style={slideStyle}>
             <EventCard event={event} />
           </div>
+<<<<<<< HEAD
         ))}
+=======
+        ))} 
+        <span aria-hidden className="w-1 shrink-0" />
+>>>>>>> 3cb53d4 (fix: itens 01/07)
       </div>
 
       {scrollable && pageCount > 1 && (
