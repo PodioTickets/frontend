@@ -377,7 +377,7 @@ export function BannerSection({
   const renderCardListingPreview = () => (
     // Largura igual à do card na home (carrossel usa 240px) — a prévia estava em
     // 300px, maior do que aparece pro usuário.
-    <div className="flex flex-col gap-5 w-full max-w-[308px] mx-auto md:mx-0">
+    <div className="flex flex-col gap-5 w-full max-w-[240px] mx-auto md:mx-0">
       <p className="text-gray-12 text-[20px] font-bold font-manrope leading-[1.1]">Prévia</p>
       {/* Card de listagem REAL (o mesmo das listas/busca), em modo prévia: sem
           navegação e aceitando a imagem em upload (data:). Paridade 1:1. */}

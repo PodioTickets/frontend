@@ -10,8 +10,8 @@ export const metadata: Metadata = {
 };
 
 export default function TermsPage() {
-  const title =
-    termsOfUse.find((b) => b.type === "h1")?.text ?? "Termos de Uso";
   const body = termsOfUse.filter((b) => b.type !== "h1");
-  return <LegalDocument title={title} blocks={body} />;
+  return (
+    <LegalDocument title="Termos e serviços" blocks={body} updatedAt="01/01/2026" />
+  );
 }
