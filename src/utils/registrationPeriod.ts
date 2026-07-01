@@ -9,10 +9,27 @@ export const DATE_NOT_BEFORE_TODAY_TOAST =
 export const REGISTRATION_START_NOT_BEFORE_EVENT_TOAST =
   "A data de início das inscrições deve ser antes da data do evento.";
 
-/** Início do dia atual (horário local) para `minDate` em pickers que não permitem datas passadas. */
+/** A data do evento não pode ser anterior ao encerramento das inscrições. */
+export const EVENT_DATE_NOT_BEFORE_REGISTRATION_END_TOAST =
+  "A data do evento não pode ser anterior ao encerramento das inscrições.";
+
+/**
+ * Início do dia de HOJE no fuso de BRASÍLIA (UTC-3 fixo), para `minDate` de pickers
+ * que não permitem datas passadas.
+ *
+ * ⚠️ Usa o dia civil de Brasília, NÃO o fuso do dispositivo. Antes usávamos os
+ * componentes locais de `new Date()`, então um device com fuso ADIANTADO (ex.: UTC/
+ * Europa, ou relógio à frente) via o dia seguinte e bloqueava datas ainda válidas no
+ * Brasil — ex.: às 22h BRT do dia 30, quem estava adiantado não conseguia escolher o
+ * dia 30. Retorna um `Date` à meia-noite LOCAL cujos componentes de DIA são os de
+ * Brasília (o resto do módulo compara só por dia civil, então o fuso do `Date` em si
+ * é irrelevante).
+ */
 export function getTodayStartLocal(): Date {
-  const t = new Date();
-  return new Date(t.getFullYear(), t.getMonth(), t.getDate());
+  const now = new Date();
+  // BRT = UTC-3 fixo: desloca −3h e lê os componentes UTC → dia civil de Brasília.
+  const brt = new Date(now.getTime() - 3 * 60 * 60 * 1000);
+  return new Date(brt.getUTCFullYear(), brt.getUTCMonth(), brt.getUTCDate());
 }
 
 /** `YYYY-MM-DD` → início do dia no fuso local, ou null se inválido. */
@@ -69,6 +86,44 @@ export function isRegistrationStartNotBeforeEvent(
   const eventStartMs = new Date(`${ed}T00:00:00`).getTime();
   if (Number.isNaN(startMs) || Number.isNaN(eventStartMs)) return false;
   return startMs >= eventStartMs;
+}
+
+/**
+ * `true` quando o DIA do EVENTO é anterior ao DIA de ENCERRAMENTO das inscrições —
+ * viola "o evento não pode acontecer antes das inscrições fecharem". Comparação por
+ * DIA civil (o form não tem hora do evento); o MESMO dia é permitido (inscrições
+ * podem encerrar no dia do evento). Usado no onChange e no submit.
+ */
+export function isEventDateBeforeRegistrationEnd(
+  eventDateYmd: string | undefined,
+  registrationEndDateYmd: string | undefined,
+): boolean {
+  const eventDay = parseIsoDateToLocalDayStart(eventDateYmd?.trim() ?? "");
+  const endDay = parseIsoDateToLocalDayStart(registrationEndDateYmd?.trim() ?? "");
+  if (!eventDay || !endDay) return false;
+  return eventDay < endDay;
+}
+
+/**
+ * `minDate` do picker da DATA DO EVENTO: o MAIOR entre "hoje" (BRT) e o dia de
+ * ENCERRAMENTO das inscrições — impede escolher data anterior ao encerramento.
+ */
+export function getMinDateForEventPicker(
+  registrationEndDateYmd: string | undefined,
+): Date {
+  const today = getTodayStartLocal();
+  const endDay = parseIsoDateToLocalDayStart(registrationEndDateYmd?.trim() ?? "");
+  return endDay && endDay > today ? endDay : today;
+}
+
+/**
+ * `maxDate` do picker de ENCERRAMENTO das inscrições: o dia do EVENTO (encerramento
+ * não pode ser depois do evento). `undefined` quando não há data de evento.
+ */
+export function getMaxDateForRegistrationEndPicker(
+  eventDateYmd: string | undefined,
+): Date | undefined {
+  return parseIsoDateToLocalDayStart(eventDateYmd?.trim() ?? "") ?? undefined;
 }
 
 export type RegistrationPeriodFields = {

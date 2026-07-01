@@ -84,6 +84,12 @@ export class EventService {
       limit = 20,
     } = params || {};
 
+    // O filtro de preço da UI é em REAIS (com centavos, ex.: 100,01). A busca no
+    // backend é em CENTAVOS (inteiro, mesma unidade de TicketBatch.price) — converte
+    // aqui, na fronteira da API, pra não mandar decimal (rejeitado pelo @IsInt do DTO).
+    const toCents = (reais?: number) =>
+      reais != null ? Math.round(reais * 100) : undefined;
+
     const { data } = await this.apiClient.get("/api/v1/events/search", {
       params: {
         q,
@@ -94,8 +100,8 @@ export class EventService {
         endDate,
         includePast: includePast !== undefined ? String(includePast) : undefined,
         modalities: modalities && modalities.length > 0 ? modalities.join(",") : undefined,
-        minPrice,
-        maxPrice,
+        minPrice: toCents(minPrice),
+        maxPrice: toCents(maxPrice),
         page,
         limit,
       },
