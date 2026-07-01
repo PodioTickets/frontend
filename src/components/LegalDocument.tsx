@@ -122,15 +122,13 @@ export function LegalDocument({
     <main className="w-full bg-gray-2">
       {/* Banner */}
       <div className="relative w-full overflow-hidden bg-linear-to-r from-[#141a15] to-[#1d3a24]">
-        <div className="mx-auto w-full max-w-6xl px-4 sm:px-6 lg:px-8 py-10 lg:py-[52px] flex flex-col items-center text-center gap-3 lg:flex-row lg:items-center lg:justify-between lg:text-left lg:gap-2">
-          <div className="relative">
-            {/* Barra desktop — à esquerda do título, preenche a calha até 151px
-                (gradiente dark→green, respiro de 32px até o título). Só ≥1024. */}
-            <div className="hidden lg:block absolute right-full mr-8 top-1/2 -translate-y-1/2 h-5 w-[min(151px,calc((100vw-72rem)/2))] rounded-r-full bg-linear-to-r from-[#141a15] to-[#59e373]" />
-            <h1 className="font-manrope font-extrabold text-[28px] lg:text-4xl tracking-[1px] text-white">
-              {title}
-            </h1>
-          </div>
+        {/* Barra desktop — grudada na esquerda da tela, preenche a calha até
+            151px (gradiente dark→green, sem passar da borda do conteúdo). Só ≥1024. */}
+        <div className="hidden lg:block absolute left-0 top-1/2 -translate-y-1/2 h-5 w-[min(151px,calc((100vw-72rem)/2))] rounded-r-full bg-linear-to-r from-[#141a15] to-[#59e373]" />
+        <div className="relative z-10 mx-auto w-full max-w-6xl px-4 sm:px-6 py-10 lg:py-[52px] flex flex-col items-center text-center gap-3 lg:mx-0 lg:max-w-none lg:pl-[max(2rem,calc(min(151px,(100vw-72rem)/2)+1.5rem))] lg:pr-[max(2rem,calc(min(151px,(100vw-72rem)/2)+1.5rem))] lg:flex-row lg:items-center lg:justify-between lg:text-left lg:gap-2">
+          <h1 className="font-manrope font-extrabold text-[28px] lg:text-4xl tracking-[1px] text-white">
+            {title}
+          </h1>
           {updatedAt && (
             <p className="font-manrope font-semibold text-base lg:text-lg text-gray-11 whitespace-nowrap shrink-0">
               Última atualização: {updatedAt}
