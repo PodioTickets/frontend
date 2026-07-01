@@ -12,6 +12,7 @@ import {
 } from "react-day-picker";
 
 import { cn } from "@/utils/cn";
+import { brasiliaTodayCivilStart } from "@/utils/datetimeBR";
 import { buttonVariants } from "@/components/Button";
 import { Button } from "@/components/Button";
 import { Dropdown, type DropdownOption } from "@/components/Dropdown";
@@ -136,7 +137,7 @@ function CalendarCaptionWithDropdowns({ calendarMonth }: MonthCaptionProps) {
   // quer agendar pra frente. Quando for outro ano, ordem natural (Janeiro
   // ..Dezembro) — meses passados ou futuros nao tem ancora no "agora".
   // `id` continua o indice 0-11 do mes — selecao/realce independem da ordem.
-  const today = new Date();
+  const today = brasiliaTodayCivilStart();
   const isCurrentYear = current.getFullYear() === today.getFullYear();
   const startIdx = isCurrentYear ? today.getMonth() : 0;
   const monthOptions: DropdownOption[] = useMemo(() => {
@@ -151,7 +152,7 @@ function CalendarCaptionWithDropdowns({ calendarMonth }: MonthCaptionProps) {
   }, [startIdx]);
 
   const yearOptions: DropdownOption[] = useMemo(() => {
-    const currentYear = new Date().getFullYear();
+    const currentYear = brasiliaTodayCivilStart().getFullYear();
     const start = Math.max(fromYear, Math.min(toYear, currentYear));
     const list: DropdownOption[] = [];
     for (let y = start; y <= toYear; y++) {
@@ -229,13 +230,12 @@ function Calendar({
   toYear,
   ...props
 }: CalendarProps) {
-  const currentYear = new Date().getFullYear();
+  // "Hoje" SEMPRE em Brasília (não no fuso do device): piso de datas passadas
+  // idêntico pra qualquer usuário, mesmo acessando de outro país.
+  const todayStart = brasiliaTodayCivilStart();
+  const currentYear = todayStart.getFullYear();
   const resolvedFromYear = fromYear ?? currentYear;
   const resolvedToYear = toYear ?? currentYear + 10;
-  const todayStart = (() => {
-    const t = new Date();
-    return new Date(t.getFullYear(), t.getMonth(), t.getDate());
-  })();
 
   /** `before` é exclusivo no react-day-picker: o dia de `todayStart` continua selecionável. */
   const pastMatcher: Matcher = { before: todayStart };

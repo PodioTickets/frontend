@@ -61,6 +61,13 @@ export default function ReviewBannerPage() {
         street={formData.street}
         city={formData.city}
         state={formData.state}
+        socialLinks={{
+          instagram: formData.instagram,
+          facebook: formData.facebook,
+          youtube: formData.youtube,
+          tiktok: formData.tiktok,
+          website: formData.website,
+        }}
         organizer={organizer}
         previewEvent={event as Event}
         onBannerUploaded={handleBannerUploaded}

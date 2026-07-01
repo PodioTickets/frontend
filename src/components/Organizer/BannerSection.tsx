@@ -14,6 +14,7 @@ import {
   type ImageUploadWithCropRef,
 } from "@/components/ImageUploadWithCrop";
 import { EVENT_IMAGE_SPECS } from "@/lib/eventImageSpecs";
+import { cn } from "@/utils/cn";
 import toast from "react-hot-toast";
 
 // ─── helpers ────────────────────────────────────────────────────────────────
@@ -39,6 +40,46 @@ const uploadSvg = (
   </svg>
 );
 
+/**
+ * Placeholder de card na prévia da listagem — espelha a MOLDURA do `EventCard`
+ * (mesma borda/sombra/aspect-square + blocos de texto) só que em estado de
+ * carregamento. Serve pra contextualizar o card real (centralizado) como ele
+ * aparece cercado por outros na listagem/carrossel, sem inventar dados falsos.
+ */
+function EventCardSkeleton() {
+  return (
+    <div
+      aria-hidden
+      className="flex w-full flex-col overflow-hidden rounded-lg border border-[#cecece] bg-[#f9f9f9] shadow-[0_2px_6px_0_rgba(17,17,17,0.3)]"
+    >
+      <div className="aspect-square w-full shrink-0 animate-pulse bg-gray-4" />
+      {/* Título (1 linha) + local (row de ícone = 20px) → espelha a altura exata
+          da seção equivalente do EventCard. */}
+      <div className="flex flex-col gap-3 border-b border-[#d9d9d9] px-3 pb-3 pt-4">
+        <div className="h-4 w-3/4 animate-pulse rounded bg-gray-4" />
+        <div className="flex h-5 items-center">
+          <div className="h-3.5 w-1/2 animate-pulse rounded bg-gray-4" />
+        </div>
+      </div>
+      {/* Organizador + data (duas rows de ícone = 20px cada) + tag de status. */}
+      <div className="flex flex-col gap-4 pt-3">
+        <div className="flex flex-col gap-3 px-3">
+          <div className="flex h-5 items-center gap-1">
+            <div className="size-5 shrink-0 animate-pulse rounded-full bg-gray-4" />
+            <div className="h-3.5 w-2/3 animate-pulse rounded bg-gray-4" />
+          </div>
+          <div className="flex h-5 items-center">
+            <div className="h-3.5 w-1/2 animate-pulse rounded bg-gray-4" />
+          </div>
+        </div>
+        <div className="flex items-center">
+          <div className="h-11 w-32 animate-pulse rounded-tr-[16px] bg-gray-4" />
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── types ───────────────────────────────────────────────────────────────────
 
 export interface BannerSectionOrganizerData {
@@ -61,6 +102,18 @@ interface BannerSectionProps {
   street?: string;
   city?: string;
   state?: string;
+  /**
+   * Redes sociais VIVAS do form — sobrepostas no card da prévia pra os ícones
+   * refletirem o que o organizador acabou de editar (o `previewEvent` pode estar
+   * stale). Vazio ("") reflete remoção; ausente cai no valor do evento base.
+   */
+  socialLinks?: {
+    instagram?: string;
+    facebook?: string;
+    youtube?: string;
+    tiktok?: string;
+    website?: string;
+  };
   /** Organizer preview data */
   organizer: BannerSectionOrganizerData;
   /**
@@ -94,6 +147,7 @@ export function BannerSection({
   street,
   city,
   state,
+  socialLinks,
   organizer,
   previewEvent,
   onBannerUploaded,
@@ -149,6 +203,13 @@ export function BannerSection({
       // Imagem do card/banner: preview vivo > já salvo > evento base.
       logoUrl: cardPreview || cardImageUrl || (base.logoUrl as string) || "",
       bannerUrl: bannerPreview || bannerUrl || (base.bannerUrl as string) || "",
+      // Redes sociais VIVAS do form (fallback ao evento base). Fazem os ícones
+      // aparecerem na prévia do banner refletindo a edição atual.
+      instagram: socialLinks?.instagram ?? (base.instagram as string) ?? "",
+      facebook: socialLinks?.facebook ?? (base.facebook as string) ?? "",
+      youtube: socialLinks?.youtube ?? (base.youtube as string) ?? "",
+      tiktok: socialLinks?.tiktok ?? (base.tiktok as string) ?? "",
+      website: socialLinks?.website ?? (base.website as string) ?? "",
     } as unknown as Event;
   }, [
     previewEvent,
@@ -163,6 +224,11 @@ export function BannerSection({
     bannerUrl,
     organizer.name,
     organizer.logoSrc,
+    socialLinks?.instagram,
+    socialLinks?.facebook,
+    socialLinks?.youtube,
+    socialLinks?.tiktok,
+    socialLinks?.website,
   ]);
 
   const uploadImageFile = useCallback(async (file: File): Promise<string> => {
@@ -375,13 +441,38 @@ export function BannerSection({
     );
 
   const renderCardListingPreview = () => (
-    // Largura igual à do card na home (carrossel usa 240px) — a prévia estava em
-    // 300px, maior do que aparece pro usuário.
-    <div className="flex flex-col gap-5 w-full max-w-[240px] mx-auto md:mx-0">
+    <div className="flex w-full flex-col gap-5">
       <p className="text-gray-12 text-[20px] font-bold font-manrope leading-[1.1]">Prévia</p>
-      {/* Card de listagem REAL (o mesmo das listas/busca), em modo prévia: sem
-          navegação e aceitando a imagem em upload (data:). Paridade 1:1. */}
-      <EventCard event={cardEvent} preview />
+      {/* Fileira responsiva: o do MEIO é o card REAL (mesmo das listas/busca, em
+          modo prévia — sem navegação e aceitando a imagem em upload `data:`); os
+          outros são skeletons só pra contextualizar como aparece cercado. Contagem
+          por breakpoint: 1 no mobile (só o real), 3 no md, 5 no xl. Como `hidden`
+          remove o item do fluxo flex, os `flex-1` visíveis se redistribuem sozinhos. */}
+      <div className="flex items-start justify-center gap-4 md:justify-start">
+        {[0, 1, 2, 3, 4].map((i) => {
+          // 0/4 = pontas (só xl); 1/3 = intermediários (md+); 2 = real (sempre).
+          const visibility =
+            i === 2 ? "" : i === 1 || i === 3 ? "hidden md:block" : "hidden xl:block";
+          return (
+            <div
+              key={i}
+              className={cn(
+                "min-w-0 flex-1",
+                // No mobile só o card real aparece; limita a largura pra não esticar
+                // ocupando a linha inteira. A partir do md volta a dividir igual.
+                i === 2 && "max-w-[280px] md:max-w-none",
+                visibility,
+              )}
+            >
+              {i === 2 ? (
+                <EventCard event={cardEvent} preview />
+              ) : (
+                <EventCardSkeleton />
+              )}
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 

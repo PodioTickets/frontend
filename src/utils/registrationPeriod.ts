@@ -1,3 +1,5 @@
+import { brasiliaTodayCivilStart } from "@/utils/datetimeBR";
+
 /** Mesma mensagem usada ao bloquear alteração no formulário (estilo TicketForm). */
 export const REGISTRATION_END_BEFORE_START_TOAST =
   "A data de encerramento das inscrições não pode ser anterior à data de início.";
@@ -26,10 +28,9 @@ export const EVENT_DATE_NOT_BEFORE_REGISTRATION_END_TOAST =
  * é irrelevante).
  */
 export function getTodayStartLocal(): Date {
-  const now = new Date();
-  // BRT = UTC-3 fixo: desloca −3h e lê os componentes UTC → dia civil de Brasília.
-  const brt = new Date(now.getTime() - 3 * 60 * 60 * 1000);
-  return new Date(brt.getUTCFullYear(), brt.getUTCMonth(), brt.getUTCDate());
+  // Fonte única: dia civil de HOJE em Brasília (ver datetimeBR). Mantido aqui só
+  // como alias por compatibilidade com os callers deste módulo.
+  return brasiliaTodayCivilStart();
 }
 
 /** `YYYY-MM-DD` → início do dia no fuso local, ou null se inválido. */
@@ -152,23 +153,19 @@ export function wouldRegistrationEndBeforeStart(
 }
 
 /**
- * `YYYY-MM-DD` do início → `Date` local (início do dia) para `minDate` no DatePicker de encerramento.
- * Dias anteriores ao início ficam desabilitados no calendário; o mesmo dia do início continua selecionável.
+ * `minDate` do picker de ENCERRAMENTO das inscrições: o MAIOR entre "hoje" (BRT)
+ * e o DIA de INÍCIO das inscrições. Ancorar em Brasília (e não retornar
+ * `undefined`) é essencial: os pickers do evento desligam o `disablePastDates`
+ * do device — quem enforça o "não pode no passado" é SÓ este `minDate`. Sem o
+ * floor de hoje, com início vazio, dava pra escolher datas passadas. O mesmo dia
+ * do início continua selecionável (comparação por dia civil).
  */
 export function getMinDateForRegistrationEndPicker(
   registrationStartDateYmd: string | undefined,
-): Date | undefined {
-  const rs = registrationStartDateYmd?.trim();
-  if (!rs) return undefined;
-  const parts = rs.split("-");
-  if (parts.length !== 3) return undefined;
-  const y = Number(parts[0]);
-  const m = Number(parts[1]) - 1;
-  const d = Number(parts[2]);
-  if (!Number.isFinite(y) || !Number.isFinite(m) || !Number.isFinite(d))
-    return undefined;
-  const dt = new Date(y, m, d);
-  if (dt.getFullYear() !== y || dt.getMonth() !== m || dt.getDate() !== d)
-    return undefined;
-  return dt;
+): Date {
+  const today = getTodayStartLocal();
+  const startDay = parseIsoDateToLocalDayStart(
+    registrationStartDateYmd?.trim() ?? "",
+  );
+  return startDay && startDay > today ? startDay : today;
 }

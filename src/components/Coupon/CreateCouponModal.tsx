@@ -15,7 +15,7 @@ import { organizerService } from "@/services";
 import { ArrowButton } from "../ArrowButton";
 import { SelectTicketsModal } from "./SelectTicketsModal";
 import { cn } from "@/utils/cn";
-import { toCivilDayBRT } from "@/utils/datetimeBR";
+import { toCivilDayBRT, brasiliaTodayCivilStart } from "@/utils/datetimeBR";
 import { useCpfList } from "@/hooks/useCpfList";
 import { formatCpf as formatCPF } from "@/lib/cpfList";
 
@@ -81,11 +81,9 @@ export function CreateCouponModal() {
     handleRemoveCPF, handleClearList,
   } = useCpfList();
 
-  const minSelectableExpiryDate = useMemo(() => {
-    const d = new Date();
-    d.setHours(0, 0, 0, 0);
-    return d;
-  }, [isOpen]);
+  // Piso da validade = HOJE em Brasília (não no fuso do device), pra o mínimo ser
+  // o mesmo pra quem cria o cupom de qualquer país.
+  const minSelectableExpiryDate = useMemo(() => brasiliaTodayCivilStart(), [isOpen]);
 
   // Campos específicos por tipo de cupom
   const [minQuantity, setMinQuantity] = useState(""); // Para QUANTITY
