@@ -695,7 +695,7 @@ export function PaymentDetailsModal() {
                             {isCardPayment ? (
                               <div className="size-10 shrink-0 flex items-center justify-center">
                                 {paymentInfo.cardBrand ? (
-                                  <PaymentIcon type={paymentInfo.cardBrand as any} className="size-10" />
+                                  <PaymentIcon type={paymentInfo.cardBrand as any} format="flatRounded" className="size-10" />
                                 ) : (
                                   <CardIcon className="size-6 text-gray-12" />
                                 )}
@@ -1145,7 +1145,7 @@ export function PaymentDetailsModal() {
                               {isCardPayment ? (
                                 <div className="size-[36px] relative shrink-0">
                                   {paymentInfo.cardBrand ? (
-                                    <PaymentIcon type={paymentInfo.cardBrand as any} className="size-9" />
+                                    <PaymentIcon type={paymentInfo.cardBrand as any} format="flatRounded" className="size-9" />
                                   ) : (
                                     <div className="size-9 flex items-center justify-center border border-gray-6 rounded">
                                       <CardIcon className="size-6" />

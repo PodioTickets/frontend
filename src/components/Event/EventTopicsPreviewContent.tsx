@@ -9,6 +9,7 @@ import {
   EventPublicInfoCardMobile,
 } from "@/components/Event/EventPublicInfoCard";
 import { TopicsPreviewKitsSection } from "@/components/Event/TopicsPreviewKitsSection";
+import { PODIO_SUPPORT_WHATSAPP } from "@/components/Event/ContactSubjectModal";
 import type { Event } from "@/interfaces/event";
 
 /**
@@ -49,6 +50,22 @@ export function EventTopicsPreviewContent({
   topicSections: PreviewTopicSection[];
   kits: readonly { description?: unknown; imageUrl?: unknown; name?: unknown }[];
 }) {
+  // "Denunciar evento" → WhatsApp do suporte, IGUAL à tela pública do cliente
+  // (mesma mensagem pré-preenchida). Presente na prévia por paridade visual.
+  const reportWhatsappUrl = `https://wa.me/${PODIO_SUPPORT_WHATSAPP}?text=${encodeURIComponent(
+    `Olá! Gostaria de denunciar o evento "${event?.name ?? ""}".`,
+  )}`;
+  const reportEventLink = (
+    <a
+      href={reportWhatsappUrl}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="cursor-pointer text-sm font-semibold text-gray-11 underline transition-colors hover:text-gray-12"
+    >
+      Denunciar evento
+    </a>
+  );
+
   return (
     <div className="flex w-full flex-col gap-8 md:flex-row md:items-start">
       {/* Coluna esquerda: banner + tópicos (idêntico à tela do cliente) */}
@@ -70,6 +87,9 @@ export function EventTopicsPreviewContent({
         {eventTyped && (
           <div className="mb-10 w-full md:hidden">
             <EventPublicInfoCardMobile event={eventTyped} isPreview />
+            <div className="mt-8 flex flex-col items-center justify-center">
+              {reportEventLink}
+            </div>
           </div>
         )}
 
@@ -129,10 +149,13 @@ export function EventTopicsPreviewContent({
         )}
       </div>
 
-      {/* Coluna direita: card de informações (desktop). */}
+      {/* Coluna direita: card de informações + "Denunciar evento" (desktop). */}
       {eventTyped && (
         <div className="hidden shrink-0 md:block md:w-1/4">
           <EventPublicInfoCardDesktop event={eventTyped} isPreview />
+          <div className="mt-8 flex flex-col items-center justify-center">
+            {reportEventLink}
+          </div>
         </div>
       )}
     </div>

@@ -515,7 +515,7 @@ export function AwaitingReleaseDrawer({
                             {item.paymentMethod === "PIX" ? (
                               <PixIcon className="size-5 text-gray-12" />
                             ) : (
-                              <PaymentIcon type="Generic" className="size-8 text-gray-12" />
+                              <PaymentIcon type="Generic" format="flatRounded" className="size-8 text-gray-12" />
                             )}
                           </div>
                         </div>

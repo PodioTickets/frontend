@@ -370,6 +370,7 @@ export function RefundedDrawer({
                               ) : (
                                 <PaymentIcon
                                   type={displayItem.paymentMethod as any}
+                                  format="flatRounded"
                                   className="size-8 text-gray-12"
                                 />
                               )}

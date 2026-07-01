@@ -417,7 +417,7 @@ export function PaymentItemDetailsDrawer({
                     {payment.method === "PIX" ? (
                       <PixIcon className="size-9 text-gray-12" />
                     ) : payment.cardBrand ? (
-                      <PaymentIcon type={payment.cardBrand as any} className="size-9" />
+                      <PaymentIcon type={payment.cardBrand as any} format="flatRounded" className="size-9" />
                     ) : (
                       <CardIcon className="size-9 text-gray-12" />
                     )}

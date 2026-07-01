@@ -244,6 +244,7 @@ export function FinancialDetailsMobile({
                         ) : (
                           <PaymentIcon
                             type={item.paymentMethod as any}
+                            format="flatRounded"
                             className="h-4 w-auto"
                           />
                         )}
