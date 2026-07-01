@@ -116,9 +116,11 @@ export function EventCard({ event, preview = false }: EventCardProps) {
   const eventImg = (event as any).logoUrl;
 
   const cardInner = (
-      <div className="flex w-full flex-col overflow-hidden rounded-lg border border-[#cecece] bg-[#f9f9f9] shadow-[0_2px_6px_0_rgba(17,17,17,0.3)] transition-transform duration-200 hover:scale-[1.01]">
-        {/* Imagem sempre quadrada */}
-        <div className="relative aspect-square w-full shrink-0 bg-gray-4">
+      // Card fixo em 308px de largura (altura total ~420px: imagem 4:3 de 232px +
+      // blocos de texto). `max-w-full` evita overflow em telas < 308px (mobile).
+      <div className="flex w-[308px] max-w-full flex-col overflow-hidden rounded-lg border border-[#cecece] bg-[#f9f9f9] shadow-[0_2px_6px_0_rgba(17,17,17,0.3)] transition-transform duration-200 hover:scale-[1.01]">
+        {/* Imagem na proporção 308×232 (≈4:3, paisagem) */}
+        <div className="relative aspect-[308/232] w-full shrink-0 bg-gray-4">
           <ImageWithInitialFallback
             src={eventImg}
             alt={event.name}
