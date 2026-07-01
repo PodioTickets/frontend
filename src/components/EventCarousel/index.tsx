@@ -105,9 +105,8 @@ export function EventCarousel({ items = 20 }: EventCarouselProps) {
 
       <div
         ref={scrollerRef}
-        className={`flex items-start gap-4 overflow-x-auto overscroll-x-contain py-3 [-webkit-overflow-scrolling:touch] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden ${
-          scrollable ? "" : "justify-center"
-        }`}
+        className={`flex items-start gap-4 overflow-x-auto overscroll-x-contain py-3 [-webkit-overflow-scrolling:touch] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden ${scrollable ? "" : "justify-center"
+          }`}
       >
         {/* Sem spacers de borda: eles somavam largura + gaps extras e faziam o 5º
             card estourar (cortado à direita). Com `flex-basis` de perView cards +
@@ -117,12 +116,8 @@ export function EventCarousel({ items = 20 }: EventCarouselProps) {
           <div key={event.id} data-slide style={slideStyle}>
             <EventCard event={event} />
           </div>
-<<<<<<< HEAD
-        ))}
-=======
         ))} 
         <span aria-hidden className="w-1 shrink-0" />
->>>>>>> 3cb53d4 (fix: itens 01/07)
       </div>
 
       {scrollable && pageCount > 1 && (
