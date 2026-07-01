@@ -31,7 +31,7 @@ export function TopicsPreviewKitsSection({ kits }: { kits: readonly PreviewKit[]
   const firstKit = kits[0];
 
   return (
-    <div className="w-full border-b border-gray-8 py-10">
+    <div className="w-full border-b border-gray-6 py-10">
       <div className="flex flex-col items-start gap-6">
         <h2 className="font-manrope text-2xl font-bold leading-[1.1] text-gray-12">
           Kits
