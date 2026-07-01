@@ -275,7 +275,7 @@ export function RequestTransferModal() {
                               <p className="font-family-dm-sans font-semibold text-base text-gray-12 select-text cursor-text">
                                 {displayBankName}
                               </p>
-                              <div className="flex items-center gap-3 flex-wrap text-sm">
+                              <div className="flex flex-col text-sm">
                                 <span className="font-family-dm-sans font-normal text-gray-11">
                                   Titular: <span className="font-semibold text-gray-12 select-text cursor-text">{displayHolder}</span>
                                 </span>
@@ -402,7 +402,7 @@ export function RequestTransferModal() {
                             </div>
                             <div className="flex flex-col gap-0.5">
                               <p className="font-family-dm-sans font-semibold text-[16px] leading-[1.3] text-gray-12 select-text cursor-text">{displayBankName}</p>
-                              <div className="flex items-center gap-4 flex-wrap text-[16px] leading-[1.3]">
+                              <div className="flex flex-col text-[16px] leading-[1.3] mt-1.5">
                                 <span className="font-family-dm-sans font-normal text-gray-11">
                                   Titular: <span className="font-semibold text-gray-12 select-text cursor-text">{displayHolder}</span>
                                 </span>

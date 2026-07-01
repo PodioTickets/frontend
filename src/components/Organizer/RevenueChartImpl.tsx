@@ -297,6 +297,11 @@ export function RevenueChart({ data }: RevenueChartProps) {
           return gradient;
         },
         fill: true,
+        // Interpolação monotônica: mantém a linha suave/fluida SEM overshoot.
+        // Com `tension` puro, um ponto em 0 entre picos fazia a curva mergulhar
+        // abaixo de zero e ser cortada pelo `min: 0` do eixo — a "quebra" feia.
+        // `monotone` respeita os valores reais, então a linha nunca achata no fundo.
+        cubicInterpolationMode: "monotone" as const,
         tension: 0.4,
         borderWidth: 2,
         pointRadius: 0,

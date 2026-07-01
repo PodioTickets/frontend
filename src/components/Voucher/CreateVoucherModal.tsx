@@ -6,7 +6,7 @@ import { Button } from "@/components/Button";
 import { Input } from "@/components/Input";
 import { Checkbox } from "@/components/CheckBox";
 import { DatePicker } from "@/components/DatePicker";
-import { toCivilDayBRT } from "@/utils/datetimeBR";
+import { toCivilDayBRT, brasiliaTodayCivilStart } from "@/utils/datetimeBR";
 import { X } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import toast from "react-hot-toast";
@@ -70,11 +70,9 @@ export function CreateVoucherModal() {
   const isEditing = data?.voucherId !== undefined;
   const eventId = data?.eventId;
 
-  const minSelectableExpiryDate = useMemo(() => {
-    const d = new Date();
-    d.setHours(0, 0, 0, 0);
-    return d;
-  }, [isOpen]);
+  // Piso da validade = HOJE em Brasília (não no fuso do device), pra o mínimo ser
+  // o mesmo pra quem cria o voucher de qualquer país.
+  const minSelectableExpiryDate = useMemo(() => brasiliaTodayCivilStart(), [isOpen]);
 
   // Initialize form when modal opens
   useEffect(() => {

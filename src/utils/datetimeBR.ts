@@ -186,6 +186,23 @@ export function eventWindowInstant(value: DateInput): Date | null {
   return new Date(d.getTime() + 3 * 60 * 60 * 1000);
 }
 
+/**
+ * Início do dia civil de HOJE no fuso de BRASÍLIA (UTC-3 fixo), como `Date` à
+ * meia-noite LOCAL cujos componentes Y/M/D são os de Brasília.
+ *
+ * FONTE ÚNICA de "hoje" para TODOS os date-pickers do app. Ancorar em Brasília
+ * (e não no fuso do dispositivo) garante que o piso de datas passadas e a
+ * seleção sejam IDÊNTICOS pra qualquer usuário — alguém acessando de outro país
+ * não pode ver um "hoje" diferente. O fuso do `Date` em si é irrelevante: os
+ * pickers comparam por dia civil (componentes locais).
+ */
+export function brasiliaTodayCivilStart(): Date {
+  const now = new Date();
+  // BRT = UTC-3 fixo: desloca −3h e lê os componentes UTC → dia civil de Brasília.
+  const brt = new Date(now.getTime() - 3 * 60 * 60 * 1000);
+  return new Date(brt.getUTCFullYear(), brt.getUTCMonth(), brt.getUTCDate());
+}
+
 const MONTHS_BR_SHORT = [
   "Jan", "Fev", "Mar", "Abr", "Mai", "Jun",
   "Jul", "Ago", "Set", "Out", "Nov", "Dez",

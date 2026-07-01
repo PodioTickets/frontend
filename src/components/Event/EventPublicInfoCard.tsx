@@ -153,6 +153,13 @@ type EventPublicInfoCardProps = {
   event: Event;
   /** Prévia do organizador: mesmos estados visuais, sem checkout real. */
   isPreview?: boolean;
+  /**
+   * Prévia "apagada": o card inteiro ganha aspecto cinza/desabilitado (como um
+   * placeholder de pré-visualização) e vira não-selecionável — EXCETO o título do
+   * evento, que fica normal e selecionável. Usado na prévia de tópicos, onde o
+   * card lateral é só contexto e o foco é o conteúdo à esquerda.
+   */
+  mutedPreview?: boolean;
   onRegisterClick?: (e: React.MouseEvent) => void;
 };
 
@@ -390,7 +397,8 @@ function ShareAndReport({
   onShare: () => void;
 }) {
   if (mobile) {
-    // Página pública (mobile) mostra apenas "Compartilhar".
+    // Prévia (mobile): "Compartilhar" + "Denunciar evento", ambos desabilitados
+    // (o card inteiro fica apagado via mutedPreview).
     return (
       <div className="mt-8 flex flex-col items-center justify-center gap-2 px-4">
         <Button
@@ -403,6 +411,9 @@ function ShareAndReport({
           <ShareIcon className="size-5" />
           Compartilhar
         </Button>
+        <span className="cursor-not-allowed text-sm font-semibold text-gray-11 underline">
+          Denunciar evento
+        </span>
       </div>
     );
   }
@@ -427,26 +438,31 @@ function ShareAndReport({
 }
 
 export function EventPublicInfoCardMobile(props: EventPublicInfoCardProps) {
-  const { event, isPreview, onRegisterClick } = props;
+  const { event, isPreview, mutedPreview, onRegisterClick } = props;
   const [shareOpen, setShareOpen] = useState(false);
   const eventUrl = event.slug ? `/events/${event.slug}` : "";
+  const mutedBody = mutedPreview ? "pointer-events-none select-none opacity-50" : "";
 
   return (
     <>
       <div className="px-4">
-        <div className="relative z-10 mt-10 rounded-2xl px-4 pb-4 pt-6 shadow-[0_5px_10px_rgba(0,0,0,0.3)]">
-          <h1 className="mb-4 text-xl font-bold text-gray-12">{event.name}</h1>
-          <EventMetaRows event={event} mobile />
-          <OrganizerBlock event={event} mobile />
-          <RegistrationCtaBlock
-            event={event}
-            isPreview={isPreview}
-            onRegisterClick={onRegisterClick}
-            desktopSpacing={false}
-          />
+        <div className={cn("relative z-10 mt-10 rounded-2xl px-4 pb-4 pt-6 shadow-[0_5px_10px_rgba(0,0,0,0.3)]", mutedPreview && "select-none")}>
+          <h1 className={cn("mb-4 text-xl font-bold text-gray-12", mutedPreview && "select-text")}>{event.name}</h1>
+          <div className={mutedBody}>
+            <EventMetaRows event={event} mobile />
+            <OrganizerBlock event={event} mobile />
+            <RegistrationCtaBlock
+              event={event}
+              isPreview={isPreview}
+              onRegisterClick={onRegisterClick}
+              desktopSpacing={false}
+            />
+          </div>
         </div>
       </div>
-      <ShareAndReport mobile onShare={() => setShareOpen(true)} />
+      <div className={mutedBody}>
+        <ShareAndReport mobile onShare={() => setShareOpen(true)} />
+      </div>
       <ShareModal
         isOpen={shareOpen}
         onClose={() => setShareOpen(false)}
@@ -458,24 +474,30 @@ export function EventPublicInfoCardMobile(props: EventPublicInfoCardProps) {
 }
 
 export function EventPublicInfoCardDesktop(props: EventPublicInfoCardProps) {
-  const { event, isPreview, onRegisterClick } = props;
+  const { event, isPreview, mutedPreview, onRegisterClick } = props;
   const [shareOpen, setShareOpen] = useState(false);
   const eventUrl = event.slug ? `/events/${event.slug}` : "";
+  // Aspecto "apagado" aplicado a tudo MENOS o título (que fica nítido e selecionável).
+  const mutedBody = mutedPreview ? "pointer-events-none select-none opacity-50" : "";
 
   return (
     <div className="w-full">
-      <div className="h-full overflow-hidden rounded-xl bg-gray-2 p-5 shadow-[0_5px_10px_rgba(0,0,0,0.3)]">
-        <h1 className="mb-4 text-lg font-bold">{event.name}</h1>
-        <EventMetaRows event={event} />
-        <OrganizerBlock event={event} />
-        <RegistrationCtaBlock
-          event={event}
-          isPreview={isPreview}
-          onRegisterClick={onRegisterClick}
-          desktopSpacing
-        />
+      <div className={cn("h-full overflow-hidden rounded-xl bg-gray-2 p-5 shadow-[0_5px_10px_rgba(0,0,0,0.3)]", mutedPreview && "select-none")}>
+        <h1 className={cn("mb-4 text-lg font-bold", mutedPreview && "select-text text-gray-12")}>{event.name}</h1>
+        <div className={mutedBody}>
+          <EventMetaRows event={event} />
+          <OrganizerBlock event={event} />
+          <RegistrationCtaBlock
+            event={event}
+            isPreview={isPreview}
+            onRegisterClick={onRegisterClick}
+            desktopSpacing
+          />
+        </div>
       </div>
-      <ShareAndReport onShare={() => setShareOpen(true)} />
+      <div className={mutedBody}>
+        <ShareAndReport onShare={() => setShareOpen(true)} />
+      </div>
       <ShareModal
         isOpen={shareOpen}
         onClose={() => setShareOpen(false)}

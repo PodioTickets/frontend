@@ -10,6 +10,7 @@ import {
 } from "@/components/ui/popover";
 import { CalendarIcon } from "@/components/Icons/CalendarIcon";
 import { ArrowButton } from "@/components/ArrowButton";
+import { brasiliaTodayCivilStart } from "@/utils/datetimeBR";
 import { Button } from "../Button";
 
 const formatDate = (date: Date | null | string | undefined): string => {
@@ -154,7 +155,7 @@ export function DatePicker({
   // Sem isso, mudar ano+mes e clicar Confirmar sem clicar num dia mantinha a
   // data antiga no input.
   const [viewMonth, setViewMonth] = React.useState<Date>(
-    () => validDate ?? (openAtCurrentMonth ? new Date() : new Date()),
+    () => validDate ?? brasiliaTodayCivilStart(),
   );
 
   React.useEffect(() => {
@@ -202,7 +203,8 @@ export function DatePicker({
 
   const isSelectionAllowed = (d: Date): boolean => {
     const day = startOfLocalDay(d);
-    const today = startOfLocalDay(new Date());
+    // "Hoje" em Brasília (não o do device) — mesma regra pra qualquer fuso.
+    const today = brasiliaTodayCivilStart();
     if (disablePastDates && day < today) return false;
     if (minDate) {
       const min = startOfLocalDay(new Date(minDate));
@@ -223,7 +225,7 @@ export function DatePicker({
       // Ao abrir, mostra o mes/ano da data ja escrita no input (validDate); se
       // vazio, mes atual. PopoverContent remonta mas o state persiste — sem este
       // reset a view ficaria no ultimo mes navegado em vez da data selecionada.
-      setViewMonth(validDate ?? new Date());
+      setViewMonth(validDate ?? brasiliaTodayCivilStart());
       if (value) {
         const parsed = parseValueToDate(value);
         if (parsed && !isSelectionAllowed(parsed)) {
@@ -277,8 +279,8 @@ export function DatePicker({
           <Calendar
             mode="single"
             captionLayout="dropdown"
-            fromYear={fromYear ?? new Date().getFullYear()}
-            toYear={toYear ?? new Date().getFullYear() + 4}
+            fromYear={fromYear ?? brasiliaTodayCivilStart().getFullYear()}
+            toYear={toYear ?? brasiliaTodayCivilStart().getFullYear() + 4}
             // Mes controlado: dropdown de ano/mes move a data selecionada
             // (handleViewMonthChange), nao so navega.
             month={viewMonth}

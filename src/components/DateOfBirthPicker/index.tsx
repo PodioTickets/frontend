@@ -9,6 +9,7 @@ import {
 } from "@/components/ui/popover";
 import { CalendarIcon } from "@/components/Icons/CalendarIcon";
 import { cn } from "@/utils/cn";
+import { brasiliaTodayCivilStart } from "@/utils/datetimeBR";
 import { ArrowButton } from "@/components/ArrowButton";
 
 interface DateOfBirthPickerProps {
@@ -280,8 +281,9 @@ export function DateOfBirthPicker({
       return null;
     }
 
-    // Check if date is in the future
-    const today = new Date();
+    // Check if date is in the future — "hoje" em Brasília (não no fuso do
+    // device) pra que a validação seja idêntica acessando de qualquer país.
+    const today = brasiliaTodayCivilStart();
     today.setHours(23, 59, 59, 999);
     if (date > today) return null;
 
@@ -414,7 +416,7 @@ export function DateOfBirthPicker({
           fromYear={1900}
           toYear={new Date().getFullYear()}
           disabled={(date: Date) => {
-            const today = new Date();
+            const today = brasiliaTodayCivilStart();
             today.setHours(23, 59, 59, 999);
             return date > today;
           }}

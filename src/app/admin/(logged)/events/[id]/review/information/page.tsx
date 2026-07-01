@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useCallback } from "react";
+import { useState, useCallback } from "react";
 import { useParams } from "next/navigation";
 import { organizerService } from "@/services";
 import { useWizardAuth } from "@/hooks/useWizardAuth";
@@ -11,31 +11,30 @@ import { UnsavedChangesModal } from "@/components/UnsavedChangesModal";
 import { WizardStepLayout } from "@/components/Organizer/WizardStepLayout";
 import { InformationForm } from "@/components/Organizer/InformationForm";
 import { buildCreateEventBodyFromForm } from "@/lib/createEventDraftSync";
+import { eventInformationHasChanges } from "@/lib/eventEditValidation";
 import { organizerEventEditClientPage } from "@/lib/organizerAudit";
 import { wouldRegistrationEndBeforeStart, REGISTRATION_END_BEFORE_START_TOAST, isRegistrationStartNotBeforeEvent, REGISTRATION_START_NOT_BEFORE_EVENT_TOAST } from "@/utils/registrationPeriod";
 import toast from "react-hot-toast";
-
-const INFORMATION_FIELDS = [
-  "name", "eventDate",
-  "registrationStartDate", "registrationStartTime",
-  "registrationEndDate", "registrationEndTime",
-  "cep", "street", "neighborhood", "city", "state", "googleMapsLink",
-  "contactEmail", "instagram", "facebook", "youtube", "tiktok", "website",
-  "regulationUrl",
-] as const;
 
 export default function ReviewInformationPage() {
   const params = useParams();
   const eventId = params.id as string;
   const { authChecked } = useWizardAuth();
-  const { formData, updateFormData, errors, setErrors, loading: eventLoading } = useEditEvent();
+  // Baseline do dirty-check vem do CONTEXTO (reidrata junto com o evento). Antes
+  // esta página capturava o baseline num useRef local na 1ª render — quando o
+  // `formData` ainda estava vazio/stale → `hasChanges=true` fantasma (modal de
+  // "alterações não salvas" ao só ENTRAR na tela, sem editar nada).
+  const {
+    formData,
+    initialFormData,
+    updateFormData,
+    commitInitialFormData,
+    errors,
+    setErrors,
+    loading: eventLoading,
+  } = useEditEvent();
   const [saving, setSaving] = useState(false);
   const [hasPendingPdf, setHasPendingPdf] = useState(false);
-
-  const initialDataRef = useRef<typeof formData | null>(null);
-  if (initialDataRef.current === null) {
-    initialDataRef.current = { ...formData };
-  }
 
   const validateForm = (): boolean => {
     const newErrors: Record<string, string> = {};
@@ -83,10 +82,8 @@ export default function ReviewInformationPage() {
         { clientPage: organizerEventEditClientPage(eventId, "general") },
       );
       if (resolvedPdfUrl) updateFormData({ regulationUrl: resolvedPdfUrl });
-      initialDataRef.current = {
-        ...formData,
-        ...(resolvedPdfUrl ? { regulationUrl: resolvedPdfUrl } : {}),
-      };
+      // Re-fixa o baseline no contexto (zera o dirty após salvar).
+      commitInitialFormData(resolvedPdfUrl ? { regulationUrl: resolvedPdfUrl } : undefined);
       toast.success("Informações salvas com sucesso!");
     } catch (error: any) {
       let errorMessage = "Erro ao salvar evento";
@@ -115,22 +112,17 @@ export default function ReviewInformationPage() {
     !!formData.state?.trim() &&
     !!formData.contactEmail?.trim();
 
-  const initial = initialDataRef.current ?? formData;
-  const hasChanges =
-    hasPendingPdf ||
-    INFORMATION_FIELDS.some(
-      (k) => (formData[k as keyof typeof formData] ?? "") !== (initial[k as keyof typeof initial] ?? ""),
-    );
+  const hasChanges = eventInformationHasChanges(formData, initialFormData, hasPendingPdf);
 
   const canSave = isFormValid && hasChanges;
 
-  /* Descarta as edições locais re-aplicando o baseline (`initialDataRef`) sobre
-   * o `formData` do contexto (compartilhado entre os steps via layout) + limpa
-   * erros. Sem o reset, a edição não salva vazaria para os demais passos. */
+  /* Descarta as edições locais re-aplicando o baseline (`initialFormData` do
+   * contexto, compartilhado entre os steps via layout) + limpa erros. Sem o
+   * reset, a edição não salva vazaria para os demais passos. */
   const discardLocalChanges = useCallback(() => {
-    if (initialDataRef.current) updateFormData(initialDataRef.current);
+    updateFormData(initialFormData);
     setErrors({});
-  }, [updateFormData, setErrors]);
+  }, [initialFormData, updateFormData, setErrors]);
 
   /* Guarda de saída: histórico/popstate + beforeunload + interceptação de
    * cliques em links (stepper) enquanto houver alterações não salvas.
