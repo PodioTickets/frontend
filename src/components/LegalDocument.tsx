@@ -100,6 +100,34 @@ function renderBody(blocks: LegalBlock[]): ReactNode[] {
 }
 
 /**
+ * Corpo de um documento legal: intro + seções (h2) separadas por divisores.
+ * Reutilizado pela página (/terms, /privacy) e pelo TermsOfServiceModal do
+ * cadastro — o pai controla largura, padding e gap do container.
+ */
+export function LegalDocumentBody({ blocks }: { blocks: LegalBlock[] }) {
+  const sections = toSections(blocks);
+  const intro = sections[0];
+  const rest = sections.slice(1).filter((s) => s.heading);
+
+  return (
+    <>
+      {intro.body.length > 0 && (
+        <div key="intro" className="flex flex-col gap-2">{renderBody(intro.body)}</div>
+      )}
+      {rest.flatMap((s, i) => [
+        <div key={`div-${i}`} className="h-px w-full bg-gray-6" />,
+        <div key={`sec-${i}`} className="flex flex-col gap-6">
+          <h2 className="font-manrope font-extrabold text-xl md:text-2xl leading-[1.1] text-gray-12">
+            {s.heading!.text}
+          </h2>
+          <div className="flex flex-col gap-2">{renderBody(s.body)}</div>
+        </div>,
+      ])}
+    </>
+  );
+}
+
+/**
  * Renderiza um documento legal (Política de Privacidade, Termos de Uso, etc.)
  * no layout do Figma: banner verde com título + "Última atualização" e conteúdo
  * em seções separadas por divisores. O bloco "h1" do data é ignorado (vira o
@@ -114,10 +142,6 @@ export function LegalDocument({
   blocks: LegalBlock[];
   updatedAt?: string;
 }) {
-  const sections = toSections(blocks);
-  const intro = sections[0];
-  const rest = sections.slice(1).filter((s) => s.heading);
-
   return (
     <main className="w-full bg-gray-2">
       {/* Banner */}
@@ -125,7 +149,10 @@ export function LegalDocument({
         {/* Barra desktop — grudada na esquerda da tela, preenche a calha até
             151px (gradiente dark→green, sem passar da borda do conteúdo). Só ≥1024. */}
         <div className="hidden lg:block absolute left-0 top-1/2 -translate-y-1/2 h-5 w-[min(151px,calc((100vw-72rem)/2))] rounded-r-full bg-linear-to-r from-[#141a15] to-[#59e373]" />
-        <div className="relative z-10 mx-auto w-full max-w-6xl px-4 sm:px-6 py-10 lg:py-[52px] flex flex-col items-center text-center gap-3 lg:mx-0 lg:max-w-none lg:pl-[max(2rem,calc(min(151px,(100vw-72rem)/2)+1.5rem))] lg:pr-[max(2rem,calc(min(151px,(100vw-72rem)/2)+1.5rem))] lg:flex-row lg:items-center lg:justify-between lg:text-left lg:gap-2">
+        {/* Padding mobile assimétrico de propósito (35/64): compensa o meio-leading
+            do h1 (~11px de "ar" acima dos glifos) e a barra de 20px no rodapé, pra
+            distância VISUAL título↔topo == atualização↔barra (~46px cada). */}
+        <div className="relative z-10 mx-auto w-full max-w-6xl px-4 sm:px-6 pt-[35px] pb-[64px] lg:pt-[52px] lg:pb-[52px] flex flex-col items-center text-center gap-3 lg:mx-0 lg:max-w-none lg:pl-[max(2rem,calc(min(151px,(100vw-72rem)/2)+1.5rem))] lg:pr-[max(2rem,calc(min(151px,(100vw-72rem)/2)+1.5rem))] lg:flex-row lg:items-center lg:justify-between lg:text-left lg:gap-2">
           <h1 className="font-manrope font-extrabold text-[28px] lg:text-4xl tracking-[1px] text-white">
             {title}
           </h1>
@@ -141,18 +168,7 @@ export function LegalDocument({
 
       {/* Conteúdo */}
       <article className="mx-auto w-full max-w-6xl px-4 sm:px-6 lg:px-8 py-10 md:py-[52px] flex flex-col gap-8 md:gap-[52px] font-family-dm-sans">
-        {intro.body.length > 0 && (
-          <div key="intro" className="flex flex-col gap-2">{renderBody(intro.body)}</div>
-        )}
-        {rest.flatMap((s, i) => [
-          <div key={`div-${i}`} className="h-px w-full bg-gray-6" />,
-          <div key={`sec-${i}`} className="flex flex-col gap-6">
-            <h2 className="font-manrope font-extrabold text-xl md:text-2xl leading-[1.1] text-gray-12">
-              {s.heading!.text}
-            </h2>
-            <div className="flex flex-col gap-2">{renderBody(s.body)}</div>
-          </div>,
-        ])}
+        <LegalDocumentBody blocks={blocks} />
       </article>
     </main>
   );

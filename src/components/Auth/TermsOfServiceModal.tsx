@@ -5,24 +5,11 @@ import { motion, AnimatePresence } from "framer-motion";
 import { X } from "lucide-react";
 import { Button } from "@/components/Button";
 import { ArrowButton } from "@/components/ArrowButton";
-import dynamic from "next/dynamic";
+import { LegalDocumentBody } from "@/components/LegalDocument";
+import { termsOfUse } from "@/data/termsOfUse";
 
-/**
- * `PdfViewer` carrega o react-pdf/pdf.js (lib pesada) só quando o modal de termos
- * é montado — antes era import estático e entrava no bundle de quem só importa
- * este modal. `ssr: false` porque o pdf.js depende de APIs de browser.
- */
-const PdfViewer = dynamic(
-  () => import("@/components/PdfViewer").then((m) => m.PdfViewer),
-  {
-    ssr: false,
-    loading: () => (
-      <div className="flex items-center justify-center py-10 text-sm text-gray-11 font-family-dm-sans">
-        Carregando documento...
-      </div>
-    ),
-  },
-);
+/* Mesmo conteúdo da página /terms; o "h1" vira o título do header do modal. */
+const termsBlocks = termsOfUse.filter((b) => b.type !== "h1");
 
 /**
  * Modal de Termos de Uso da PódioTicket.
@@ -31,8 +18,9 @@ const PdfViewer = dynamic(
  * paralelo — usuário lê e clica "Aceitar termos" pra confirmar e voltar
  * pro fluxo de cadastro com o checkbox marcado.
  *
- * Conteúdo: o PDF oficial dos termos (`/public/termos-comprador.pdf`)
- * renderizado em <canvas> via `PdfViewer` (pdf.js) — bom no desktop e no mobile.
+ * Conteúdo: os mesmos blocos da página /terms (`@/data/termsOfUse`),
+ * renderizados via `LegalDocumentBody` — substitui o PDF antigo
+ * (`/termos-comprador.pdf` + pdf.js).
  */
 
 interface TermsOfServiceModalProps {
@@ -95,8 +83,10 @@ export function TermsOfServiceModal({
               </button>
             </div>
 
-            <div className="flex-1 overflow-y-auto bg-gray-2 px-3 py-4">
-              <PdfViewer file="/termos-comprador.pdf" />
+            <div className="flex-1 overflow-y-auto bg-gray-2 px-4 py-5">
+              <div className="flex flex-col gap-6 font-family-dm-sans">
+                <LegalDocumentBody blocks={termsBlocks} />
+              </div>
             </div>
 
             <div className="bg-gray-1 border-t border-gray-6 px-4 py-4 shrink-0 w-full">
@@ -148,8 +138,10 @@ export function TermsOfServiceModal({
                 </button>
               </div>
 
-              <div className="flex-1 overflow-y-auto bg-gray-2 p-4 [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-thumb]:bg-gray-8 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-track]:bg-gray-4 [&::-webkit-scrollbar-track]:rounded-full">
-                <PdfViewer file="/termos-comprador.pdf" />
+              <div className="flex-1 overflow-y-auto bg-gray-2 p-6 [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-thumb]:bg-gray-8 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-track]:bg-gray-4 [&::-webkit-scrollbar-track]:rounded-full">
+                <div className="flex flex-col gap-6 font-family-dm-sans">
+                  <LegalDocumentBody blocks={termsBlocks} />
+                </div>
               </div>
 
               <div className="bg-gray-1 border-t border-gray-6 flex items-center justify-end px-6 py-4 shrink-0 w-full">
