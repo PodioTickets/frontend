@@ -149,7 +149,10 @@ export function LegalDocument({
         {/* Barra desktop — grudada na esquerda da tela, preenche a calha até
             151px (gradiente dark→green, sem passar da borda do conteúdo). Só ≥1024. */}
         <div className="hidden lg:block absolute left-0 top-1/2 -translate-y-1/2 h-5 w-[min(151px,calc((100vw-72rem)/2))] rounded-r-full bg-linear-to-r from-[#141a15] to-[#59e373]" />
-        <div className="relative z-10 mx-auto w-full max-w-6xl px-4 sm:px-6 pt-10 pb-[60px] lg:pt-[52px] lg:pb-[52px] flex flex-col items-center text-center gap-3 lg:mx-0 lg:max-w-none lg:pl-[max(2rem,calc(min(151px,(100vw-72rem)/2)+1.5rem))] lg:pr-[max(2rem,calc(min(151px,(100vw-72rem)/2)+1.5rem))] lg:flex-row lg:items-center lg:justify-between lg:text-left lg:gap-2">
+        {/* Padding mobile assimétrico de propósito (35/64): compensa o meio-leading
+            do h1 (~11px de "ar" acima dos glifos) e a barra de 20px no rodapé, pra
+            distância VISUAL título↔topo == atualização↔barra (~46px cada). */}
+        <div className="relative z-10 mx-auto w-full max-w-6xl px-4 sm:px-6 pt-[35px] pb-[64px] lg:pt-[52px] lg:pb-[52px] flex flex-col items-center text-center gap-3 lg:mx-0 lg:max-w-none lg:pl-[max(2rem,calc(min(151px,(100vw-72rem)/2)+1.5rem))] lg:pr-[max(2rem,calc(min(151px,(100vw-72rem)/2)+1.5rem))] lg:flex-row lg:items-center lg:justify-between lg:text-left lg:gap-2">
           <h1 className="font-manrope font-extrabold text-[28px] lg:text-4xl tracking-[1px] text-white">
             {title}
           </h1>
