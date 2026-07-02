@@ -386,13 +386,13 @@ export function BannerSection({
       <div className="flex flex-col gap-5 rounded-lg border border-gray-6 bg-gray-1 p-4 md:rounded-none md:border-0 md:bg-transparent md:p-0">
         <h2 className="text-gray-12 text-xl font-bold font-manrope leading-[1.1]">Prévia</h2>
         <div className="flex gap-8 items-start w-full flex-col xl:flex-row xl:justify-center">
-          <div className="flex flex-col gap-6 md:gap-[52px] flex-1 min-w-0 max-w-[625px] w-full">
+          <div className="flex flex-col gap-6 md:gap-[52px] flex-1 min-w-0 max-w-full w-full">
             {bannerPreview ? (
-              <div className="relative w-full aspect-342/134 md:aspect-880/400 max-w-[625px] rounded-lg md:rounded-2xl overflow-hidden shadow-[0px_8px_16px_0px_rgba(17,17,17,0.5)]">
+              <div className="relative w-full aspect-342/134 md:aspect-880/400 max-w-full rounded-lg md:rounded-2xl overflow-hidden shadow-[0px_8px_16px_0px_rgba(17,17,17,0.5)]">
                 <Image src={bannerPreview} alt="Banner preview" fill className="object-cover" sizes="(max-width:768px) 100vw, 625px" unoptimized={bannerPreview.startsWith("data:")} />
               </div>
             ) : (
-              <div className="w-full aspect-342/134 md:aspect-880/400 max-w-[625px] bg-gray-4 rounded-lg md:rounded-2xl" />
+              <div className="w-full aspect-342/134 md:aspect-880/400 max-w-full bg-gray-4 rounded-lg md:rounded-2xl" />
             )}
             <div className="hidden md:flex flex-col gap-4">
               <div className="bg-gray-8 h-4 w-full rounded" />
@@ -404,8 +404,9 @@ export function BannerSection({
 
           <div className="w-auto md:w-72 flex flex-col gap-4 shrink-0 xl:sticky xl:top-4 mx-auto xl:mx-0">
             {/* Card lateral REAL da página pública do evento (events/[slug]) — em
-                modo prévia (sem checkout). Garante paridade 1:1. */}
-            <EventPublicInfoCardDesktop event={cardEvent} isPreview />
+                modo prévia (sem checkout) e APAGADO (cinza), igual à prévia de
+                tópicos: só o título fica nítido/selecionável. */}
+            <EventPublicInfoCardDesktop event={cardEvent} isPreview mutedPreview />
           </div>
         </div>
       </div>
