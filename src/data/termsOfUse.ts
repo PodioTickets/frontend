@@ -1,4 +1,5 @@
-// Conteúdo dos Termos de Uso do Comprador (gerado de public/termos-comprador.pdf).
+// Conteúdo dos Termos de Uso do Comprador (gerado do antigo public/termos-comprador.pdf,
+// removido do repo — recuperável no histórico do git).
 import type { LegalBlock } from "@/components/LegalDocument";
 
 export const termsOfUse: LegalBlock[] = [
