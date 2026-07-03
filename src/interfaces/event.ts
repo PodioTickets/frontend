@@ -40,12 +40,6 @@ export interface Event {
   instagram?: string;
   registrationStartDate: string;
   registrationEndDate: string;
-  /**
-   * Vagas do evento: teto máximo de participantes (inscrições). `null`/ausente =
-   * ilimitado. É o limite absoluto sobre a soma dos lotes; o "esgotado" derivado
-   * dele vem em `hasRegistrationSlotsAvailable` (não recalcular no front).
-   */
-  maxParticipants?: number | null;
   hasRegistrationSlotsAvailable?: boolean;
   /** Inscrições suspensas (alternativa ou complemento a status SUSPENDED). */
   isSuspended?: boolean;

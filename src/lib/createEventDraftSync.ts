@@ -104,13 +104,6 @@ export function buildCreateEventBodyFromForm(
     eventData.regulationUrl = reg;
   }
 
-  // Vagas do evento: string no form. "" (ou 0) → `null` (ilimitado / limpa o teto,
-  // semântica de PATCH). Número válido → inteiro. NÃO enviar 0 (backend exige @Min(1)).
-  const maxP = (formData.maxParticipants ?? "").toString().trim();
-  const maxPNum = maxP ? Number(maxP) : null;
-  eventData.maxParticipants =
-    maxPNum && Number.isFinite(maxPNum) && maxPNum > 0 ? Math.floor(maxPNum) : null;
-
   eventData.contactEmail = formData.contactEmail?.trim() || null;
   eventData.instagram = formData.instagram?.trim() || null;
   eventData.facebook = formData.facebook?.trim() || null;

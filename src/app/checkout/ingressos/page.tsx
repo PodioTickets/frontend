@@ -168,10 +168,6 @@ function CheckoutIngressosContent() {
       if (err instanceof OrderApiError) {
         if (err.code === "BATCH_SOLD_OUT") {
           toast.error("Lote esgotado. Escolha outro ingresso.");
-        } else if (err.code === "EVENT_SOLD_OUT") {
-          // Teto de vagas do evento atingido (pode acontecer por corrida mesmo com
-          // o botão liberado). Mensagem do backend já é clara e específica.
-          toast.error(err.message || "Evento esgotado. Não há vagas suficientes.");
         } else if (err.code === "TOO_MANY_PENDING_ORDERS") {
           toast.error(
             "Você já tem reservas em andamento. Finalize uma antes de começar outra.",
@@ -233,7 +229,7 @@ function CheckoutIngressosContent() {
 
   return (
     <div className="w-full gap-4">
-      <CheckoutHeader activeStep={1} onBack={handleBack} />
+      <CheckoutHeader activeStep={1} />
       <div className="w-full max-w-[1280px] mx-auto flex flex-col min-h-screen items-start justify-start gap-4 py-4 md:py-11 px-4 bg-gray-2 md:bg-transparent">
         <ModalitiesStep event={event} onNext={handleNext} onBack={handleBack} isSubmitting={reserving || isNavigating} />
       </div>

@@ -110,15 +110,14 @@ export function EventCarousel({ items = 20 }: EventCarouselProps) {
           scrollable ? "" : "justify-center"
         }`}
       >
-        {/* Sem spacers de borda: eles somavam largura + gaps extras e faziam o 5º
-            card estourar (cortado à direita). Com `flex-basis` de perView cards +
-            (perView-1) gaps = 100%, os 5 cabem INTEIROS; o overflow dos demais
-            mantém a seta de scroll visível. */}
+        {/* respiro leve no inicio/fim sem cortar (scroller sem padding -> peek natural na borda) */}
+        <span aria-hidden className="w-1 shrink-0" />
         {events?.map((event) => (
           <div key={event.id} data-slide style={slideStyle}>
             <EventCard event={event} />
           </div>
-        ))}
+        ))} 
+        <span aria-hidden className="w-1 shrink-0" />
       </div>
 
       {scrollable && pageCount > 1 && (
