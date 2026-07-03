@@ -47,6 +47,11 @@ export default function ReviewInformationPage() {
     }
     if (!formData.registrationEndDate?.trim()) newErrors.registrationEndDate = "Data de encerramento das inscrições é obrigatória";
     if (wouldRegistrationEndBeforeStart(formData)) newErrors.registrationPeriod = REGISTRATION_END_BEFORE_START_TOAST;
+    if (!formData.maxParticipants?.toString().trim()) {
+      newErrors.maxParticipants = "Vagas do evento é obrigatório";
+    } else if (Number(formData.maxParticipants) < 1) {
+      newErrors.maxParticipants = "As vagas do evento devem ser ao menos 1.";
+    }
     const cepDigits = (formData.cep ?? "").replace(/\D/g, "");
     if (!cepDigits) {
       newErrors.cep = "CEP é obrigatório";
@@ -106,6 +111,8 @@ export default function ReviewInformationPage() {
     !!formData.eventDate &&
     !!formData.registrationStartDate?.trim() &&
     !!formData.registrationEndDate?.trim() &&
+    !!formData.maxParticipants?.toString().trim() &&
+    Number(formData.maxParticipants) >= 1 &&
     cepDigits.length === 8 &&
     !!formData.street?.trim() &&
     !!formData.city?.trim() &&
