@@ -26,15 +26,14 @@ export function EventCarousel({ items = 20 }: EventCarouselProps) {
     if (!el) return;
     const w = el.clientWidth || 1;
 
-    // Largura-alvo do card = tamanho do Figma (~300px).
     if (w < 768) {
-      // Mobile: um card no tamanho do Figma + peek do próximo.
-      setPerView(Math.max(1.15, w / (300 + GAP)));
+      // Mobile/tablet pequeno: card menor + peek do próximo (~1.5).
+      setPerView(Math.max(1.3, w / (240 + GAP)));
     } else {
-      // Desktop: 4 por vez (3 em 768–1023, pra não espremer). Área limitada a
-      // ~1216px centralizada (ver root) → cards ~292px (≈ card do Figma) com
-      // respiro nas laterais. A seta avança uma página inteira.
-      setPerView(w >= 1024 ? 4 : 3);
+      // Desktop: exibe 5 por vez (4 em telas 768–1023, pra não espremer). A área
+      // é limitada a ~1216px centralizada (ver root), então os 5 cards ficam no
+      // tamanho normal (~230px) com respiro nas laterais. A seta avança 5.
+      setPerView(w >= 1024 ? 5 : 4);
     }
     const max = el.scrollWidth - el.clientWidth;
     setCanPrev(el.scrollLeft > 1);

@@ -5,7 +5,7 @@ import Link from "next/link";
 import { ImageWithInitialFallback } from "@/components/ImageWithInitialFallback";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/hooks/useAuth";
-import { Activity, FileText, Send, TrendingUp, Users, UserRound, File } from "lucide-react";
+import { Activity, FileText, Send, TrendingUp, Users, File } from "lucide-react";
 import { getAvatarUrl } from "@/utils/avatar";
 import { motion, AnimatePresence } from "framer-motion";
 import { TicketIcon } from "@/components/Icons/TicketIcon";
@@ -20,7 +20,6 @@ const NAV_ITEMS = [
   { label: "Eventos", href: "/admin/events", icon: TicketIcon },
   { label: "Organizadores", href: "/admin/organizers", icon: Users },
   { label: "Repasse", href: "/admin/repasse", icon: TrendingUp },
-  { label: "Usuários", href: "/admin/users", icon: UserRound },
   { label: "Aud. Retenção", href: "/admin/auditoria-retencao", icon: AuditRetencaoIcon },
   { label: "Aud. Evento", href: "/admin/auditoria-evento", icon: File },
   { label: "Anúncios", href: "/admin/anuncios", icon: Send },
