@@ -23,6 +23,8 @@ export interface EditEventFormData {
   registrationStartTime: string;
   registrationEndDate: string;
   registrationEndTime: string;
+  /** Vagas do evento (teto de participantes). String no form; "" = ilimitado. */
+  maxParticipants: string;
   cep: string;
   street: string;
   neighborhood: string;
@@ -67,6 +69,7 @@ const defaultFormData: EditEventFormData = {
   registrationStartTime: "",
   registrationEndDate: "",
   registrationEndTime: "",
+  maxParticipants: "",
   cep: "",
   street: "",
   neighborhood: "",
@@ -138,6 +141,11 @@ function buildFormDataFromEvent(eventId: string, eventData: any): EditEventFormD
     registrationStartTime: formatTimeForInput(eventData.registrationStartDate),
     registrationEndDate: formatDateForInput(eventData.registrationEndDate),
     registrationEndTime: formatTimeForInput(eventData.registrationEndDate),
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    maxParticipants:
+      (eventData as any).maxParticipants != null
+        ? String((eventData as any).maxParticipants)
+        : "",
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     cep: formatCEP(eventData.zipCode || (eventData as any).cep),
     street: eventData.location || "",

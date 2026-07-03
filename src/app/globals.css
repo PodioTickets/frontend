@@ -188,6 +188,23 @@ input[type="number"] {
   appearance: textfield;
 }
 
+/*
+ * iOS Safari dá ZOOM ao focar qualquer campo com font-size < 16px. Garantimos
+ * ≥16px em TODOS os controles de texto no mobile (< md, 768px) — trava sistêmica
+ * pra não depender de cada input lembrar de subir a fonte (ex.: um `text-sm`
+ * esquecido). Fora de `@layer` de propósito: precisa vencer os utilitários do
+ * Tailwind. Os `:not(...)` excluem controles que não dão zoom E elevam a
+ * especificidade acima de `.text-sm`. No desktop o zoom não existe, então a
+ * regra só vale abaixo de 768px (mantém os tamanhos originais no desktop).
+ */
+@media (max-width: 767px) {
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+  textarea,
+  select {
+    font-size: 16px;
+  }
+}
+
 @keyframes spin-dots {
   0% {
     transform: rotate(0deg) translateX(16px) rotate(0deg);
