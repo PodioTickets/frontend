@@ -14,23 +14,21 @@ import { toUtcDate } from "@/utils/datetimeBR";
 export const dynamic = "force-dynamic";
 
 function getNextIncompleteStep(event: any, ticketCount: number): string {
-  const cardImage = event.cardImageUrl ?? event.logoUrl ?? event.logo_url ?? "";
+  // Imagem do evento = BANNER apenas (a antiga "imagem do card" foi descontinuada).
   const hasBanner =
     typeof event.bannerUrl === "string" && event.bannerUrl.trim().length > 0;
-  const hasCard =
-    typeof cardImage === "string" && cardImage.trim().length > 0;
   const topics: any[] = event.topics ?? [];
   const hasConfiguredTopics =
     topics.some((t: any) => !t.isDefault) ||
     topics.some((t: any) => typeof t.content === "string" && t.content.trim().length > 0);
 
   // Tópicos configurados → info + banner + ingressos já foram feitos
-  if (hasBanner && hasCard && hasConfiguredTopics) {
+  if (hasBanner && hasConfiguredTopics) {
     return "/organizer/events/new/questionnaire";
   }
 
   // Banner existe → info já foi feita; verifica ingressos
-  if (hasBanner && hasCard) {
+  if (hasBanner) {
     if (ticketCount === 0) return "/organizer/events/new/tickets";
     return "/organizer/events/new/topics";
   }
@@ -97,8 +95,6 @@ export default function CreateEventRedirectPage() {
         organizerService.getFinancialSettings(resumeId).catch(() => null),
       ])
         .then(([event, ticketsRes, financial]: [any, any, any]) => {
-          const cardImage =
-            event.cardImageUrl ?? event.logoUrl ?? event.logo_url ?? "";
           updateFormData({
             createdEventId: resumeId,
             name: event.name ?? "",
@@ -114,7 +110,6 @@ export default function CreateEventRedirectPage() {
             state: event.state ?? "",
             googleMapsLink: event.googleMapsLink ?? "",
             bannerUrl: event.bannerUrl ?? "",
-            cardImageUrl: typeof cardImage === "string" ? cardImage.trim() : "",
             regulationUrl: event.regulationUrl ?? "",
             // Contato + redes sociais (salvos no create, mas o resume não os
             // restaurava → resetavam ao reabrir o rascunho sem localStorage).

@@ -46,7 +46,6 @@ interface AdminEvent {
   name: string;
   slug?: string;
   status: EventStatus;
-  logoUrl?: string | null;
   bannerUrl?: string | null;
   city?: string;
   state?: string;
@@ -500,7 +499,7 @@ export default function AdminEventsPage() {
             </div>
           ) : (
             events.map((ev) => {
-              const img = ev.logoUrl ?? ev.bannerUrl;
+              const img = ev.bannerUrl;
               return (
                 <div key={ev.id} className="rounded-xl border border-gray-6 bg-gray-1 p-4 shadow-[0px_2px_6px_0px_rgba(17,17,17,0.08)] flex flex-col gap-3">
                   <div className="flex items-center gap-3">
@@ -573,7 +572,7 @@ export default function AdminEventsPage() {
                   </tr>
                 ) : (
                   events.map((event) => {
-                    const eventImg = event.logoUrl ?? event.bannerUrl;
+                    const eventImg = event.bannerUrl;
                     const orgImg = event.organization.logoUrl;
                     const isCreationDraft = event.status === "DRAFT";
 

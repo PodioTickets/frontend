@@ -9,7 +9,7 @@ type SearchResult = {
   id: string;
   title: string;
   href: string;
-  logoUrl?: string;
+  imageUrl?: string;
   location?: string;
   date?: string;
 };
@@ -154,9 +154,9 @@ export function SearchBar({
                   }}
                 >
                   <div className="w-9 h-9 shrink-0 rounded-lg border border-gray-6 overflow-hidden bg-gray-3 relative">
-                    {result.logoUrl ? (
+                    {result.imageUrl ? (
                       <Image
-                        src={result.logoUrl}
+                        src={result.imageUrl}
                         alt={result.title}
                         fill
                         sizes="36px"

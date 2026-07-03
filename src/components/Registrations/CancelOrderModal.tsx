@@ -57,7 +57,8 @@ export function CancelOrderModal({
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.2 }}
-            className="fixed inset-0 bg-black/50 z-[60]"
+            className="fixed inset-0 bg-black/50 z-[70]"
+            style={{ pointerEvents: "auto" }}
             onClick={loading ? undefined : onClose}
           />
           <motion.div
@@ -65,7 +66,8 @@ export function CancelOrderModal({
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 20 }}
             transition={{ duration: 0.2, ease: "easeOut" }}
-            className="fixed inset-0 z-[60] flex items-center justify-center p-4"
+            className="fixed inset-0 z-[70] flex items-center justify-center p-4"
+            style={{ pointerEvents: "auto" }}
             onClick={(e) => e.stopPropagation()}
           >
             <div className="bg-gray-1 rounded-[12px] w-full max-w-[474px] shadow-2xl flex flex-col gap-11 pt-6 pb-5 px-5">

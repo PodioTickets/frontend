@@ -17,7 +17,6 @@ interface AuditEvent {
   name: string;
   slug?: string;
   status: string;
-  logoUrl?: string | null;
   bannerUrl?: string | null;
   city?: string | null;
   state?: string | null;
@@ -74,7 +73,6 @@ function normalizeEvent(raw: Record<string, unknown>): AuditEvent | null {
     name: typeof raw.name === "string" ? raw.name : "—",
     slug: typeof raw.slug === "string" ? raw.slug : undefined,
     status: typeof raw.status === "string" ? raw.status : "REVISION",
-    logoUrl: typeof raw.logoUrl === "string" ? raw.logoUrl : typeof raw.logo_url === "string" ? raw.logo_url : null,
     bannerUrl: typeof raw.bannerUrl === "string" ? raw.bannerUrl : null,
     city: typeof raw.city === "string" ? raw.city : null,
     state: typeof raw.state === "string" ? raw.state : null,
@@ -273,7 +271,7 @@ export default function AuditoriaEventoPage() {
                   <div className="flex items-center gap-3">
                     <div className="relative size-10 shrink-0 overflow-hidden rounded-lg bg-gray-4">
                       <ImageWithInitialFallback
-                        src={event.logoUrl ?? event.bannerUrl ?? null}
+                        src={event.bannerUrl ?? null}
                         alt={event.name}
                         name={event.name}
                         fill
@@ -359,7 +357,7 @@ export default function AuditoriaEventoPage() {
                   <div className="flex items-center gap-3 px-4 py-4">
                     <div className="relative size-9 shrink-0 overflow-hidden rounded-lg bg-gray-4">
                       <ImageWithInitialFallback
-                        src={event.logoUrl ?? event.bannerUrl ?? null}
+                        src={event.bannerUrl ?? null}
                         alt={event.name}
                         name={event.name}
                         fill

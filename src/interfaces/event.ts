@@ -15,10 +15,9 @@ export interface Event {
   name: string;
   description: string;
   location: string;
+  // Imagem do evento = BANNER apenas. A antiga "imagem do card" (logoUrl/
+  // cardImageUrl) foi descontinuada — todo o app exibe o banner.
   bannerUrl: string;
-  /** Imagem/ícone do card do evento (logo). Pode vir como logoUrl ou cardImageUrl. */
-  logoUrl?: string | null;
-  cardImageUrl?: string | null;
   city: string;
   state: string;
   country: string;

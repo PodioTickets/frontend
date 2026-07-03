@@ -40,7 +40,6 @@ type PublicEvent = {
   description?: string;
   bannerUrl?: string;
   city?: string;
-  logoUrl?: string;
   state?: string;
   registrationStartDate?: string;
 };
@@ -91,7 +90,8 @@ export async function generateMetadata({
   // "Inscrições abertas a partir de dd/mm/aaaa" (data em UTC, padrão do projeto).
   const description = `Inscrições abertas a partir de ${formatDateBR(event.registrationStartDate)}`;
 
-  const imageUrl = toAbsoluteImageUrl(event.logoUrl);
+  // OG/SEO usa o BANNER do evento (logoUrl descontinuado).
+  const imageUrl = toAbsoluteImageUrl(event.bannerUrl);
 
   return {
     title,

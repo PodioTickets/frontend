@@ -29,8 +29,7 @@ import { organizerMemberSettingsClientPage } from "@/lib/organizerAudit";
 const EVENTS_PER_PAGE = 5;
 
 function eventListImageUrl(ev: Event): string | null {
-  const ext = ev as Event & { cardImageUrl?: string | null };
-  const u = (ext.cardImageUrl || ev.bannerUrl || "").trim();
+  const u = (ev.bannerUrl || "").trim();
   return u || null;
 }
 

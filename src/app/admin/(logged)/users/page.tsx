@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Search, ChevronLeft, ChevronRight, X } from "lucide-react";
+import { Search } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { cn } from "@/utils/cn";
 import { adminService } from "@/services";
@@ -9,11 +9,11 @@ import { queryKeys } from "@/services/cache/QueryClient";
 import type { AdminUser } from "@/services/admin/AdminService";
 import { UserAvatar } from "@/components/UserAvatar";
 import { SearchableSelect } from "@/components/SearchableSelect";
+import { Pagination } from "@/components/Pagination";
+import { AdminUserDetailsDrawer } from "@/components/Admin/AdminUserDetailsDrawer";
 import { formatTimeBRT } from "@/utils/datetimeBR";
 import {
-  documentLabel,
   formatDocumentDisplay,
-  formatPersonPhone,
   isPersonBr,
 } from "@/utils/documentDisplay";
 
@@ -83,173 +83,6 @@ function StatusBadge({ active }: { active: boolean }) {
 
 // ─── Pagination (com elipse, p/ muitas páginas) ─────────────────────────────────
 
-/** Lista de páginas com elipses: [1, …, 4,5,6, …, 20]. */
-function pageItems(current: number, total: number): (number | "ellipsis")[] {
-  if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1);
-  const items: (number | "ellipsis")[] = [1];
-  const start = Math.max(2, current - 1);
-  const end = Math.min(total - 1, current + 1);
-  if (start > 2) items.push("ellipsis");
-  for (let p = start; p <= end; p++) items.push(p);
-  if (end < total - 1) items.push("ellipsis");
-  items.push(total);
-  return items;
-}
-
-function PaginationBar({
-  totalPages,
-  page,
-  onPageChange,
-  variant,
-}: {
-  totalPages: number;
-  page: number;
-  onPageChange: (p: number) => void;
-  variant: "desktop" | "mobile";
-}) {
-  if (totalPages <= 1) return null;
-  const safePage = Math.min(page, totalPages);
-  const isMobile = variant === "mobile";
-
-  const navBtn = isMobile
-    ? "size-8 shrink-0 rounded-lg border border-gray-6 bg-gray-4/80 hover:bg-gray-4 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center transition-colors"
-    : "size-8 rounded-full border border-gray-6 bg-gray-1 hover:bg-gray-2 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center transition-colors";
-
-  const pageBtn = (active: boolean) =>
-    cn(
-      "size-8 shrink-0 border text-sm font-medium font-family-dm-sans transition-colors",
-      isMobile ? "rounded-lg" : "rounded-full",
-      active
-        ? "bg-primary-11 text-gray-1 border-primary-11"
-        : isMobile
-          ? "bg-gray-4 text-gray-12 border-transparent hover:bg-gray-5"
-          : "bg-gray-1 border-gray-6 text-gray-12 hover:bg-gray-2",
-    );
-
-  return (
-    <div
-      className={cn(
-        "flex items-center gap-2",
-        isMobile
-          ? "justify-center w-full py-4 flex-wrap"
-          : "justify-end px-4 py-5 border-t border-gray-6",
-      )}
-    >
-      <button
-        type="button"
-        onClick={() => onPageChange(Math.max(1, safePage - 1))}
-        disabled={safePage <= 1}
-        className={navBtn}
-        aria-label="Página anterior"
-      >
-        <ChevronLeft className={cn("size-4", isMobile ? "text-gray-12" : "text-gray-11")} />
-      </button>
-      {pageItems(safePage, totalPages).map((it, i) =>
-        it === "ellipsis" ? (
-          <span
-            key={`e${i}`}
-            className="size-8 shrink-0 flex items-center justify-center text-sm text-gray-11 font-family-dm-sans"
-          >
-            …
-          </span>
-        ) : (
-          <button key={it} type="button" onClick={() => onPageChange(it)} className={pageBtn(safePage === it)}>
-            {it}
-          </button>
-        ),
-      )}
-      <button
-        type="button"
-        onClick={() => onPageChange(Math.min(totalPages, safePage + 1))}
-        disabled={safePage >= totalPages}
-        className={navBtn}
-        aria-label="Próxima página"
-      >
-        <ChevronRight className={cn("size-4", isMobile ? "text-gray-12" : "text-gray-11")} />
-      </button>
-    </div>
-  );
-}
-
-// ─── Details drawer (read-only) ─────────────────────────────────────────────────
-
-function DetailRow({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="flex flex-col gap-1 border-b border-gray-4 py-3 last:border-0">
-      <span className="text-xs text-gray-11 font-family-dm-sans">{label}</span>
-      <span className="text-sm text-gray-12 font-family-dm-sans break-words">{value || "—"}</span>
-    </div>
-  );
-}
-
-function UserDetailsDrawer({ user, onClose }: { user: AdminUser | null; onClose: () => void }) {
-  // Fecha com ESC + trava o scroll do body enquanto aberto.
-  useEffect(() => {
-    if (!user) return;
-    const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
-    document.addEventListener("keydown", onKey);
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    return () => {
-      document.removeEventListener("keydown", onKey);
-      document.body.style.overflow = prev;
-    };
-  }, [user, onClose]);
-
-  if (!user) return null;
-  const isBr = isPersonBr({
-    country: user.country,
-    documentType: user.documentType ?? undefined,
-    document: user.documentNumber ?? undefined,
-  });
-  const { date, time } = formatDate(user.createdAt);
-
-  return (
-    <div className="fixed inset-0 z-[60] flex justify-end">
-      <div
-        className="absolute inset-0 bg-black/40"
-        onClick={onClose}
-        aria-hidden="true"
-      />
-      <div className="relative h-full w-full max-w-md bg-gray-1 shadow-xl overflow-y-auto animate-in slide-in-from-right">
-        <div className="flex items-center justify-between border-b border-gray-6 px-6 py-4">
-          <h2 className="text-lg font-bold text-gray-12 font-manrope">Detalhes do usuário</h2>
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label="Fechar"
-            className="flex size-9 items-center justify-center rounded-lg border border-gray-6 text-gray-12 hover:bg-gray-3 transition-colors"
-          >
-            <X className="size-5" />
-          </button>
-        </div>
-
-        <div className="px-6 py-5">
-          <div className="flex items-center gap-3">
-            <UserAvatar avatarUrl={user.avatarUrl} name={fullName(user)} initials={initialsOf(user)} shape="lg" />
-            <div className="min-w-0">
-              <p className="text-base font-semibold text-gray-12 font-family-dm-sans truncate">{fullName(user)}</p>
-              <p className="text-sm text-gray-11 font-family-dm-sans truncate">{user.email || "—"}</p>
-            </div>
-          </div>
-
-          <div className="mt-4 flex flex-col">
-            <DetailRow label={documentLabel(isBr)} value={docDisplay(user)} />
-            <DetailRow label="Telefone" value={formatPersonPhone(user.phone, user.country)} />
-            <DetailRow label="País" value={user.country ?? "—"} />
-            <DetailRow label="Ingressos" value={String(user.ticketsCount ?? 0)} />
-            <DetailRow label="Cadastro" value={`${date}${time ? ` · ${time}` : ""}`} />
-            <div className="flex flex-col gap-1 py-3">
-              <span className="text-xs text-gray-11 font-family-dm-sans">Status</span>
-              <div><StatusBadge active={user.isActive !== false} /></div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 const STATUS_OPTIONS = [
@@ -316,7 +149,11 @@ export default function AdminUsersPage() {
 
   return (
     <div className="min-h-screen bg-gray-2 pb-10">
-      <UserDetailsDrawer user={selected} onClose={() => setSelected(null)} />
+      <AdminUserDetailsDrawer
+        userId={selected?.id ?? null}
+        fallback={selected}
+        onClose={() => setSelected(null)}
+      />
 
       <div className="max-w-[1222px] mx-auto w-full">
         {/* Header */}
@@ -411,12 +248,12 @@ export default function AdminUsersPage() {
             })
           )}
 
-          {!loading && (
-            <PaginationBar
+          {!loading && pagination.totalPages > 1 && (
+            <Pagination
+              currentPage={pagination.page}
               totalPages={pagination.totalPages}
-              page={pagination.page}
               onPageChange={setPage}
-              variant="mobile"
+              className="py-4"
             />
           )}
         </div>
@@ -509,12 +346,12 @@ export default function AdminUsersPage() {
             </table>
           </div>
 
-          {!loading && (
-            <PaginationBar
+          {!loading && pagination.totalPages > 1 && (
+            <Pagination
+              currentPage={pagination.page}
               totalPages={pagination.totalPages}
-              page={pagination.page}
               onPageChange={setPage}
-              variant="desktop"
+              className="border-t border-gray-6 px-4 py-4"
             />
           )}
         </div>

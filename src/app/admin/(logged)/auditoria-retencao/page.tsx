@@ -28,7 +28,7 @@ interface RetentionEvent {
   name: string;
   slug: string;
   status: RetentionStatus;
-  logoUrl?: string | null;
+  bannerUrl?: string | null;
   eventDate: string;
   retentionRate: number;
   organization: {
@@ -432,8 +432,8 @@ export default function AdminAuditoriaRetencaoPage() {
                 >
                   <div className="flex items-center gap-3">
                     <div className="size-10 rounded-lg border border-gray-6 overflow-hidden shrink-0 bg-gray-4 relative">
-                      {row.logoUrl ? (
-                        <Image src={row.logoUrl} alt={row.name} fill className="object-cover" />
+                      {row.bannerUrl ? (
+                        <Image src={row.bannerUrl} alt={row.name} fill className="object-cover" />
                       ) : (
                         <div className="size-full flex items-center justify-center text-xs font-bold text-gray-11">
                           {row.name.slice(0, 2).toUpperCase()}
@@ -535,8 +535,8 @@ export default function AdminAuditoriaRetencaoPage() {
                         <td className="py-3.5 px-4">
                           <div className="flex items-center gap-3">
                             <div className="size-9 rounded-lg border border-gray-6 overflow-hidden shrink-0 relative bg-gray-4">
-                              {row.logoUrl ? (
-                                <Image src={row.logoUrl} alt={row.name} fill className="object-cover" />
+                              {row.bannerUrl ? (
+                                <Image src={row.bannerUrl} alt={row.name} fill className="object-cover" />
                               ) : (
                                 <div className="size-full flex items-center justify-center text-xs font-bold text-gray-11">
                                   {row.name.slice(0, 2).toUpperCase()}
