@@ -113,7 +113,10 @@ export function EventCarousel({ items = 20 }: EventCarouselProps) {
             (perView-1) gaps = 100%, os 5 cabem INTEIROS; o overflow dos demais
             mantém a seta de scroll visível. */}
         {events?.map((event) => (
-          <div key={event.id} data-slide style={slideStyle}>
+          // min-w-0: sem isso o slide (flex item) tem `min-width:auto` e pode
+          // CRESCER além de 308px quando o conteúdo tem min-content maior → a
+          // imagem (aspect-ratio) fica mais alta → card "maior". Trava em 308px.
+          <div key={event.id} data-slide className="min-w-0" style={slideStyle}>
             <EventCard event={event} />
           </div>
         ))}

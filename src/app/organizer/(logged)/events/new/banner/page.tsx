@@ -64,17 +64,6 @@ export default function BannerPage() {
     }
   };
 
-  const handleCardUploaded = async (url: string) => {
-    updateFormData({ cardImageUrl: url });
-    const draftId = formData.createdEventId;
-    if (draftId) {
-      await organizerService.updateEvent(draftId, { cardImageUrl: url }, { clientPage: organizerNewEventClientPage("banner") });
-      toast.success("Imagem de pré-visualização enviada!");
-    } else {
-      toast.success("Imagem salva no rascunho.");
-    }
-  };
-
   const handleNext = async () => {
     if (!formData.createdEventId) {
       setSyncingEvent(true);
@@ -133,7 +122,6 @@ export default function BannerPage() {
     >
       <BannerSection
         bannerUrl={formData.bannerUrl}
-        cardImageUrl={formData.cardImageUrl}
         eventName={formData.name}
         eventDate={formData.eventDate}
         street={formData.street}
@@ -148,7 +136,6 @@ export default function BannerPage() {
         }}
         organizer={organizer}
         onBannerUploaded={handleBannerUploaded}
-        onCardUploaded={handleCardUploaded}
         onNext={handleNext}
         nextLoading={syncingEvent}
       />

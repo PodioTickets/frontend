@@ -22,8 +22,8 @@ const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 /**
  * Reenvio do e-mail do pedido (organizador): todos os ingressos + comprovante
- * para o endereço informado. Overlay próprio (z-60) por cima do
- * PaymentDetailsModal (z-50) — controlado por estado local, não pelo modalStore
+ * para o endereço informado. Overlay próprio (z-70) por cima do conteúdo do
+ * PaymentDetailsModal (z-61) — controlado por estado local, não pelo modalStore
  * (que é single-modal). Espelha o CancelOrderModal.
  */
 export function ResendTicketsModal({
@@ -70,7 +70,8 @@ export function ResendTicketsModal({
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.2 }}
-            className="fixed inset-0 bg-black/50 z-[60]"
+            className="fixed inset-0 bg-black/50 z-[70]"
+            style={{ pointerEvents: "auto" }}
             onClick={loading ? undefined : onClose}
           />
           <motion.div
@@ -78,7 +79,8 @@ export function ResendTicketsModal({
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 20 }}
             transition={{ duration: 0.2, ease: "easeOut" }}
-            className="fixed inset-0 z-[60] flex items-center justify-center p-4"
+            className="fixed inset-0 z-[70] flex items-center justify-center p-4"
+            style={{ pointerEvents: "auto" }}
             onClick={(e) => e.stopPropagation()}
           >
             <div className="bg-gray-1 rounded-[12px] w-full max-w-[474px] shadow-2xl flex flex-col gap-8 pt-6 pb-5 px-5">

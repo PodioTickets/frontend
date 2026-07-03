@@ -32,7 +32,6 @@ export interface EditEventFormData {
   state: string;
   googleMapsLink: string;
   bannerUrl: string;
-  cardImageUrl: string;
   regulationUrl: string;
   description: string;
   contactEmail: string;
@@ -77,7 +76,6 @@ const defaultFormData: EditEventFormData = {
   state: "",
   googleMapsLink: "",
   bannerUrl: "",
-  cardImageUrl: "",
   regulationUrl: "",
   description: "",
   contactEmail: "",
@@ -128,11 +126,6 @@ function formatCEP(cep: string | null | undefined) {
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function buildFormDataFromEvent(eventId: string, eventData: any): EditEventFormData {
-  const ev = eventData as Record<string, unknown>;
-  const cardImageFromApi = [ev.cardImageUrl, ev.logoUrl, ev.logo_url].find(
-    (u) => typeof u === "string" && u.trim().length > 0,
-  );
-
   return {
     eventId,
     name: eventData.name || "",
@@ -154,7 +147,6 @@ function buildFormDataFromEvent(eventId: string, eventData: any): EditEventFormD
     state: eventData.state || "",
     googleMapsLink: eventData.googleMapsLink || "",
     bannerUrl: eventData.bannerUrl || "",
-    cardImageUrl: typeof cardImageFromApi === "string" ? cardImageFromApi.trim() : "",
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     regulationUrl: (eventData as any).regulationUrl || "",
     description: eventData.description || "",

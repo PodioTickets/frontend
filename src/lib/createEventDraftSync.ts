@@ -191,19 +191,5 @@ export async function ensureCreateEventSyncedFromDraft(options: {
     updateFormData({ bannerUrl });
   }
 
-  let cardImageUrl = (formData.cardImageUrl || "").trim();
-  if (cardImageUrl) {
-    if (cardImageUrl.startsWith("data:")) {
-      const file = dataUrlToFile(cardImageUrl, "card.jpg");
-      cardImageUrl = await uploadOrganizerImage(file);
-    }
-    await organizerService.updateEvent(
-      id,
-      { cardImageUrl },
-      { clientPage: organizerNewEventClientPage("banner") },
-    );
-    updateFormData({ cardImageUrl: cardImageUrl });
-  }
-
   return id;
 }

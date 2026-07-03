@@ -23,7 +23,6 @@ export interface CreateEventFormData {
   state: string;
   googleMapsLink: string;
   bannerUrl: string;
-  cardImageUrl: string;
   regulationUrl: string;
   createdEventId: string | null;
   contactEmail: string;
@@ -65,7 +64,6 @@ const initialFormData: CreateEventFormData = {
   state: "",
   googleMapsLink: "",
   bannerUrl: "",
-  cardImageUrl: "",
   regulationUrl: "",
   createdEventId: null,
   contactEmail: "",

@@ -22,12 +22,6 @@ export default function EditBannerPage() {
     toast.success("Banner enviado com sucesso!");
   };
 
-  const handleCardUploaded = async (url: string) => {
-    updateFormData({ cardImageUrl: url });
-    await organizerService.updateEvent(eventId, { cardImageUrl: url }, { clientPage: organizerEventEditClientPage(eventId, "banner") });
-    toast.success("Imagem de pré-visualização enviada!");
-  };
-
   const organizerPreview = event ? getEventOrganizer(event as Event) : null;
   const org = event?.organization;
   const orgTradeName = org?.tradeName?.trim() ?? null;
@@ -51,7 +45,6 @@ export default function EditBannerPage() {
     >
       <BannerSection
         bannerUrl={formData.bannerUrl}
-        cardImageUrl={formData.cardImageUrl}
         eventName={formData.name}
         eventDate={formData.eventDate}
         street={formData.street}
@@ -67,7 +60,6 @@ export default function EditBannerPage() {
         organizer={organizer}
         previewEvent={event as Event}
         onBannerUploaded={handleBannerUploaded}
-        onCardUploaded={handleCardUploaded}
       />
     </WizardStepLayout>
   );

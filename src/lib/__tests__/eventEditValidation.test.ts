@@ -31,7 +31,6 @@ function validForm(): EditEventFormData {
     state: "SP",
     googleMapsLink: "https://maps.google.com/?q=se",
     bannerUrl: "",
-    cardImageUrl: "",
     regulationUrl: "",
     description: "",
     contactEmail: "contato@evento.com",

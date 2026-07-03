@@ -382,8 +382,6 @@ export interface CreateEventRequest {
   maxParticipants?: number | null;
   googleMapsLink?: string;
   bannerUrl?: string;
-  /** Imagem do card na listagem; API pode persistir como `logoUrl` na resposta GET. */
-  cardImageUrl?: string;
   status?:
   | "DRAFT"
   | "PUBLISHED"

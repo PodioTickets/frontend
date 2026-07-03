@@ -19,9 +19,9 @@ interface EventCardProps {
 }
 
 /**
- * Card de evento (home/busca) — design do Figma (222:5298). A imagem é o BANNER
- * do evento (aspect 312/142), não a logo/card image. Estrutura: banner → título +
- * cidade/estado (com borda inferior) → organizador + data. Sem tag de status.
+ * Card de evento (home/busca) — design do Figma (222:5298), 308×242. A imagem é o
+ * BANNER do evento (aspect 312/142, cantos arredondados). Card SEM borda/fundo/sombra:
+ * banner arredondado → título + cidade/estado → organizador + data, tudo flush-left.
  */
 export function EventCard({ event, preview = false }: EventCardProps) {
   const formattedDate = useMemo(() => {
@@ -40,13 +40,13 @@ export function EventCard({ event, preview = false }: EventCardProps) {
       ? getAvatarUrl(event.organizer.user.avatarUrl)
       : null;
 
-  // Imagem do card = BANNER do evento (antes era a logo/card image).
+  // Imagem do card = BANNER do evento.
   const eventImg = event.bannerUrl;
 
   const cardInner = (
-    <div className="flex w-full flex-col overflow-hidden rounded-lg border border-[#cecece] bg-[#f9f9f9] shadow-[0_2px_6px_0_rgba(17,17,17,0.3)] transition-transform duration-200 hover:scale-[1.01]">
-      {/* Banner — proporção do Figma (312/142) */}
-      <div className="relative aspect-[312/142] w-full shrink-0 bg-gray-4">
+    <div className="flex w-full flex-col items-start transition-transform duration-200 hover:scale-[1.01]">
+      {/* Banner — proporção do Figma (312/142), cantos arredondados */}
+      <div className="relative aspect-[312/142] w-full shrink-0 overflow-hidden rounded-[8px] bg-gray-4">
         <ImageWithInitialFallback
           src={eventImg}
           alt={event.name}
@@ -63,22 +63,27 @@ export function EventCard({ event, preview = false }: EventCardProps) {
         />
       </div>
 
-      {/* Título + cidade/estado */}
-      <div className="flex flex-col gap-2 border-b border-[#d9d9d9] px-3 py-3">
-        <p className="truncate font-manrope text-base font-bold leading-[1.1] text-[#202020]">
+      {/* Título + cidade/estado (sem padding lateral, sem borda) */}
+      <div className="flex w-full flex-col gap-3 pt-3 pb-2">
+        <p className="[text-box-trim:trim-both] [text-box-edge:cap_alphabetic] truncate font-manrope text-base font-bold text-[#202020]">
           {event.name}
         </p>
-        {/* Só a cidade trunca; o estado fica colado no "…" (medição em canvas,
-            ver CityStateLabel) — CSS puro deixaria um vão antes da vírgula. */}
-        <CityStateLabel
-          city={event.city ?? ""}
-          state={event.state ?? ""}
-          className="font-family-dm-sans text-sm leading-[1.3] text-[#646464]"
-        />
+        {/* Wrapper em LINHA (igual ao "local" do Figma): o `flex-1` interno do
+            CityStateLabel cresce na HORIZONTAL. Sem esta linha, ele ficava como
+            filho da coluna → flex-1 crescia vertical (altura inconsistente). */}
+        <div className="flex w-full items-center">
+          {/* Só a cidade trunca; o estado fica colado no "…" (medição em canvas,
+              ver CityStateLabel) — CSS puro deixaria um vão antes da vírgula. */}
+          <CityStateLabel
+            city={event.city ?? ""}
+            state={event.state ?? ""}
+            className="[text-box-trim:trim-both] [text-box-edge:cap_alphabetic] font-family-dm-sans text-sm text-[#646464]"
+          />
+        </div>
       </div>
 
       {/* Organizador + data */}
-      <div className="flex flex-col gap-2 px-3 py-3">
+      <div className="flex w-full flex-col gap-2">
         <div className="flex min-w-0 items-center gap-1">
           <ImageWithInitialFallback
             src={organizerImg}
@@ -91,13 +96,13 @@ export function EventCard({ event, preview = false }: EventCardProps) {
             imgClassName="object-cover"
             letterClassName="text-[10px]"
           />
-          <span className="truncate font-family-dm-sans text-sm leading-[1.3] text-[#646464]">
+          <span className="truncate [text-box-trim:trim-both] [text-box-edge:cap_alphabetic] font-family-dm-sans text-sm leading-[1.3] text-[#646464]">
             {organizer?.name || "Organizador"}
           </span>
         </div>
         <div className="flex items-center gap-1">
           <CalendarIcon className="size-5 shrink-0 text-[#646464]" />
-          <span className="font-family-dm-sans text-sm leading-[1.3] text-[#646464]">
+          <span className="[text-box-trim:trim-both] [text-box-edge:cap_alphabetic] font-family-dm-sans text-sm leading-[1.3] text-[#646464]">
             {formattedDate}
           </span>
         </div>
