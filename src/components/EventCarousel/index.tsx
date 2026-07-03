@@ -26,18 +26,15 @@ export function EventCarousel({ items = 20 }: EventCarouselProps) {
     if (!el) return;
     const w = el.clientWidth || 1;
 
+    // Largura-alvo do card = tamanho do Figma (~300px).
     if (w < 768) {
-      // Mobile/tablet pequeno: card menor + peek do próximo (~1.5).
-      setPerView(Math.max(1.3, w / (240 + GAP)));
+      // Mobile: um card no tamanho do Figma + peek do próximo.
+      setPerView(Math.max(1.15, w / (300 + GAP)));
     } else {
-      // Desktop: card com a MESMA largura da /search (grid responsivo dentro de
-      // max-w-1280: 2/3/4/5 colunas, gap-6, px-4 / lg:px-8). Mantém full-bleed
-      // (mais cards rolam), mas cada card = largura do card da busca.
-      const cols = w >= 1536 ? 5 : w >= 1280 ? 4 : w >= 1024 ? 3 : 2;
-      const pad = w >= 1024 ? 64 : 32;
-      const content = Math.min(w, 1280) - pad;
-      const cardW = Math.max(160, (content - (cols - 1) * 24) / cols);
-      setPerView(Math.max(1.1, (w + GAP) / (cardW + GAP)));
+      // Desktop: 4 por vez (3 em 768–1023, pra não espremer). Área limitada a
+      // ~1216px centralizada (ver root) → cards ~292px (≈ card do Figma) com
+      // respiro nas laterais. A seta avança uma página inteira.
+      setPerView(w >= 1024 ? 4 : 3);
     }
     const max = el.scrollWidth - el.clientWidth;
     setCanPrev(el.scrollLeft > 1);
@@ -65,13 +62,11 @@ export function EventCarousel({ items = 20 }: EventCarouselProps) {
   const activePage = Math.round(progress * (pageCount - 1));
   const scrollable = canPrev || canNext;
 
-  const stepSize = () => {
-    const el = scrollerRef.current;
-    const card = el?.querySelector<HTMLElement>("[data-slide]");
-    return card ? card.offsetWidth + GAP : (el?.clientWidth ?? 0) * 0.8;
-  };
+  // "Passar" avança uma PÁGINA inteira (os 5 visíveis), não um card por vez.
   const scrollByDir = (dir: number) => {
-    scrollerRef.current?.scrollBy({ left: dir * stepSize(), behavior: "smooth" });
+    const el = scrollerRef.current;
+    if (!el) return;
+    el.scrollBy({ left: dir * el.clientWidth, behavior: "smooth" });
   };
   const scrollToPage = (i: number) => {
     const el = scrollerRef.current;
@@ -89,7 +84,9 @@ export function EventCarousel({ items = 20 }: EventCarouselProps) {
     "hidden md:flex absolute top-1/2 -translate-y-1/2 z-10 size-9 items-center justify-center rounded-full bg-gray-2 border border-gray-6 shadow-md hover:bg-gray-3 transition-all duration-200 disabled:opacity-0 disabled:pointer-events-none";
 
   return (
-    <div className="relative w-full">
+    // Área limitada e centralizada: 5 cards no tamanho normal, com respiro nas
+    // laterais em telas grandes (a seção pai é full-bleed; aqui recentralizamos).
+    <div className="relative mx-auto w-full max-w-[1216px]">
       <button
         onClick={() => scrollByDir(-1)}
         disabled={!canPrev}
@@ -113,14 +110,15 @@ export function EventCarousel({ items = 20 }: EventCarouselProps) {
           scrollable ? "" : "justify-center"
         }`}
       >
-        {/* respiro leve no inicio/fim sem cortar (scroller sem padding -> peek natural na borda) */}
-        <span aria-hidden className="w-1 shrink-0" />
+        {/* Sem spacers de borda: eles somavam largura + gaps extras e faziam o 5º
+            card estourar (cortado à direita). Com `flex-basis` de perView cards +
+            (perView-1) gaps = 100%, os 5 cabem INTEIROS; o overflow dos demais
+            mantém a seta de scroll visível. */}
         {events?.map((event) => (
           <div key={event.id} data-slide style={slideStyle}>
             <EventCard event={event} />
           </div>
         ))}
-        <span aria-hidden className="w-1 shrink-0" />
       </div>
 
       {scrollable && pageCount > 1 && (

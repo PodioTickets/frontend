@@ -378,6 +378,8 @@ export interface CreateEventRequest {
   eventDate?: string;
   registrationStartDate?: string;
   registrationEndDate?: string;
+  /** Vagas do evento (teto de participantes). `null` limpa o teto; omitido mantém. */
+  maxParticipants?: number | null;
   googleMapsLink?: string;
   bannerUrl?: string;
   /** Imagem do card na listagem; API pode persistir como `logoUrl` na resposta GET. */

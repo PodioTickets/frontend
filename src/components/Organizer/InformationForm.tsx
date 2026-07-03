@@ -20,14 +20,8 @@ import { BRAZIL_STATES } from "@/utils/locationFacets";
 import { useCitiesByState } from "@/hooks/useCitiesByState";
 import { userService } from "@/services";
 import {
-  DATE_NOT_BEFORE_TODAY_TOAST,
   EVENT_DATE_NOT_BEFORE_REGISTRATION_END_TOAST,
-  getMaxDateForRegistrationEndPicker,
-  getMinDateForEventPicker,
-  getMinDateForRegistrationEndPicker,
-  getTodayStartLocal,
   isEventDateBeforeRegistrationEnd,
-  isIsoDateStrictlyBefore,
   isRegistrationStartNotBeforeEvent,
   REGISTRATION_END_BEFORE_START_TOAST,
   REGISTRATION_START_NOT_BEFORE_EVENT_TOAST,
@@ -93,6 +87,8 @@ export interface InformationFormValues {
   registrationStartTime?: string;
   registrationEndDate?: string;
   registrationEndTime?: string;
+  /** Vagas do evento (teto de participantes). String; "" = ilimitado. */
+  maxParticipants?: string;
   cep?: string;
   street?: string;
   neighborhood?: string;
@@ -192,6 +188,14 @@ export function InformationForm({
     if (errors[name]) onErrorsChange((prev) => ({ ...prev, [name]: "" }));
   };
 
+  /* Vagas do evento: só dígitos, sem zeros à esquerda. "" = ilimitado (o build
+   * envia null). Cap defensivo em 7 dígitos (o backend valida @Max 10.000.000). */
+  const handleMaxParticipantsChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const digits = e.target.value.replace(/\D/g, "").replace(/^0+(?=\d)/, "").slice(0, 8);
+    onChange({ maxParticipants: digits });
+    if (errors.maxParticipants) onErrorsChange((prev) => ({ ...prev, maxParticipants: "" }));
+  };
+
   const clearRegistrationPeriodError = (name: string) => {
     if (["registrationStartDate", "registrationStartTime", "registrationEndDate", "registrationEndTime"].includes(name)) {
       onErrorsChange((prev) => prev.registrationPeriod ? { ...prev, registrationPeriod: "" } : prev);
@@ -230,114 +234,83 @@ export function InformationForm({
     }
   };
 
+  // Seleção LIVRE: o organizador pode escolher QUALQUER data (início/encerramento/
+  // evento), inclusive passada — não bloqueamos mais. As violações de ORDEM viram
+  // apenas ERRO DE INPUT (mesmo mapeamento de campos da validação de submit
+  // `validateEventInformation`), sem `return`/toast. O submit segue barrando a
+  // publicação enquanto houver erro.
   const handleDateChange = (name: string, value: string) => {
-    const todayStart = getTodayStartLocal();
+    const v = value?.trim();
 
     if (name === "registrationStartDate") {
-      if (value?.trim() && isIsoDateStrictlyBefore(value, todayStart)) {
-        toast.error(DATE_NOT_BEFORE_TODAY_TOAST);
-        return;
-      }
-      const hasStart = Boolean(value?.trim());
-      const nextStartTime = hasStart ? values.registrationStartTime?.trim() || "00:00" : "";
-      // Início ANTES do encerramento → mantém o encerramento. Início DEPOIS (fim
-      // ficaria inválido) OU início removido → LIMPA o encerramento (data + hora)
-      // para VAZIO (placeholder "DD/MM/AAAA"), pra o usuário reescolher. Não há
-      // período válido a preservar nesse caso.
-      const hadEnd = Boolean(values.registrationEndDate?.trim());
-      const endNowInvalid =
-        hadEnd &&
+      const nextStartTime = v ? values.registrationStartTime?.trim() || "00:00" : "";
+      onChange({ registrationStartDate: value, registrationStartTime: nextStartTime });
+
+      const startBeforeEvent = isRegistrationStartNotBeforeEvent(value, nextStartTime, values.eventDate);
+      const endBeforeStart =
+        Boolean(values.registrationEndDate?.trim()) &&
         wouldRegistrationEndBeforeStart({
           ...values,
           registrationStartDate: value,
           registrationStartTime: nextStartTime,
         } as any);
-      const clearEnd = !hasStart || endNowInvalid;
-      onChange(
-        clearEnd
-          ? {
-              registrationStartDate: value,
-              registrationStartTime: nextStartTime,
-              registrationEndDate: "",
-              registrationEndTime: "",
-            }
-          : {
-              registrationStartDate: value,
-              registrationStartTime: nextStartTime,
-            },
-      );
-      // Sem toast: o encerramento é apenas resetado (silenciosamente) quando
-      // ficaria anterior ao novo início — o campo volta ao placeholder vazio.
-      // Período fica sempre resolvido aqui (ou era válido, ou limpamos o fim).
-      const startBeforeEventViolation = isRegistrationStartNotBeforeEvent(
-        value,
-        nextStartTime,
-        values.eventDate,
-      );
-      if (startBeforeEventViolation) toast.error(REGISTRATION_START_NOT_BEFORE_EVENT_TOAST);
+
       onErrorsChange((prev) => ({
         ...prev,
-        registrationPeriod: "",
-        registrationStartDate: startBeforeEventViolation
-          ? REGISTRATION_START_NOT_BEFORE_EVENT_TOAST
-          : "",
+        registrationStartDate: startBeforeEvent ? REGISTRATION_START_NOT_BEFORE_EVENT_TOAST : "",
+        // Um erro por vez: quando o próprio início já viola "antes do evento",
+        // o "encerramento antes do início" é consequência redundante do mesmo
+        // início tardio — não exibimos as duas mensagens pro mesmo input.
+        registrationPeriod: !startBeforeEvent && endBeforeStart ? REGISTRATION_END_BEFORE_START_TOAST : "",
       }));
       return;
     }
 
     if (name === "registrationEndDate") {
-      if (value?.trim() && isIsoDateStrictlyBefore(value, todayStart)) {
-        toast.error(DATE_NOT_BEFORE_TODAY_TOAST);
-        return;
-      }
-      // Encerramento não pode ser DEPOIS do evento (evento não acontece antes das
-      // inscrições fecharem). `isEventDateBeforeRegistrationEnd(eventDate, novoFim)`.
-      if (value?.trim() && isEventDateBeforeRegistrationEnd(values.eventDate, value)) {
-        toast.error(EVENT_DATE_NOT_BEFORE_REGISTRATION_END_TOAST);
-        return;
-      }
-      const hasEnd = Boolean(value?.trim());
-      const nextEndTime = hasEnd ? values.registrationEndTime?.trim() || "00:00" : "";
-      if (wouldRegistrationEndBeforeStart({ ...values, registrationEndDate: value, registrationEndTime: nextEndTime } as any)) {
-        toast.error(REGISTRATION_END_BEFORE_START_TOAST);
-        return;
-      }
+      const nextEndTime = v ? values.registrationEndTime?.trim() || "00:00" : "";
       onChange({ registrationEndDate: value, registrationEndTime: nextEndTime });
-      clearRegistrationPeriodError(name);
-      if (errors[name]) onErrorsChange((prev) => ({ ...prev, [name]: "" }));
-      return;
-    }
 
-    if (name === "eventDate" && value?.trim() && isIsoDateStrictlyBefore(value, todayStart)) {
-      toast.error(DATE_NOT_BEFORE_TODAY_TOAST);
-      return;
-    }
-    // Data do evento não pode ser ANTES do encerramento das inscrições.
-    if (name === "eventDate" && value?.trim() && isEventDateBeforeRegistrationEnd(value, values.registrationEndDate)) {
-      toast.error(EVENT_DATE_NOT_BEFORE_REGISTRATION_END_TOAST);
-      return;
-    }
-    onChange({ [name]: value });
-    clearRegistrationPeriodError(name);
-    if (errors[name]) onErrorsChange((prev) => ({ ...prev, [name]: "" }));
+      const endBeforeStart =
+        !!v &&
+        wouldRegistrationEndBeforeStart({
+          ...values,
+          registrationEndDate: value,
+          registrationEndTime: nextEndTime,
+        } as any);
+      const eventBeforeEnd = !!v && isEventDateBeforeRegistrationEnd(values.eventDate, value);
 
-    // Mudar a data do evento pode (in)validar a regra "início das inscrições antes do evento".
-    if (name === "eventDate") {
-      const startBeforeEventViolation = isRegistrationStartNotBeforeEvent(
-        values.registrationStartDate,
-        values.registrationStartTime,
-        value,
-      );
-      if (startBeforeEventViolation) toast.error(REGISTRATION_START_NOT_BEFORE_EVENT_TOAST);
       onErrorsChange((prev) => ({
         ...prev,
-        registrationStartDate: startBeforeEventViolation
-          ? REGISTRATION_START_NOT_BEFORE_EVENT_TOAST
-          : prev.registrationStartDate === REGISTRATION_START_NOT_BEFORE_EVENT_TOAST
+        registrationEndDate: "",
+        registrationPeriod: endBeforeStart ? REGISTRATION_END_BEFORE_START_TOAST : "",
+        // "Evento não pode ser antes do encerramento" → erro no campo do EVENTO
+        // (mesmo alvo do submit), pra não divergir.
+        eventDate: eventBeforeEnd
+          ? EVENT_DATE_NOT_BEFORE_REGISTRATION_END_TOAST
+          : prev.eventDate === EVENT_DATE_NOT_BEFORE_REGISTRATION_END_TOAST
             ? ""
-            : prev.registrationStartDate,
+            : prev.eventDate,
       }));
+      return;
     }
+
+    // eventDate
+    onChange({ eventDate: value });
+    const eventBeforeEnd = !!v && isEventDateBeforeRegistrationEnd(value, values.registrationEndDate);
+    const startBeforeEvent = isRegistrationStartNotBeforeEvent(
+      values.registrationStartDate,
+      values.registrationStartTime,
+      value,
+    );
+    onErrorsChange((prev) => ({
+      ...prev,
+      eventDate: eventBeforeEnd ? EVENT_DATE_NOT_BEFORE_REGISTRATION_END_TOAST : "",
+      registrationStartDate: startBeforeEvent
+        ? REGISTRATION_START_NOT_BEFORE_EVENT_TOAST
+        : prev.registrationStartDate === REGISTRATION_START_NOT_BEFORE_EVENT_TOAST
+          ? ""
+          : prev.registrationStartDate,
+    }));
   };
 
   // ── PDF ───────────────────────────────────────────────────────────────────
@@ -457,8 +430,9 @@ export function InformationForm({
               placeholder={getCurrentDatePlaceholder()}
               className="w-full md:w-max"
               hideIcon={false}
-              openAtCurrentMonth
-              minDate={getMinDateForEventPicker(values.registrationEndDate)}
+              error={!!errors.eventDate}
+              // Seleção livre: qualquer data (a validação de ordem/erro é inline).
+              disablePastDates={false}
             />
           </div>
           <div className="flex items-start gap-2">
@@ -474,39 +448,73 @@ export function InformationForm({
       {/* Registration period */}
       <div className="flex flex-col gap-5 md:gap-[20px]">
         <h2 className="text-gray-12 text-lg font-semibold font-manrope leading-[1.1]">Inscrição</h2>
-        <div className="flex flex-col md:flex-row gap-9 md:gap-[72px] items-stretch md:items-start">
+        <div className="flex flex-col md:flex-row md:flex-wrap gap-9 md:gap-[72px] items-stretch md:items-start">
           <div className="flex flex-col gap-3 md:gap-[12px] min-w-0">
             <label className="text-gray-12 text-base font-family-dm-sans">Data de início das inscrições</label>
-            <div className="flex gap-3 items-end w-full">
-              <div className="min-w-0 flex-1 md:flex-none">
-                <DatePicker value={values.registrationStartDate} onChange={(v) => handleDateChange("registrationStartDate", v || "")} placeholder={getCurrentDatePlaceholder()} className="w-full md:w-max" error={!!errors.registrationStartDate} openAtCurrentMonth minDate={getTodayStartLocal()} />
+            {/* Wrapper md:w-max trava a largura da coluna no grupo de inputs; a
+                mensagem de erro (w-0 min-w-full) contribui 0 pra largura intrínseca
+                e só QUEBRA dentro dela — sem empurrar o campo de encerramento. */}
+            <div className="flex flex-col gap-2 w-full md:w-max">
+              <div className="flex gap-3 items-end w-full">
+                <div className="min-w-0 flex-1 md:flex-none">
+                  <DatePicker value={values.registrationStartDate} onChange={(v) => handleDateChange("registrationStartDate", v || "")} placeholder={getCurrentDatePlaceholder()} className="w-full md:w-max" error={!!errors.registrationStartDate} disablePastDates={false} />
+                </div>
+                <div className="w-[112px] shrink-0 md:w-auto">
+                  <TimePicker
+                    value={values.registrationStartDate?.trim() ? values.registrationStartTime?.trim() || "00:00" : values.registrationStartTime || ""}
+                    onChange={(v) => handleTimeChange("registrationStartTime", v)}
+                    className="w-full md:w-max"
+                  />
+                </div>
               </div>
-              <div className="w-[112px] shrink-0 md:w-auto">
-                <TimePicker
-                  value={values.registrationStartDate?.trim() ? values.registrationStartTime?.trim() || "00:00" : values.registrationStartTime || ""}
-                  onChange={(v) => handleTimeChange("registrationStartTime", v)}
-                  className="w-full md:w-max"
-                />
-              </div>
+              {errors.registrationStartDate && <p className="text-red-10 text-sm w-0 min-w-full">{errors.registrationStartDate}</p>}
             </div>
-            {errors.registrationStartDate && <p className="text-red-10 text-sm">{errors.registrationStartDate}</p>}
           </div>
 
           <div className="flex flex-col gap-3 md:gap-[12px] min-w-0">
             <label className="text-gray-12 text-base font-family-dm-sans">Data de encerramento das inscrições</label>
-            <div className="flex gap-3 items-end w-full">
-              <div className="min-w-0 flex-1 md:flex-none">
-                <DatePicker value={values.registrationEndDate} onChange={(v) => handleDateChange("registrationEndDate", v || "")} placeholder={getCurrentDatePlaceholder()} className="w-full md:w-max" error={!!errors.registrationEndDate} openAtCurrentMonth minDate={getMinDateForRegistrationEndPicker(values.registrationStartDate)} maxDate={getMaxDateForRegistrationEndPicker(values.eventDate)} />
+            {/* Mesmo padrão da coluna de início: erro quebra dentro da largura dos
+                inputs (w-0 min-w-full) sem esticar a coluna. */}
+            <div className="flex flex-col gap-2 w-full md:w-max">
+              <div className="flex gap-3 items-end w-full">
+                <div className="min-w-0 flex-1 md:flex-none">
+                  <DatePicker value={values.registrationEndDate} onChange={(v) => handleDateChange("registrationEndDate", v || "")} placeholder={getCurrentDatePlaceholder()} className="w-full md:w-max" error={!!errors.registrationEndDate} disablePastDates={false} />
+                </div>
+                <div className="w-[112px] shrink-0 md:w-auto">
+                  <TimePicker
+                    value={values.registrationEndDate?.trim() ? values.registrationEndTime?.trim() || "00:00" : values.registrationEndTime || ""}
+                    onChange={(v) => handleTimeChange("registrationEndTime", v)}
+                    className="w-full md:w-max"
+                  />
+                </div>
               </div>
-              <div className="w-[112px] shrink-0 md:w-auto">
-                <TimePicker
-                  value={values.registrationEndDate?.trim() ? values.registrationEndTime?.trim() || "00:00" : values.registrationEndTime || ""}
-                  onChange={(v) => handleTimeChange("registrationEndTime", v)}
-                  className="w-full md:w-max"
-                />
-              </div>
+              {errors.registrationEndDate && <p className="text-red-10 text-sm w-0 min-w-full">{errors.registrationEndDate}</p>}
             </div>
-            {errors.registrationEndDate && <p className="text-red-10 text-sm">{errors.registrationEndDate}</p>}
+          </div>
+
+          {/* Vagas do evento — teto de participantes (à direita do encerramento).
+              Vazio = ilimitado. Só dígitos. Erro (ex.: teto < inscritos, vindo do
+              backend) quebra dentro da largura do input (w-0 min-w-full), sem esticar. */}
+          <div className="flex flex-col gap-3 md:gap-[12px] min-w-0">
+            <label htmlFor={`${formId}-max-participants`} className="text-gray-12 text-base font-family-dm-sans">
+              Vagas do evento
+            </label>
+            <div className="flex flex-col gap-2 w-full md:w-[280px]">
+              <Input
+                id={`${formId}-max-participants`}
+                type="text"
+                inputMode="numeric"
+                name="maxParticipants"
+                value={values.maxParticipants ?? ""}
+                onChange={handleMaxParticipantsChange}
+                placeholder="Quantidade máxima"
+                className={`h-12 ${errors.maxParticipants ? "border-red-10" : ""}`}
+              />
+              <p className="text-gray-11 text-sm md:text-base font-family-dm-sans leading-[1.4] w-0 min-w-full">
+                Quantidade máxima de participantes permitida no evento.
+              </p>
+              {errors.maxParticipants && <p className="text-red-10 text-sm w-0 min-w-full">{errors.maxParticipants}</p>}
+            </div>
           </div>
         </div>
         {errors.registrationPeriod && <p className="text-red-10 text-sm">{errors.registrationPeriod}</p>}

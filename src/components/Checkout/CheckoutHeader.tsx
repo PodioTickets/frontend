@@ -11,10 +11,18 @@ import { useCheckoutProductStep } from "@/hooks/useCheckoutProductStep";
 
 export interface CheckoutHeaderProps {
   activeStep: number;
+  /**
+   * Voltar da PRIMEIRA etapa (Ingressos): destino é a página do evento, não uma
+   * etapa anterior do checkout — por isso vem de fora (a page conhece o slug).
+   * Steps > 1 usam o `handleBack` interno (etapa visível anterior). Quando
+   * fornecido, a seta de voltar mobile aparece também no step 1.
+   */
+  onBack?: () => void;
 }
 
 export default function CheckoutHeader({
   activeStep,
+  onBack,
 }: CheckoutHeaderProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -34,7 +42,12 @@ export default function CheckoutHeader({
 
   // "Voltar" navega para a etapa visível anterior — assim pula Produtos
   // automaticamente quando ela está oculta (ex.: Pagamento → Informações).
+  // No step 1 (sem etapa anterior) delega ao `onBack` da page, que volta pro evento.
   const handleBack = () => {
+    if (activeStep <= 1) {
+      onBack?.();
+      return;
+    }
     if (!eventId) return;
     const currentIndex = visibleOptions.findIndex((opt) => opt.id === activeStep);
     const previous = currentIndex > 0 ? visibleOptions[currentIndex - 1] : null;
@@ -43,14 +56,18 @@ export default function CheckoutHeader({
     }
   };
 
+  // Seta de voltar mobile: steps > 1 sempre; step 1 só quando a page passa `onBack`.
+  const showBackButton = activeStep > 1 || !!onBack;
+
   return (
     <>
       {/* Mobile Header */}
       <div className="md:hidden w-full bg-white border-b border-gray-6">
         <div className="flex items-center justify-center px-4 py-4 relative">
-          {activeStep > 1 && (
+          {showBackButton && (
             <button
               onClick={handleBack}
+              aria-label="Voltar"
               className="absolute left-4 flex items-center justify-center"
             >
               <ArrowLeft className="size-5 text-gray-12" />

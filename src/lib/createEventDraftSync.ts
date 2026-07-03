@@ -104,6 +104,13 @@ export function buildCreateEventBodyFromForm(
     eventData.regulationUrl = reg;
   }
 
+  // Vagas do evento: string no form. "" (ou 0) → `null` (ilimitado / limpa o teto,
+  // semântica de PATCH). Número válido → inteiro. NÃO enviar 0 (backend exige @Min(1)).
+  const maxP = (formData.maxParticipants ?? "").toString().trim();
+  const maxPNum = maxP ? Number(maxP) : null;
+  eventData.maxParticipants =
+    maxPNum && Number.isFinite(maxPNum) && maxPNum > 0 ? Math.floor(maxPNum) : null;
+
   eventData.contactEmail = formData.contactEmail?.trim() || null;
   eventData.instagram = formData.instagram?.trim() || null;
   eventData.facebook = formData.facebook?.trim() || null;
@@ -165,10 +172,17 @@ export async function ensureCreateEventSyncedFromDraft(options: {
     updateFormData({ regulationUrl: url });
   }
 
+  // Banner/card: ANEXA ao evento recém-criado independentemente do formato.
+  // `data:` (ainda não subiu) → sobe e anexa; URL REMOTA (subiu ANTES do evento
+  // existir, via onBannerUploaded sem createdEventId) → só anexa. Antes só o caso
+  // `data:` era persistido, então um banner/card enviado antes da criação do
+  // evento não era anexado a nada e "sumia" (no rascunho e no fluxo do admin).
   let bannerUrl = (formData.bannerUrl || "").trim();
-  if (bannerUrl.startsWith("data:")) {
-    const file = dataUrlToFile(bannerUrl, "banner.jpg");
-    bannerUrl = await uploadOrganizerImage(file);
+  if (bannerUrl) {
+    if (bannerUrl.startsWith("data:")) {
+      const file = dataUrlToFile(bannerUrl, "banner.jpg");
+      bannerUrl = await uploadOrganizerImage(file);
+    }
     await organizerService.updateEvent(
       id,
       { bannerUrl },
@@ -178,9 +192,11 @@ export async function ensureCreateEventSyncedFromDraft(options: {
   }
 
   let cardImageUrl = (formData.cardImageUrl || "").trim();
-  if (cardImageUrl.startsWith("data:")) {
-    const file = dataUrlToFile(cardImageUrl, "card.jpg");
-    cardImageUrl = await uploadOrganizerImage(file);
+  if (cardImageUrl) {
+    if (cardImageUrl.startsWith("data:")) {
+      const file = dataUrlToFile(cardImageUrl, "card.jpg");
+      cardImageUrl = await uploadOrganizerImage(file);
+    }
     await organizerService.updateEvent(
       id,
       { cardImageUrl },

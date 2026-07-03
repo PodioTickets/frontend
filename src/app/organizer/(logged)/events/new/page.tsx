@@ -90,8 +90,13 @@ export default function CreateEventRedirectPage() {
       Promise.all([
         organizerService.getEventById(resumeId),
         organizerService.getTickets(resumeId, { page: 1, limit: 1 }),
+        // Config financeira é persistida por endpoint próprio (saveFinancialSettings),
+        // não pelo payload do evento — precisa ser restaurada à parte no resume, senão
+        // o passo "Pagamento" volta aos defaults e ao re-salvar SOBRESCREVE o que foi
+        // configurado. `.catch` → mantém os defaults do contexto.
+        organizerService.getFinancialSettings(resumeId).catch(() => null),
       ])
-        .then(([event, ticketsRes]: [any, any]) => {
+        .then(([event, ticketsRes, financial]: [any, any, any]) => {
           const cardImage =
             event.cardImageUrl ?? event.logoUrl ?? event.logo_url ?? "";
           updateFormData({
@@ -111,6 +116,22 @@ export default function CreateEventRedirectPage() {
             bannerUrl: event.bannerUrl ?? "",
             cardImageUrl: typeof cardImage === "string" ? cardImage.trim() : "",
             regulationUrl: event.regulationUrl ?? "",
+            // Contato + redes sociais (salvos no create, mas o resume não os
+            // restaurava → resetavam ao reabrir o rascunho sem localStorage).
+            contactEmail: event.contactEmail ?? "",
+            instagram: event.instagram ?? "",
+            facebook: event.facebook ?? "",
+            youtube: event.youtube ?? "",
+            tiktok: event.tiktok ?? "",
+            website: event.website ?? "",
+            // Financeiro (do endpoint próprio) — só sobrescreve quando veio.
+            ...(financial
+              ? {
+                  organizerFeePercent: financial.organizerFeePercent,
+                  maxInstallments: financial.maxInstallments,
+                  acceptedPaymentMethods: financial.acceptedPaymentMethods,
+                }
+              : {}),
           });
           const ticketCount = ticketsRes?.tickets?.length ?? 0;
           orgNav.replace(getNextIncompleteStep(event, ticketCount));

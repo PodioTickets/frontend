@@ -139,6 +139,13 @@ export default function BannerPage() {
         street={formData.street}
         city={formData.city}
         state={formData.state}
+        socialLinks={{
+          instagram: formData.instagram,
+          facebook: formData.facebook,
+          youtube: formData.youtube,
+          tiktok: formData.tiktok,
+          website: formData.website,
+        }}
         organizer={organizer}
         onBannerUploaded={handleBannerUploaded}
         onCardUploaded={handleCardUploaded}
