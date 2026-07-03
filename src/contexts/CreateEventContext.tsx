@@ -14,8 +14,6 @@ export interface CreateEventFormData {
   registrationStartTime: string;
   registrationEndDate: string;
   registrationEndTime: string;
-  /** Vagas do evento (teto de participantes). String no form; "" = ilimitado. */
-  maxParticipants: string;
   cep: string;
   street: string;
   neighborhood: string;
@@ -57,7 +55,6 @@ const initialFormData: CreateEventFormData = {
   registrationStartTime: "",
   registrationEndDate: "",
   registrationEndTime: "",
-  maxParticipants: "",
   cep: "",
   street: "",
   neighborhood: "",

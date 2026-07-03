@@ -23,7 +23,6 @@ function validForm(): EditEventFormData {
     registrationStartTime: "08:00",
     registrationEndDate: "2026-07-01",
     registrationEndTime: "18:00",
-    maxParticipants: "500",
     cep: "01001-000",
     street: "Praça da Sé",
     neighborhood: "Sé",
@@ -118,21 +117,6 @@ describe("validateEventInformation", () => {
     );
   });
 
-  it("início depois do evento E depois do encerramento → só UM erro (no início, sem período)", () => {
-    // Início tardio viola as duas regras (antes do evento + antes do encerramento).
-    // Deve exibir apenas o erro específico do input de início, não os dois juntos.
-    const errors = validateEventInformation({
-      ...validForm(),
-      eventDate: "2026-08-10",
-      registrationStartDate: "2026-08-15",
-      registrationEndDate: "2026-08-12", // encerra ANTES do início tardio
-    });
-    expect(errors.registrationStartDate).toBe(
-      "A data de início das inscrições deve ser antes da data do evento.",
-    );
-    expect(errors.registrationPeriod).toBeUndefined();
-  });
-
   it("início das inscrições ANTES do evento → sem erro de início", () => {
     const errors = validateEventInformation({
       ...validForm(),
@@ -163,16 +147,6 @@ describe("validateEventInformation", () => {
     expect(meiaNoiteDoEvento.registrationStartDate).toBe(
       "A data de início das inscrições deve ser antes da data do evento.",
     );
-  });
-
-  it("exige vagas do evento (obrigatório e ≥ 1)", () => {
-    expect(validateEventInformation({ ...validForm(), maxParticipants: "" }).maxParticipants).toBe(
-      "Vagas do evento é obrigatório",
-    );
-    expect(validateEventInformation({ ...validForm(), maxParticipants: "0" }).maxParticipants).toBe(
-      "As vagas do evento devem ser ao menos 1.",
-    );
-    expect(validateEventInformation({ ...validForm(), maxParticipants: "500" }).maxParticipants).toBeUndefined();
   });
 
   it("valida CEP: obrigatório e 8 dígitos", () => {
@@ -275,23 +249,6 @@ describe("mapEventBackendErrors", () => {
       }),
     );
     expect(fieldErrors.eventDate).toBeTruthy();
-  });
-
-  it("erro de negócio com { field, message } → mapeia msg do servidor no campo", () => {
-    // Ex.: vagas do evento abaixo dos inscritos atuais (update valida no backend).
-    const { fieldErrors, generalMessage } = mapEventBackendErrors(
-      axiosError(400, {
-        code: "MAX_PARTICIPANTS_BELOW_CURRENT",
-        field: "maxParticipants",
-        message:
-          "As vagas do evento (50) não podem ser menores que o número de inscritos atuais (80).",
-      }),
-    );
-    expect(fieldErrors.maxParticipants).toBe(
-      "As vagas do evento (50) não podem ser menores que o número de inscritos atuais (80).",
-    );
-    // Campo destacado → sem toast geral.
-    expect(generalMessage).toBeUndefined();
   });
 
   it("slug duplicado (DUPLICATE_VALUE) → erro no campo name", () => {

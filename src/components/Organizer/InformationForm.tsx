@@ -87,8 +87,6 @@ export interface InformationFormValues {
   registrationStartTime?: string;
   registrationEndDate?: string;
   registrationEndTime?: string;
-  /** Vagas do evento (teto de participantes). String; "" = ilimitado. */
-  maxParticipants?: string;
   cep?: string;
   street?: string;
   neighborhood?: string;
@@ -188,14 +186,6 @@ export function InformationForm({
     if (errors[name]) onErrorsChange((prev) => ({ ...prev, [name]: "" }));
   };
 
-  /* Vagas do evento: só dígitos, sem zeros à esquerda. "" = ilimitado (o build
-   * envia null). Cap defensivo em 7 dígitos (o backend valida @Max 10.000.000). */
-  const handleMaxParticipantsChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const digits = e.target.value.replace(/\D/g, "").replace(/^0+(?=\d)/, "").slice(0, 8);
-    onChange({ maxParticipants: digits });
-    if (errors.maxParticipants) onErrorsChange((prev) => ({ ...prev, maxParticipants: "" }));
-  };
-
   const clearRegistrationPeriodError = (name: string) => {
     if (["registrationStartDate", "registrationStartTime", "registrationEndDate", "registrationEndTime"].includes(name)) {
       onErrorsChange((prev) => prev.registrationPeriod ? { ...prev, registrationPeriod: "" } : prev);
@@ -258,10 +248,7 @@ export function InformationForm({
       onErrorsChange((prev) => ({
         ...prev,
         registrationStartDate: startBeforeEvent ? REGISTRATION_START_NOT_BEFORE_EVENT_TOAST : "",
-        // Um erro por vez: quando o próprio início já viola "antes do evento",
-        // o "encerramento antes do início" é consequência redundante do mesmo
-        // início tardio — não exibimos as duas mensagens pro mesmo input.
-        registrationPeriod: !startBeforeEvent && endBeforeStart ? REGISTRATION_END_BEFORE_START_TOAST : "",
+        registrationPeriod: endBeforeStart ? REGISTRATION_END_BEFORE_START_TOAST : "",
       }));
       return;
     }
@@ -448,73 +435,39 @@ export function InformationForm({
       {/* Registration period */}
       <div className="flex flex-col gap-5 md:gap-[20px]">
         <h2 className="text-gray-12 text-lg font-semibold font-manrope leading-[1.1]">Inscrição</h2>
-        <div className="flex flex-col md:flex-row md:flex-wrap gap-9 md:gap-[72px] items-stretch md:items-start">
+        <div className="flex flex-col md:flex-row gap-9 md:gap-[72px] items-stretch md:items-start">
           <div className="flex flex-col gap-3 md:gap-[12px] min-w-0">
             <label className="text-gray-12 text-base font-family-dm-sans">Data de início das inscrições</label>
-            {/* Wrapper md:w-max trava a largura da coluna no grupo de inputs; a
-                mensagem de erro (w-0 min-w-full) contribui 0 pra largura intrínseca
-                e só QUEBRA dentro dela — sem empurrar o campo de encerramento. */}
-            <div className="flex flex-col gap-2 w-full md:w-max">
-              <div className="flex gap-3 items-end w-full">
-                <div className="min-w-0 flex-1 md:flex-none">
-                  <DatePicker value={values.registrationStartDate} onChange={(v) => handleDateChange("registrationStartDate", v || "")} placeholder={getCurrentDatePlaceholder()} className="w-full md:w-max" error={!!errors.registrationStartDate} disablePastDates={false} />
-                </div>
-                <div className="w-[112px] shrink-0 md:w-auto">
-                  <TimePicker
-                    value={values.registrationStartDate?.trim() ? values.registrationStartTime?.trim() || "00:00" : values.registrationStartTime || ""}
-                    onChange={(v) => handleTimeChange("registrationStartTime", v)}
-                    className="w-full md:w-max"
-                  />
-                </div>
+            <div className="flex gap-3 items-end w-full">
+              <div className="min-w-0 flex-1 md:flex-none">
+                <DatePicker value={values.registrationStartDate} onChange={(v) => handleDateChange("registrationStartDate", v || "")} placeholder={getCurrentDatePlaceholder()} className="w-full md:w-max" error={!!errors.registrationStartDate} disablePastDates={false} />
               </div>
-              {errors.registrationStartDate && <p className="text-red-10 text-sm w-0 min-w-full">{errors.registrationStartDate}</p>}
+              <div className="w-[112px] shrink-0 md:w-auto">
+                <TimePicker
+                  value={values.registrationStartDate?.trim() ? values.registrationStartTime?.trim() || "00:00" : values.registrationStartTime || ""}
+                  onChange={(v) => handleTimeChange("registrationStartTime", v)}
+                  className="w-full md:w-max"
+                />
+              </div>
             </div>
+            {errors.registrationStartDate && <p className="text-red-10 text-sm">{errors.registrationStartDate}</p>}
           </div>
 
           <div className="flex flex-col gap-3 md:gap-[12px] min-w-0">
             <label className="text-gray-12 text-base font-family-dm-sans">Data de encerramento das inscrições</label>
-            {/* Mesmo padrão da coluna de início: erro quebra dentro da largura dos
-                inputs (w-0 min-w-full) sem esticar a coluna. */}
-            <div className="flex flex-col gap-2 w-full md:w-max">
-              <div className="flex gap-3 items-end w-full">
-                <div className="min-w-0 flex-1 md:flex-none">
-                  <DatePicker value={values.registrationEndDate} onChange={(v) => handleDateChange("registrationEndDate", v || "")} placeholder={getCurrentDatePlaceholder()} className="w-full md:w-max" error={!!errors.registrationEndDate} disablePastDates={false} />
-                </div>
-                <div className="w-[112px] shrink-0 md:w-auto">
-                  <TimePicker
-                    value={values.registrationEndDate?.trim() ? values.registrationEndTime?.trim() || "00:00" : values.registrationEndTime || ""}
-                    onChange={(v) => handleTimeChange("registrationEndTime", v)}
-                    className="w-full md:w-max"
-                  />
-                </div>
+            <div className="flex gap-3 items-end w-full">
+              <div className="min-w-0 flex-1 md:flex-none">
+                <DatePicker value={values.registrationEndDate} onChange={(v) => handleDateChange("registrationEndDate", v || "")} placeholder={getCurrentDatePlaceholder()} className="w-full md:w-max" error={!!errors.registrationEndDate} disablePastDates={false} />
               </div>
-              {errors.registrationEndDate && <p className="text-red-10 text-sm w-0 min-w-full">{errors.registrationEndDate}</p>}
+              <div className="w-[112px] shrink-0 md:w-auto">
+                <TimePicker
+                  value={values.registrationEndDate?.trim() ? values.registrationEndTime?.trim() || "00:00" : values.registrationEndTime || ""}
+                  onChange={(v) => handleTimeChange("registrationEndTime", v)}
+                  className="w-full md:w-max"
+                />
+              </div>
             </div>
-          </div>
-
-          {/* Vagas do evento — teto de participantes (à direita do encerramento).
-              Vazio = ilimitado. Só dígitos. Erro (ex.: teto < inscritos, vindo do
-              backend) quebra dentro da largura do input (w-0 min-w-full), sem esticar. */}
-          <div className="flex flex-col gap-3 md:gap-[12px] min-w-0">
-            <label htmlFor={`${formId}-max-participants`} className="text-gray-12 text-base font-family-dm-sans">
-              Vagas do evento
-            </label>
-            <div className="flex flex-col gap-2 w-full md:w-[280px]">
-              <Input
-                id={`${formId}-max-participants`}
-                type="text"
-                inputMode="numeric"
-                name="maxParticipants"
-                value={values.maxParticipants ?? ""}
-                onChange={handleMaxParticipantsChange}
-                placeholder="Quantidade máxima"
-                className={`h-12 ${errors.maxParticipants ? "border-red-10" : ""}`}
-              />
-              <p className="text-gray-11 text-sm md:text-base font-family-dm-sans leading-[1.4] w-0 min-w-full">
-                Quantidade máxima de participantes permitida no evento.
-              </p>
-              {errors.maxParticipants && <p className="text-red-10 text-sm w-0 min-w-full">{errors.maxParticipants}</p>}
-            </div>
+            {errors.registrationEndDate && <p className="text-red-10 text-sm">{errors.registrationEndDate}</p>}
           </div>
         </div>
         {errors.registrationPeriod && <p className="text-red-10 text-sm">{errors.registrationPeriod}</p>}

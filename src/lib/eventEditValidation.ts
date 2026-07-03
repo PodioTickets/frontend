@@ -20,7 +20,6 @@ export const INFORMATION_FIELDS = [
   "name", "eventDate",
   "registrationStartDate", "registrationStartTime",
   "registrationEndDate", "registrationEndTime",
-  "maxParticipants",
   "cep", "street", "neighborhood", "city", "state", "googleMapsLink",
   "contactEmail", "instagram", "facebook", "youtube", "tiktok", "website",
   "regulationUrl",
@@ -52,18 +51,7 @@ export function validateEventInformation(
     errors.registrationStartDate = REGISTRATION_START_NOT_BEFORE_EVENT_TOAST;
   }
   if (!formData.registrationEndDate?.trim()) errors.registrationEndDate = "Data de encerramento das inscrições é obrigatória";
-  // Vagas do evento: obrigatório e ≥ 1.
-  if (!formData.maxParticipants?.toString().trim()) {
-    errors.maxParticipants = "Vagas do evento é obrigatório";
-  } else if (Number(formData.maxParticipants) < 1) {
-    errors.maxParticipants = "As vagas do evento devem ser ao menos 1.";
-  }
-  // Um erro por vez: só sinaliza "encerramento antes do início" quando o próprio
-  // início NÃO está em erro — senão as duas mensagens (input do início + período)
-  // apareceriam juntas para o mesmo início tardio (redundante).
-  if (!errors.registrationStartDate && wouldRegistrationEndBeforeStart(formData)) {
-    errors.registrationPeriod = REGISTRATION_END_BEFORE_START_TOAST;
-  }
+  if (wouldRegistrationEndBeforeStart(formData)) errors.registrationPeriod = REGISTRATION_END_BEFORE_START_TOAST;
   // Data do evento não pode ser anterior ao encerramento das inscrições.
   if (isEventDateBeforeRegistrationEnd(formData.eventDate, formData.registrationEndDate)) {
     errors.eventDate = EVENT_DATE_NOT_BEFORE_REGISTRATION_END_TOAST;
@@ -100,8 +88,6 @@ export function isEventInformationValid(formData: EditEventFormData): boolean {
     !!formData.eventDate &&
     !!formData.registrationStartDate?.trim() &&
     !!formData.registrationEndDate?.trim() &&
-    !!formData.maxParticipants?.toString().trim() &&
-    Number(formData.maxParticipants) >= 1 &&
     cepDigitsOf(formData).length === CEP_DIGITS &&
     !!formData.street?.trim() &&
     !!formData.city?.trim() &&
@@ -139,7 +125,6 @@ const BACKEND_FIELD_TO_FORM_ERROR_KEY: Record<string, string> = {
   eventDate: "eventDate",
   registrationStartDate: "registrationStartDate",
   registrationEndDate: "registrationEndDate",
-  maxParticipants: "maxParticipants",
   zipCode: "cep",
   location: "street",
   city: "city",
@@ -154,7 +139,6 @@ const FORM_FIELD_ERROR_MESSAGE: Record<string, string> = {
   eventDate: "Data do evento inválida.",
   registrationStartDate: "Data de início das inscrições inválida.",
   registrationEndDate: "Data de encerramento das inscrições inválida.",
-  maxParticipants: "Vagas do evento inválidas.",
   cep: "CEP inválido.",
   street: "Endereço inválido.",
   city: "Cidade inválida.",
@@ -211,16 +195,6 @@ export function mapEventBackendErrors(error: unknown): MappedBackendErrors {
     for (const msg of errorsArr) {
       if (typeof msg === "string" && msg.trim()) addByBackendField(msg.trim().split(/\s+/)[0]);
     }
-  }
-
-  // 1b) Erro de negócio com CAMPO explícito (`{ code, field, message }`) — ex.:
-  //     vagas do evento abaixo dos inscritos atuais. Preserva a MENSAGEM do servidor
-  //     (informativa, com os números) no input certo, em vez do texto genérico.
-  const bizField = (data as { field?: unknown }).field;
-  const bizMsg = (data as { message?: unknown }).message;
-  if (typeof bizField === 'string' && bizField && typeof bizMsg === 'string' && bizMsg) {
-    const key = BACKEND_FIELD_TO_FORM_ERROR_KEY[bizField];
-    if (key && !fieldErrors[key]) fieldErrors[key] = bizMsg;
   }
 
   // 2) Slug duplicado: o slug é gerado a partir do nome → destaca o campo `name`.
