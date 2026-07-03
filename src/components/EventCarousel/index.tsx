@@ -10,6 +10,8 @@ interface EventCarouselProps {
 }
 
 const GAP = 16;
+/** Largura fixa do card (Figma 222:5298 = 308×282). */
+const CARD_WIDTH = 308;
 
 export function EventCarousel({ items = 20 }: EventCarouselProps) {
   const { events } = useEvents({ page: 1, limit: items });
@@ -26,16 +28,10 @@ export function EventCarousel({ items = 20 }: EventCarouselProps) {
     if (!el) return;
     const w = el.clientWidth || 1;
 
-    // Largura-alvo do card = tamanho do Figma (~300px).
-    if (w < 768) {
-      // Mobile: um card no tamanho do Figma + peek do próximo.
-      setPerView(Math.max(1.15, w / (300 + GAP)));
-    } else {
-      // Desktop: 4 por vez (3 em 768–1023, pra não espremer). Área limitada a
-      // ~1216px centralizada (ver root) → cards ~292px (≈ card do Figma) com
-      // respiro nas laterais. A seta avança uma página inteira.
-      setPerView(w >= 1024 ? 4 : 3);
-    }
+    // Cards com LARGURA FIXA de 308px (Figma). perView = quantos cabem INTEIROS
+    // (só pra dots/paginação; o slide tem basis fixa). O +GAP no numerador
+    // compensa o último card não ter gap à direita.
+    setPerView(Math.max(1, Math.floor((w + GAP) / (CARD_WIDTH + GAP))));
     const max = el.scrollWidth - el.clientWidth;
     setCanPrev(el.scrollLeft > 1);
     setCanNext(el.scrollLeft < max - 1);
@@ -75,10 +71,9 @@ export function EventCarousel({ items = 20 }: EventCarouselProps) {
     el.scrollTo({ left: pageCount > 1 ? (i / (pageCount - 1)) * max : 0, behavior: "smooth" });
   };
 
-  const slideStyle = {
-    flex: `0 0 calc((100% - ${(perView - 1) * GAP}px) / ${perView})`,
-    minWidth: 0,
-  };
+  // Slide com largura FIXA do card (308px). O scroller (overflow-x-auto) clipa no
+  // mobile, então cards fixos não estouram a página em telas estreitas.
+  const slideStyle = { flex: `0 0 ${CARD_WIDTH}px` };
 
   const arrowClass =
     "hidden md:flex absolute top-1/2 -translate-y-1/2 z-10 size-9 items-center justify-center rounded-full bg-gray-2 border border-gray-6 shadow-md hover:bg-gray-3 transition-all duration-200 disabled:opacity-0 disabled:pointer-events-none";
@@ -86,7 +81,10 @@ export function EventCarousel({ items = 20 }: EventCarouselProps) {
   return (
     // Área limitada e centralizada: 5 cards no tamanho normal, com respiro nas
     // laterais em telas grandes (a seção pai é full-bleed; aqui recentralizamos).
-    <div className="relative mx-auto w-full max-w-[1216px]">
+    // Padding lateral (desktop) cria a "gutter" onde as setas ficam — assim elas
+    // NUNCA sobrepõem os cards (o scroller fica dentro do content box, inset). A
+    // largura (1376) = 4 cards de 308 + 3 gaps (1280) + as gutters das setas (96).
+    <div className="relative mx-auto w-full max-w-[1376px] md:px-12">
       <button
         onClick={() => scrollByDir(-1)}
         disabled={!canPrev}

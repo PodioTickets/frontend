@@ -53,7 +53,8 @@ export function EventCard({ event, preview = false }: EventCardProps) {
           name={event.name}
           fallbackId={event.id}
           fill
-          sizes="(max-width: 768px) 90vw, 308px"
+          sizes="(max-width: 768px) 92vw, 320px"
+          quality={90}
           className="size-full border-0 object-cover"
           letterClassName="text-5xl"
           // Prévia mostra `data:` URLs (upload em andamento) — next/image rejeita
@@ -63,7 +64,7 @@ export function EventCard({ event, preview = false }: EventCardProps) {
       </div>
 
       {/* Título + cidade/estado */}
-      <div className="flex flex-col gap-2 border-b border-[#d9d9d9] px-3 py-4">
+      <div className="flex flex-col gap-2 border-b border-[#d9d9d9] px-3 py-3">
         <p className="truncate font-manrope text-base font-bold leading-[1.1] text-[#202020]">
           {event.name}
         </p>
@@ -77,7 +78,7 @@ export function EventCard({ event, preview = false }: EventCardProps) {
       </div>
 
       {/* Organizador + data */}
-      <div className="flex flex-col gap-2 px-3 py-4">
+      <div className="flex flex-col gap-2 px-3 py-3">
         <div className="flex min-w-0 items-center gap-1">
           <ImageWithInitialFallback
             src={organizerImg}

@@ -459,9 +459,11 @@ function MobileAdvancedSearch() {
             </div>
           ) : (
             <>
-              <div className="grid grid-cols-1 gap-4">
+              <div className="flex flex-wrap justify-center gap-4">
                 {events.map((event) => (
-                  <EventCard key={event.id} event={event} />
+                  <div key={event.id} className="w-[308px] max-w-full">
+                    <EventCard event={event} />
+                  </div>
                 ))}
               </div>
               {currentPage < pagination.totalPages && (
@@ -708,7 +710,9 @@ function SearchContent() {
   return (
     <>
       <MobileAdvancedSearch />
-      <section className="hidden md:flex flex-col min-h-screen items-center max-w-[1280px] mx-auto px-4 lg:px-8">
+      {/* Largura p/ caber 4 cards de 308px por linha (4×308 + 3 gaps = 1304 +
+          padding). Antes 1280 só cabia 3. */}
+      <section className="hidden md:flex flex-col min-h-screen items-center max-w-[1376px] mx-auto px-4 lg:px-8">
         <HomeFilters
           initialState={effectiveLocation.state}
           initialCity={effectiveLocation.city}
@@ -786,9 +790,13 @@ function SearchContent() {
             </div>
           ) : (
             <>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-6">
+              {/* Cards com largura fixa do Figma (308px); no máx. 4 por linha
+                  (max-w = 4×308 + 3 gaps de 24). flex-wrap resolve a responsividade. */}
+              <div className="flex flex-wrap justify-center gap-6 mx-auto max-w-[1304px]">
                 {filteredEvents.map((event) => (
-                  <EventCard key={event.id} event={event} />
+                  <div key={event.id} className="w-[308px] max-w-full">
+                    <EventCard event={event} />
+                  </div>
                 ))}
               </div>
               {hasMore && (
