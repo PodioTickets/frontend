@@ -11,8 +11,6 @@ const ADMIN_AUDIT_LOGS_PATH =
 
 const ADMIN_ORGANIZATIONS_PATH = "/api/v1/admin/organizations";
 
-const ADMIN_USERS_PATH = "/api/v1/admin/users";
-
 const ADMIN_USER_ACTIVITY_PATH = "/api/v1/admin/user-activity";
 
 // ──────────────── User activity (cliente final + anônimo) ────────────────
@@ -416,51 +414,6 @@ export interface AdminProfile {
   avatarUrl?: string | null;
 }
 
-/** Usuário (participante) na listagem admin — shape normalizado do endpoint. */
-export interface AdminUser {
-  id: string;
-  firstName: string;
-  lastName: string;
-  email: string;
-  avatarUrl: string | null;
-  documentNumber: string | null;
-  documentType: "CPF" | "PASSPORT" | null;
-  country: string | null;
-  phone: string | null;
-  isActive: boolean;
-  createdAt: string;
-  /** Ingressos (inscrições confirmadas) do participante. */
-  ticketsCount: number;
-}
-
-/** Parse defensivo de um item cru do backend → AdminUser (ignora inválidos). */
-function parseAdminUser(raw: unknown): AdminUser | null {
-  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return null;
-  const o = raw as Record<string, unknown>;
-  const id = typeof o.id === "string" ? o.id : "";
-  if (!id) return null;
-  const str = (v: unknown): string => (typeof v === "string" ? v : "");
-  const strOrNull = (v: unknown): string | null =>
-    typeof v === "string" && v.length > 0 ? v : null;
-  const docType = o.documentType;
-  return {
-    id,
-    firstName: str(o.firstName),
-    lastName: str(o.lastName),
-    email: str(o.email),
-    avatarUrl: strOrNull(o.avatarUrl),
-    documentNumber: strOrNull(o.documentNumber),
-    documentType:
-      docType === "CPF" || docType === "PASSPORT" ? docType : null,
-    country: strOrNull(o.country),
-    phone: strOrNull(o.phone),
-    isActive: o.isActive !== false, // default ativo se ausente
-    createdAt: str(o.createdAt),
-    ticketsCount:
-      typeof o.ticketsCount === "number" ? o.ticketsCount : 0,
-  };
-}
-
 export class AdminService {
   constructor(private apiClient: ApiClient) { }
 
@@ -609,69 +562,6 @@ export class AdminService {
         limit: pagination.limit ?? safeLimit,
         total: pagination.total ?? 0,
         totalPages: Math.max(1, pagination.totalPages ?? 1),
-      },
-    };
-  }
-
-  /**
-   * Lista/busca USUÁRIOS (participantes) para o admin. Espelha
-   * `getAdminOrganizations`: paginação server-side, busca e filtro de status
-   * (isActive). Tolera `data.users`/`data.items` e diferentes envelopes.
-   */
-  async getAdminUsers(params?: {
-    page?: number;
-    limit?: number;
-    search?: string;
-    isActive?: boolean;
-  }): Promise<{
-    items: AdminUser[];
-    pagination: OrganizationAuditLogsPagination;
-  }> {
-    const { page = 1, limit = 20, search, isActive } = params || {};
-    const safeLimit = Math.min(100, Math.max(1, limit));
-
-    const res = await this.apiClient.get<Record<string, unknown>>(
-      ADMIN_USERS_PATH,
-      {
-        params: {
-          page,
-          limit: safeLimit,
-          ...(search?.trim() ? { search: search.trim() } : {}),
-          ...(isActive !== undefined ? { isActive } : {}),
-        },
-      },
-    );
-
-    const body =
-      res.data && typeof res.data === "object" && !Array.isArray(res.data)
-        ? (res.data as Record<string, unknown>)
-        : {};
-    const nested =
-      body.data && typeof body.data === "object" && !Array.isArray(body.data)
-        ? (body.data as Record<string, unknown>)
-        : body;
-
-    const rawItems = Array.isArray(nested.users)
-      ? nested.users
-      : Array.isArray(nested.items)
-        ? nested.items
-        : [];
-    const p =
-      nested.pagination && typeof nested.pagination === "object"
-        ? (nested.pagination as Record<string, unknown>)
-        : {};
-
-    const items = rawItems
-      .map(parseAdminUser)
-      .filter((u): u is AdminUser => u !== null);
-
-    return {
-      items,
-      pagination: {
-        page: typeof p.page === "number" ? p.page : page,
-        limit: typeof p.limit === "number" ? p.limit : safeLimit,
-        total: typeof p.total === "number" ? p.total : 0,
-        totalPages: Math.max(1, typeof p.totalPages === "number" ? p.totalPages : 1),
       },
     };
   }
