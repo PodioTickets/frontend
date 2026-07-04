@@ -848,7 +848,10 @@ export class AdminService {
     const contentDisposition =
       ((response.headers as Record<string, unknown>)["content-disposition"] as string) ?? "";
     const match = contentDisposition.match(/filename="?([^"]+)"?/);
-    const filename = match?.[1] ?? `ingressos-${id.slice(0, 8)}.txt`;
+    // Fallback SEMPRE .csv: o endpoint devolve CSV (text/csv). O `.txt` anterior
+    // vazava quando o header Content-Disposition não é legível pelo JS (CORS sem
+    // exposedHeaders) → o arquivo baixava como TXT.
+    const filename = match?.[1] ?? `ingressos-${id.slice(0, 8)}.csv`;
     return { blob: response.data as unknown as Blob, filename };
   }
 
