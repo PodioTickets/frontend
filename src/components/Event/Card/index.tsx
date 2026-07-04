@@ -64,8 +64,8 @@ export function EventCard({ event, preview = false }: EventCardProps) {
       </div>
 
       {/* Título + cidade/estado (sem padding lateral, sem borda) */}
-      <div className="flex w-full flex-col gap-3 pt-3 pb-2">
-        <p className="[text-box-trim:trim-both] [text-box-edge:cap_alphabetic] truncate font-manrope text-base font-bold text-[#202020]">
+      <div className="flex w-full flex-col pt-3 pb-2">
+        <p className="[text-box-trim:trim-both] truncate font-manrope text-base font-bold text-[#202020]">
           {event.name}
         </p>
         {/* Wrapper em LINHA (igual ao "local" do Figma): o `flex-1` interno do
@@ -77,7 +77,7 @@ export function EventCard({ event, preview = false }: EventCardProps) {
           <CityStateLabel
             city={event.city ?? ""}
             state={event.state ?? ""}
-            className="[text-box-trim:trim-both] [text-box-edge:cap_alphabetic] font-family-dm-sans text-sm text-[#646464]"
+            className="[text-box-trim:trim-both] font-family-dm-sans text-sm text-[#646464]"
           />
         </div>
       </div>

@@ -58,8 +58,15 @@ export function readCouponParam(
 const MAX_COUPON_LENGTH = 30;
 
 /* Buffer volátil — zera quando o JS da página é recarregado. Guarda código +
- * tipo pra preservar a distinção cupom/voucher entre navegações SPA. */
-let pendingCouponMemory: { code: string; kind: CouponParamKind } | null = null;
+ * tipo (distinção cupom/voucher) + `ownerSlug`: o slug do evento de ORIGEM do
+ * link. O cupom só vale no fluxo desse evento (página dele + checkout); ao ir
+ * pra home/busca/outro evento o `CouponLinkCapture` descarta — cupom é
+ * event-scoped (links são sempre `/events/[slug]?cupom=`). */
+let pendingCouponMemory: {
+  code: string;
+  kind: CouponParamKind;
+  ownerSlug: string | null;
+} | null = null;
 
 export function normalizeCouponCode(raw: string | null | undefined): string | null {
   if (!raw) return null;
@@ -77,13 +84,21 @@ export function getPendingCouponKind(): CouponParamKind | null {
   return pendingCouponMemory?.kind ?? null;
 }
 
+/** Slug do evento de origem do cupom pendente (`null` se capturado fora de um
+ *  evento). Usado pelo `CouponLinkCapture` pra descartar o cupom ao sair do
+ *  fluxo desse evento. */
+export function getPendingCouponOwnerSlug(): string | null {
+  return pendingCouponMemory?.ownerSlug ?? null;
+}
+
 export function setPendingCoupon(
   code: string,
   kind: CouponParamKind = "coupon",
+  ownerSlug: string | null = null,
 ): void {
   const normalized = normalizeCouponCode(code);
   if (!normalized) return;
-  pendingCouponMemory = { code: normalized, kind };
+  pendingCouponMemory = { code: normalized, kind, ownerSlug };
 }
 
 export function clearPendingCoupon(): void {

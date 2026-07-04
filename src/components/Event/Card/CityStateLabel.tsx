@@ -129,13 +129,13 @@ export function CityStateLabel({ city, state, className }: CityStateLabelProps) 
           corta o line-box p/ a altura das maiúsculas, batendo a altura do Figma. */}
       <span
         ref={cityRef}
-        className="min-w-0 truncate [text-box-trim:trim-both] [text-box-edge:cap_alphabetic]"
+        className="min-w-0 truncate [text-box-trim:trim-both]"
       >
         {displayCity}
       </span>
       <span
         ref={suffixRef}
-        className="shrink-0 whitespace-nowrap [text-box-trim:trim-both] [text-box-edge:cap_alphabetic]"
+        className="shrink-0 whitespace-nowrap [text-box-trim:trim-both]"
       >
         ,&nbsp;{stateRaw}
       </span>

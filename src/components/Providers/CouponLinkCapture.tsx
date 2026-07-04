@@ -5,25 +5,33 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
   getPendingCoupon,
   getPendingCouponKind,
+  getPendingCouponOwnerSlug,
+  clearPendingCoupon,
   normalizeCouponCode,
   readCouponParamEntry,
   setPendingCoupon,
   couponParamName,
 } from "@/hooks/usePendingCoupon";
 
+/** Slug do evento se `pathname` for a página pública de um evento (`/events/[slug]`),
+ *  senão `null`. O checkout (`/checkout/...`) não traz o slug na rota — é tratado à
+ *  parte como "dentro do fluxo". */
+function eventSlugFromPath(pathname: string): string | null {
+  const parts = pathname.split("/").filter(Boolean);
+  return parts[0] === "events" && parts[1] ? decodeURIComponent(parts[1]) : null;
+}
+
 /**
- * Captura `?cupom=CODIGO` (ou o legado `?coupon=`) em qualquer rota e mantém na
- * URL. A URL é a ÚNICA fonte duradoura: recarregar uma rota sem o param descarta
- * o cupom. Não usa sessionStorage nem localStorage — só um buffer volátil em
- * memória JS (`pendingCouponMemory` em `usePendingCoupon.ts`) pra propagar o
- * param em navegações SPA que destruiriam a query string (router.push / <Link>
- * sem o cupom). No reload da página o buffer zera.
+ * Captura `?cupom=CODIGO` (ou o legado `?coupon=`) na página de um evento e mantém
+ * o cupom ATIVO apenas no fluxo DAQUELE evento — a própria página dele e o checkout.
+ * Ao navegar pra home, busca ou OUTRO evento, o cupom é descartado (links são sempre
+ * `/events/[slug]?cupom=`, então o cupom é event-scoped e não pode contaminar outro
+ * evento). A URL é a fonte duradoura; o buffer volátil em memória
+ * (`pendingCouponMemory`) só re-anexa o param em navegações SPA que destruiriam a
+ * query string. No reload da página o buffer zera.
  *
- * Quando o usuário avança no checkout o cupom/voucher é aplicado
- * automaticamente (silencioso em caso de erro).
- *
- * Preserva o TIPO do param: um `?voucher=` continua `?voucher=` ao re-anexar;
- * cupom é re-anexado como `?cupom=` (migra links legados `?coupon=`).
+ * Preserva o TIPO do param: `?voucher=` continua `?voucher=`; cupom é re-anexado
+ * como `?cupom=` (migra links legados `?coupon=`).
  */
 export function CouponLinkCapture() {
   const searchParams = useSearchParams();
@@ -33,25 +41,39 @@ export function CouponLinkCapture() {
   useEffect(() => {
     const urlEntry = readCouponParamEntry(searchParams);
     const urlCode = normalizeCouponCode(urlEntry?.code);
+    const slug = eventSlugFromPath(pathname);
 
     if (urlCode) {
-      // URL é a fonte da verdade — sincroniza o buffer em memória com ela.
-      if (urlCode !== getPendingCoupon()) {
-        setPendingCoupon(urlCode, urlEntry!.kind);
+      // URL é a fonte da verdade — sincroniza o buffer. Só (re)define o dono quando
+      // estamos numa página de evento; em rotas de checkout (slug null, param
+      // re-anexado) preserva o dono já capturado, senão ele seria perdido.
+      const ownerSlug = slug ?? getPendingCouponOwnerSlug();
+      if (urlCode !== getPendingCoupon() || ownerSlug !== getPendingCouponOwnerSlug()) {
+        setPendingCoupon(urlCode, urlEntry!.kind, ownerSlug);
       }
       return;
     }
 
-    // Sem código na URL: se o buffer ainda tem (navegação SPA acabou de remover
-    // a query), re-anexa via router.replace usando o MESMO param de origem.
-    // Próxima execução do effect verá `urlCode === buffered` e retornará acima.
+    // Sem código na URL: só temos algo a fazer se o buffer ainda tiver um cupom.
     const buffered = getPendingCoupon();
     if (!buffered) return;
 
+    // O cupom vale só no fluxo do evento de ORIGEM: a página dele OU qualquer rota
+    // de checkout (o pedido em checkout é de um único evento). Em home/busca/outro
+    // evento, descarta — não reaplica o cupom do evento anterior.
+    const isCheckout = pathname.startsWith("/checkout");
+    const owner = getPendingCouponOwnerSlug();
+    const belongsHere = isCheckout || (slug != null && slug === owner);
+    if (!belongsHere) {
+      clearPendingCoupon();
+      return;
+    }
+
+    // Navegação SPA removeu a query dentro do fluxo válido → re-anexa via
+    // router.replace com o nome canônico (`cupom`/`voucher`). A próxima execução
+    // verá `urlCode === buffered` e retornará acima.
     const kind = getPendingCouponKind() ?? "coupon";
     const params = new URLSearchParams(searchParams.toString());
-    // Re-anexa com o nome canônico (`cupom`/`voucher`) — migra links legados
-    // (`?coupon=`) pro `?cupom=` na primeira navegação interna.
     params.set(couponParamName(kind), buffered);
     const query = params.toString();
     router.replace(query ? `${pathname}?${query}` : pathname, { scroll: false });
