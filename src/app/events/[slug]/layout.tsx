@@ -26,6 +26,16 @@ const DEFAULT_TITLE = "PódioTicket";
 const DEFAULT_DESCRIPTION =
   "Descubra e inscreva-se em eventos esportivos na PódioTicket.";
 
+/**
+ * Dimensões declaradas do `og:image`, na MESMA proporção do banner exibido nos
+ * cards da home (Figma 312/142 ≈ 2.2:1). Sem `og:image:width/height` os crawlers
+ * (WhatsApp/Facebook/Telegram) caem num thumbnail QUADRADO; declarar a proporção
+ * paisagem força o card largo do banner. 1200px de largura = tamanho recomendado
+ * p/ previews grandes (`summary_large_image`). Altura = round(1200*142/312)=546.
+ */
+const OG_IMAGE_WIDTH = 1200;
+const OG_IMAGE_HEIGHT = 546;
+
 /** Garante URL absoluta para a imagem OG (crawlers exigem absoluta). */
 function toAbsoluteImageUrl(raw: string | undefined | null): string | null {
   const v = raw?.trim();
@@ -104,7 +114,16 @@ export async function generateMetadata({
       type: "website",
       siteName: DEFAULT_TITLE,
       ...(imageUrl
-        ? { images: [{ url: imageUrl, alt: event.name }] }
+        ? {
+            images: [
+              {
+                url: imageUrl,
+                width: OG_IMAGE_WIDTH,
+                height: OG_IMAGE_HEIGHT,
+                alt: event.name,
+              },
+            ],
+          }
         : {}),
     },
     twitter: {
