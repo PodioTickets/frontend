@@ -831,7 +831,7 @@ export default function EventPage() {
                 <p className="text-sm text-gray-11 text-center mt-2">
                   Inscrições abrem em <br />{" "}
                   <RegistrationCountdown
-                    targetDate={registrationOpensAt}
+                    targetDate={registrationOpensInstant}
                     fallbackText={registrationOpensDateText}
                     onExpire={handleRegistrationCountdownExpire}
                     className="font-semibold"
