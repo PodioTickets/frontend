@@ -923,11 +923,15 @@ export function TicketForm({
           const priceString = b.price.replace(/[^\d,]/g, "").replace(",", ".");
           const priceInCents = Math.round((parseFloat(priceString) || 0) * 100);
           const triggerType = b.startType === "previous" ? "AFTER_PREVIOUS_SOLD_OUT" : "BY_TIME";
+          // Wall-clock do lote enviado como UTC EXPLÍCITO (`Z`) — igual às datas de
+          // inscrição do evento. Sem o `Z`, `new Date(...)` no backend usa o fuso LOCAL
+          // do servidor e desloca +3h no save (num servidor em America/Sao_Paulo),
+          // fazendo o lote abrir/fechar na hora errada. Ver createEventDraftSync.
           const startDate =
             b.startType === "date" && b.startDate
-              ? `${b.startDate}T${b.startTime || "00:00"}:00`
+              ? `${b.startDate}T${b.startTime || "00:00"}:00.000Z`
               : undefined;
-          const endDate = b.endDate ? `${b.endDate}T${b.endTime || "23:59"}:59` : undefined;
+          const endDate = b.endDate ? `${b.endDate}T${b.endTime || "23:59"}:59.999Z` : undefined;
           const base = {
             quantity: parseInt(b.quantity, 10) || 0,
             price: priceInCents,
