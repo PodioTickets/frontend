@@ -72,8 +72,13 @@ export function buildCreateEventBodyFromForm(
   const rst = (formData.registrationStartTime?.trim() || "00:00").slice(0, 5);
   const ret = (formData.registrationEndTime?.trim() || "00:00").slice(0, 5);
 
-  const registrationStartDateTime = rs ? `${rs}T${rst}:00` : undefined;
-  const registrationEndDateTime = re ? `${re}T${ret}:00` : undefined;
+  // Wall-clock do organizador enviado como UTC EXPLÍCITO (`Z`). Sem o `Z`, o backend
+  // faz `new Date("2026-07-05T20:00:00")` e interpreta no fuso LOCAL do servidor — num
+  // servidor em America/Sao_Paulo (ex.: ambiente local) isso desloca +3h no save (20:00
+  // vira 23:00Z). Com `Z` o instante gravado é sempre o wall-clock digitado (20:00Z),
+  // determinístico em qualquer fuso, e casa com a exibição/hidratação (que leem UTC).
+  const registrationStartDateTime = rs ? `${rs}T${rst}:00.000Z` : undefined;
+  const registrationEndDateTime = re ? `${re}T${ret}:00.000Z` : undefined;
 
   const eventData: Record<string, unknown> = {
     name: formData.name.trim(),
