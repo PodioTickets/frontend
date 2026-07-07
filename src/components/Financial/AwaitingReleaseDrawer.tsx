@@ -15,7 +15,6 @@ import { CardIcon } from "@/components/Icons/CardIcon";
 import { PaymentItemDetailsDrawer } from "./PaymentItemDetailsDrawer";
 import { ArrowButton } from "../ArrowButton";
 import { DetailsIcon } from "../Icons/DetailsIcon";
-import { PaymentIcon } from "react-svg-credit-card-payment-icons";
 import { organizerService } from "@/services";
 import type { PendingRelease } from "@/services/organizer/OrganizerService";
 import { TimerIcon } from "../Icons/Organizer/TimerIcon";
@@ -417,18 +416,13 @@ export function AwaitingReleaseDrawer({
                       Comprador
                     </p>
                   </div>
-                  <div className="flex flex-1 h-full items-center min-h-px min-w-px p-4">
-                    <p className="font-inter font-medium leading-[1.3] text-sm text-gray-12 text-center">
-                      Previsão liberação
-                    </p>
-                  </div>
                   <div className="flex flex-1 h-full items-center justify-center min-h-px min-w-px p-4">
                     <p className="font-inter font-medium leading-[1.3] text-sm text-gray-12 text-center">
-                      Pagamento
+                      Previsão de liberação
                     </p>
                   </div>
-                  <div className="flex flex-1 h-full items-center justify-center min-h-px min-w-px p-4">
-                    <p className="font-inter font-medium leading-[1.3] text-sm text-gray-12 text-center">
+                  <div className="flex flex-1 h-full items-center justify-end min-h-px min-w-px p-4">
+                    <p className="font-inter font-medium leading-[1.3] text-sm text-gray-12 text-right">
                       Valor pendente
                     </p>
                   </div>
@@ -500,7 +494,7 @@ export function AwaitingReleaseDrawer({
                           </div>
                         </div>
 
-                        {/* Previsão liberação */}
+                        {/* Previsão de liberação */}
                         <div className="flex flex-1 h-full items-center min-h-px min-w-px p-4">
                           <div className="flex items-center justify-center w-full">
                             <p className="font-inter font-semibold leading-[1.3] text-sm text-gray-12">
@@ -509,25 +503,11 @@ export function AwaitingReleaseDrawer({
                           </div>
                         </div>
 
-                        {/* Pagamento */}
-                        <div className="flex flex-1 h-full items-center justify-center min-h-px min-w-px p-4">
-                          <div className="flex items-center gap-2 justify-center w-full">
-                            {item.paymentMethod === "PIX" ? (
-                              <PixIcon className="size-5 text-gray-12" />
-                            ) : (
-                              <PaymentIcon type="Generic" format="flatRounded" className="size-8 text-gray-12" />
-                            )}
-                          </div>
-                        </div>
-
                         {/* Valor pendente */}
-                        <div className="flex flex-1 h-full items-center justify-center min-h-px min-w-px p-4">
-                          <div className="flex items-center gap-1 justify-center w-full">
+                        <div className="flex flex-1 h-full items-center justify-end min-h-px min-w-px p-4">
+                          <div className="flex items-center gap-1 justify-end w-full">
                             <span className="font-inter font-semibold leading-[1.3] text-sm text-gray-12">
-                              R$
-                            </span>
-                            <span className="font-inter font-semibold leading-[1.3] text-sm text-gray-12">
-                              {(item.amount / 100).toFixed(2).replace(".", ",")}
+                              R$ {(item.amount / 100).toFixed(2).replace(".", ",")}
                             </span>
                           </div>
                         </div>
