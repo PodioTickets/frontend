@@ -31,6 +31,11 @@ export interface EditEventFormData {
   city: string;
   state: string;
   googleMapsLink: string;
+  /** Local por coordenadas (seleção no mapa). String no form; "" = não definido. */
+  latitude: string;
+  longitude: string;
+  /** Rótulo do local escolhido (nome do POI / endereço formatado). */
+  locationName: string;
   bannerUrl: string;
   regulationUrl: string;
   description: string;
@@ -75,6 +80,9 @@ const defaultFormData: EditEventFormData = {
   city: "",
   state: "",
   googleMapsLink: "",
+  latitude: "",
+  longitude: "",
+  locationName: "",
   bannerUrl: "",
   regulationUrl: "",
   description: "",
@@ -146,6 +154,12 @@ function buildFormDataFromEvent(eventId: string, eventData: any): EditEventFormD
     city: eventData.city || "",
     state: eventData.state || "",
     googleMapsLink: eventData.googleMapsLink || "",
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    latitude: (eventData as any).latitude != null ? String((eventData as any).latitude) : "",
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    longitude: (eventData as any).longitude != null ? String((eventData as any).longitude) : "",
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    locationName: (eventData as any).locationName || "",
     bannerUrl: eventData.bannerUrl || "",
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     regulationUrl: (eventData as any).regulationUrl || "",

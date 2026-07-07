@@ -22,6 +22,11 @@ export interface CreateEventFormData {
   city: string;
   state: string;
   googleMapsLink: string;
+  /** Local por coordenadas (seleção no mapa). String no form; "" = não definido. */
+  latitude: string;
+  longitude: string;
+  /** Rótulo do local escolhido (nome do POI / endereço formatado). */
+  locationName: string;
   bannerUrl: string;
   regulationUrl: string;
   createdEventId: string | null;
@@ -63,6 +68,9 @@ const initialFormData: CreateEventFormData = {
   city: "",
   state: "",
   googleMapsLink: "",
+  latitude: "",
+  longitude: "",
+  locationName: "",
   bannerUrl: "",
   regulationUrl: "",
   createdEventId: null,

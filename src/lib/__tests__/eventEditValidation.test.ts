@@ -29,7 +29,10 @@ function validForm(): EditEventFormData {
     neighborhood: "Sé",
     city: "São Paulo",
     state: "SP",
-    googleMapsLink: "https://maps.google.com/?q=se",
+    googleMapsLink: "https://www.google.com/maps/search/?api=1&query=-23.5501,-46.6339",
+    latitude: "-23.5501",
+    longitude: "-46.6339",
+    locationName: "Praça da Sé, São Paulo - SP",
     bannerUrl: "",
     regulationUrl: "",
     description: "",
@@ -184,12 +187,23 @@ describe("validateEventInformation", () => {
     const semCep = validateEventInformation({ ...validForm(), cep: "", street: "", city: "" });
     expect(semCep.street).toBeUndefined();
     expect(semCep.city).toBeUndefined();
-    // CEP válido + endereço vazio → cobra.
-    const comCep = validateEventInformation({ ...validForm(), street: "", city: "", state: "", googleMapsLink: "" });
+    // CEP válido + endereço/local vazio → cobra (inclui a seleção no mapa).
+    // Sem coords E sem link legado → erro de local.
+    const comCep = validateEventInformation({ ...validForm(), street: "", city: "", state: "", latitude: "", longitude: "", googleMapsLink: "" });
     expect(comCep.street).toBeDefined();
     expect(comCep.city).toBeDefined();
     expect(comCep.state).toBeDefined();
-    expect(comCep.googleMapsLink).toBeDefined();
+    expect(comCep.mapLocation).toBeDefined();
+  });
+
+  it("evento legado (só googleMapsLink, sem lat/lng) continua válido no local", () => {
+    const legado = validateEventInformation({
+      ...validForm(),
+      latitude: "",
+      longitude: "",
+      googleMapsLink: "https://www.google.com/maps/search/?api=1&query=Praca+da+Se",
+    });
+    expect(legado.mapLocation).toBeUndefined();
   });
 
   it("valida formato de email de atendimento", () => {
@@ -247,7 +261,8 @@ describe("mapEventBackendErrors", () => {
       }),
     );
     expect(fieldErrors.contactEmail).toBeTruthy();
-    expect(fieldErrors.googleMapsLink).toBeTruthy();
+    // Erro de local do backend cai no slot inline do botão de mapa.
+    expect(fieldErrors.mapLocation).toBeTruthy();
   });
 
   it("traduz nomes de endereço do backend (zipCode→cep, location→street)", () => {

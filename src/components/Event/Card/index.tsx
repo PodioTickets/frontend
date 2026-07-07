@@ -1,14 +1,10 @@
 "use client";
 
-import { CalendarIcon } from "@/components/Icons/CalendarIcon";
 import Link from "next/link";
 import { useMemo } from "react";
 import type { Event } from "@/interfaces/event";
-import { getAvatarUrl } from "@/utils/avatar";
-import { getEventOrganizer } from "@/utils/organization";
-import { formatDateBR } from "@/utils/datetimeBR";
+import { formatDateBR, toUtcDate } from "@/utils/datetimeBR";
 import { ImageWithInitialFallback } from "@/components/ImageWithInitialFallback";
-import { CityStateLabel } from "./CityStateLabel";
 
 interface EventCardProps {
   event: Event;
@@ -19,26 +15,36 @@ interface EventCardProps {
 }
 
 /**
- * Card de evento (home/busca) — design do Figma (222:5298), 308×242. A imagem é o
- * BANNER do evento (aspect 312/142, cantos arredondados). Card SEM borda/fundo/sombra:
- * banner arredondado → título + cidade/estado → organizador + data, tudo flush-left.
+ * Card de evento (home/busca) — design do Figma (222:5298). A imagem é o BANNER do
+ * evento (aspect 312/142, cantos arredondados). Card SEM borda/fundo/sombra:
+ * banner arredondado → título → endereço (local, cidade, estado) → data por extenso.
  */
 export function EventCard({ event, preview = false }: EventCardProps) {
-  const formattedDate = useMemo(() => {
-    if (!event?.eventDate) return "";
-    return formatDateBR(event.eventDate, {
-      day: "2-digit",
-      month: "2-digit",
-      year: "numeric",
-    });
-  }, [event?.eventDate]);
+  // Endereço completo: "Local, Cidade, Estado". `locationName` (escolhido no mapa)
+  // pode faltar em eventos legados → cai pra "Cidade, Estado".
+  const addressLabel = useMemo(() => {
+    return [event.locationName, event.city, event.state]
+      .map((part) => (part ?? "").trim())
+      .filter(Boolean)
+      .join(", ");
+  }, [event.locationName, event.city, event.state]);
 
-  const organizer = getEventOrganizer(event);
-  const organizerImg = organizer?.logoUrl
-    ? getAvatarUrl(organizer.logoUrl)
-    : event.organizer?.user?.avatarUrl
-      ? getAvatarUrl(event.organizer.user.avatarUrl)
-      : null;
+  // "Acontece no sábado, 25 de julho" — dia da semana + dia + mês por extenso (UTC).
+  // Preposição concorda com o gênero do dia: domingo/sábado (m) → "no";
+  // segunda a sexta (…-feira, f) → "na".
+  const dateLabel = useMemo(() => {
+    if (!event.eventDate) return "";
+    const d = toUtcDate(event.eventDate);
+    if (!d) return "";
+    const weekday = d.getUTCDay(); // 0=domingo … 6=sábado
+    const prep = weekday === 0 || weekday === 6 ? "no" : "na";
+    const formatted = formatDateBR(event.eventDate, {
+      weekday: "long",
+      day: "numeric",
+      month: "long",
+    });
+    return `Acontece ${prep} ${formatted}`;
+  }, [event.eventDate]);
 
   // Imagem do card = BANNER do evento.
   const eventImg = event.bannerUrl;
@@ -63,50 +69,21 @@ export function EventCard({ event, preview = false }: EventCardProps) {
         />
       </div>
 
-      {/* Título + cidade/estado (sem padding lateral, sem borda) */}
+      {/* Título + endereço (sem padding lateral, sem borda) */}
       <div className="flex w-full flex-col pt-3 pb-2">
         <p className="[text-box-trim:trim-both] truncate font-manrope text-base font-bold text-[#202020]">
           {event.name}
         </p>
-        {/* Wrapper em LINHA (igual ao "local" do Figma): o `flex-1` interno do
-            CityStateLabel cresce na HORIZONTAL. Sem esta linha, ele ficava como
-            filho da coluna → flex-1 crescia vertical (altura inconsistente). */}
-        <div className="flex w-full items-center">
-          {/* Só a cidade trunca; o estado fica colado no "…" (medição em canvas,
-              ver CityStateLabel) — CSS puro deixaria um vão antes da vírgula. */}
-          <CityStateLabel
-            city={event.city ?? ""}
-            state={event.state ?? ""}
-            className="[text-box-trim:trim-both] font-family-dm-sans text-sm text-[#646464]"
-          />
-        </div>
+        {/* Endereço numa linha só (trunca): Local, Cidade, Estado. */}
+        <p className="[text-box-trim:trim-both] w-full min-w-0 truncate font-family-dm-sans text-sm text-gray-11">
+          {addressLabel}
+        </p>
       </div>
 
-      {/* Organizador + data */}
-      <div className="flex w-full flex-col gap-2">
-        <div className="flex min-w-0 items-center gap-1">
-          <ImageWithInitialFallback
-            src={organizerImg}
-            alt={organizer?.name ?? "Organizador"}
-            name={organizer?.name ?? "Organizador"}
-            fallbackId={organizer?.id ?? event.id}
-            width={20}
-            height={20}
-            className="size-5 shrink-0 rounded-full"
-            imgClassName="object-cover"
-            letterClassName="text-[10px]"
-          />
-          <span className="truncate [text-box-trim:trim-both] [text-box-edge:cap_alphabetic] font-family-dm-sans text-sm leading-[1.3] text-[#646464]">
-            {organizer?.name || "Organizador"}
-          </span>
-        </div>
-        <div className="flex items-center gap-1">
-          <CalendarIcon className="size-5 shrink-0 text-[#646464]" />
-          <span className="[text-box-trim:trim-both] [text-box-edge:cap_alphabetic] font-family-dm-sans text-sm leading-[1.3] text-[#646464]">
-            {formattedDate}
-          </span>
-        </div>
-      </div>
+      {/* Data por extenso (sem ícone) */}
+      <span className="[text-box-trim:trim-both] [text-box-edge:cap_alphabetic] font-family-dm-sans font-medium text-sm leading-[1.3] text-gray-11">
+        {dateLabel}
+      </span>
     </div>
   );
 

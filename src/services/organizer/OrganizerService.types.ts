@@ -381,6 +381,13 @@ export interface CreateEventRequest {
   /** Vagas do evento (teto de participantes). `null` limpa o teto; omitido mantém. */
   maxParticipants?: number | null;
   googleMapsLink?: string;
+  /**
+   * Local do evento por coordenadas (seleção no mapa). `null` limpa o campo;
+   * omitido mantém. `googleMapsLink` é derivado destas no build.
+   */
+  latitude?: number | null;
+  longitude?: number | null;
+  locationName?: string | null;
   bannerUrl?: string;
   status?:
   | "DRAFT"
