@@ -13,7 +13,7 @@ import { FacebookIcon } from "@/components/Icons/FacebookIcon";
 import { YoutubeIcon } from "@/components/Icons/YoutubeIcon";
 import { TiktokIcon } from "@/components/Icons/TiktokIcon";
 import { EmailIcon } from "@/components/Icons/EmailIcon";
-import { LocationPickerModal } from "@/components/Organizer/LocationPickerModal";
+import { LocationPickerModal, type LocationPickerResult } from "@/components/Organizer/LocationPickerModal";
 import { hasGoogleMapsApiKey } from "@/hooks/useGoogleMaps";
 import {
   hasValidCoordinates,
@@ -22,10 +22,6 @@ import {
 } from "@/utils/googleMapsGeo";
 import { ContactEmailHelpTooltip } from "@/components/Organizer/ContactEmailHelpTooltip";
 import { FieldHelpTooltip } from "@/components/Organizer/FieldHelpTooltip";
-import { SearchableSelect } from "@/components/SearchableSelect";
-import { BRAZIL_STATES } from "@/utils/locationFacets";
-import { useCitiesByState } from "@/hooks/useCitiesByState";
-import { userService } from "@/services";
 import {
   EVENT_DATE_NOT_BEFORE_REGISTRATION_END_TOAST,
   isEventDateBeforeRegistrationEnd,
@@ -75,14 +71,6 @@ function formatCEP(value: string): string {
 // encerramento das inscrições ao mudar o início pra depois do fim).
 function getCurrentDatePlaceholder(): string {
   return `00/00/${new Date().getFullYear()}`;
-}
-
-interface ViaCEPResponse {
-  logradouro: string;
-  bairro: string;
-  localidade: string;
-  uf: string;
-  erro?: boolean;
 }
 
 // ─── types ───────────────────────────────────────────────────────────────────
@@ -156,8 +144,6 @@ export function InformationForm({
   onHasPendingPdfChange,
   filledParticipants,
 }: InformationFormProps) {
-  const { cities: stateCities, loading: loadingCities } = useCitiesByState(values.state ?? "");
-  const [loadingCEP, setLoadingCEP] = useState(false);
   const [uploadingPDF, setUploadingPDF] = useState(false);
   const [pdfFile, setPdfFile] = useState<File | null>(null);
   const [pdfUrl, setPdfUrl] = useState<string>("");
@@ -166,9 +152,6 @@ export function InformationForm({
   }, [pdfFile, onHasPendingPdfChange]);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
-
-  const cepDigits = (values.cep ?? "").replace(/\D/g, "");
-  const showAddressFields = cepDigits.length === 8;
 
   // ── Local no mapa ──────────────────────────────────────────────────────────
   const [mapOpen, setMapOpen] = useState(false);
@@ -189,47 +172,28 @@ export function InformationForm({
       ? `Quantidade máxima de participantes permitida no evento. ${filledParticipants} vagas já foram vendidas.`
       : "Quantidade máxima de participantes permitida no evento.";
 
-  const handleLocationConfirm = (r: {
-    lat: number;
-    lng: number;
-    name: string;
-    address: string;
-  }) => {
-    onChange({
+  const handleLocationConfirm = (r: LocationPickerResult) => {
+    const updates: Partial<InformationFormValues> = {
       latitude: String(r.lat),
       longitude: String(r.lng),
       locationName: r.name || r.address || "",
       // `googleMapsLink` derivado (query=lat,lng) mantém o embed/EventMap público.
       googleMapsLink: buildGoogleMapsLinkFromCoordinates(r.lat, r.lng),
-    });
-    if (errors.mapLocation) onErrorsChange((prev) => ({ ...prev, mapLocation: "" }));
-  };
-
-  // ── CEP ──────────────────────────────────────────────────────────────────
-
-  const handleCEPChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const raw = e.target.value.replace(/\D/g, "");
-    onChange({ cep: formatCEP(raw) });
-    if (errors.cep) onErrorsChange((prev) => ({ ...prev, cep: "" }));
-
-    if (raw.length === 8) {
-      setLoadingCEP(true);
-      try {
-        const response = await fetch(`/api/cep?cep=${raw}`);
-        if (!response.ok) throw new Error("Erro na requisição: " + response.status);
-        const data: ViaCEPResponse = await response.json();
-        if (data.erro) {
-          toast.error("CEP não encontrado");
-        } else {
-          onChange({ street: data.logradouro || "", neighborhood: data.bairro || "", city: data.localidade || "", state: data.uf || "" });
-          toast.success("Endereço encontrado!");
-        }
-      } catch {
-        toast.error("Erro ao buscar CEP");
-      } finally {
-        setLoadingCEP(false);
-      }
+    };
+    // Endereço derivado do mapa: quando o local foi (re)selecionado, substitui o
+    // bloco de endereço INTEIRO (inclusive vazios) pelo geocode — evita misturar
+    // rua/bairro de um local antigo com o novo. Sem `components` (só reconfirmou),
+    // mantém o endereço já salvo.
+    if (r.components) {
+      const c = r.components;
+      updates.cep = c.cep ? formatCEP(c.cep) : "";
+      updates.street = c.street;
+      updates.neighborhood = c.neighborhood;
+      updates.city = c.city;
+      updates.state = c.state;
     }
+    onChange(updates);
+    if (errors.mapLocation) onErrorsChange((prev) => ({ ...prev, mapLocation: "" }));
   };
 
   // ── field changes ─────────────────────────────────────────────────────────
@@ -583,7 +547,9 @@ export function InformationForm({
           {registrationError && <p className="text-red-10 text-sm">{registrationError}</p>}
         </div>
 
-        {/* Location */}
+        {/* Local do evento — seleção 100% pelo MAPA. O endereço (cep/rua/bairro/
+            cidade/estado) é derivado do local escolhido (reverse geocode) e não
+            é mais editado manualmente. */}
         <div className="flex flex-col gap-4 md:gap-[12px]">
           <div className="flex flex-col gap-2 md:gap-[12px]">
             <h2 className="text-gray-12 text-lg font-semibold font-manrope leading-[1.1]">Local do evento</h2>
@@ -592,97 +558,37 @@ export function InformationForm({
             </p>
           </div>
 
-          <div className="gap-2 w-full grid grid-cols-1 md:grid-cols-2 md:pr-3">
-            <div className="flex flex-col gap-2 w-full">
-              <label className="text-gray-12 text-base font-family-dm-sans">CEP</label>
-              <Input type="text" name="cep" value={values.cep} onChange={handleCEPChange} placeholder="00000-000" maxLength={9} className={`h-12 ${errors.cep ? "border-red-10" : ""}`} />
-              {loadingCEP && <p className="text-gray-11 text-sm">Buscando endereço...</p>}
-              {errors.cep && <p className="text-red-10 text-sm">{errors.cep}</p>}
-            </div>
-          </div>
-
-          <div className={`grid transition-[grid-template-rows] duration-300 ease-in-out ${showAddressFields ? "grid-rows-[1fr]" : "grid-rows-[0fr]"}`}>
-            <div className={`overflow-hidden transition-opacity duration-300 ${showAddressFields ? "opacity-100" : "opacity-0"}`}>
-              <div className="flex flex-col md:flex-row md:flex-wrap gap-5 items-stretch md:items-start pt-1">
-                <div className="flex flex-col gap-2 w-full md:min-w-[365px] md:flex-1">
-                  <label className="text-gray-12 text-base font-family-dm-sans">Rua</label>
-                  <Input type="text" name="street" value={values.street} onChange={handleInputChange} placeholder="Digite o nome da rua" className={`h-12 ${errors.street ? "border-red-10" : ""}`} />
-                  {errors.street && <p className="text-red-10 text-sm">{errors.street}</p>}
-                </div>
-
-                <div className="flex flex-col gap-2 w-full md:min-w-[365px] md:flex-1">
-                  <label className="text-gray-12 text-base font-family-dm-sans">Bairro</label>
-                  <Input type="text" name="neighborhood" value={values.neighborhood} onChange={handleInputChange} placeholder="Digite o nome do bairro" className="h-12" />
-                </div>
-
-                <div className="flex flex-col gap-2 w-full md:min-w-[365px] md:flex-1">
-                  <label className="text-gray-12 text-base font-family-dm-sans">Estado</label>
-                  <SearchableSelect
-                    options={BRAZIL_STATES.map(({ uf, name }) => ({ id: uf, label: `${name} - ${uf}` }))}
-                    value={values.state ?? ""}
-                    onChange={(val) => { onChange({ state: val, city: "" }); if (errors.state) onErrorsChange((prev) => ({ ...prev, state: "" })); if (errors.city) onErrorsChange((prev) => ({ ...prev, city: "" })); }}
-                    placeholder="Selecione o estado"
-                    searchPlaceholder="Pesquisar estado..."
-                    emptyText="Nenhum estado encontrado"
-                    error={!!errors.state}
-                  />
-                  {errors.state && <p className="text-red-10 text-sm">{errors.state}</p>}
-                </div>
-
-                <div className="flex flex-col gap-2 w-full md:min-w-[365px] md:flex-1">
-                  <label className="text-gray-12 text-base font-family-dm-sans">Cidade</label>
-                  <SearchableSelect
-                    options={stateCities.map((c) => ({ id: c, label: c }))}
-                    value={values.city ?? ""}
-                    onChange={(val) => { onChange({ city: val }); if (errors.city) onErrorsChange((prev) => ({ ...prev, city: "" })); }}
-                    placeholder={!values.state ? "Selecione o estado primeiro" : "Selecione a cidade"}
-                    searchPlaceholder="Pesquisar cidade..."
-                    emptyText="Nenhuma cidade encontrada"
-                    disabled={!values.state}
-                    loading={loadingCities}
-                    loadingText="Carregando cidades..."
-                    error={!!errors.city}
-                  />
-                  {errors.city && <p className="text-red-10 text-sm">{errors.city}</p>}
-                </div>
-
-
-
-                <div className="flex flex-col gap-2 w-full">
-                  <label className="text-gray-12 text-base font-family-dm-sans">Local no mapa</label>
-                  {hasLocation ? (
-                    <div className={`flex items-center justify-between gap-3 h-12 rounded-lg border px-3 ${errors.mapLocation ? "border-red-10" : "border-gray-6"}`}>
-                      <span className="flex items-center gap-2 min-w-0">
-                        <LocationIcon className="size-5 text-primary-11 shrink-0" />
-                        <span className="truncate text-gray-12 text-base font-family-dm-sans">{locationLabel}</span>
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() => setMapOpen(true)}
-                        className="shrink-0 text-primary-11 text-sm font-semibold font-family-dm-sans hover:underline"
-                      >
-                        Alterar
-                      </button>
-                    </div>
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={() => setMapOpen(true)}
-                      className={`flex items-center gap-2 h-12 rounded-lg border px-3 text-left transition-colors hover:border-gray-8 ${errors.mapLocation ? "border-red-10" : "border-gray-6"}`}
-                    >
-                      <LocationIcon className="size-5 text-gray-12 shrink-0" />
-                      <span className="text-gray-11 text-base font-family-dm-sans">Selecionar local no mapa</span>
-                    </button>
-                  )}
-                  {!mapsEnabled && (
-                    <p className="text-gray-11 text-sm font-family-dm-sans leading-[1.4]">
-                      A integração de mapa ainda não foi configurada neste ambiente.
-                    </p>
-                  )}
-                  {errors.mapLocation && <p className="text-red-10 text-sm">{errors.mapLocation}</p>}
-                </div>
+          <div className="flex flex-col gap-2 w-full md:w-1/2">
+            {hasLocation ? (
+              <div className={`flex items-center justify-between gap-3 h-12 rounded-lg border px-3 ${errors.mapLocation ? "border-red-10" : "border-gray-6"}`}>
+                <span className="flex items-center gap-2 min-w-0">
+                  <LocationIcon className="size-5 text-primary-11 shrink-0" />
+                  <span className="truncate text-gray-12 text-base font-family-dm-sans">{locationLabel}</span>
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setMapOpen(true)}
+                  className="shrink-0 text-primary-11 text-sm font-semibold font-family-dm-sans hover:underline"
+                >
+                  Alterar
+                </button>
               </div>
-            </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setMapOpen(true)}
+                className={`flex items-center gap-2 h-12 rounded-lg border px-3 text-left transition-colors hover:border-gray-8 ${errors.mapLocation ? "border-red-10" : "border-gray-6"}`}
+              >
+                <LocationIcon className="size-5 text-gray-12 shrink-0" />
+                <span className="text-gray-11 text-base font-family-dm-sans">Selecionar local no mapa</span>
+              </button>
+            )}
+            {!mapsEnabled && (
+              <p className="text-gray-11 text-sm font-family-dm-sans leading-[1.4]">
+                A integração de mapa ainda não foi configurada neste ambiente.
+              </p>
+            )}
+            {errors.mapLocation && <p className="text-red-10 text-sm">{errors.mapLocation}</p>}
           </div>
         </div>
 

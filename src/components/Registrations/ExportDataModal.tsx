@@ -52,7 +52,7 @@ const ALL_FIELDS = [
   { id: "dataPagamento", label: "Data da compra" },
   { id: "status", label: "Status da compra" },
   { id: "formaPagamento", label: "Forma de pagamento" },
-  { id: "valorPago", label: "Valor pago" },
+  { id: "valorPago", label: "Valor pago por ingresso" },
 ];
 
 const DEFAULT_SELECTED = new Set(ALL_FIELDS.map((f) => f.id));

@@ -177,23 +177,31 @@ describe("validateEventInformation", () => {
     expect(validateEventInformation({ ...validForm(), maxParticipants: "500" }).maxParticipants).toBeUndefined();
   });
 
-  it("valida CEP: obrigatório e 8 dígitos", () => {
-    expect(validateEventInformation({ ...validForm(), cep: "" }).cep).toBe("CEP é obrigatório");
-    expect(validateEventInformation({ ...validForm(), cep: "123" }).cep).toBe("CEP inválido");
+  it("não exige mais endereço manual (cep/rua/cidade/estado) — derivado do mapa", () => {
+    // Endereço vazio, mas com coordenadas válidas → sem erro de endereço/local.
+    const semEndereco = validateEventInformation({
+      ...validForm(),
+      cep: "",
+      street: "",
+      neighborhood: "",
+      city: "",
+      state: "",
+    });
+    expect(semEndereco.cep).toBeUndefined();
+    expect(semEndereco.street).toBeUndefined();
+    expect(semEndereco.city).toBeUndefined();
+    expect(semEndereco.state).toBeUndefined();
+    expect(semEndereco.mapLocation).toBeUndefined();
   });
 
-  it("só exige endereço quando o CEP é válido", () => {
-    // CEP inválido → não cobra rua/cidade/estado/maps (espelha a UI condicional).
-    const semCep = validateEventInformation({ ...validForm(), cep: "", street: "", city: "" });
-    expect(semCep.street).toBeUndefined();
-    expect(semCep.city).toBeUndefined();
-    // CEP válido + endereço/local vazio → cobra (inclui a seleção no mapa).
-    // Sem coords E sem link legado → erro de local.
-    const comCep = validateEventInformation({ ...validForm(), street: "", city: "", state: "", latitude: "", longitude: "", googleMapsLink: "" });
-    expect(comCep.street).toBeDefined();
-    expect(comCep.city).toBeDefined();
-    expect(comCep.state).toBeDefined();
-    expect(comCep.mapLocation).toBeDefined();
+  it("exige a seleção no mapa (sem coords E sem link legado → erro de local)", () => {
+    const semLocal = validateEventInformation({
+      ...validForm(),
+      latitude: "",
+      longitude: "",
+      googleMapsLink: "",
+    });
+    expect(semLocal.mapLocation).toBeDefined();
   });
 
   it("evento legado (só googleMapsLink, sem lat/lng) continua válido no local", () => {
@@ -216,13 +224,20 @@ describe("isEventInformationValid", () => {
   it("true para form válido, false faltando obrigatório", () => {
     expect(isEventInformationValid(validForm())).toBe(true);
     expect(isEventInformationValid({ ...validForm(), name: "" })).toBe(false);
-    expect(isEventInformationValid({ ...validForm(), cep: "123" })).toBe(false);
     expect(isEventInformationValid({ ...validForm(), contactEmail: "" })).toBe(false);
   });
 
-  it("não exige googleMapsLink (diferente da validação com mensagens)", () => {
-    // O gate do botão é mais leve: maps não entra no `canSave`.
+  it("não exige endereço manual, mas exige local (coords ou link legado)", () => {
+    // Endereço vazio + coords válidas → ainda habilita o botão.
+    expect(
+      isEventInformationValid({ ...validForm(), cep: "", street: "", city: "", state: "" }),
+    ).toBe(true);
+    // Com coords válidas, o link não é necessário.
     expect(isEventInformationValid({ ...validForm(), googleMapsLink: "" })).toBe(true);
+    // Sem coords E sem link → não habilita.
+    expect(
+      isEventInformationValid({ ...validForm(), latitude: "", longitude: "", googleMapsLink: "" }),
+    ).toBe(false);
   });
 });
 
@@ -265,18 +280,24 @@ describe("mapEventBackendErrors", () => {
     expect(fieldErrors.mapLocation).toBeTruthy();
   });
 
-  it("traduz nomes de endereço do backend (zipCode→cep, location→street)", () => {
+  it("erros de endereço do backend (zipCode/location/city/state) caem no slot do mapa", () => {
     const { fieldErrors } = mapEventBackendErrors(
       axiosError(400, {
         message: "Validation failed",
         details: [
           { property: "zipCode", message: "zipCode must be a string" },
           { property: "location", message: "location must be a string" },
+          { property: "city", message: "city must be a string" },
+          { property: "state", message: "state must be a string" },
         ],
       }),
     );
-    expect(fieldErrors.cep).toBeTruthy();
-    expect(fieldErrors.street).toBeTruthy();
+    // Sem inputs manuais de endereço → tudo destacado no botão do mapa.
+    expect(fieldErrors.mapLocation).toBeTruthy();
+    expect(fieldErrors.cep).toBeUndefined();
+    expect(fieldErrors.street).toBeUndefined();
+    expect(fieldErrors.city).toBeUndefined();
+    expect(fieldErrors.state).toBeUndefined();
     expect(fieldErrors.zipCode).toBeUndefined();
     expect(fieldErrors.location).toBeUndefined();
   });

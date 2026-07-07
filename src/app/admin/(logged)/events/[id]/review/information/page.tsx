@@ -12,6 +12,7 @@ import { WizardStepLayout } from "@/components/Organizer/WizardStepLayout";
 import { InformationForm } from "@/components/Organizer/InformationForm";
 import { buildCreateEventBodyFromForm } from "@/lib/createEventDraftSync";
 import { eventInformationHasChanges } from "@/lib/eventEditValidation";
+import { hasValidCoordinates } from "@/utils/googleMapsGeo";
 import { organizerEventEditClientPage } from "@/lib/organizerAudit";
 import { wouldRegistrationEndBeforeStart, REGISTRATION_END_BEFORE_START_TOAST, isRegistrationStartNotBeforeEvent, REGISTRATION_START_NOT_BEFORE_EVENT_TOAST } from "@/utils/registrationPeriod";
 import toast from "react-hot-toast";
@@ -53,16 +54,11 @@ export default function ReviewInformationPage() {
     } else if (Number(formData.maxParticipants) < 1) {
       newErrors.maxParticipants = "As vagas do evento devem ser ao menos 1.";
     }
-    const cepDigits = (formData.cep ?? "").replace(/\D/g, "");
-    if (!cepDigits) {
-      newErrors.cep = "CEP é obrigatório";
-    } else if (cepDigits.length !== 8) {
-      newErrors.cep = "CEP inválido";
-    } else {
-      if (!formData.street?.trim()) newErrors.street = "Rua é obrigatória";
-      if (!formData.city?.trim()) newErrors.city = "Cidade é obrigatória";
-      if (!formData.state?.trim()) newErrors.state = "Estado é obrigatório";
-      if (!formData.googleMapsLink?.trim()) newErrors.googleMapsLink = "URL do Google Maps é obrigatória";
+    if (
+      !hasValidCoordinates(formData.latitude, formData.longitude) &&
+      !formData.googleMapsLink?.trim()
+    ) {
+      newErrors.mapLocation = "Selecione o local do evento no mapa";
     }
     if (!formData.contactEmail?.trim()) {
       newErrors.contactEmail = "Email de atendimento é obrigatório";
@@ -106,7 +102,9 @@ export default function ReviewInformationPage() {
     }
   };
 
-  const cepDigits = (formData.cep ?? "").replace(/\D/g, "");
+  const hasLocation =
+    hasValidCoordinates(formData.latitude, formData.longitude) ||
+    !!formData.googleMapsLink?.trim();
   const isFormValid =
     !!formData.name?.trim() &&
     !!formData.eventDate &&
@@ -114,10 +112,7 @@ export default function ReviewInformationPage() {
     !!formData.registrationEndDate?.trim() &&
     !!formData.maxParticipants?.toString().trim() &&
     Number(formData.maxParticipants) >= 1 &&
-    cepDigits.length === 8 &&
-    !!formData.street?.trim() &&
-    !!formData.city?.trim() &&
-    !!formData.state?.trim() &&
+    hasLocation &&
     !!formData.contactEmail?.trim();
 
   const hasChanges = eventInformationHasChanges(formData, initialFormData, hasPendingPdf);
