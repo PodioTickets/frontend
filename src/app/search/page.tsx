@@ -461,7 +461,7 @@ function MobileAdvancedSearch() {
             <>
               <div className="flex flex-wrap justify-center gap-4">
                 {events.map((event) => (
-                  <div key={event.id} className="w-[308px] max-w-full">
+                  <div key={event.id} className="w-full">
                     <EventCard event={event} />
                   </div>
                 ))}
@@ -792,9 +792,9 @@ function SearchContent() {
             <>
               {/* Cards com largura fixa do Figma (308px); no máx. 4 por linha
                   (max-w = 4×308 + 3 gaps de 24). flex-wrap resolve a responsividade. */}
-              <div className="flex flex-wrap justify-center gap-6 mx-auto max-w-[1304px]">
+              <div className="flex flex-col md:flex-row md:flex-wrap w-full justify-center gap-6 mx-auto max-w-[1304px]">
                 {filteredEvents.map((event) => (
-                  <div key={event.id} className="w-[308px] max-w-full">
+                  <div key={event.id} className="w-full md:w-[308px] max-w-full">
                     <EventCard event={event} />
                   </div>
                 ))}
