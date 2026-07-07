@@ -9,6 +9,8 @@ import {
   parseCoordinate,
   roundCoordinate,
   formatCoordinatesLabel,
+  parseGoogleAddressComponents,
+  type ParsedAddressComponents,
 } from "@/utils/googleMapsGeo";
 
 /* Google Maps não tem tipos instalados no projeto — usamos `any` localmente
@@ -22,6 +24,13 @@ export interface LocationPickerResult {
   name: string;
   /** Endereço formatado retornado pelo Google. */
   address: string;
+  /**
+   * Endereço estruturado (cep/rua/bairro/cidade/estado) derivado do local no
+   * MELHOR ESFORÇO. `undefined` quando o pino não foi movido/reselecionado
+   * nesta sessão (ex.: reabrir e confirmar as coords já salvas) — o consumidor
+   * NÃO deve sobrescrever o endereço existente nesse caso.
+   */
+  components?: ParsedAddressComponents;
 }
 
 interface LocationPickerModalProps {
@@ -68,6 +77,11 @@ export function LocationPickerModal({
   const [name, setName] = useState("");
   const [address, setAddress] = useState("");
   const [geocoding, setGeocoding] = useState(false);
+  // Endereço estruturado do local selecionado NESTA sessão. Null enquanto o pino
+  // não for (re)posicionado — evita apagar o endereço salvo ao só reconfirmar.
+  const [components, setComponents] = useState<ParsedAddressComponents | null>(
+    null,
+  );
 
   // ── Reset do estado ao (re)abrir: parte do que já estava salvo ──────────────
   useEffect(() => {
@@ -80,6 +94,7 @@ export function LocationPickerModal({
     setName(initialName?.trim() || "");
     setAddress(initialName?.trim() || "");
     setGeocoding(false);
+    setComponents(null);
   }, [isOpen, initialLat, initialLng, initialName]);
 
   // ── Inicialização imperativa do mapa (só quando o SDK está pronto) ──────────
@@ -116,6 +131,7 @@ export function LocationPickerModal({
         recenter: boolean;
         presetName?: string;
         presetAddress?: string;
+        presetComponents?: ParsedAddressComponents;
       },
     ) => {
       if (!markerRef.current) {
@@ -141,6 +157,9 @@ export function LocationPickerModal({
         setName(opts.presetName?.trim() || opts.presetAddress?.trim() || "");
         setAddress(opts.presetAddress?.trim() || "");
       }
+      if (opts.presetComponents) {
+        setComponents(opts.presetComponents);
+      }
 
       if (opts.reverse && geocoderRef.current) {
         setGeocoding(true);
@@ -148,10 +167,16 @@ export function LocationPickerModal({
           { location: pos },
           (results: any[], geoStatus: string) => {
             setGeocoding(false);
-            if (geoStatus === "OK" && results?.[0]?.formatted_address) {
+            if (geoStatus === "OK" && results?.[0]) {
               const formatted = results[0].formatted_address as string;
-              setAddress(formatted);
-              setName(formatted);
+              if (formatted) {
+                setAddress(formatted);
+                setName(formatted);
+              }
+              // Endereço estruturado do ponto (clique/arraste) → preenche o form.
+              setComponents(
+                parseGoogleAddressComponents(results[0].address_components),
+              );
             }
           },
         );
@@ -181,7 +206,12 @@ export function LocationPickerModal({
         try {
           const poi = new gm.places.Place({ id: e.placeId });
           await poi.fetchFields({
-            fields: ["location", "displayName", "formattedAddress"],
+            fields: [
+              "location",
+              "displayName",
+              "formattedAddress",
+              "addressComponents",
+            ],
           });
           const loc = poi.location;
           const coords =
@@ -198,6 +228,9 @@ export function LocationPickerModal({
             recenter: false,
             presetName: displayName,
             presetAddress: poi.formattedAddress,
+            presetComponents: parseGoogleAddressComponents(
+              poi.addressComponents,
+            ),
           });
           return;
         } catch {
@@ -216,12 +249,50 @@ export function LocationPickerModal({
     // disponível para projetos criados após 2025-03-01 ("new customers"). Usamos
     // o web component novo, que monta seu próprio input dentro do container.
     let autocompleteEl: any = null;
+    let onSearchKeyDown: ((e: KeyboardEvent) => void) | null = null;
     // Lê lat/lng tolerando as duas formas do SDK (método lat()/lng() ou número).
     const readLatLng = (loc: any): { lat: number; lng: number } | null => {
       if (!loc) return null;
       const lat = typeof loc.lat === "function" ? loc.lat() : loc.lat;
       const lng = typeof loc.lng === "function" ? loc.lng() : loc.lng;
       return typeof lat === "number" && typeof lng === "number" ? { lat, lng } : null;
+    };
+    // Resolve um Place (do dropdown ou de uma predição) → busca campos, extrai
+    // coordenadas/nome/endereço e posiciona o pino. Compartilhado entre o clique
+    // numa sugestão (`handleSelect`) e o Enter (`selectFirstSuggestion`).
+    const resolveAndPlace = async (place: any, prediction: any) => {
+      if (!place) return;
+      if (typeof place.fetchFields === "function") {
+        await place.fetchFields({
+          fields: [
+            "location",
+            "displayName",
+            "formattedAddress",
+            "addressComponents",
+          ],
+        });
+      }
+      const coords = readLatLng(place.location);
+      if (!coords) return;
+      // Nome do local: preferimos o `displayName` do Place (nome do POI, ex.:
+      // "Ginásio Municipal"). Quando ele não vem, usamos o TEXTO PRINCIPAL da
+      // sugestão (`mainText` — a linha em negrito do dropdown, que para um
+      // estabelecimento é o nome), e só então o endereço formatado.
+      const displayName =
+        typeof place.displayName === "string"
+          ? place.displayName
+          : place.displayName?.text;
+      const predictionMainText =
+        prediction?.mainText?.text ??
+        prediction?.structuredFormat?.mainText?.text ??
+        (typeof prediction?.mainText === "string" ? prediction.mainText : undefined);
+      applyPosition(coords, {
+        reverse: false,
+        recenter: true,
+        presetName: displayName || predictionMainText,
+        presetAddress: place.formattedAddress,
+        presetComponents: parseGoogleAddressComponents(place.addressComponents),
+      });
     };
     const handleSelect = async (event: any) => {
       try {
@@ -232,35 +303,44 @@ export function LocationPickerModal({
           (prediction?.toPlace ? prediction.toPlace() : null) ??
           event?.place ??
           prediction;
-        if (!place) return;
-        if (typeof place.fetchFields === "function") {
-          await place.fetchFields({
-            fields: ["location", "displayName", "formattedAddress"],
-          });
-        }
-        const coords = readLatLng(place.location);
-        if (!coords) return;
-        // Nome do local: preferimos o `displayName` do Place (nome do POI, ex.:
-        // "Ginásio Municipal"). Quando ele não vem, usamos o TEXTO PRINCIPAL da
-        // sugestão (`mainText` — a linha em negrito do dropdown, que para um
-        // estabelecimento é o nome), e só então o endereço formatado.
-        const displayName =
-          typeof place.displayName === "string"
-            ? place.displayName
-            : place.displayName?.text;
-        const predictionMainText =
-          prediction?.mainText?.text ??
-          prediction?.structuredFormat?.mainText?.text ??
-          (typeof prediction?.mainText === "string" ? prediction.mainText : undefined);
-        applyPosition(coords, {
-          reverse: false,
-          recenter: true,
-          presetName: displayName || predictionMainText,
-          presetAddress: place.formattedAddress,
-        });
+        await resolveAndPlace(place, prediction);
       } catch (err) {
         // Diagnóstico: aparece no console se a seleção falhar (ex.: sem location).
         console.warn("[LocationPicker] falha ao resolver o local:", err);
+      }
+    };
+
+    // Enter no campo de busca escolhe a PRIMEIRA sugestão da lista. O web
+    // component novo não seleciona nada no Enter sem navegar com as setas — então
+    // buscamos as predições do texto atual e resolvemos a 1ª nós mesmos.
+    let enterInFlight = false;
+    const selectFirstSuggestion = async (rawInput: string) => {
+      const input = rawInput.trim();
+      if (!input || enterInFlight) return;
+      const suggestionApi = gm.places?.AutocompleteSuggestion;
+      if (!suggestionApi?.fetchAutocompleteSuggestions) return;
+      enterInFlight = true;
+      try {
+        // `includedRegionCodes` pode não existir em versões antigas → refaz sem ele.
+        let result: any;
+        try {
+          result = await suggestionApi.fetchAutocompleteSuggestions({
+            input,
+            includedRegionCodes: ["br"],
+          });
+        } catch {
+          result = await suggestionApi.fetchAutocompleteSuggestions({ input });
+        }
+        const suggestions: any[] = result?.suggestions ?? [];
+        const first = suggestions.find((s) => s?.placePrediction);
+        const prediction = first?.placePrediction;
+        if (!prediction) return;
+        const place = prediction.toPlace ? prediction.toPlace() : null;
+        await resolveAndPlace(place, prediction);
+      } catch (err) {
+        console.warn("[LocationPicker] falha ao resolver a 1ª sugestão:", err);
+      } finally {
+        enterInFlight = false;
       }
     };
     if (searchContainerRef.current && gm.places?.PlaceAutocompleteElement) {
@@ -284,6 +364,24 @@ export function LocationPickerModal({
         // Nome do evento varia por versão — ouvimos ambos (só um dispara).
         autocompleteEl.addEventListener("gmp-select", handleSelect);
         autocompleteEl.addEventListener("gmp-placeselect", handleSelect);
+        // Enter → escolhe a 1ª sugestão da lista. Interceptamos na CAPTURA (antes
+        // do handler interno do componente) e suprimimos o Enter nativo, que sem
+        // navegar pelas setas não seleciona nada. O <input> pode estar no shadow DOM.
+        onSearchKeyDown = (e: KeyboardEvent) => {
+          if (e.key !== "Enter") return;
+          const inputEl: HTMLInputElement | null =
+            autocompleteEl.querySelector?.("input") ??
+            autocompleteEl.shadowRoot?.querySelector?.("input") ??
+            null;
+          const value = (inputEl?.value ??
+            (e.target as HTMLInputElement)?.value ??
+            "") as string;
+          if (!value.trim()) return;
+          e.preventDefault();
+          e.stopPropagation();
+          void selectFirstSuggestion(value);
+        };
+        autocompleteEl.addEventListener("keydown", onSearchKeyDown, true);
       }
     } else {
       console.warn(
@@ -296,6 +394,9 @@ export function LocationPickerModal({
       if (autocompleteEl) {
         autocompleteEl.removeEventListener("gmp-select", handleSelect);
         autocompleteEl.removeEventListener("gmp-placeselect", handleSelect);
+        if (onSearchKeyDown) {
+          autocompleteEl.removeEventListener("keydown", onSearchKeyDown, true);
+        }
         autocompleteEl.remove();
       }
       if (markerRef.current) {
@@ -326,6 +427,9 @@ export function LocationPickerModal({
       lng: roundCoordinate(pin.lng),
       name: label,
       address: address.trim(),
+      // Só envia o endereço estruturado quando houve (re)seleção nesta sessão —
+      // senão `undefined` sinaliza "não mexer no endereço já salvo".
+      components: components ?? undefined,
     });
     onClose();
   };

@@ -87,6 +87,82 @@ export function buildGoogleMapsLinkFromCoordinates(
   return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(q)}`;
 }
 
+/**
+ * Endereço estruturado derivado do local escolhido no mapa. Preenchido no
+ * MELHOR ESFORÇO a partir do reverse-geocode/Place do Google — qualquer campo
+ * pode vir vazio (ex.: POI sem número, área rural sem bairro).
+ */
+export interface ParsedAddressComponents {
+  /** CEP como o Google devolve (ex.: "01310-100"); pode vir vazio. */
+  cep: string;
+  /** Logradouro + número quando disponível (ex.: "Avenida Paulista, 1578"). */
+  street: string;
+  neighborhood: string;
+  city: string;
+  /** UF (short_name, ex.: "SP") — cai no nome completo se o short faltar. */
+  state: string;
+}
+
+/** Shape de um address component tolerando as DUAS APIs do Google:
+ *  Geocoder clássico (`long_name`/`short_name`) e Places New (`longText`/`shortText`). */
+type RawAddressComponent = {
+  types?: string[];
+  long_name?: string;
+  short_name?: string;
+  longText?: string;
+  shortText?: string;
+};
+
+const EMPTY_ADDRESS: ParsedAddressComponents = {
+  cep: "",
+  street: "",
+  neighborhood: "",
+  city: "",
+  state: "",
+};
+
+/**
+ * Converte o array de `address_components`/`addressComponents` do Google num
+ * endereço estruturado PT-BR. Puro e defensivo: entrada inválida → tudo vazio.
+ *
+ * Usado pelo `LocationPickerModal` para preencher automaticamente o endereço do
+ * evento (o formulário manual de endereço foi removido — a fonte é o mapa).
+ */
+export function parseGoogleAddressComponents(
+  components: unknown,
+): ParsedAddressComponents {
+  if (!Array.isArray(components)) return { ...EMPTY_ADDRESS };
+
+  const list = components as RawAddressComponent[];
+  const longOf = (c: RawAddressComponent | undefined): string =>
+    (c?.long_name ?? c?.longText ?? "").trim();
+  const shortOf = (c: RawAddressComponent | undefined): string =>
+    (c?.short_name ?? c?.shortText ?? "").trim();
+  // Primeiro componente cujo `types` inclui o tipo pedido.
+  const byType = (type: string): RawAddressComponent | undefined =>
+    list.find((c) => Array.isArray(c?.types) && c.types.includes(type));
+
+  const routeName = longOf(byType("route"));
+  const number = longOf(byType("street_number"));
+  // Ordem PT-BR: "Rua X, 123".
+  const street = routeName && number ? `${routeName}, ${number}` : routeName;
+
+  const neighborhoodC =
+    byType("sublocality_level_1") ?? byType("sublocality") ?? byType("neighborhood");
+  // Cidade: preferimos `locality`; em alguns municípios só vem no nível 2.
+  const cityC = byType("locality") ?? byType("administrative_area_level_2");
+  const stateC = byType("administrative_area_level_1");
+
+  return {
+    cep: longOf(byType("postal_code")),
+    street,
+    neighborhood: longOf(neighborhoodC),
+    city: longOf(cityC),
+    // UF pelo short_name ("SP"); fallback pro nome completo se faltar.
+    state: shortOf(stateC) || longOf(stateC),
+  };
+}
+
 /** Rótulo curto "lat, lng" (5 casas ~1 m) para exibir no preview do local. */
 export function formatCoordinatesLabel(
   lat: string | number | null | undefined,

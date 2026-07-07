@@ -7,6 +7,7 @@ import {
   roundCoordinate,
   buildGoogleMapsLinkFromCoordinates,
   formatCoordinatesLabel,
+  parseGoogleAddressComponents,
 } from "@/utils/googleMapsGeo";
 import { googleMapsLinkToEmbedUrl } from "@/utils/googleMapsEmbed";
 
@@ -83,6 +84,57 @@ describe("buildGoogleMapsLinkFromCoordinates", () => {
     expect(embed).toContain("output=embed");
     // O param query preservado é a coordenada exata do pino.
     expect(embed).toContain(encodeURIComponent("-23.5613,-46.6565"));
+  });
+});
+
+describe("parseGoogleAddressComponents", () => {
+  it("extrai cep/rua+número/bairro/cidade/UF do Geocoder clássico (long_name/short_name)", () => {
+    const components = [
+      { types: ["street_number"], long_name: "1578", short_name: "1578" },
+      { types: ["route"], long_name: "Avenida Paulista", short_name: "Av. Paulista" },
+      { types: ["sublocality_level_1", "sublocality"], long_name: "Bela Vista", short_name: "Bela Vista" },
+      { types: ["locality"], long_name: "São Paulo", short_name: "São Paulo" },
+      { types: ["administrative_area_level_1"], long_name: "São Paulo", short_name: "SP" },
+      { types: ["postal_code"], long_name: "01310-100", short_name: "01310-100" },
+    ];
+    expect(parseGoogleAddressComponents(components)).toEqual({
+      cep: "01310-100",
+      street: "Avenida Paulista, 1578",
+      neighborhood: "Bela Vista",
+      city: "São Paulo",
+      state: "SP", // short_name (UF)
+    });
+  });
+
+  it("aceita o shape da Places API New (longText/shortText)", () => {
+    const components = [
+      { types: ["route"], longText: "Rua da Praia", shortText: "R. da Praia" },
+      { types: ["administrative_area_level_1"], longText: "Rio Grande do Sul", shortText: "RS" },
+      { types: ["administrative_area_level_2"], longText: "Porto Alegre", shortText: "Porto Alegre" },
+    ];
+    const r = parseGoogleAddressComponents(components);
+    // Sem street_number → só o logradouro; cidade cai no nível 2 quando falta locality.
+    expect(r.street).toBe("Rua da Praia");
+    expect(r.city).toBe("Porto Alegre");
+    expect(r.state).toBe("RS");
+    expect(r.cep).toBe("");
+    expect(r.neighborhood).toBe("");
+  });
+
+  it("entrada inválida/vazia → todos os campos vazios", () => {
+    const empty = { cep: "", street: "", neighborhood: "", city: "", state: "" };
+    expect(parseGoogleAddressComponents(undefined)).toEqual(empty);
+    expect(parseGoogleAddressComponents(null)).toEqual(empty);
+    expect(parseGoogleAddressComponents([])).toEqual(empty);
+    expect(parseGoogleAddressComponents("nope")).toEqual(empty);
+  });
+
+  it("prefere locality sobre administrative_area_level_2 para cidade", () => {
+    const components = [
+      { types: ["locality"], long_name: "Campinas" },
+      { types: ["administrative_area_level_2"], long_name: "Região de Campinas" },
+    ];
+    expect(parseGoogleAddressComponents(components).city).toBe("Campinas");
   });
 });
 

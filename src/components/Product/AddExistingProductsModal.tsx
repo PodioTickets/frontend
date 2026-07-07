@@ -56,6 +56,28 @@ type LinkedTicketsPopoverPlacement = {
   maxHeight: number;
 };
 
+/**
+ * Extrai os IDs de produto vinculados a um ingresso cobrindo os DOIS shapes que
+ * o backend retorna (ver `hooks/useTickets.ts`): o bundle da listagem traz
+ * `productIds: string[]`, mas respostas de POST/PATCH (e alguns reads) trazem o
+ * vínculo só como `products: [{ productId }]`. Ler apenas `productIds` fazia o
+ * popover "Ver ingressos vinculados" ignorar ingressos que realmente vinculam o
+ * produto quando o shape vinha como `products`.
+ */
+function extractTicketProductIds(ticket: any): string[] {
+  if (Array.isArray(ticket?.productIds)) {
+    return ticket.productIds.filter(
+      (id: unknown): id is string => typeof id === "string",
+    );
+  }
+  if (Array.isArray(ticket?.products)) {
+    return ticket.products
+      .map((tp: any) => tp?.productId ?? tp?.product?.id)
+      .filter((id: unknown): id is string => typeof id === "string");
+  }
+  return [];
+}
+
 function productHasLinkedTickets(
   productId: string,
   tickets: EventTicket[],
@@ -273,7 +295,7 @@ export function AddExistingProductsModal() {
           categoryName: categoryId
             ? catMap.get(categoryId) ?? "Sem categoria"
             : "Sem categoria",
-          productIds: Array.isArray(t.productIds) ? t.productIds : [],
+          productIds: extractTicketProductIds(t),
         };
       });
       setTickets(mapped);
