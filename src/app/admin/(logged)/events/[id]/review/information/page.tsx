@@ -32,6 +32,7 @@ export default function ReviewInformationPage() {
     errors,
     setErrors,
     loading: eventLoading,
+    event,
   } = useEditEvent();
   const [saving, setSaving] = useState(false);
   const [hasPendingPdf, setHasPendingPdf] = useState(false);
@@ -183,6 +184,7 @@ export default function ReviewInformationPage() {
         onSubmit={handleSubmit}
         loading={saving}
         onHasPendingPdfChange={setHasPendingPdf}
+        filledParticipants={event?.registrationsCount}
       />
     </WizardStepLayout>
 
