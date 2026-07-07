@@ -224,6 +224,15 @@ export function formatEventHappensLabel(value: DateInput): string {
   return `Acontece ${prep} ${formatDateTimeBR(value, EVENT_HAPPENS_LABEL_OPTS)}`;
 }
 
+/**
+ * Só a data por extenso "sábado, 31 de julho" (dia da semana + dia + mês), UTC —
+ * sem o prefixo "Acontece". Para linhas com rótulo próprio ("Inscrições até …")
+ * que devem usar o MESMO formato longo dos cards. Retorna "" p/ valor inválido.
+ */
+export function formatWeekdayDayMonthBR(value: DateInput): string {
+  return formatDateTimeBR(value, EVENT_HAPPENS_LABEL_OPTS);
+}
+
 const MONTHS_BR_SHORT = [
   "Jan", "Fev", "Mar", "Abr", "Mai", "Jun",
   "Jul", "Ago", "Set", "Out", "Nov", "Dez",

@@ -14,7 +14,12 @@ import { TiktokIcon } from "@/components/Icons/TiktokIcon";
 import { ShareModal } from "@/components/ShareModal";
 import type { Event } from "@/interfaces/event";
 import { cn } from "@/utils/cn";
-import { formatDateBR, formatDateTimeBR, eventWindowInstant } from "@/utils/datetimeBR";
+import {
+  formatDateTimeBR,
+  eventWindowInstant,
+  formatEventHappensLabel,
+  formatWeekdayDayMonthBR,
+} from "@/utils/datetimeBR";
 import { getEventOrganizer } from "@/utils/organization";
 import { useMemo, useState } from "react";
 
@@ -138,15 +143,6 @@ function useEventRegistrationUiState(event: Event) {
       eventSuspendedByOrganizer,
     };
   }, [event]);
-}
-
-/** dd/mm/aaaa — mesmo formato da página pública do evento ("Acontece em" / "Inscrições até"). */
-function formatDateShort(date: Date) {
-  return formatDateBR(date, {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-  });
 }
 
 type EventPublicInfoCardProps = {
@@ -282,13 +278,13 @@ function EventMetaRows({ event, mobile }: { event: Event; mobile?: boolean }) {
     <div className={cn("flex flex-col", mobile ? "mb-4 gap-3" : "gap-4")}>
       <div className={cn("flex items-center gap-2 text-sm font-medium", textColor)}>
         <CalendarIcon className="size-5 shrink-0" />
-        <span>Acontece em {formatDateShort(new Date(event.eventDate))}</span>
+        <span>{formatEventHappensLabel(event.eventDate)}</span>
       </div>
       {event.registrationEndDate && (
         <div className={cn("flex items-center gap-2 text-sm font-medium", textColor)}>
           <CalendarCheckIcon className="size-5 shrink-0 text-gray-12" />
           <span>
-            Inscrições até {formatDateShort(new Date(event.registrationEndDate))}
+            Inscrições até {formatWeekdayDayMonthBR(event.registrationEndDate)}
           </span>
         </div>
       )}
