@@ -133,6 +133,11 @@ interface InformationFormProps {
   onClearLocalRegulationDraft?: () => void;
   /** Called whenever the pending PDF file presence changes (for dirty tracking). */
   onHasPendingPdfChange?: (has: boolean) => void;
+  /**
+   * Nº de vagas já preenchidas/vendidas (inscrições confirmadas) — exibido no
+   * tooltip de "Vagas do evento". Só nos fluxos de edição; ausente no create (0).
+   */
+  filledParticipants?: number | null;
 }
 
 // ─── component ───────────────────────────────────────────────────────────────
@@ -148,6 +153,7 @@ export function InformationForm({
   hasLocalRegulationDraft = false,
   onClearLocalRegulationDraft,
   onHasPendingPdfChange,
+  filledParticipants,
 }: InformationFormProps) {
   const { cities: stateCities, loading: loadingCities } = useCitiesByState(values.state ?? "");
   const [loadingCEP, setLoadingCEP] = useState(false);
@@ -174,6 +180,13 @@ export function InformationForm({
   const mapFallbackQuery = [values.city, values.state, "Brasil"]
     .filter((s) => (s ?? "").trim())
     .join(", ");
+ 
+  // Tooltip de "Vagas do evento": acrescenta as vagas JÁ PREENCHIDAS/vendidas
+  // (inscrições confirmadas) quando a contagem está disponível (fluxos de edição).
+  const vagasTooltipText =
+    typeof filledParticipants === "number" && filledParticipants >= 0
+      ? `Quantidade máxima de participantes permitida no evento. ${filledParticipants} vagas foram vendidas.`
+      : "Quantidade máxima de participantes permitida no evento.";
 
   const handleLocationConfirm = (r: {
     lat: number;
@@ -475,7 +488,7 @@ export function InformationForm({
               <label className="text-gray-12 text-base font-family-dm-sans">Data do evento</label>
               <FieldHelpTooltip
                 label="Data do evento"
-                text="Use a data oficial em que o evento começa. Modalidades e horários você configura nas próximas etapas."
+                text="Use a data oficial em que o evento começa."
               />
             </div>
             <DatePicker
@@ -546,12 +559,9 @@ export function InformationForm({
               <label htmlFor={`${formId}-max-participants`} className="text-gray-12 text-base font-family-dm-sans">
                 Vagas do evento
               </label>
-              <FieldHelpTooltip
-                label="Vagas do evento"
-                text="Quantidade máxima de participantes permitida no evento."
-              />
+              <FieldHelpTooltip label="Vagas do evento" text={vagasTooltipText} />
             </div>
-            <div className="flex flex-col gap-2 w-full md:w-[280px]">
+            <div className="flex flex-col gap-2 w-1/2 md:w-[140px]">
               <Input
                 id={`${formId}-max-participants`}
                 type="text"
@@ -559,8 +569,8 @@ export function InformationForm({
                 name="maxParticipants"
                 value={values.maxParticipants ?? ""}
                 onChange={handleMaxParticipantsChange}
-                placeholder="Quantidade máxima"
-                className={`h-12 ${errors.maxParticipants ? "border-red-10" : ""}`}
+                placeholder="Ex: 500"
+                className={`h-12 w-full ${errors.maxParticipants ? "border-red-10" : ""}`}
               />
               {errors.maxParticipants && <p className="text-red-10 text-sm w-0 min-w-full">{errors.maxParticipants}</p>}
             </div>
