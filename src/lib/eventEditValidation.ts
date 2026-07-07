@@ -1,4 +1,5 @@
 import type { EditEventFormData } from "@/contexts/EditEventContext";
+import { hasValidCoordinates } from "@/utils/googleMapsGeo";
 import {
   isEventDateBeforeRegistrationEnd,
   isRegistrationStartNotBeforeEvent,
@@ -22,6 +23,7 @@ export const INFORMATION_FIELDS = [
   "registrationEndDate", "registrationEndTime",
   "maxParticipants",
   "cep", "street", "neighborhood", "city", "state", "googleMapsLink",
+  "latitude", "longitude", "locationName",
   "contactEmail", "instagram", "facebook", "youtube", "tiktok", "website",
   "regulationUrl",
 ] as const satisfies readonly (keyof EditEventFormData)[];
@@ -78,7 +80,14 @@ export function validateEventInformation(
     if (!formData.street?.trim()) errors.street = "Rua é obrigatória";
     if (!formData.city?.trim()) errors.city = "Cidade é obrigatória";
     if (!formData.state?.trim()) errors.state = "Estado é obrigatório";
-    if (!formData.googleMapsLink?.trim()) errors.googleMapsLink = "URL do Google Maps é obrigatória";
+    // Local no mapa: exige a seleção (coordenadas válidas). Eventos LEGADOS que
+    // só têm o `googleMapsLink` antigo (sem lat/lng ainda persistidos) continuam
+    // válidos — não forçamos re-seleção ao editar. Erro renderizado sob o botão.
+    const hasCoords = hasValidCoordinates(formData.latitude, formData.longitude);
+    const hasLegacyLink = !!formData.googleMapsLink?.trim();
+    if (!hasCoords && !hasLegacyLink) {
+      errors.mapLocation = "Selecione o local do evento no mapa";
+    }
   }
 
   if (!formData.contactEmail?.trim()) {
@@ -144,7 +153,12 @@ const BACKEND_FIELD_TO_FORM_ERROR_KEY: Record<string, string> = {
   location: "street",
   city: "city",
   state: "state",
-  googleMapsLink: "googleMapsLink",
+  // Local no mapa: qualquer erro de local vindo do backend (link/coordenadas)
+  // é destacado no mesmo slot inline do botão de mapa.
+  googleMapsLink: "mapLocation",
+  latitude: "mapLocation",
+  longitude: "mapLocation",
+  locationName: "mapLocation",
   contactEmail: "contactEmail",
 };
 
@@ -159,7 +173,7 @@ const FORM_FIELD_ERROR_MESSAGE: Record<string, string> = {
   street: "Endereço inválido.",
   city: "Cidade inválida.",
   state: "Estado inválido.",
-  googleMapsLink: "URL do Google Maps inválida (use http(s)://).",
+  mapLocation: "Selecione um local válido no mapa.",
   contactEmail: "E-mail de atendimento inválido.",
 };
 

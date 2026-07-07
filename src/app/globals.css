@@ -738,3 +738,88 @@ input[type="number"] {
 .topic-rich-html li[data-list=ordered].ql-indent-3::before {
   content: counter(list-3, decimal) '. ';
 }
+/* ──────────────────────────────────────────────────────────────────────────
+   Seletor de local do evento (LocationPickerModal): casa o web component do
+   Google (Places API New — <gmp-place-autocomplete>) com os inputs do
+   formulário. O elemento tem shadow DOM: só herança (font/cor) e propriedades
+   no host atravessam; por isso estilizamos o HOST (borda/raio/altura/fundo) e
+   deixamos font-family/color herdarem para o input interno.
+   ────────────────────────────────────────────────────────────────────────── */
+/* Host = a "caixa" do campo (mesma aparência dos <Input> do form). NÃO usar
+   overflow:hidden aqui — o dropdown é renderizado para fora e seria cortado. */
+gmp-place-autocomplete {
+  width: 100%;
+  box-sizing: border-box;
+  min-height: 3rem; /* h-12 */
+  border: 1px solid var(--gray-6);
+  border-radius: 0.5rem; /* rounded-lg */
+  background-color: var(--gray-1);
+  font-family: var(--font-family-dm-sans);
+  color: var(--gray-12);
+  /* Força o tema CLARO do widget — sem isso ele segue o color-scheme do
+     sistema e renderiza as divisórias/chrome internos em PRETO no dark mode. */
+  color-scheme: light;
+  transition: border-color 0.2s ease;
+}
+gmp-place-autocomplete:focus-within {
+  border-color: var(--primary-9);
+  outline: none;
+}
+
+/* Campo de texto interno: transparente e sem borda (a caixa é o host). */
+gmp-place-autocomplete::part(input) {
+  width: 100%;
+  height: 3rem; /* h-12 */
+  padding: 0 0.75rem; /* px-3 */
+  border: none;
+  background-color: transparent;
+  outline: none;
+  font-family: var(--font-family-dm-sans);
+  font-size: 1rem; /* text-base */
+  color: var(--gray-12);
+}
+/* Foco já é indicado pela borda primary-9 no host — evita anel duplicado. */
+gmp-place-autocomplete::part(focus-ring) {
+  display: none;
+}
+
+/* Dropdown de sugestões: card no padrão do projeto. */
+gmp-place-autocomplete::part(prediction-list) {
+  z-index: 60;
+  margin-top: 0.375rem;
+  padding: 0.25rem;
+  background-color: var(--gray-1);
+  border: 1px solid var(--gray-6);
+  border-radius: 0.5rem;
+  box-shadow: 0 8px 24px rgba(17, 17, 17, 0.12);
+}
+gmp-place-autocomplete::part(prediction-item) {
+  padding: 0.5rem 0.625rem;
+  border: none; /* remove a divisória escura/arredondada padrão entre itens */
+  border-radius: 0.375rem; /* rounded-md */
+  font-family: var(--font-family-dm-sans);
+  font-size: 0.9375rem;
+  line-height: 1.35;
+  color: var(--gray-12);
+  cursor: pointer;
+}
+gmp-place-autocomplete::part(prediction-item):hover,
+gmp-place-autocomplete::part(prediction-item-selected) {
+  background-color: var(--gray-3);
+}
+/* Ícone do local em verde (padrão dos ícones de localização do app). */
+gmp-place-autocomplete::part(prediction-item-icon) {
+  color: var(--primary-11);
+  fill: var(--primary-11);
+}
+gmp-place-autocomplete::part(prediction-item-main-text) {
+  color: var(--gray-12);
+}
+gmp-place-autocomplete::part(prediction-item-match) {
+  font-weight: 600;
+  color: var(--gray-12);
+}
+gmp-place-autocomplete::part(prediction-item-secondary-text) {
+  color: var(--gray-11);
+  font-size: 0.8125rem; /* text-sm */
+}

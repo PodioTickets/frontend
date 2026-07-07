@@ -5,7 +5,6 @@ import { surfaceHeader } from "@/lib/authSurface";
 import { Input } from "@/components/Input";
 import { DatePicker } from "@/components/DatePicker";
 import { TimePicker } from "@/components/TimePicker";
-import { InfoIcon } from "@/components/Icons/InfoIcon";
 import { LocationIcon } from "@/components/Icons/LocationIcon";
 import { Plus, Globe } from "lucide-react";
 import { InstagramIcon } from "@/components/Icons/InstagramIcon";
@@ -13,8 +12,15 @@ import { FacebookIcon } from "@/components/Icons/FacebookIcon";
 import { YoutubeIcon } from "@/components/Icons/YoutubeIcon";
 import { TiktokIcon } from "@/components/Icons/TiktokIcon";
 import { EmailIcon } from "@/components/Icons/EmailIcon";
-import { GoogleMapsUrlHelpTooltip } from "@/components/Organizer/GoogleMapsUrlHelpTooltip";
+import { LocationPickerModal } from "@/components/Organizer/LocationPickerModal";
+import { hasGoogleMapsApiKey } from "@/hooks/useGoogleMaps";
+import {
+  hasValidCoordinates,
+  formatCoordinatesLabel,
+  buildGoogleMapsLinkFromCoordinates,
+} from "@/utils/googleMapsGeo";
 import { ContactEmailHelpTooltip } from "@/components/Organizer/ContactEmailHelpTooltip";
+import { FieldHelpTooltip } from "@/components/Organizer/FieldHelpTooltip";
 import { SearchableSelect } from "@/components/SearchableSelect";
 import { BRAZIL_STATES } from "@/utils/locationFacets";
 import { useCitiesByState } from "@/hooks/useCitiesByState";
@@ -95,6 +101,11 @@ export interface InformationFormValues {
   city?: string;
   state?: string;
   googleMapsLink?: string;
+  /** Local por coordenadas (seleção no mapa). String; "" = não definido. */
+  latitude?: string;
+  longitude?: string;
+  /** Rótulo do local escolhido (nome do POI / endereço formatado). */
+  locationName?: string;
   contactEmail?: string;
   instagram?: string;
   facebook?: string;
@@ -151,6 +162,34 @@ export function InformationForm({
 
   const cepDigits = (values.cep ?? "").replace(/\D/g, "");
   const showAddressFields = cepDigits.length === 8;
+
+  // ── Local no mapa ──────────────────────────────────────────────────────────
+  const [mapOpen, setMapOpen] = useState(false);
+  const mapsEnabled = hasGoogleMapsApiKey();
+  const hasLocation = hasValidCoordinates(values.latitude, values.longitude);
+  const locationLabel =
+    (values.locationName ?? "").trim() ||
+    formatCoordinatesLabel(values.latitude, values.longitude);
+  // Busca de fallback só para CENTRALIZAR o mapa (cidade/estado do endereço).
+  const mapFallbackQuery = [values.city, values.state, "Brasil"]
+    .filter((s) => (s ?? "").trim())
+    .join(", ");
+
+  const handleLocationConfirm = (r: {
+    lat: number;
+    lng: number;
+    name: string;
+    address: string;
+  }) => {
+    onChange({
+      latitude: String(r.lat),
+      longitude: String(r.lng),
+      locationName: r.name || r.address || "",
+      // `googleMapsLink` derivado (query=lat,lng) mantém o embed/EventMap público.
+      googleMapsLink: buildGoogleMapsLinkFromCoordinates(r.lat, r.lng),
+    });
+    if (errors.mapLocation) onErrorsChange((prev) => ({ ...prev, mapLocation: "" }));
+  };
 
   // ── CEP ──────────────────────────────────────────────────────────────────
 
@@ -398,6 +437,7 @@ export function InformationForm({
   // ── render ────────────────────────────────────────────────────────────────
 
   return (
+    <>
     <form id={formId} onSubmit={(e) => void handleSubmit(e)} className="flex flex-col gap-9 md:gap-[44px]">
 
       {/* Name + event date */}
@@ -423,7 +463,13 @@ export function InformationForm({
 
         <div className="flex flex-col gap-3 w-full md:w-1/2 shrink-0">
           <div className="flex flex-col gap-2">
-            <label className="text-gray-12 text-base font-family-dm-sans">Data do evento</label>
+            <div className="flex items-center gap-1.5">
+              <label className="text-gray-12 text-base font-family-dm-sans">Data do evento</label>
+              <FieldHelpTooltip
+                label="Data do evento"
+                text="Use a data oficial em que o evento começa. Modalidades e horários você configura nas próximas etapas."
+              />
+            </div>
             <DatePicker
               value={values.eventDate}
               onChange={(value) => handleDateChange("eventDate", value || "")}
@@ -434,12 +480,6 @@ export function InformationForm({
               // Seleção livre: qualquer data (a validação de ordem/erro é inline).
               disablePastDates={false}
             />
-          </div>
-          <div className="flex items-start gap-2">
-            <InfoIcon className="size-5 text-gray-11 shrink-0 mt-0.5" />
-            <p className="text-gray-11 text-sm md:text-base font-family-dm-sans leading-[1.4]">
-              Use a data oficial em que o evento começa. Modalidades e horários você configura nas próximas etapas.
-            </p>
           </div>
           {errors.eventDate && <p className="text-red-10 text-sm">{errors.eventDate}</p>}
         </div>
@@ -496,9 +536,15 @@ export function InformationForm({
               Vazio = ilimitado. Só dígitos. Erro (ex.: teto < inscritos, vindo do
               backend) quebra dentro da largura do input (w-0 min-w-full), sem esticar. */}
           <div className="flex flex-col gap-3 md:gap-[12px] min-w-0">
-            <label htmlFor={`${formId}-max-participants`} className="text-gray-12 text-base font-family-dm-sans">
-              Vagas do evento
-            </label>
+            <div className="flex items-center gap-1.5">
+              <label htmlFor={`${formId}-max-participants`} className="text-gray-12 text-base font-family-dm-sans">
+                Vagas do evento
+              </label>
+              <FieldHelpTooltip
+                label="Vagas do evento"
+                text="Quantidade máxima de participantes permitida no evento."
+              />
+            </div>
             <div className="flex flex-col gap-2 w-full md:w-[280px]">
               <Input
                 id={`${formId}-max-participants`}
@@ -510,9 +556,6 @@ export function InformationForm({
                 placeholder="Quantidade máxima"
                 className={`h-12 ${errors.maxParticipants ? "border-red-10" : ""}`}
               />
-              <p className="text-gray-11 text-sm md:text-base font-family-dm-sans leading-[1.4] w-0 min-w-full">
-                Quantidade máxima de participantes permitida no evento.
-              </p>
               {errors.maxParticipants && <p className="text-red-10 text-sm w-0 min-w-full">{errors.maxParticipants}</p>}
             </div>
           </div>
@@ -586,15 +629,37 @@ export function InformationForm({
 
 
               <div className="flex flex-col gap-2 w-full">
-                <div className="flex items-center gap-1.5 flex-wrap">
-                  <label htmlFor={`${formId}-google-maps`} className="text-gray-12 text-base font-family-dm-sans">URL do google</label>
-                  <GoogleMapsUrlHelpTooltip />
-                </div>
-                <div className="relative">
-                  <LocationIcon className="absolute left-3 top-1/2 -translate-y-1/2 size-5 text-gray-12 pointer-events-none" />
-                  <Input id={`${formId}-google-maps`} type="url" name="googleMapsLink" value={values.googleMapsLink} onChange={handleInputChange} placeholder="www.google.com/maps/search/?api=1&query=Av.+Paulista+2084+S%C3%A3o+Paulo+SP" className={`h-12 pl-10 ${errors.googleMapsLink ? "border-red-10" : ""}`} />
-                </div>
-                {errors.googleMapsLink && <p className="text-red-10 text-sm">{errors.googleMapsLink}</p>}
+                <label className="text-gray-12 text-base font-family-dm-sans">Local no mapa</label>
+                {hasLocation ? (
+                  <div className={`flex items-center justify-between gap-3 h-12 rounded-lg border px-3 ${errors.mapLocation ? "border-red-10" : "border-gray-6"}`}>
+                    <span className="flex items-center gap-2 min-w-0">
+                      <LocationIcon className="size-5 text-primary-11 shrink-0" />
+                      <span className="truncate text-gray-12 text-base font-family-dm-sans">{locationLabel}</span>
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setMapOpen(true)}
+                      className="shrink-0 text-primary-11 text-sm font-semibold font-family-dm-sans hover:underline"
+                    >
+                      Alterar
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => setMapOpen(true)}
+                    className={`flex items-center gap-2 h-12 rounded-lg border px-3 text-left transition-colors hover:border-gray-8 ${errors.mapLocation ? "border-red-10" : "border-gray-6"}`}
+                  >
+                    <LocationIcon className="size-5 text-gray-12 shrink-0" />
+                    <span className="text-gray-11 text-base font-family-dm-sans">Selecionar local no mapa</span>
+                  </button>
+                )}
+                {!mapsEnabled && (
+                  <p className="text-gray-11 text-sm font-family-dm-sans leading-[1.4]">
+                    A integração de mapa ainda não foi configurada neste ambiente.
+                  </p>
+                )}
+                {errors.mapLocation && <p className="text-red-10 text-sm">{errors.mapLocation}</p>}
               </div>
             </div>
           </div>
@@ -717,5 +782,16 @@ export function InformationForm({
         )}
       </div>
     </form>
+
+    <LocationPickerModal
+      isOpen={mapOpen}
+      onClose={() => setMapOpen(false)}
+      initialLat={values.latitude}
+      initialLng={values.longitude}
+      initialName={values.locationName}
+      fallbackQuery={mapFallbackQuery}
+      onConfirm={handleLocationConfirm}
+    />
+    </>
   );
 }

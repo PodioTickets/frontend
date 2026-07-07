@@ -28,6 +28,15 @@ export interface Event {
   /** Whitelist de métodos do checkout (tela financeira). Ausente = todos. */
   acceptedPaymentMethods?: AcceptedPaymentMethod[];
   googleMapsLink: string;
+  /**
+   * Local do evento por coordenadas (seleção no mapa). Opcionais até o backend
+   * persistir os novos campos; `googleMapsLink` segue derivado destas para
+   * compatibilidade com o consumo público (embed/EventMap).
+   */
+  latitude?: number | null;
+  longitude?: number | null;
+  /** Rótulo amigável do local escolhido no mapa (nome do POI / endereço). */
+  locationName?: string | null;
   stravaRouteId?: string;
   /** URL do regulamento do evento (ex.: PDF) */
   regulationUrl?: string;
