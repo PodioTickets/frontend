@@ -203,6 +203,27 @@ export function brasiliaTodayCivilStart(): Date {
   return new Date(brt.getUTCFullYear(), brt.getUTCMonth(), brt.getUTCDate());
 }
 
+const EVENT_HAPPENS_LABEL_OPTS: Intl.DateTimeFormatOptions = {
+  weekday: "long",
+  day: "numeric",
+  month: "long",
+};
+
+/**
+ * Rótulo "Acontece no sábado, 25 de julho" — dia da semana + dia + mês por
+ * extenso, em UTC (wall-clock do evento, sem shift). A preposição concorda com o
+ * gênero do dia: domingo/sábado (m) → "no"; segunda a sexta (…-feira, f) → "na".
+ * Compartilhado pelos cards de evento (home/busca) e de ingresso (meus ingressos).
+ * Retorna "" para valor ausente/ inválido.
+ */
+export function formatEventHappensLabel(value: DateInput): string {
+  const d = toUtcDate(value);
+  if (!d) return "";
+  const weekday = d.getUTCDay(); // 0=domingo … 6=sábado
+  const prep = weekday === 0 || weekday === 6 ? "no" : "na";
+  return `Acontece ${prep} ${formatDateTimeBR(value, EVENT_HAPPENS_LABEL_OPTS)}`;
+}
+
 const MONTHS_BR_SHORT = [
   "Jan", "Fev", "Mar", "Abr", "Mai", "Jun",
   "Jul", "Ago", "Set", "Out", "Nov", "Dez",

@@ -436,6 +436,14 @@ export function InformationForm({
 
   // ── render ────────────────────────────────────────────────────────────────
 
+  // Erros das datas de inscrição consolidados numa ÚNICA mensagem (largura total,
+  // rodapé da seção): evita 2 erros simultâneos e a quebra em 2 linhas na coluna
+  // estreita. Prioridade: início > encerramento > período (fim-antes-do-início).
+  const registrationError =
+    errors.registrationStartDate ||
+    errors.registrationEndDate ||
+    errors.registrationPeriod;
+
   return (
     <>
     <form id={formId} onSubmit={(e) => void handleSubmit(e)} className="flex flex-col gap-9 md:gap-[44px]">
@@ -507,7 +515,6 @@ export function InformationForm({
                   />
                 </div>
               </div>
-              {errors.registrationStartDate && <p className="text-red-10 text-sm w-0 min-w-full">{errors.registrationStartDate}</p>}
             </div>
           </div>
 
@@ -528,7 +535,6 @@ export function InformationForm({
                   />
                 </div>
               </div>
-              {errors.registrationEndDate && <p className="text-red-10 text-sm w-0 min-w-full">{errors.registrationEndDate}</p>}
             </div>
           </div>
 
@@ -560,7 +566,7 @@ export function InformationForm({
             </div>
           </div>
         </div>
-        {errors.registrationPeriod && <p className="text-red-10 text-sm">{errors.registrationPeriod}</p>}
+        {registrationError && <p className="text-red-10 text-sm">{registrationError}</p>}
       </div>
 
       {/* Location */}

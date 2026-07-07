@@ -163,6 +163,14 @@ export function useMyTickets(
           },
           modalities,
           status: resolveOrderStatus(firstReg.status, order.status),
+          // Nº de participantes do pedido ("X pessoas" no card). Prefere um total
+          // explícito do backend; senão conta as inscrições do pedido.
+          peopleCount:
+            typeof order.participantsCount === "number"
+              ? order.participantsCount
+              : Array.isArray(order.registrations)
+                ? order.registrations.length
+                : undefined,
           distance,
           qrCode: firstReg.qrCode,
           purchaseDate: order.createdAt,
