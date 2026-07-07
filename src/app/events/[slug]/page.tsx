@@ -9,7 +9,12 @@ import Link from "next/link";
 import { Button } from "@/components/Button";
 import { EventMap } from "@/components/EventMap";
 import { useEventBySlug } from "@/hooks/useEvent";
-import { formatDateTimeBR, eventWindowInstant } from "@/utils/datetimeBR";
+import {
+  formatDateTimeBR,
+  eventWindowInstant,
+  formatEventHappensLabel,
+  formatWeekdayDayMonthBR,
+} from "@/utils/datetimeBR";
 import { useQueryClient } from "@tanstack/react-query";
 import { RegistrationCountdown } from "@/components/Event/RegistrationCountdown";
 import { ShareIcon } from "@/components/Icons/ShareIcon";
@@ -162,13 +167,6 @@ export default function EventPage() {
     router.push(`/checkout/ingressos?eventId=${event.id}`);
   };
 
-  const formatDate = (date: Date) => {
-    return formatDateTimeBR(date, {
-      day: "2-digit",
-      month: "2-digit",
-      year: "numeric",
-    });
-  };
 
   /* Mantém o skeleton da página enquanto o fetch do evento roda — sem isso,
    * o `loading.tsx` some quando o RSC chega e o spinner curto deixa o footer
@@ -360,7 +358,7 @@ export default function EventPage() {
                 </svg>
 
                 <span className="text-sm">
-                  Acontece em {formatDate(new Date(event.eventDate))}
+                  {formatEventHappensLabel(event.eventDate)}
                 </span>
               </div>
               <div className="flex items-center gap-2 text-gray-12">
@@ -408,7 +406,7 @@ export default function EventPage() {
                 {event.registrationEndDate && (
                   <span className="text-sm">
                     Inscrições até{" "}
-                    {formatDate(new Date(event.registrationEndDate))}
+                    {formatWeekdayDayMonthBR(event.registrationEndDate)}
                   </span>
                 )}
               </div>
@@ -712,7 +710,7 @@ export default function EventPage() {
                   />
                 </svg>
                 <span className="text-xs">
-                  Acontece em {formatDate(new Date(event.eventDate))}
+                  {formatEventHappensLabel(event.eventDate)}
                 </span>
               </div>
               <div className="flex items-center gap-1 text-gray-12">
@@ -760,7 +758,7 @@ export default function EventPage() {
                 {event.registrationEndDate && (
                   <span className="text-xs">
                     Inscrições até{" "}
-                    {formatDate(new Date(event.registrationEndDate))}
+                    {formatWeekdayDayMonthBR(event.registrationEndDate)}
                   </span>
                 )}
               </div>
@@ -983,7 +981,7 @@ export default function EventPage() {
                     <h1 className="flex items-center gap-2 text-sm text-gray-12 font-medium">
                       <CalendarIcon className="size-5" />{" "}
                       <span>
-                        Acontece em {formatDate(new Date(event.eventDate))}
+                        {formatEventHappensLabel(event.eventDate)}
                       </span>
                     </h1>
                     {event.registrationEndDate && (
@@ -1031,7 +1029,7 @@ export default function EventPage() {
                         </svg>
                         <span>
                           Inscrições até{" "}
-                          {formatDate(new Date(event.registrationEndDate))}
+                          {formatWeekdayDayMonthBR(event.registrationEndDate)}
                         </span>
                       </div>
                     )}
