@@ -6,6 +6,7 @@ import { Input } from "@/components/Input";
 import { DatePicker } from "@/components/DatePicker";
 import { TimePicker } from "@/components/TimePicker";
 import { LocationIcon } from "@/components/Icons/LocationIcon";
+import { ParticipantsIcon } from "@/components/Icons/ParticipantsIcon";
 import { Plus, Globe } from "lucide-react";
 import { InstagramIcon } from "@/components/Icons/InstagramIcon";
 import { FacebookIcon } from "@/components/Icons/FacebookIcon";
@@ -462,7 +463,7 @@ export function InformationForm({
     <form id={formId} onSubmit={(e) => void handleSubmit(e)} className="flex flex-col gap-9 md:gap-[44px]">
 
       {/* Name + event date */}
-      <div className="flex flex-col md:flex-row gap-9 md:gap-3 w-full items-stretch md:items-start">
+      <div className="flex flex-col md:flex-row gap-9 md:gap-3 w-full items-stretch md:items-baseline">
         <div className="flex flex-col gap-3 flex-1 min-w-0">
           <div className="flex flex-col gap-2">
             <div className="flex items-center justify-between gap-3">
@@ -475,7 +476,7 @@ export function InformationForm({
               value={values.name}
               onChange={handleInputChange}
               placeholder="Ex: Corrida Pena Nubas 2025"
-              className={`h-12 ${errors.name ? "border-red-10" : ""}`}
+              className={`h-12 shadow-none ${errors.name ? "border-red-10" : ""}`}
               maxLength={EVENT_NAME_MAX_LENGTH}
             />
           </div>
@@ -509,7 +510,7 @@ export function InformationForm({
       {/* Registration period */}
       <div className="flex flex-col gap-5 md:gap-[20px]">
         <h2 className="text-gray-12 text-lg font-semibold font-manrope leading-[1.1]">Inscrição</h2>
-        <div className="flex flex-col md:flex-row md:flex-wrap gap-9 md:gap-[72px] items-stretch md:items-start">
+        <div className="flex flex-col md:flex-row md:flex-wrap gap-9 md:gap-[72px] items-stretch md:items-baseline">
           <div className="flex flex-col gap-3 md:gap-[12px] min-w-0">
             <label className="text-gray-12 text-base font-family-dm-sans">Data de início das inscrições</label>
             {/* Wrapper md:w-max trava a largura da coluna no grupo de inputs; a
@@ -562,16 +563,19 @@ export function InformationForm({
               <FieldHelpTooltip label="Vagas do evento" text={vagasTooltipText} />
             </div>
             <div className="flex flex-col gap-2 w-1/2 md:w-[140px]">
-              <Input
-                id={`${formId}-max-participants`}
-                type="text"
-                inputMode="numeric"
-                name="maxParticipants"
-                value={values.maxParticipants ?? ""}
-                onChange={handleMaxParticipantsChange}
-                placeholder="Ex: 500"
-                className={`h-12 w-full ${errors.maxParticipants ? "border-red-10" : ""}`}
-              />
+              <div className="relative">
+                <ParticipantsIcon className="absolute left-3 top-1/2 -translate-y-1/2 size-5 text-gray-11 pointer-events-none" />
+                <Input
+                  id={`${formId}-max-participants`}
+                  type="text"
+                  inputMode="numeric"
+                  name="maxParticipants"
+                  value={values.maxParticipants ?? ""}
+                  onChange={handleMaxParticipantsChange}
+                  placeholder="Ex: 500"
+                  className={`h-12 w-full pl-10 shadow-none ${errors.maxParticipants ? "border-red-10" : ""}`}
+                />
+              </div>
               {errors.maxParticipants && <p className="text-red-10 text-sm w-0 min-w-full">{errors.maxParticipants}</p>}
             </div>
           </div>
