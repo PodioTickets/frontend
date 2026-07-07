@@ -733,12 +733,12 @@ export function AddExistingProductsModal() {
                       </p>
                     </div>
                     <div className="flex min-h-0 flex-1 flex-wrap content-start gap-2 overflow-y-auto p-2">
-                      {tickets.length === 0 ? (
+                      {ticketsLinkedToExpanded.length === 0 ? (
                         <p className="w-full p-2 text-sm font-family-dm-sans text-gray-11">
-                          Nenhum ingresso disponível
+                          Nenhum ingresso vincula este produto
                         </p>
                       ) : (
-                        tickets.map((ticket) => (
+                        ticketsLinkedToExpanded.map((ticket) => (
                           <span
                             key={ticket.id}
                             className="rounded-md bg-gray-3 px-3 py-1.5 text-sm font-normal font-family-dm-sans text-gray-12"

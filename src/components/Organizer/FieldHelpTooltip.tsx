@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { X } from "lucide-react";
 import { Tooltip } from "@/components/Tooltip";
-import { BookIcon } from "@/components/Icons/BookIcon";
+import { InfoIcon } from "@/components/Icons/InfoIcon";
 import {
   Drawer,
   DrawerClose,
@@ -59,7 +59,7 @@ export function FieldHelpTooltip({ label, text }: FieldHelpTooltipProps) {
             aria-expanded={tooltipOpen}
             aria-haspopup="true"
           >
-            <BookIcon className="size-5 shrink-0" />
+            <InfoIcon className="size-5 shrink-0" />
           </button>
         </Tooltip>
       </div>
@@ -74,7 +74,7 @@ export function FieldHelpTooltip({ label, text }: FieldHelpTooltipProps) {
             aria-expanded={drawerOpen}
             aria-haspopup="dialog"
           >
-            <BookIcon className="size-5 shrink-0" />
+            <InfoIcon className="size-5 shrink-0" />
           </button>
         </DrawerTrigger>
         <DrawerContent

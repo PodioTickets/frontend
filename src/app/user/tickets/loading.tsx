@@ -20,20 +20,25 @@ export default function UserTicketsLoading() {
             <div className="h-5 md:h-7 w-44 md:w-56 rounded bg-gray-4 animate-pulse" />
           </div>
 
-          {/* Grid de cards de ingresso */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-8 md:gap-4">
+          {/* Grid de cards de ingresso — mesmas proporções do TicketCard real */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-x-4 gap-y-9">
             {Array.from({ length: 8 }).map((_, i) => (
-              <div
-                key={i}
-                className="rounded-xl border border-gray-6 bg-gray-1 overflow-hidden flex flex-col"
-              >
-                {/* Banner — proporção quadrada igual ao TicketCard */}
-                <div className="h-[232px] md:h-auto md:aspect-square bg-gray-3 animate-pulse" />
-                {/* Body — título + categoria + data */}
-                <div className="p-4 flex flex-col gap-2">
-                  <div className="h-4 w-3/4 rounded bg-gray-3 animate-pulse" />
-                  <div className="h-3 w-1/2 rounded bg-gray-2 animate-pulse" />
-                  <div className="h-3 w-1/3 rounded bg-gray-2 animate-pulse" />
+              <div key={i} className="flex flex-col items-start">
+                {/* Aba de status */}
+                <div className="-mb-2 h-8 w-32 rounded-tl-lg rounded-tr-lg bg-gray-4 animate-pulse" />
+                {/* Card */}
+                <div className="flex w-full flex-col overflow-hidden rounded-lg bg-gray-1">
+                  {/* Banner — proporção 312/142 igual ao TicketCard */}
+                  <div className="aspect-[312/142] w-full bg-gray-3 animate-pulse" />
+                  {/* Título + local + data + pessoas */}
+                  <div className="flex flex-col gap-3 pt-3 pb-4">
+                    <div className="h-4 w-3/4 rounded bg-gray-3 animate-pulse" />
+                    <div className="h-3 w-1/2 rounded bg-gray-2 animate-pulse" />
+                    <div className="h-3 w-2/3 rounded bg-gray-2 animate-pulse" />
+                    <div className="h-3 w-1/3 rounded bg-gray-2 animate-pulse" />
+                  </div>
+                  {/* Botão */}
+                  <div className="h-10 w-full rounded-lg border border-gray-6 bg-gray-2 animate-pulse" />
                 </div>
               </div>
             ))}
