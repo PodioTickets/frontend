@@ -343,53 +343,101 @@ export function LocationPickerModal({
         enterInFlight = false;
       }
     };
-    if (searchContainerRef.current && gm.places?.PlaceAutocompleteElement) {
-      // Construção à prova de versão: se a opção `includedRegionCodes` não for
-      // suportada, o construtor lança — recriamos SEM opções para o campo SEMPRE
-      // renderizar (senão a busca some inteira).
+    // Cria uma instância do web component (à prova de versão: `includedRegionCodes`
+    // pode não existir no construtor → recria sem opções pra a busca SEMPRE renderizar).
+    const createAutocompleteEl = (): any => {
       try {
-        autocompleteEl = new gm.places.PlaceAutocompleteElement({
-          includedRegionCodes: ["br"],
-        });
+        return new gm.places.PlaceAutocompleteElement({ includedRegionCodes: ["br"] });
       } catch {
         try {
-          autocompleteEl = new gm.places.PlaceAutocompleteElement();
+          return new gm.places.PlaceAutocompleteElement();
         } catch {
-          autocompleteEl = null;
+          return null;
         }
       }
-      if (autocompleteEl) {
-        autocompleteEl.style.width = "100%";
-        searchContainerRef.current.appendChild(autocompleteEl);
-        // Nome do evento varia por versão — ouvimos ambos (só um dispara).
-        autocompleteEl.addEventListener("gmp-select", handleSelect);
-        autocompleteEl.addEventListener("gmp-placeselect", handleSelect);
-        // Enter → escolhe a 1ª sugestão da lista. Interceptamos na CAPTURA (antes
-        // do handler interno do componente) e suprimimos o Enter nativo, que sem
-        // navegar pelas setas não seleciona nada. O <input> pode estar no shadow DOM.
-        onSearchKeyDown = (e: KeyboardEvent) => {
-          if (e.key !== "Enter") return;
-          const inputEl: HTMLInputElement | null =
-            autocompleteEl.querySelector?.("input") ??
-            autocompleteEl.shadowRoot?.querySelector?.("input") ??
-            null;
-          const value = (inputEl?.value ??
-            (e.target as HTMLInputElement)?.value ??
-            "") as string;
-          if (!value.trim()) return;
-          e.preventDefault();
-          e.stopPropagation();
-          void selectFirstSuggestion(value);
-          // Fecha o dropdown de sugestões do widget: no Enter interceptado ele não
-          // fecha sozinho (quem seleciona somos nós, fora do fluxo do componente).
-          // Tirar o foco do input dispensa a lista; blur no próximo tick garante que
-          // acontece depois do handling do Enter.
-          const closeDropdown = () => inputEl?.blur();
-          closeDropdown();
-          setTimeout(closeDropdown, 0);
-        };
-        autocompleteEl.addEventListener("keydown", onSearchKeyDown, true);
+    };
+
+    // Acha o <input> da busca. No Enter o input está FOCADO, então o elemento
+    // realmente focado (atravessando shadow DOM aninhado) É o input — mais confiável
+    // que `querySelector` (que não perfura shadow aninhado).
+    const findSearchInput = (): HTMLInputElement | null => {
+      let el: Element | null = document.activeElement;
+      while (el && (el as any).shadowRoot?.activeElement) {
+        el = (el as any).shadowRoot.activeElement as Element;
       }
+      if (el && el.tagName === "INPUT") return el as HTMLInputElement;
+      return (
+        autocompleteEl?.querySelector?.("input") ??
+        autocompleteEl?.shadowRoot?.querySelector?.("input") ??
+        null
+      );
+    };
+
+    const wireAutocomplete = (el: any) => {
+      el.style.width = "100%";
+      // Nome do evento varia por versão — ouvimos ambos (só um dispara).
+      el.addEventListener("gmp-select", handleSelect);
+      el.addEventListener("gmp-placeselect", handleSelect);
+      // Enter → escolhe a 1ª sugestão. Interceptamos na CAPTURA e suprimimos o Enter
+      // nativo (que sem navegar pelas setas não seleciona nada).
+      onSearchKeyDown = (e: KeyboardEvent) => {
+        if (e.key !== "Enter") return;
+        const inputEl = findSearchInput();
+        // Se o usuário NAVEGOU com as setas, o widget tem uma sugestão destacada
+        // (`aria-activedescendant`): deixamos o Enter NATIVO seguir — o próprio
+        // componente seleciona (dispara gmp-select → handleSelect) E FECHA o dropdown.
+        // Só assumimos o controle quando NADA está destacado (Enter "escolhe a 1ª").
+        const hasHighlight = !!inputEl?.getAttribute("aria-activedescendant");
+        if (hasHighlight) return;
+
+        const value = (inputEl?.value ??
+          (e.target as HTMLInputElement)?.value ??
+          "") as string;
+        if (!value.trim()) return;
+        e.preventDefault();
+        e.stopPropagation();
+        void selectFirstSuggestion(value);
+        // Sem destaque, a seleção vem de FORA (nós) e o widget não fecha a lista —
+        // blur/Escape/limpar o input são ignorados. Recriamos o campo de busca
+        // (elemento novo = sem lista). O local já foi selecionado do `value` acima.
+        remountAutocomplete();
+      };
+      el.addEventListener("keydown", onSearchKeyDown, true);
+    };
+
+    const unwireAutocomplete = (el: any) => {
+      if (!el) return;
+      el.removeEventListener("gmp-select", handleSelect);
+      el.removeEventListener("gmp-placeselect", handleSelect);
+      if (onSearchKeyDown) el.removeEventListener("keydown", onSearchKeyDown, true);
+    };
+
+    const mountAutocomplete = () => {
+      if (!searchContainerRef.current) return;
+      const el = createAutocompleteEl();
+      if (!el) {
+        console.warn(
+          "[LocationPicker] PlaceAutocompleteElement indisponível — verifique se a 'Places API (New)' está habilitada no Google Cloud.",
+        );
+        return;
+      }
+      autocompleteEl = el;
+      searchContainerRef.current.appendChild(el);
+      wireAutocomplete(el);
+    };
+
+    // Destrói o campo atual (junto com seu dropdown) e monta um novo — chamado após o
+    // Enter pra a lista de sugestões sumir de forma confiável.
+    const remountAutocomplete = () => {
+      const old = autocompleteEl;
+      unwireAutocomplete(old);
+      old?.remove?.();
+      autocompleteEl = null;
+      mountAutocomplete();
+    };
+
+    if (gm.places?.PlaceAutocompleteElement) {
+      mountAutocomplete();
     } else {
       console.warn(
         "[LocationPicker] PlaceAutocompleteElement indisponível — verifique se a 'Places API (New)' está habilitada no Google Cloud.",
@@ -399,11 +447,7 @@ export function LocationPickerModal({
     return () => {
       clickListener?.remove?.();
       if (autocompleteEl) {
-        autocompleteEl.removeEventListener("gmp-select", handleSelect);
-        autocompleteEl.removeEventListener("gmp-placeselect", handleSelect);
-        if (onSearchKeyDown) {
-          autocompleteEl.removeEventListener("keydown", onSearchKeyDown, true);
-        }
+        unwireAutocomplete(autocompleteEl);
         autocompleteEl.remove();
       }
       if (markerRef.current) {
