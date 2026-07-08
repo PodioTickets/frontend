@@ -380,6 +380,13 @@ export function LocationPickerModal({
           e.preventDefault();
           e.stopPropagation();
           void selectFirstSuggestion(value);
+          // Fecha o dropdown de sugestões do widget: no Enter interceptado ele não
+          // fecha sozinho (quem seleciona somos nós, fora do fluxo do componente).
+          // Tirar o foco do input dispensa a lista; blur no próximo tick garante que
+          // acontece depois do handling do Enter.
+          const closeDropdown = () => inputEl?.blur();
+          closeDropdown();
+          setTimeout(closeDropdown, 0);
         };
         autocompleteEl.addEventListener("keydown", onSearchKeyDown, true);
       }
