@@ -7,7 +7,7 @@ import {
   DrawerHeader,
   DrawerTitle,
 } from "@/components/ui/drawer";
-import { X, ChevronLeft, ChevronRight, CheckCircle, FileText, Search, EyeIcon } from "lucide-react";
+import { X, CheckCircle, FileText, Search, EyeIcon } from "lucide-react";
 import { CalendarIcon } from "@/components/Icons/CalendarIcon";
 import { TransferDetailsDrawer } from "./TransferDetailsDrawer";
 import { RepasseIcon } from "../Icons/RepasseIcon";
@@ -320,35 +320,12 @@ export function TransferHistoryDrawer({
 
               {/* Mobile pagination */}
               {totalPages > 1 && (
-                <div className="flex items-center justify-center gap-2 pt-2">
-                  <button
-                    onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                    disabled={currentPage === 1}
-                    className="size-8 flex items-center justify-center rounded-lg border border-gray-6 disabled:opacity-50"
-                  >
-                    <ChevronLeft className="size-4" />
-                  </button>
-                  {Array.from({ length: Math.min(totalPages, 8) }, (_, i) => {
-                    const pageNum = i + 1;
-                    const isActive = pageNum === currentPage;
-                    return (
-                      <button
-                        key={pageNum}
-                        onClick={() => setCurrentPage(pageNum)}
-                        className={`size-8 flex items-center justify-center rounded-lg text-sm font-family-dm-sans font-medium transition-colors ${isActive ? "bg-primary-11 border-primary-11 text-primary-2" : "border border-gray-6 bg-gray-4 text-gray-12"}`}
-                      >
-                        {pageNum}
-                      </button>
-                    );
-                  })}
-                  <button
-                    onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-                    disabled={currentPage >= totalPages}
-                    className="size-8 flex items-center justify-center rounded-lg border border-gray-6 disabled:opacity-50"
-                  >
-                    <ChevronRight className="size-4" />
-                  </button>
-                </div>
+                <Pagination
+                  currentPage={currentPage}
+                  totalPages={totalPages}
+                  onPageChange={setCurrentPage}
+                  className="pt-2"
+                />
               )}
             </div>
           </div>

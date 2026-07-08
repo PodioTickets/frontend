@@ -8,13 +8,13 @@ import {
   DrawerHeader,
   DrawerTitle,
 } from "@/components/ui/drawer";
-import { X, ChevronLeft, ChevronRight, FileText, Search } from "lucide-react";
+import { X, FileText, Search } from "lucide-react";
 import { CalendarIcon } from "@/components/Icons/CalendarIcon";
 import { PixIcon } from "@/components/Icons/PixIcon";
 import { CardIcon } from "@/components/Icons/CardIcon";
 import { PaymentItemDetailsDrawer } from "./PaymentItemDetailsDrawer";
+import { AnticipationModal } from "./AnticipationModal";
 import { ArrowButton } from "../ArrowButton";
-import { DetailsIcon } from "../Icons/DetailsIcon";
 import { organizerService } from "@/services";
 import type { PendingRelease } from "@/services/organizer/OrganizerService";
 import { TimerIcon } from "../Icons/Organizer/TimerIcon";
@@ -25,6 +25,7 @@ import { Tooltip } from "../Tooltip";
 import { Pagination } from "../Pagination";
 import { formatDateBR } from "@/utils/datetimeBR";
 import { formatShortId } from "@/utils/shortId";
+import { formatDocumentDisplay, isPersonBr } from "@/utils/documentDisplay";
 
 interface AwaitingReleaseDrawerProps {
   isOpen: boolean;
@@ -43,7 +44,6 @@ export function AwaitingReleaseDrawer({
   isOpen,
   onClose,
   totalPending,
-  releaseToday,
   totalTransactions,
   eventId,
   eventName = "Maratona 2024",
@@ -53,14 +53,11 @@ export function AwaitingReleaseDrawer({
 }: AwaitingReleaseDrawerProps) {
   const [currentPage, setCurrentPage] = useState(1);
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
+  const [isAnticipationOpen, setIsAnticipationOpen] = useState(false);
   const [selectedPayment, setSelectedPayment] = useState<PendingRelease | null>(null);
   const [pendingReleases, setPendingReleases] = useState<PendingRelease[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
-  const [actualData, setActualData] = useState<{
-    totalPending: number;
-    releaseToday: number;
-  }>({ totalPending, releaseToday });
   const [pagination, setPagination] = useState<{
     page: number;
     limit: number;
@@ -95,10 +92,6 @@ export function AwaitingReleaseDrawer({
       setLoading(true);
       const data = await organizerService.getEventPendingReleases(eventId, page, itemsPerPage);
       setPendingReleases(data.pending || []);
-      setActualData({
-        totalPending: data.totalPending || 0,
-        releaseToday: data.releaseToday || 0,
-      });
       if (data.pagination) {
         setPagination({
           page: data.pagination.page || page,
@@ -224,7 +217,7 @@ export function AwaitingReleaseDrawer({
                     <p className="font-family-dm-sans font-normal text-base text-gray-11">Aguardando liberação</p>
                   </div>
                   <p className="font-manrope font-extrabold text-lg text-gray-12">
-                    R$ {(actualData.totalPending / 100).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    R$ {(totalPending / 100).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </p>
                 </div>
                 <div className="bg-gray-1 border border-gray-6 rounded-xl p-4 flex flex-col justify-between gap-3">
@@ -287,7 +280,7 @@ export function AwaitingReleaseDrawer({
                               <p className="font-family-dm-sans font-medium text-base text-gray-12 truncate">
                                 {item.buyer?.fullName || `${item.buyer?.firstName || ""} ${item.buyer?.lastName || ""}`.trim()}
                               </p>
-                              <p className="font-family-dm-sans font-normal text-sm text-gray-11 truncate">{item.buyer?.email}</p>
+                              <p className="font-family-dm-sans font-normal text-sm text-gray-11 truncate">{formatDocumentDisplay(item.buyer?.documentNumber, isPersonBr({ document: item.buyer?.documentNumber })) || item.buyer?.email}</p>
                             </div>
                           </div>
                           <div className="shrink-0">
@@ -329,36 +322,13 @@ export function AwaitingReleaseDrawer({
 
               {/* Mobile pagination */}
               {totalPages > 1 && (
-                <div className="flex items-center justify-center gap-2 pt-2">
-                  <button
-                    onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                    disabled={!pagination.hasPreviousPage || loading}
-                    className="size-8 flex items-center justify-center rounded-lg border border-gray-6 disabled:opacity-50"
-                  >
-                    <ChevronLeft className="size-4" />
-                  </button>
-                  {Array.from({ length: Math.min(totalPages, 8) }, (_, i) => {
-                    const pageNum = i + 1;
-                    const isActive = pageNum === currentPage;
-                    return (
-                      <button
-                        key={pageNum}
-                        onClick={() => setCurrentPage(pageNum)}
-                        disabled={loading}
-                        className={`size-8 flex items-center justify-center rounded-lg text-sm font-family-dm-sans font-medium transition-colors ${isActive ? "bg-primary-11 border-primary-11 text-primary-2" : "border border-gray-6 bg-gray-4 text-gray-12"}`}
-                      >
-                        {pageNum}
-                      </button>
-                    );
-                  })}
-                  <button
-                    onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-                    disabled={!pagination.hasNextPage || loading}
-                    className="size-8 flex items-center justify-center rounded-lg border border-gray-6 disabled:opacity-50"
-                  >
-                    <ChevronRight className="size-4" />
-                  </button>
-                </div>
+                <Pagination
+                  currentPage={currentPage}
+                  totalPages={totalPages}
+                  onPageChange={setCurrentPage}
+                  disabled={loading}
+                  className="pt-2"
+                />
               )}
             </div>
           </div>
@@ -370,35 +340,33 @@ export function AwaitingReleaseDrawer({
                 <span>Evento: <span className="text-gray-12">{eventName}</span></span>
               </div>
 
-              <div className="grid grid-cols-2 gap-4 mb-5">
-                {/* Total pendente */}
-                <div className="bg-gray-1 border border-gray-6 rounded-[12px] px-4 py-3">
-                  <div className="flex items-center justify-between mb-3">
-                    <p className="font-family-dm-sans font-normal text-gray-11">
-                      Total pendente
+              {/* Card "Cartão à vista" (Figma). Por decisão do usuário o valor é o
+                  TOTAL de "aguardando liberação" (prop `totalPending` =
+                  summary.pendingRelease = aguardandoLiberacao + valorRetido, o mesmo
+                  número da tela financeiro) — NÃO o total da lista paginada
+                  (getFinancialPending, que só conta pedidos com releaseDate>now e por
+                  isso é menor). O rótulo "Cartão à vista" é do design; o valor
+                  intencionalmente cobre todo o aguardando liberação. */}
+              <div className="flex items-start mb-5">
+                <div className="bg-gray-1 border border-gray-6 rounded-[12px] flex flex-col gap-4 pt-4 pb-5 px-4 w-[343px] max-w-full">
+                  <div className="flex items-center justify-between">
+                    <p className="font-family-dm-sans font-normal text-base text-gray-11">
+                      Cartão à vista
                     </p>
-                    <div className="w-[28px] h-[28px] p-1 rounded-lg bg-[#CAF1F6] flex items-center justify-center">
-                      <CalendarIcon className="size-5 text-gray-12" />
+                    <div className="w-[32px] h-[32px] p-1 rounded-lg bg-blue-4 flex items-center justify-center shrink-0">
+                      <CardIcon className="size-5 text-gray-12" />
                     </div>
                   </div>
-                  <p className="font-family-dm-sans font-extrabold text-xl text-gray-12">
-                    R$ {(actualData.totalPending / 100).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  <p className="font-manrope font-extrabold text-[20px] leading-[1.1] text-gray-12">
+                    R$ {(totalPending / 100).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </p>
-                </div>
-
-                {/* Pedidos */}
-                <div className="bg-gray-1 border border-gray-6 rounded-[12px] px-4 py-3">
-                  <div className="flex items-center justify-between mb-3">
-                    <p className="font-family-dm-sans font-normal text-gray-11">
-                      Pedidos
-                    </p>
-                    <div className="w-[28px] h-[28px] p-1 rounded-lg bg-[#EBE4FF] flex items-center justify-center">
-                      <FileText className="size-5 text-[#2F265F]" />
-                    </div>
-                  </div>
-                  <p className="font-family-dm-sans font-extrabold text-xl text-gray-12">
-                    {pagination.totalOrders}
-                  </p>
+                  <button
+                    type="button"
+                    onClick={() => setIsAnticipationOpen(true)}
+                    className="self-start font-family-dm-sans font-semibold text-sm text-blue-11 hover:text-blue-12 transition-colors cursor-pointer"
+                  >
+                    Solicitar antecipação
+                  </button>
                 </div>
               </div>
 
@@ -489,7 +457,7 @@ export function AwaitingReleaseDrawer({
                               {item.buyer.fullName || `${item.buyer.firstName} ${item.buyer.lastName}`}
                             </p>
                             <p className="font-inter font-normal leading-[1.3] text-sm text-gray-11 truncate">
-                              {item.buyer.email}
+                              {formatDocumentDisplay(item.buyer.documentNumber, isPersonBr({ document: item.buyer.documentNumber })) || item.buyer.email}
                             </p>
                           </div>
                         </div>
@@ -521,7 +489,7 @@ export function AwaitingReleaseDrawer({
                             }}
                             className="bg-gray-2 border border-gray-6 rounded-lg size-8 flex items-center justify-center hover:bg-gray-3 transition-colors cursor-pointer"
                           >
-                            <DetailsIcon className="size-5 text-gray-12" />
+                            <FileText className="size-4 text-gray-11" />
                           </button>
                         </div>
                       </div>
@@ -559,6 +527,16 @@ export function AwaitingReleaseDrawer({
           eventName={eventName}
           categoryName={categoryName}
           type="awaiting"
+        />
+      )}
+
+      {/* Modal "Antecipar recebíveis". Busca a cotação e envia o pedido pelo
+          endpoint /repasse/anticipations. Montagem condicional (mount = aberto). */}
+      {isAnticipationOpen && (
+        <AnticipationModal
+          eventId={eventId}
+          onClose={() => setIsAnticipationOpen(false)}
+          onSuccess={() => loadPendingReleases(currentPage)}
         />
       )}
     </>

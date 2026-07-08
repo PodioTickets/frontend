@@ -13,6 +13,7 @@ import { PaymentIcon } from "react-svg-credit-card-payment-icons";
 import { PixIcon } from "@/components/Icons/PixIcon";
 import { CardIcon } from "@/components/Icons/CardIcon";
 import { organizerService } from "@/services";
+import { useViewRegistrationModal } from "@/stores/modalStore";
 import type { PaymentDetails } from "@/services/organizer/OrganizerService";
 import toast from "react-hot-toast";
 import { Loading } from "@/components/Loading";
@@ -63,6 +64,7 @@ export function PaymentItemDetailsDrawer({
   const [paymentDetails, setPaymentDetails] = useState<PaymentDetails | null>(null);
   const [loading, setLoading] = useState(false);
   const [ticketsPage, setTicketsPage] = useState(1);
+  const { openViewRegistrationModal, isOpen: isRegistrationOpen } = useViewRegistrationModal();
 
   useEffect(() => {
     if (!isOpen) {
@@ -200,7 +202,18 @@ export function PaymentItemDetailsDrawer({
 
   if (loading) {
     return (
-      <Drawer open={isOpen} onOpenChange={onClose} direction="right">
+      <Drawer
+      open={isOpen}
+      onOpenChange={(open) => {
+        // O ViewRegistrationModal é renderizado no ROOT (fora deste DrawerContent),
+        // então o Radix interpreta o clique/Esc que FECHA o modal como "interação
+        // fora do drawer" e fecharia o drawer junto. Enquanto o modal de inscrição
+        // estiver aberto, ignoramos o pedido de fechar do drawer.
+        if (!open && isRegistrationOpen) return;
+        if (!open) onClose();
+      }}
+      direction="right"
+    >
         <DrawerContent className="bg-gray-1 h-full w-full sm:max-w-[970px] border-l border-gray-6">
           <DrawerTitle className="sr-only">Comprovante do pagamento</DrawerTitle>
           <div className="flex items-center justify-center h-full">
@@ -264,7 +277,18 @@ export function PaymentItemDetailsDrawer({
   ];
 
   return (
-    <Drawer open={isOpen} onOpenChange={onClose} direction="right">
+    <Drawer
+      open={isOpen}
+      onOpenChange={(open) => {
+        // O ViewRegistrationModal é renderizado no ROOT (fora deste DrawerContent),
+        // então o Radix interpreta o clique/Esc que FECHA o modal como "interação
+        // fora do drawer" e fecharia o drawer junto. Enquanto o modal de inscrição
+        // estiver aberto, ignoramos o pedido de fechar do drawer.
+        if (!open && isRegistrationOpen) return;
+        if (!open) onClose();
+      }}
+      direction="right"
+    >
       <DrawerContent className="bg-gray-1 h-full w-full sm:max-w-[970px] border-l border-gray-6">
         <DrawerTitle className="sr-only">Comprovante do pagamento</DrawerTitle>
 
@@ -292,6 +316,13 @@ export function PaymentItemDetailsDrawer({
           transactionIp={payment.transactionIp ?? undefined}
           couponCode={coupon?.code ?? undefined}
           participants={mobileParticipants}
+          onViewParticipant={(p) =>
+            openViewRegistrationModal({
+              registrationId: p.id,
+              eventId: event.id,
+              eventName: event.name,
+            })
+          }
           currentPage={safeTicketsPage}
           totalPages={totalTicketPages}
           onPageChange={setTicketsPage}
@@ -614,8 +645,15 @@ export function PaymentItemDetailsDrawer({
                       <div className="flex-1 min-w-0 px-4 py-2 flex justify-end">
                         <button
                           type="button"
-                          aria-label="Informações do participante"
-                          title="Informações do participante"
+                          onClick={() =>
+                            openViewRegistrationModal({
+                              registrationId: p.id,
+                              eventId: event.id,
+                              eventName: event.name,
+                            })
+                          }
+                          aria-label="Ver inscrição"
+                          title="Ver inscrição"
                           className="bg-gray-2 border border-gray-6 rounded-lg size-8 flex items-center justify-center hover:bg-gray-3 transition-colors cursor-pointer shrink-0"
                         >
                           <TicketIcon className="size-4 text-gray-11" />

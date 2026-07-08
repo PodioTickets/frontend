@@ -3,7 +3,8 @@
 import { ReactNode } from "react";
 import Image from "next/image";
 import { getAvatarUrl } from "@/utils/avatar";
-import { Copy, CheckCircle, ChevronLeft, ChevronRight, FileText, Star, X } from "lucide-react";
+import { Copy, CheckCircle, ChevronLeft, FileText, Star, X } from "lucide-react";
+import { Pagination } from "../Pagination";
 import { PixIcon } from "@/components/Icons/PixIcon";
 import { CardIcon } from "@/components/Icons/CardIcon";
 import { TicketIcon } from "@/components/Icons/TicketIcon";
@@ -423,54 +424,12 @@ export function PaymentDetailsMobile({
 
               {/* Paginacao — DENTRO do outer card, separada da lista */}
               {totalPages > 1 && (
-                <div className="flex items-center justify-center px-4 py-5 w-full bg-gray-2 border-t border-gray-6">
-                  <div className="flex h-8 items-center gap-0">
-                    <button
-                      onClick={() => onPageChange(Math.max(1, currentPage - 1))}
-                      disabled={currentPage === 1}
-                      className="size-8 flex items-center justify-center disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
-                      aria-label="Página anterior"
-                    >
-                      <ChevronLeft className="size-5 text-gray-11" />
-                    </button>
-                    <div className="flex gap-1 items-center">
-                      {(() => {
-                        const WINDOW = 6;
-                        const start = Math.min(
-                          Math.max(1, currentPage - Math.floor(WINDOW / 2)),
-                          Math.max(1, totalPages - WINDOW + 1),
-                        );
-                        const end = Math.min(totalPages, start + WINDOW - 1);
-                        const pages: number[] = [];
-                        for (let p = start; p <= end; p++) pages.push(p);
-                        return pages.map((pageNum) => {
-                          const isActive = pageNum === currentPage;
-                          return (
-                            <button
-                              key={pageNum}
-                              onClick={() => onPageChange(pageNum)}
-                              className={`size-8 flex items-center justify-center rounded-lg font-family-dm-sans font-medium text-[14px] leading-[18.2px] transition-colors cursor-pointer ${
-                                isActive
-                                  ? "bg-primary-11 text-primary-1"
-                                  : "bg-gray-4 text-gray-12 hover:bg-gray-5"
-                              }`}
-                            >
-                              {pageNum}
-                            </button>
-                          );
-                        });
-                      })()}
-                    </div>
-                    <button
-                      onClick={() => onPageChange(Math.min(totalPages, currentPage + 1))}
-                      disabled={currentPage >= totalPages}
-                      className="size-8 flex items-center justify-center disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
-                      aria-label="Próxima página"
-                    >
-                      <ChevronRight className="size-5 text-gray-11" />
-                    </button>
-                  </div>
-                </div>
+                <Pagination
+                  currentPage={currentPage}
+                  totalPages={totalPages}
+                  onPageChange={onPageChange}
+                  className="bg-gray-2 border-t border-gray-6 px-4 py-5"
+                />
               )}
             </div>
           </div>

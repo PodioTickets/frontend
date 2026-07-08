@@ -120,7 +120,7 @@ export function TicketCard({ ticket, className }: TicketCardProps) {
   // Overlay "Inscrição feita por" (pedido de convite) sobre o banner.
   const invitedByOverlay = ticket.invitedBy ? (
     <div
-      className="absolute left-2 top-2 flex items-center gap-2 rounded-lg p-2"
+      className="absolute left-2 top-2 flex max-w-[calc(100%-1rem)] items-center gap-1.5 rounded-lg p-1.5"
       style={{
         background: "rgba(1, 29, 33, 0.70)",
         backdropFilter: "blur(6px)",
@@ -130,16 +130,16 @@ export function TicketCard({ ticket, className }: TicketCardProps) {
       <Image
         src="/images/gift-huge.png"
         alt=""
-        width={20}
-        height={20}
-        className="size-5 shrink-0 brightness-0 invert"
+        width={16}
+        height={16}
+        className="size-4 shrink-0 brightness-0 invert"
         draggable={false}
       />
-      <div className="flex flex-col gap-1">
-        <span className="font-family-dm-sans text-xs font-normal leading-[1.3] text-[#B4B4B4]">
+      <div className="flex min-w-0 flex-col gap-0.5">
+        <span className="font-family-dm-sans text-[10px] font-normal leading-[1.3] text-[#B4B4B4]">
           Inscrição feita por
         </span>
-        <span className="font-family-dm-sans text-xs font-semibold leading-[1.3] text-[#EEEEEE]">
+        <span className="font-family-dm-sans truncate text-xs font-semibold leading-[1.3] text-[#EEEEEE]">
           {ticket.invitedBy.fullName}
         </span>
       </div>

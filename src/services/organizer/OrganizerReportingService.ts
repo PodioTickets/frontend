@@ -321,6 +321,37 @@ export class OrganizerReportingService extends OrganizerServiceBase {
     return response.data;
   }
 
+  /**
+   * Cotação da antecipação de recebíveis: total disponível p/ antecipar, taxa
+   * mensal e a lista de pedidos (oldest-first) p/ o front calcular a prévia local.
+   */
+  async getAnticipationQuote(eventId: string): Promise<{
+    anticipatableTotal: number;
+    monthlyRate: number;
+    orders: { orderId: string; netAmount: number; daysUntilRelease: number }[];
+  }> {
+    const { data: response } = await this.apiClient.get<{
+      data: {
+        anticipatableTotal: number;
+        monthlyRate: number;
+        orders: { orderId: string; netAmount: number; daysUntilRelease: number }[];
+      };
+    }>(`/api/v1/events/${eventId}/repasse/anticipations/quote`);
+    return response.data;
+  }
+
+  /** Solicita a antecipação (o backend recalcula o custo de forma autoritativa). */
+  async requestAnticipation(
+    eventId: string,
+    amount: number,
+  ): Promise<{ message: string; data: { anticipation: unknown } }> {
+    const { data } = await this.apiClient.post<{ message: string; data: { anticipation: unknown } }>(
+      `/api/v1/events/${eventId}/repasse/anticipations`,
+      { amount },
+    );
+    return data;
+  }
+
   async getEventRefunded(
     eventId: string,
     params?: {
