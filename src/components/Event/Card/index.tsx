@@ -36,7 +36,7 @@ export function EventCard({ event, preview = false }: EventCardProps) {
   );
 
   const cardInner = (
-    <div className="flex w-full items-start transition-transform duration-200 hover:scale-[1.01]">
+    <div className="flex w-full flex-col items-start transition-transform duration-200 hover:scale-[1.01]">
       {/* Núcleo compartilhado com o TicketCard (banner + título + endereço + data). */}
       <EventCardContent
         name={event.name}
