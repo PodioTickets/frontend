@@ -503,7 +503,7 @@ export default function AdminEventsPage() {
               return (
                 <div key={ev.id} className="rounded-xl border border-gray-6 bg-gray-1 p-4 shadow-[0px_2px_6px_0px_rgba(17,17,17,0.08)] flex flex-col gap-3">
                   <div className="flex items-center gap-3">
-                    <div className="size-10 rounded-lg border border-gray-6 overflow-hidden shrink-0 bg-gray-4 relative flex items-center justify-center text-xs font-bold text-gray-11">
+                    <div className="h-10 aspect-1660/930 rounded-lg border border-gray-6 overflow-hidden shrink-0 bg-gray-4 relative flex items-center justify-center text-xs font-bold text-gray-11">
                       {img ? <Image src={img} alt={ev.name} fill className="object-cover" /> : getInitials(ev.name)}
                     </div>
                     <div className="min-w-0">
@@ -581,7 +581,7 @@ export default function AdminEventsPage() {
                         {/* Evento */}
                         <td className="py-3.5 px-4">
                           <div className="flex items-center gap-3">
-                            <div className="size-10 rounded-lg border border-gray-6 overflow-hidden shrink-0 relative bg-gray-4 flex items-center justify-center text-xs font-bold text-gray-11">
+                            <div className="h-10 aspect-1660/930 rounded-lg border border-gray-6 overflow-hidden shrink-0 relative bg-gray-4 flex items-center justify-center text-xs font-bold text-gray-11">
                               {eventImg ? <Image src={eventImg} alt={event.name} fill className="object-cover" /> : getInitials(event.name)}
                             </div>
                             <span className="text-sm font-semibold text-gray-12 font-family-dm-sans line-clamp-2 max-w-[200px]">

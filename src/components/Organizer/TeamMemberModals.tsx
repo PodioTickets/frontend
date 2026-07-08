@@ -990,7 +990,7 @@ export function CollaboratorDrawer({
                               <PermissionCheckbox
                                 checked={!!eventSelection[ev.id]}
                               />
-                              <span className="relative size-11 shrink-0 overflow-hidden rounded-lg border border-gray-6 bg-gray-3">
+                              <span className="relative block h-11 aspect-1660/930 shrink-0 overflow-hidden rounded-lg border border-gray-6 bg-gray-3">
                                 {img ? (
                                   <Image
                                     src={img}

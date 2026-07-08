@@ -3,8 +3,8 @@
 export default function EventLoading() {
   return (
     <div className="min-h-screen bg-gray-2 pb-24" aria-busy="true" aria-live="polite">
-      {/* Banner (16:9-ish) */}
-      <div className="w-full h-[174px] md:h-[400px] bg-gray-3 animate-pulse" />
+      {/* Banner — formato padrão 1660×930 (mobile full-width; desktop aproxima) */}
+      <div className="w-full aspect-1660/930 md:aspect-auto md:h-[400px] bg-gray-3 animate-pulse" />
 
       <div className="max-w-[1280px] mx-auto px-4 md:px-8 -mt-10 md:-mt-14 relative">
         {/* Hero card */}
