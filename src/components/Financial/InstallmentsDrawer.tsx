@@ -8,7 +8,8 @@ import {
   DrawerHeader,
   DrawerTitle,
 } from "@/components/ui/drawer";
-import { X, ChevronLeft, ChevronRight, FileText, Search } from "lucide-react";
+import { X, FileText, Search } from "lucide-react";
+import { Pagination } from "../Pagination";
 import { CalendarIcon } from "@/components/Icons/CalendarIcon";
 import { PixIcon } from "@/components/Icons/PixIcon";
 import { PaymentIcon } from "react-svg-credit-card-payment-icons";
@@ -340,35 +341,12 @@ export function InstallmentsDrawer({
 
               {/* Mobile pagination */}
               {totalPages > 1 && (
-                <div className="flex items-center justify-center gap-2 pt-2">
-                  <button
-                    onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                    disabled={currentPage === 1}
-                    className="size-8 flex items-center justify-center rounded-lg border border-gray-6 disabled:opacity-50"
-                  >
-                    <ChevronLeft className="size-4" />
-                  </button>
-                  {Array.from({ length: Math.min(totalPages, 8) }, (_, i) => {
-                    const pageNum = i + 1;
-                    const isActive = pageNum === currentPage;
-                    return (
-                      <button
-                        key={pageNum}
-                        onClick={() => setCurrentPage(pageNum)}
-                        className={`size-8 flex items-center justify-center rounded-lg text-sm font-family-dm-sans font-medium transition-colors ${isActive ? "bg-primary-11 border-primary-11 text-primary-2" : "border border-gray-6 bg-gray-4 text-gray-12"}`}
-                      >
-                        {pageNum}
-                      </button>
-                    );
-                  })}
-                  <button
-                    onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-                    disabled={currentPage >= totalPages}
-                    className="size-8 flex items-center justify-center rounded-lg border border-gray-6 disabled:opacity-50"
-                  >
-                    <ChevronRight className="size-4" />
-                  </button>
-                </div>
+                <Pagination
+                  currentPage={currentPage}
+                  totalPages={totalPages}
+                  onPageChange={setCurrentPage}
+                  className="pt-2"
+                />
               )}
             </div>
           </div>
@@ -551,7 +529,7 @@ export function InstallmentsDrawer({
                             }}
                             className="bg-gray-2 border border-gray-6 rounded-lg size-8 flex items-center justify-center hover:bg-gray-3 transition-colors cursor-pointer"
                           >
-                            <DetailsIcon className="size-5 text-gray-12" />
+                            <FileText className="size-4 text-gray-11" />
                           </button>
                         </div>
                       </div>
@@ -561,38 +539,12 @@ export function InstallmentsDrawer({
 
                 {/* Pagination */}
                 {totalPages > 1 && (
-                  <div className="flex items-center justify-center gap-2 py-4 px-5 border-t border-gray-6">
-                    <button
-                      onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
-                      disabled={currentPage === 1}
-                      className="size-8 flex items-center justify-center border border-gray-6 rounded-lg hover:bg-gray-3 disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      <ChevronLeft className="size-4" />
-                    </button>
-                    {Array.from({ length: Math.min(totalPages, 8) }, (_, i) => {
-                      const pageNum = i + 1;
-                      const isActive = pageNum === currentPage;
-                      return (
-                        <button
-                          key={pageNum}
-                          onClick={() => setCurrentPage(pageNum)}
-                          className={`size-8 flex items-center justify-center border rounded-lg text-sm font-inter font-normal transition-colors ${isActive
-                            ? "bg-[#59E373] border-[#59E373] text-gray-12"
-                            : "border-gray-6 hover:bg-gray-3 text-gray-12"
-                            }`}
-                        >
-                          {pageNum}
-                        </button>
-                      );
-                    })}
-                    <button
-                      onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
-                      disabled={currentPage >= totalPages}
-                      className="size-8 flex items-center justify-center border border-gray-6 rounded-lg hover:bg-gray-3 disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      <ChevronRight className="size-4" />
-                    </button>
-                  </div>
+                  <Pagination
+                    currentPage={currentPage}
+                    totalPages={totalPages}
+                    onPageChange={setCurrentPage}
+                    className="border-t border-gray-6 px-5 py-4"
+                  />
                 )}
               </div>
             </div>
