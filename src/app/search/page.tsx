@@ -459,11 +459,10 @@ function MobileAdvancedSearch() {
             </div>
           ) : (
             <>
-              <div className="grid grid-cols-2 gap-4">
+              {/* Mobile: MESMO card da home (EventCard vertical), em coluna única. */}
+              <div className="flex flex-col gap-6">
                 {events.map((event) => (
-                  <div key={event.id} className="w-full">
-                    <EventCard event={event} />
-                  </div>
+                  <EventCard key={event.id} event={event} />
                 ))}
               </div>
               {currentPage < pagination.totalPages && (

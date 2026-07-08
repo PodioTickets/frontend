@@ -257,12 +257,12 @@ export function BannerSection({
   const renderBannerUpload = () =>
     bannerPreview ? (
       <div className="border-2 border-gray-6 border-dashed rounded-xl p-4 md:p-6 flex flex-col gap-6 md:flex-row md:items-center w-full max-w-full md:max-w-[710px] md:mx-auto">
-        <div className="relative rounded-2xl shrink-0 size-[128px] overflow-hidden mx-auto md:mx-0">
+        <div className="relative rounded-2xl shrink-0 w-[128px] aspect-1660/930 overflow-hidden mx-auto md:mx-0">
           <Image src={bannerPreview} alt="Banner preview" fill className="object-cover" unoptimized={bannerPreview.startsWith("data:")} />
         </div>
         <div className="flex flex-1 flex-col gap-6 min-w-0">
           <div className="flex flex-col gap-4">
-            <p className="text-gray-12 text-base font-semibold font-manrope leading-[1.1]">Tamanho recomendado: 880 x 400 px</p>
+            <p className="text-gray-12 text-base font-semibold font-manrope leading-[1.1]">Tamanho recomendado: 1660 x 930 px</p>
             <p className="text-gray-11 text-sm md:text-base font-family-dm-sans leading-[1.3]">Use uma arte com boa resolução e pouco texto, para ficar legível em diferentes telas.</p>
           </div>
           <button type="button" onClick={() => bannerCropRef.current?.open()} className="border-[1.5px] border-gray-6 rounded-lg h-11 flex gap-2 items-center justify-center px-6 hover:bg-gray-3 transition-colors w-full md:w-fit">
@@ -283,7 +283,7 @@ export function BannerSection({
       >
         <p className="text-primary-11 text-base font-bold font-family-dm-sans leading-[1.3]">Arraste uma imagem para este campo ou clique aqui</p>
         <div className="flex flex-col gap-4 items-center text-center">
-          <p className="text-gray-12 text-base font-semibold font-manrope leading-[1.1]">Tamanho recomendado: 880 × 400 px</p>
+          <p className="text-gray-12 text-base font-semibold font-manrope leading-[1.1]">Tamanho recomendado: 1660 × 930 px</p>
           <p className="text-gray-11 text-base font-family-dm-sans leading-[1.3]">Use uma arte com boa resolução e pouco texto, para ficar legível em diferentes telas.</p>
         </div>
       </div>
@@ -296,11 +296,11 @@ export function BannerSection({
         <div className="flex gap-8 items-start w-full flex-col xl:flex-row xl:justify-center">
           <div className="flex flex-col gap-6 md:gap-[52px] flex-1 min-w-0 max-w-full w-full">
             {bannerPreview ? (
-              <div className="relative w-full aspect-342/134 md:aspect-880/400 max-w-full rounded-lg md:rounded-2xl overflow-hidden shadow-[0px_8px_16px_0px_rgba(17,17,17,0.5)]">
+              <div className="relative w-full aspect-1660/930 max-w-full rounded-lg md:rounded-2xl overflow-hidden shadow-[0px_8px_16px_0px_rgba(17,17,17,0.5)]">
                 <Image src={bannerPreview} alt="Banner preview" fill className="object-cover" sizes="(max-width:768px) 100vw, 625px" unoptimized={bannerPreview.startsWith("data:")} />
               </div>
             ) : (
-              <div className="w-full aspect-342/134 md:aspect-880/400 max-w-full bg-gray-4 rounded-lg md:rounded-2xl" />
+              <div className="w-full aspect-1660/930 max-w-full bg-gray-4 rounded-lg md:rounded-2xl" />
             )}
             <div className="hidden md:flex flex-col gap-4">
               <div className="bg-gray-8 h-4 w-full rounded" />

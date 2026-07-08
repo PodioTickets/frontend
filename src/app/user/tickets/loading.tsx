@@ -28,8 +28,8 @@ export default function UserTicketsLoading() {
                 <div className="-mb-2 h-8 w-32 rounded-tl-lg rounded-tr-lg bg-gray-4 animate-pulse" />
                 {/* Card */}
                 <div className="flex w-full flex-col overflow-hidden rounded-lg bg-gray-1">
-                  {/* Banner — proporção 312/142 igual ao TicketCard */}
-                  <div className="aspect-[312/142] w-full bg-gray-3 animate-pulse" />
+                  {/* Banner — formato padrão 1660×930 igual ao TicketCard */}
+                  <div className="aspect-1660/930 w-full bg-gray-3 animate-pulse" />
                   {/* Título + local + data + pessoas */}
                   <div className="flex flex-col gap-3 pt-3 pb-4">
                     <div className="h-4 w-3/4 rounded bg-gray-3 animate-pulse" />

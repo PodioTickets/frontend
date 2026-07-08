@@ -187,6 +187,7 @@ export default function InformacoesPage() {
         onErrorsChange={setErrors}
         onSubmit={handleSubmit}
         loading={loading}
+        enableIpLocationDefault
         hasLocalRegulationDraft={hasLocalRegulationDraft}
         onClearLocalRegulationDraft={() => {
           clearRegulationPdfDraft();

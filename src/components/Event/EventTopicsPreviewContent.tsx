@@ -74,8 +74,8 @@ export function EventTopicsPreviewContent({
           </div>
         )}
 
-        {/* Hero 174px. */}
-        <div className="relative z-10 mx-4 mt-4 h-[174px] overflow-hidden rounded-xl">
+        {/* Hero — formato padrão do banner (1660×930). */}
+        <div className="relative z-10 mx-4 mt-4 aspect-1660/930 overflow-hidden rounded-xl">
           <ImageWithInitialFallback
             src={event?.bannerUrl ?? undefined}
             alt={event?.name || "Event banner"}
@@ -154,8 +154,8 @@ export function EventTopicsPreviewContent({
       <div className="hidden w-full gap-8 md:flex md:flex-row md:items-start">
         {/* Coluna esquerda: banner + tópicos. */}
         <div className="w-full min-w-0 md:w-3/4">
-          {/* Banner: mesma altura/margem do cliente (h-400 + mb-10). */}
-          <div className="relative mb-10 h-[400px] w-full overflow-hidden rounded-xl shadow-[0px_8px_16px_0px_rgba(17,17,17,0.5)]">
+          {/* Banner: formato padrão (1660×930), espelha a página pública do evento. */}
+          <div className="relative mb-10 aspect-1660/930 w-full overflow-hidden rounded-xl shadow-[0px_8px_16px_0px_rgba(17,17,17,0.5)]">
             <ImageWithInitialFallback
               src={event?.bannerUrl ?? undefined}
               alt={event?.name || "Event banner"}

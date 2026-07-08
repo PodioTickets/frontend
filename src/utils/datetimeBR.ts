@@ -219,9 +219,10 @@ const EVENT_HAPPENS_LABEL_OPTS: Intl.DateTimeFormatOptions = {
 export function formatEventHappensLabel(value: DateInput): string {
   const d = toUtcDate(value);
   if (!d) return "";
-  const weekday = d.getUTCDay(); // 0=domingo … 6=sábado
-  const prep = weekday === 0 || weekday === 6 ? "no" : "na";
-  return `Acontece ${prep} ${formatDateTimeBR(value, EVENT_HAPPENS_LABEL_OPTS)}`;
+  // `Intl` pt-BR devolve o dia da semana em minúsculo ("sábado, …") →
+  // capitalizamos a 1ª letra ("Sábado, …").
+  const label = formatDateTimeBR(value, EVENT_HAPPENS_LABEL_OPTS);
+  return label ? label.charAt(0).toUpperCase() + label.slice(1) : "";
 }
 
 /**

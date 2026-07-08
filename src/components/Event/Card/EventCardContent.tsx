@@ -48,10 +48,12 @@ export function EventCardContent({
 }: EventCardContentProps) {
   return (
     <>
-      {/* Banner — proporção do Figma (312/142) */}
+      {/* Banner — proporção padrão do evento (1660×930 ≈ 16:9).
+          `group` + `overflow-hidden`: o zoom acontece SÓ na imagem (via
+          imgClassName), contido dentro da moldura fixa. */}
       <div
         className={cn(
-          "relative aspect-[312/142] w-full shrink-0 overflow-hidden bg-transparent",
+          "group relative aspect-1660/930 w-full shrink-0 overflow-hidden bg-transparent",
           bannerRounded === "all" && "rounded-[8px]",
         )}
       >
@@ -64,6 +66,7 @@ export function EventCardContent({
           sizes="(max-width: 768px) 92vw, 320px"
           quality={90}
           className="size-full bg-transparent border-0 border-transparent object-cover rounded-[8px]"
+          imgClassName="transition-transform duration-300 group-hover:scale-[1.03]"
           letterClassName="text-5xl"
           nativeImg={nativeImg}
         />
@@ -73,8 +76,9 @@ export function EventCardContent({
       {/* Título + endereço + data (+ linhas extras). O padding fica no wrapper
           EXTERNO; a borda-esquerda vai no INTERNO (só a altura dos textos), pra
           não passar pela área do padding em cima/embaixo. */}
-      <div className="w-full pt-2 pb-2">
-        <div className="flex w-full flex-col gap-1 border-l border-gray-6 pl-2">
+      <div className="w-full pt-2 pb-2 flex items-center">
+        <div className="shrink-0 self-stretch w-0.5 rounded-full bg-linear-to-b from-gray-6 to-transparent" />
+        <div className="flex min-w-0 w-full flex-col gap-1 pl-2">
           <p className="[text-box-trim:trim-both] truncate font-manrope text-base font-bold text-[#202020]">
             {name}
           </p>

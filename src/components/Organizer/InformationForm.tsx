@@ -15,6 +15,7 @@ import { TiktokIcon } from "@/components/Icons/TiktokIcon";
 import { EmailIcon } from "@/components/Icons/EmailIcon";
 import { LocationPickerModal, type LocationPickerResult } from "@/components/Organizer/LocationPickerModal";
 import { hasGoogleMapsApiKey } from "@/hooks/useGoogleMaps";
+import { useIpLocation } from "@/hooks/useIpLocation";
 import {
   hasValidCoordinates,
   formatCoordinatesLabel,
@@ -127,6 +128,12 @@ interface InformationFormProps {
    * tooltip de "Vagas do evento". Só nos fluxos de edição; ausente no create (0).
    */
   filledParticipants?: number | null;
+  /**
+   * Quando true (fluxo de CRIAR evento), centraliza o mapa na localização
+   * aproximada do usuário (por IP) enquanto ainda não há local escolhido. Nos
+   * fluxos de edição fica off (o evento já tem local salvo).
+   */
+  enableIpLocationDefault?: boolean;
 }
 
 // ─── component ───────────────────────────────────────────────────────────────
@@ -143,6 +150,7 @@ export function InformationForm({
   onClearLocalRegulationDraft,
   onHasPendingPdfChange,
   filledParticipants,
+  enableIpLocationDefault = false,
 }: InformationFormProps) {
   const [uploadingPDF, setUploadingPDF] = useState(false);
   const [pdfFile, setPdfFile] = useState<File | null>(null);
@@ -164,6 +172,16 @@ export function InformationForm({
   const mapFallbackQuery = [values.city, values.state, "Brasil"]
     .filter((s) => (s ?? "").trim())
     .join(", ");
+
+  // Fluxo de CRIAR: sem local escolhido, centraliza o mapa na localização
+  // aproximada do usuário (por IP, resolvida no servidor). Só busca quando
+  // realmente vai usar — mapa habilitado, fluxo de criação e ainda sem local.
+  const ipCenterEnabled = enableIpLocationDefault && mapsEnabled && !hasLocation;
+  const { data: ipLocation } = useIpLocation(ipCenterEnabled);
+  const mapInitialCenter =
+    ipCenterEnabled && ipLocation
+      ? { lat: ipLocation.lat, lng: ipLocation.lng }
+      : null;
 
   // Tooltip de "Vagas do evento": acrescenta as vagas JÁ PREENCHIDAS/vendidas
   // (inscrições confirmadas) quando a contagem está disponível (fluxos de edição).
@@ -716,6 +734,7 @@ export function InformationForm({
         initialLng={values.longitude}
         initialName={values.locationName}
         fallbackQuery={mapFallbackQuery}
+        initialCenter={mapInitialCenter}
         onConfirm={handleLocationConfirm}
       />
     </>

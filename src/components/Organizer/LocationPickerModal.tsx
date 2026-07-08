@@ -46,6 +46,13 @@ interface LocationPickerModalProps {
    * o mapa quando ainda não há pino — nunca cria pino automaticamente.
    */
   fallbackQuery?: string;
+  /**
+   * Coordenadas aproximadas (ex.: da geolocalização por IP) usadas só para
+   * CENTRALIZAR o mapa quando ainda não há pino nem coords salvas. Tem
+   * PRIORIDADE sobre `fallbackQuery` (é mais específico que "país"). Nunca cria
+   * pino — o organizador continua obrigado a marcar o ponto exato.
+   */
+  initialCenter?: { lat: number; lng: number } | null;
   onConfirm: (result: LocationPickerResult) => void;
 }
 
@@ -62,6 +69,7 @@ export function LocationPickerModal({
   initialLng,
   initialName,
   fallbackQuery,
+  initialCenter,
   onConfirm,
 }: LocationPickerModalProps) {
   const { status, google } = useGoogleMaps(isOpen);
@@ -185,6 +193,14 @@ export function LocationPickerModal({
 
     if (startPin) {
       applyPosition(startPin, { reverse: false, recenter: false });
+    } else if (
+      initialCenter &&
+      Number.isFinite(initialCenter.lat) &&
+      Number.isFinite(initialCenter.lng)
+    ) {
+      // Localização por IP: só centraliza (nível cidade) — nunca cria pino.
+      map.setCenter(initialCenter);
+      map.setZoom(CITY_ZOOM);
     } else if (fallbackQuery?.trim()) {
       // Só centraliza — não cria pino.
       geocoderRef.current.geocode(
@@ -464,6 +480,23 @@ export function LocationPickerModal({
     // Reinicializa a cada abertura / quando o SDK fica pronto.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen, status, google]);
+
+  // Localização por IP costuma chegar de forma ASSÍNCRONA (query no servidor). Se
+  // ela resolver DEPOIS que o mapa já inicializou (o closure do init capturou null),
+  // centraliza aqui — mas só enquanto NÃO houver pino nem coords salvas, pra não
+  // "puxar" o mapa depois que o usuário já escolheu/ajustou um ponto.
+  useEffect(() => {
+    if (!isOpen || status !== "ready" || !mapRef.current) return;
+    if (pin) return;
+    if (
+      !initialCenter ||
+      !Number.isFinite(initialCenter.lat) ||
+      !Number.isFinite(initialCenter.lng)
+    )
+      return;
+    mapRef.current.panTo(initialCenter);
+    if (mapRef.current.getZoom() < CITY_ZOOM) mapRef.current.setZoom(CITY_ZOOM);
+  }, [isOpen, status, pin, initialCenter]);
 
   if (!isOpen) return null;
 

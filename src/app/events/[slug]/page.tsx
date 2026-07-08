@@ -286,7 +286,7 @@ export default function EventPage() {
           const shouldShowImage = hasBannerUrl && !imageError;
 
           return shouldShowImage ? (
-            <div className="relative w-full h-[174px] md:h-[174px] mt-4 z-10 rounded-xl overflow-hidden">
+            <div className="relative w-full aspect-1660/930 mt-4 z-10 rounded-xl overflow-hidden">
               <Image
                 src={event.bannerUrl}
                 alt={event.name}
@@ -304,7 +304,7 @@ export default function EventPage() {
               />
             </div>
           ) : (
-            <div className="relative w-full h-[174px] md:h-[174px] mt-10 rounded-xl overflow-hidden bg-gray-3 flex items-center justify-center">
+            <div className="relative w-full aspect-1660/930 mt-10 rounded-xl overflow-hidden bg-gray-3 flex items-center justify-center">
               <Image
                 src="/banners/placeholder.png"
                 alt="Placeholder"
@@ -862,7 +862,7 @@ export default function EventPage() {
           </div>
         )}
 
-        <section className="flex flex-col min-h-screen items-center max-w-[1280px] mx-auto px-4 lg:px-8 pt-20 relative">
+        <section className="flex flex-col min-h-screen items-center max-w-[1280px] mx-auto px-4 lg:px-8 relative">
           {/* Layout 2 colunas: esquerda = banner + tópicos (1º tópico logo
               abaixo do banner), direita = card de informações.
               Sem `items-start`: as colunas esticam (stretch) para a mesma
@@ -872,7 +872,7 @@ export default function EventPage() {
             {/* Coluna esquerda: banner + tópicos */}
             <div className={hasBanner ? "w-3/4" : "flex-1"}>
               {hasBanner && (
-                <div className="relative w-full h-[400px] mb-10">
+                <div className="relative w-full aspect-1660/930 mb-10">
                   <Image
                     src={event.bannerUrl}
                     alt={event.name}

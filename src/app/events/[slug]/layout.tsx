@@ -27,14 +27,14 @@ const DEFAULT_DESCRIPTION =
   "Descubra e inscreva-se em eventos esportivos na PódioTicket.";
 
 /**
- * Dimensões declaradas do `og:image`, na MESMA proporção do banner exibido nos
- * cards da home (Figma 312/142 ≈ 2.2:1). Sem `og:image:width/height` os crawlers
+ * Dimensões declaradas do `og:image`, na MESMA proporção do banner padrão do
+ * evento (1660×930 ≈ 1.785:1). Sem `og:image:width/height` os crawlers
  * (WhatsApp/Facebook/Telegram) caem num thumbnail QUADRADO; declarar a proporção
  * paisagem força o card largo do banner. 1200px de largura = tamanho recomendado
- * p/ previews grandes (`summary_large_image`). Altura = round(1200*142/312)=546.
+ * p/ previews grandes (`summary_large_image`). Altura = round(1200*930/1660)=672.
  */
 const OG_IMAGE_WIDTH = 1200;
-const OG_IMAGE_HEIGHT = 546;
+const OG_IMAGE_HEIGHT = 672;
 
 /** Garante URL absoluta para a imagem OG (crawlers exigem absoluta). */
 function toAbsoluteImageUrl(raw: string | undefined | null): string | null {
