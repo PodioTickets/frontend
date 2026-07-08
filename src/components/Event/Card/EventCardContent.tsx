@@ -75,16 +75,16 @@ export function EventCardContent({
           não passar pela área do padding em cima/embaixo. */}
       <div className="w-full pt-2 pb-2">
         <div className="flex w-full flex-col gap-1 border-l border-gray-6 pl-2">
-          <p className="[text-box-trim:trim-both] truncate font-manrope text-sm font-bold text-[#202020]">
+          <p className="[text-box-trim:trim-both] truncate font-manrope text-base font-bold text-[#202020]">
             {name}
           </p>
           {addressLabel ? (
-            <p className="[text-box-trim:trim-both] w-full min-w-0 truncate font-family-dm-sans text-xs text-[#646464]">
+            <p className="[text-box-trim:trim-both] w-full min-w-0 truncate font-family-dm-sans text-sm text-[#646464]">
               {addressLabel}
             </p>
           ) : null}
           {dateLabel ? (
-            <p className="[text-box-trim:trim-both] font-family-dm-sans text-xs font-medium text-[#646464]">
+            <p className="[text-box-trim:trim-both] font-family-dm-sans text-sm font-medium text-[#646464]">
               {dateLabel}
             </p>
           ) : null}
