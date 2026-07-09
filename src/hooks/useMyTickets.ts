@@ -154,7 +154,7 @@ export function useMyTickets(
           event: {
             id: order.event?.id || "",
             name: order.event?.name || "Evento sem nome",
-            imageUrl: order.event?.logoUrl || order.event?.imageUrl || "",
+            imageUrl: order.event?.bannerUrl || order.event?.imageUrl || "",
             eventDate: order.event?.startDate || order.event?.eventDate || "",
             location: {
               city: order.event?.city || order.event?.location?.city || "Cidade não informada",
@@ -163,6 +163,14 @@ export function useMyTickets(
           },
           modalities,
           status: resolveOrderStatus(firstReg.status, order.status),
+          // Nº de participantes do pedido ("X pessoas" no card). Prefere um total
+          // explícito do backend; senão conta as inscrições do pedido.
+          peopleCount:
+            typeof order.participantsCount === "number"
+              ? order.participantsCount
+              : Array.isArray(order.registrations)
+                ? order.registrations.length
+                : undefined,
           distance,
           qrCode: firstReg.qrCode,
           purchaseDate: order.createdAt,

@@ -18,8 +18,10 @@ import { Tooltip } from "@/components/Tooltip";
 import { formatPhoneForCountry } from "@/utils/phone";
 import { isBrazilianCountry } from "@/validators/Auth.validator";
 import { formatAnswer } from "@/utils/questionAnswer";
-import { formatDateBRT, formatTimeBRT } from "@/utils/datetimeBR";
+import { formatDateBRT, formatEventHappensLabel, formatTimeBRT } from "@/utils/datetimeBR";
 import { shortId } from "@/utils/shortId";
+import { EventCardContent } from "@/components/Event/Card/EventCardContent";
+import Link from "next/link";
 
 export default function TicketDetailsPage() {
   const params = useParams();
@@ -195,10 +197,25 @@ export default function TicketDetailsPage() {
     });
   }, [orderData]);
 
-  const event = useMemo(() => {
-    if (!orderData?.event) return null;
-    return orderData.event;
-  }, [orderData]);
+  const event = useMemo(() => orderData?.event ?? null, [orderData]);
+
+  // `event` é null enquanto `orderData` carrega (o fetch roda no useEffect e o guard
+  // de loading só retorna DEPOIS destes hooks). Por isso os memos abaixo tratam null —
+  // acessar `event.location`/`event.eventDate` direto (inclusive nas deps) estourava
+  // no 1º render.
+  const addressLabel = useMemo(() => {
+    if (!event) return "";
+    return [event.location, event.city, event.state]
+      .map((part: string | null | undefined) => (part ?? "").trim())
+      .filter(Boolean)
+      .join(", ");
+  }, [event]);
+
+  // "Acontece no sábado, 25 de julho" — helper compartilhado com o card de ingresso.
+  const dateLabel = useMemo(
+    () => (event ? formatEventHappensLabel(event.eventDate) : ""),
+    [event],
+  );
 
   /* Agrupa ingressos IDÊNTICOS (mesma categoria + nome + preço) numa linha
    * "(Nx) Nome" no resumo de valores. Preserva ordem de 1ª aparição. */
@@ -319,8 +336,33 @@ export default function TicketDetailsPage() {
           </p>
         </div>
 
-        {/* Card-resumo do evento — único bloco responsivo (mobile = 2 linhas, desktop = 1 linha) */}
-        {event && <EventInfoCard event={event} className="mb-6" />}
+        <div className="relative flex w-full items-center gap-1 overflow-hidden rounded-lg bg-[#F9F9F9] mb-10">
+          <EventCardContent
+            name={event.name}
+            bannerUrl={event.bannerUrl}
+            fallbackId={event.id}
+            addressLabel={addressLabel}
+            dateLabel={dateLabel}
+            bannerRounded="none"
+            // "Meus ingressos" mantém o visual próprio: banner compacto (metade) +
+            // divisor em primary. Home/busca (EventCard) usam os defaults (w-full/gray-6).
+            bannerWidthClassName="md:w-1/4 w-1/3"
+            dividerFromClassName="hidden"
+            bannerOverlay={event.bannerUrl}
+          >
+            <Link href={`/events/${event.slug}`} className="[text-box-trim:trim-both] font-family-dm-sans self-start font-bold text-base text-primary-11 cursor-pointer max-md:hidden underline absolute bottom-0 right-0">
+              Página do evento
+            </Link>
+          </EventCardContent>
+        </div>
+
+
+
+        <div className="w-full flex items-center md:hidden">
+          <Link href={`/events/${event.slug}`} className="[text-box-trim:trim-both] font-family-dm-sans text-end font-bold text-base text-primary-11 cursor-pointer w-full underline -mt-8 mb-6">
+            Páginas do evento
+          </Link>
+        </div>
 
         {/* Participants List */}
         {participants.length === 0 ? (
@@ -733,6 +775,6 @@ export default function TicketDetailsPage() {
           </div>
         </div>
       </div>
-    </div>
+    </div >
   );
 }

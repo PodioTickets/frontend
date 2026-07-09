@@ -29,8 +29,7 @@ import { organizerMemberSettingsClientPage } from "@/lib/organizerAudit";
 const EVENTS_PER_PAGE = 5;
 
 function eventListImageUrl(ev: Event): string | null {
-  const ext = ev as Event & { cardImageUrl?: string | null };
-  const u = (ext.cardImageUrl || ev.bannerUrl || "").trim();
+  const u = (ev.bannerUrl || "").trim();
   return u || null;
 }
 
@@ -991,7 +990,7 @@ export function CollaboratorDrawer({
                               <PermissionCheckbox
                                 checked={!!eventSelection[ev.id]}
                               />
-                              <span className="relative size-11 shrink-0 overflow-hidden rounded-lg border border-gray-6 bg-gray-3">
+                              <span className="relative block h-11 aspect-1660/930 shrink-0 overflow-hidden rounded-lg border border-gray-6 bg-gray-3">
                                 {img ? (
                                   <Image
                                     src={img}

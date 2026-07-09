@@ -8,6 +8,7 @@ import {
   isIsoDateStrictlyBefore,
   parseIsoDateToLocalDayStart,
 } from "@/utils/registrationPeriod";
+import { formatTimeBR, formatDateBR } from "@/utils/datetimeBR";
 import { organizerService } from "@/services";
 import { Button } from "@/components/Button";
 import { ArrowButton } from "@/components/ArrowButton";
@@ -152,17 +153,17 @@ export function TicketForm({
     staleTime: 5 * 60 * 1000,
   });
 
-  // `registrationStartDate` vem como ISO; derivamos o dia civil local (mesma
-  // convenção de `formatDateForInput`) para comparar com o YMD do DatePicker.
+  // `registrationStartDate` é wall-clock gravado como UTC pelo backend. Derivamos o
+  // DIA civil dos componentes UTC (não do fuso do dispositivo): ler com getters locais
+  // desloca o dia para valores perto da meia-noite UTC (ex.: "T00:30Z" viraria o dia
+  // anterior em UTC-3), setando o minDate do picker errado. `formatDateBR` já formata
+  // em UTC; só reordenamos dd/mm/aaaa → aaaa-mm-dd.
   const registrationStartYmd = useMemo(() => {
     const iso = eventDetail?.registrationStartDate;
     if (!iso) return undefined;
-    const d = new Date(iso);
-    if (Number.isNaN(d.getTime())) return undefined;
-    const y = d.getFullYear();
-    const m = String(d.getMonth() + 1).padStart(2, "0");
-    const day = String(d.getDate()).padStart(2, "0");
-    return `${y}-${m}-${day}`;
+    const [day, month, year] = formatDateBR(iso).split("/");
+    if (!year || !month || !day) return undefined;
+    return `${year}-${month}-${day}`;
   }, [eventDetail?.registrationStartDate]);
 
   // `minDate` do DatePicker de início de venda do lote (dias anteriores ao
@@ -513,14 +514,15 @@ export function TicketForm({
                     : "",
                 quantitySold,
                 startType: (b as any).triggerType === "AFTER_PREVIOUS_SOLD_OUT" ? "previous" : "date",
+                // Horário do lote é WALL-CLOCK (naïve) gravado como UTC pelo backend:
+                // "08:00Z" = as 08:00 de Brasília digitadas. Ler com `toTimeString()`
+                // reaplicava o fuso do DISPOSITIVO (ex.: -3h → "05:00"), mostrando hora
+                // errada. Data e hora saem AMBAS dos componentes UTC (consistente com o
+                // resto do app — ver datetimeBR). `formatTimeBR` = HH:mm em UTC.
                 startDate: b.startDate ? b.startDate.split("T")[0] : undefined,
-                startTime: b.startDate
-                  ? new Date(b.startDate).toTimeString().slice(0, 5)
-                  : undefined,
+                startTime: b.startDate ? formatTimeBR(b.startDate) : undefined,
                 endDate: b.endDate ? b.endDate.split("T")[0] : undefined,
-                endTime: b.endDate
-                  ? new Date(b.endDate).toTimeString().slice(0, 5)
-                  : undefined,
+                endTime: b.endDate ? formatTimeBR(b.endDate) : undefined,
               };
             });
             setBatches(loadedBatches.length > 0 ? loadedBatches : [defaultBatch]);

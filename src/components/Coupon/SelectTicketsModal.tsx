@@ -8,6 +8,25 @@ import { useTickets, type Ticket } from "@/hooks/useTickets";
 import { useTicketCategories } from "@/hooks/useTicketCategories";
 import { TicketIcon } from "../Icons/TicketIcon";
 
+/**
+ * Preço efetivo do ingresso em centavos. Prioriza o lote ativo (fonte de verdade
+ * do preço vigente) e cai para o primeiro lote quando não há lote ativo resolvido.
+ * Retorna 0 quando não há preço, tratando o ingresso como gratuito.
+ */
+function getTicketPriceCents(ticket: Ticket): number {
+  const raw = ticket.activeBatch?.price ?? ticket.batches?.[0]?.price;
+  const cents = raw != null ? Number(raw) : 0;
+  return Number.isFinite(cents) ? cents : 0;
+}
+
+/**
+ * Ingresso gratuito/zerado: não é elegível a cupom/voucher (não há valor a
+ * descontar). Usado para desabilitar a seleção nos modais de cupom e voucher.
+ */
+function isFreeTicket(ticket: Ticket): boolean {
+  return getTicketPriceCents(ticket) <= 0;
+}
+
 interface SelectTicketsModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -46,6 +65,11 @@ export function SelectTicketsModal({
 
   const handleToggleTicket = (ticketId: string) => {
     if (readOnly) return;
+    // Ingresso gratuito não pode receber cupom/voucher (não há valor a descontar).
+    // Bloqueia SELECIONAR um gratuito, mas permite remover uma seleção pré-existente
+    // (ex.: vínculo legado criado antes desta regra).
+    const ticket = tickets.find((t) => t.id === ticketId);
+    if (ticket && isFreeTicket(ticket) && !selectedIds.includes(ticketId)) return;
     if (singleSelect) {
       setSelectedIds((prev) => (prev.includes(ticketId) ? [] : [ticketId]));
     } else {
@@ -158,16 +182,24 @@ export function SelectTicketsModal({
                   </div>
                 )}
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
-                  {tickets.map((ticket) => (
-                    <TicketCard
-                      key={ticket.id}
-                      ticket={ticket}
-                      categoryName={categoryMap.get(ticket.groupId) || "Ingresso avulso"}
-                      isSelected={appliesToAll || selectedIds.includes(ticket.id)}
-                      onToggle={() => handleToggleTicket(ticket.id)}
-                      readOnly={readOnly}
-                    />
-                  ))}
+                  {tickets.map((ticket) => {
+                    const selected = appliesToAll || selectedIds.includes(ticket.id);
+                    // Gratuito e ainda não selecionado → inelegível a cupom/voucher.
+                    // (Já selecionado permanece removível, tratado no toggle.) Em
+                    // somente-leitura é apenas exibição, então não marca inelegível.
+                    const ineligible = !readOnly && isFreeTicket(ticket) && !selected;
+                    return (
+                      <TicketCard
+                        key={ticket.id}
+                        ticket={ticket}
+                        categoryName={categoryMap.get(ticket.groupId) || "Ingresso avulso"}
+                        isSelected={selected}
+                        onToggle={() => handleToggleTicket(ticket.id)}
+                        readOnly={readOnly}
+                        ineligible={ineligible}
+                      />
+                    );
+                  })}
                 </div>
               </>
             )}
@@ -201,18 +233,30 @@ interface TicketCardProps {
   isSelected: boolean;
   onToggle: () => void;
   readOnly?: boolean;
+  /** Inelegível a cupom/voucher (gratuito): desabilita clique/checkbox e esmaece o card. */
+  ineligible?: boolean;
 }
 
-function TicketCard({ ticket, categoryName, isSelected, onToggle, readOnly = false }: TicketCardProps) {
+function TicketCard({
+  ticket,
+  categoryName,
+  isSelected,
+  onToggle,
+  readOnly = false,
+  ineligible = false,
+}: TicketCardProps) {
+  // Card só é interativo quando não é somente-leitura e é elegível.
+  const interactive = !readOnly && !ineligible;
   return (
     <div
-      className={`bg-gray-2 border rounded-xl p-4 flex flex-col transition-colors ${readOnly ? "cursor-default" : "cursor-pointer"} ${isSelected
+      className={`bg-gray-2 border rounded-xl p-4 flex flex-col transition-colors ${interactive ? "cursor-pointer" : "cursor-default"} ${ineligible ? "opacity-60" : ""} ${isSelected
         ? "border-primary-8 bg-primary-4"
-        : readOnly
-          ? "border-gray-6"
-          : "border-gray-6 hover:bg-gray-3"
+        : interactive
+          ? "border-gray-6 hover:bg-gray-3"
+          : "border-gray-6"
         }`}
-      onClick={readOnly ? undefined : onToggle}
+      onClick={interactive ? onToggle : undefined}
+      title={ineligible ? "Ingresso gratuito não é elegível a cupom/voucher" : undefined}
     >
       <div className="flex flex-col gap-2 mb-4">
         <p className="text-gray-11 text-base font-family-dm-sans leading-[1.3] truncate">
@@ -225,14 +269,21 @@ function TicketCard({ ticket, categoryName, isSelected, onToggle, readOnly = fal
           </p>
         </div>
       </div>
-      <div className="border-t border-gray-6 pt-4 flex items-center justify-between">
-        <p className="text-gray-12 text-base font-bold font-manrope leading-[1.1]">
-          {ticket.price}
-        </p>
+      <div className="border-t border-gray-6 pt-4 flex items-center justify-between gap-2">
+        <div className="flex flex-col min-w-0">
+          <p className="text-gray-12 text-base font-bold font-manrope leading-[1.1]">
+            {ticket.price}
+          </p>
+          {ineligible && (
+            <span className="text-gray-10 text-xs font-family-dm-sans leading-[1.3] mt-1">
+              Gratuito · não elegível
+            </span>
+          )}
+        </div>
         <Checkbox
           checked={isSelected}
-          onCheckedChange={readOnly ? undefined : onToggle}
-          disabled={readOnly}
+          onCheckedChange={interactive ? onToggle : undefined}
+          disabled={!interactive}
           onClick={(e) => e.stopPropagation()}
         />
       </div>

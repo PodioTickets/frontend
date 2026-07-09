@@ -23,14 +23,20 @@ export interface EditEventFormData {
   registrationStartTime: string;
   registrationEndDate: string;
   registrationEndTime: string;
+  /** Vagas do evento (teto de participantes). String no form; "" = ilimitado. */
+  maxParticipants: string;
   cep: string;
   street: string;
   neighborhood: string;
   city: string;
   state: string;
   googleMapsLink: string;
+  /** Local por coordenadas (seleção no mapa). String no form; "" = não definido. */
+  latitude: string;
+  longitude: string;
+  /** Rótulo do local escolhido (nome do POI / endereço formatado). */
+  locationName: string;
   bannerUrl: string;
-  cardImageUrl: string;
   regulationUrl: string;
   description: string;
   contactEmail: string;
@@ -67,14 +73,17 @@ const defaultFormData: EditEventFormData = {
   registrationStartTime: "",
   registrationEndDate: "",
   registrationEndTime: "",
+  maxParticipants: "",
   cep: "",
   street: "",
   neighborhood: "",
   city: "",
   state: "",
   googleMapsLink: "",
+  latitude: "",
+  longitude: "",
+  locationName: "",
   bannerUrl: "",
-  cardImageUrl: "",
   regulationUrl: "",
   description: "",
   contactEmail: "",
@@ -125,11 +134,6 @@ function formatCEP(cep: string | null | undefined) {
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function buildFormDataFromEvent(eventId: string, eventData: any): EditEventFormData {
-  const ev = eventData as Record<string, unknown>;
-  const cardImageFromApi = [ev.cardImageUrl, ev.logoUrl, ev.logo_url].find(
-    (u) => typeof u === "string" && u.trim().length > 0,
-  );
-
   return {
     eventId,
     name: eventData.name || "",
@@ -139,14 +143,24 @@ function buildFormDataFromEvent(eventId: string, eventData: any): EditEventFormD
     registrationEndDate: formatDateForInput(eventData.registrationEndDate),
     registrationEndTime: formatTimeForInput(eventData.registrationEndDate),
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    maxParticipants:
+      (eventData as any).maxParticipants != null
+        ? String((eventData as any).maxParticipants)
+        : "",
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     cep: formatCEP(eventData.zipCode || (eventData as any).cep),
     street: eventData.location || "",
     neighborhood: eventData.neighborhood || "",
     city: eventData.city || "",
     state: eventData.state || "",
     googleMapsLink: eventData.googleMapsLink || "",
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    latitude: (eventData as any).latitude != null ? String((eventData as any).latitude) : "",
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    longitude: (eventData as any).longitude != null ? String((eventData as any).longitude) : "",
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    locationName: (eventData as any).locationName || "",
     bannerUrl: eventData.bannerUrl || "",
-    cardImageUrl: typeof cardImageFromApi === "string" ? cardImageFromApi.trim() : "",
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     regulationUrl: (eventData as any).regulationUrl || "",
     description: eventData.description || "",

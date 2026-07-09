@@ -11,6 +11,8 @@ const ADMIN_AUDIT_LOGS_PATH =
 
 const ADMIN_ORGANIZATIONS_PATH = "/api/v1/admin/organizations";
 
+const ADMIN_USERS_PATH = "/api/v1/admin/users";
+
 const ADMIN_USER_ACTIVITY_PATH = "/api/v1/admin/user-activity";
 
 // ──────────────── User activity (cliente final + anônimo) ────────────────
@@ -414,6 +416,151 @@ export interface AdminProfile {
   avatarUrl?: string | null;
 }
 
+/** Usuário (participante) na listagem admin — shape normalizado do endpoint. */
+export interface AdminUser {
+  id: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  avatarUrl: string | null;
+  documentNumber: string | null;
+  documentType: "CPF" | "PASSPORT" | null;
+  country: string | null;
+  phone: string | null;
+  isActive: boolean;
+  createdAt: string;
+  /** Ingressos (inscrições confirmadas) do participante. */
+  ticketsCount: number;
+}
+
+/** Parse defensivo de um item cru do backend → AdminUser (ignora inválidos). */
+function parseAdminUser(raw: unknown): AdminUser | null {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return null;
+  const o = raw as Record<string, unknown>;
+  const id = typeof o.id === "string" ? o.id : "";
+  if (!id) return null;
+  const str = (v: unknown): string => (typeof v === "string" ? v : "");
+  const strOrNull = (v: unknown): string | null =>
+    typeof v === "string" && v.length > 0 ? v : null;
+  const docType = o.documentType;
+  return {
+    id,
+    firstName: str(o.firstName),
+    lastName: str(o.lastName),
+    email: str(o.email),
+    avatarUrl: strOrNull(o.avatarUrl),
+    documentNumber: strOrNull(o.documentNumber),
+    documentType:
+      docType === "CPF" || docType === "PASSPORT" ? docType : null,
+    country: strOrNull(o.country),
+    phone: strOrNull(o.phone),
+    isActive: o.isActive !== false, // default ativo se ausente
+    createdAt: str(o.createdAt),
+    ticketsCount:
+      typeof o.ticketsCount === "number" ? o.ticketsCount : 0,
+  };
+}
+
+/** Perfil completo do usuário (drawer de detalhes — form editável). */
+export interface AdminUserDetail {
+  id: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  gender: string | null;
+  genderDetails: string | null;
+  dateOfBirth: string | null;
+  country: string | null;
+  phone: string | null;
+  reservePhone: string | null;
+  documentType: "CPF" | "PASSPORT" | null;
+  documentNumber: string | null;
+  avatarUrl: string | null;
+  isActive: boolean;
+  createdAt: string;
+}
+
+function parseAdminUserDetail(raw: unknown): AdminUserDetail | null {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return null;
+  const o = raw as Record<string, unknown>;
+  const id = typeof o.id === "string" ? o.id : "";
+  if (!id) return null;
+  const str = (v: unknown): string => (typeof v === "string" ? v : "");
+  const sOrNull = (v: unknown): string | null =>
+    typeof v === "string" && v.length > 0 ? v : null;
+  const docType = o.documentType;
+  return {
+    id,
+    firstName: str(o.firstName),
+    lastName: str(o.lastName),
+    email: str(o.email),
+    gender: sOrNull(o.gender),
+    genderDetails: sOrNull(o.genderDetails),
+    dateOfBirth: sOrNull(o.dateOfBirth),
+    country: sOrNull(o.country),
+    phone: sOrNull(o.phone),
+    reservePhone: sOrNull(o.reservePhone),
+    documentType: docType === "CPF" || docType === "PASSPORT" ? docType : null,
+    documentNumber: sOrNull(o.documentNumber),
+    avatarUrl: sOrNull(o.avatarUrl),
+    isActive: o.isActive !== false,
+    createdAt: str(o.createdAt),
+  };
+}
+
+/** Uma inscrição (ingresso) do usuário na tabela do drawer. */
+export interface AdminUserRegistration {
+  /** registrationId — usado pelos modais "Ver pedido"/"Ver ingresso". */
+  id: string;
+  createdAt: string;
+  /** Status CRU da Registration (PENDING/CONFIRMED/CANCELLED/COMPLETED). */
+  status: string;
+  eventName: string;
+  orderId: string | null;
+  /**
+   * Subset do pagamento p/ o front resolver o status EXATAMENTE como a tela de
+   * inscrições do evento (getFinalStatus: estorno/chargeback/etc).
+   */
+  order: {
+    payment: {
+      status: string | null;
+      metadata: unknown;
+      refundType: string | null;
+    } | null;
+  } | null;
+}
+
+function parseAdminUserRegistration(raw: unknown): AdminUserRegistration | null {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return null;
+  const o = raw as Record<string, unknown>;
+  const id = typeof o.id === "string" ? o.id : "";
+  if (!id) return null;
+  const orderObj =
+    o.order && typeof o.order === "object" && !Array.isArray(o.order)
+      ? (o.order as Record<string, unknown>)
+      : null;
+  const payObj =
+    orderObj?.payment && typeof orderObj.payment === "object" && !Array.isArray(orderObj.payment)
+      ? (orderObj.payment as Record<string, unknown>)
+      : null;
+  return {
+    id,
+    createdAt: typeof o.createdAt === "string" ? o.createdAt : "",
+    status: typeof o.status === "string" ? o.status : "PENDING",
+    eventName: typeof o.eventName === "string" ? o.eventName : "",
+    orderId: typeof o.orderId === "string" ? o.orderId : null,
+    order: {
+      payment: payObj
+        ? {
+            status: typeof payObj.status === "string" ? payObj.status : null,
+            metadata: payObj.metadata ?? null,
+            refundType: typeof payObj.refundType === "string" ? payObj.refundType : null,
+          }
+        : null,
+    },
+  };
+}
+
 export class AdminService {
   constructor(private apiClient: ApiClient) { }
 
@@ -564,6 +711,148 @@ export class AdminService {
         totalPages: Math.max(1, pagination.totalPages ?? 1),
       },
     };
+  }
+
+  /**
+   * Lista/busca USUÁRIOS (participantes) para o admin. Espelha
+   * `getAdminOrganizations`: paginação server-side, busca e filtro de status
+   * (isActive). Tolera `data.users`/`data.items` e diferentes envelopes.
+   */
+  async getAdminUsers(params?: {
+    page?: number;
+    limit?: number;
+    search?: string;
+    isActive?: boolean;
+  }): Promise<{
+    items: AdminUser[];
+    pagination: OrganizationAuditLogsPagination;
+  }> {
+    const { page = 1, limit = 20, search, isActive } = params || {};
+    const safeLimit = Math.min(100, Math.max(1, limit));
+
+    const res = await this.apiClient.get<Record<string, unknown>>(
+      ADMIN_USERS_PATH,
+      {
+        params: {
+          page,
+          limit: safeLimit,
+          ...(search?.trim() ? { search: search.trim() } : {}),
+          ...(isActive !== undefined ? { isActive } : {}),
+        },
+      },
+    );
+
+    const body =
+      res.data && typeof res.data === "object" && !Array.isArray(res.data)
+        ? (res.data as Record<string, unknown>)
+        : {};
+    const nested =
+      body.data && typeof body.data === "object" && !Array.isArray(body.data)
+        ? (body.data as Record<string, unknown>)
+        : body;
+
+    const rawItems = Array.isArray(nested.users)
+      ? nested.users
+      : Array.isArray(nested.items)
+        ? nested.items
+        : [];
+    const p =
+      nested.pagination && typeof nested.pagination === "object"
+        ? (nested.pagination as Record<string, unknown>)
+        : {};
+
+    const items = rawItems
+      .map(parseAdminUser)
+      .filter((u): u is AdminUser => u !== null);
+
+    return {
+      items,
+      pagination: {
+        page: typeof p.page === "number" ? p.page : page,
+        limit: typeof p.limit === "number" ? p.limit : safeLimit,
+        total: typeof p.total === "number" ? p.total : 0,
+        totalPages: Math.max(1, typeof p.totalPages === "number" ? p.totalPages : 1),
+      },
+    };
+  }
+
+  /** Perfil completo de um usuário (drawer de detalhes). */
+  async getAdminUser(id: string): Promise<AdminUserDetail | null> {
+    const res = await this.apiClient.get<Record<string, unknown>>(
+      `${ADMIN_USERS_PATH}/${id}`,
+    );
+    const body =
+      res.data && typeof res.data === "object" && !Array.isArray(res.data)
+        ? (res.data as Record<string, unknown>)
+        : {};
+    const nested =
+      body.data && typeof body.data === "object" && !Array.isArray(body.data)
+        ? (body.data as Record<string, unknown>)
+        : body;
+    const u =
+      nested.user && typeof nested.user === "object" ? nested.user : nested;
+    return parseAdminUserDetail(u);
+  }
+
+  /** Ingressos (inscrições) do usuário — paginado (default 8/página, como o Figma). */
+  async getAdminUserRegistrations(
+    id: string,
+    params?: { page?: number; limit?: number },
+  ): Promise<{
+    items: AdminUserRegistration[];
+    pagination: OrganizationAuditLogsPagination;
+  }> {
+    const { page = 1, limit = 8 } = params || {};
+    const safeLimit = Math.min(100, Math.max(1, limit));
+    const res = await this.apiClient.get<Record<string, unknown>>(
+      `${ADMIN_USERS_PATH}/${id}/registrations`,
+      { params: { page, limit: safeLimit } },
+    );
+    const body =
+      res.data && typeof res.data === "object" && !Array.isArray(res.data)
+        ? (res.data as Record<string, unknown>)
+        : {};
+    const nested =
+      body.data && typeof body.data === "object" && !Array.isArray(body.data)
+        ? (body.data as Record<string, unknown>)
+        : body;
+    const rawItems = Array.isArray(nested.registrations)
+      ? nested.registrations
+      : Array.isArray(nested.items)
+        ? nested.items
+        : [];
+    const p =
+      nested.pagination && typeof nested.pagination === "object"
+        ? (nested.pagination as Record<string, unknown>)
+        : {};
+    const items = rawItems
+      .map(parseAdminUserRegistration)
+      .filter((r): r is AdminUserRegistration => r !== null);
+    return {
+      items,
+      pagination: {
+        page: typeof p.page === "number" ? p.page : page,
+        limit: typeof p.limit === "number" ? p.limit : safeLimit,
+        total: typeof p.total === "number" ? p.total : 0,
+        totalPages: Math.max(1, typeof p.totalPages === "number" ? p.totalPages : 1),
+      },
+    };
+  }
+
+  /** CSV (txt separado por vírgula) dos ingressos do usuário — download via blob. */
+  async exportAdminUserTickets(id: string): Promise<{ blob: Blob; filename: string }> {
+    const response = await this.apiClient.get<Blob>(
+      `${ADMIN_USERS_PATH}/${id}/registrations/export`,
+      { params: { format: "txt" }, responseType: "blob" },
+    );
+    const contentDisposition =
+      ((response.headers as Record<string, unknown>)["content-disposition"] as string) ?? "";
+    const match = contentDisposition.match(/filename="?([^"]+)"?/);
+    // Fallback SEMPRE .csv: o endpoint devolve CSV (text/csv). O `.txt` anterior
+    // vazava quando o header Content-Disposition não é legível pelo JS (CORS sem
+    // exposedHeaders) → o arquivo baixava como TXT.
+    const filename = match?.[1] ?? `ingressos-${id.slice(0, 8)}.csv`;
+    return { blob: response.data as unknown as Blob, filename };
   }
 
   async getAuditLogs(params?: {

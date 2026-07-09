@@ -2,7 +2,8 @@
 
 import { ReactNode } from "react";
 import Image from "next/image";
-import { ChevronLeft, ChevronRight, X, Search, FileText } from "lucide-react";
+import { X, Search, FileText } from "lucide-react";
+import { Pagination } from "../Pagination";
 import { PixIcon } from "@/components/Icons/PixIcon";
 import { PaymentIcon } from "react-svg-credit-card-payment-icons";
 import { ArrowButton } from "../ArrowButton";
@@ -281,55 +282,12 @@ export function FinancialDetailsMobile({
 
           {/* Paginação */}
           {totalPages > 1 && (
-            <div className="flex items-center justify-center p-4 w-full">
-              <div className="flex items-start gap-1">
-                <button
-                  onClick={() => onPageChange(Math.max(1, currentPage - 1))}
-                  disabled={currentPage === 1}
-                  className="size-8 flex items-center justify-center disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
-                  aria-label="Página anterior"
-                >
-                  <ChevronLeft className="size-5 text-gray-12" />
-                </button>
-                <div className="flex gap-1 items-start">
-                  {(() => {
-                    /* Janela deslizante de 6 botões — centrada na página atual quando possível. */
-                    const WINDOW = 6;
-                    const start = Math.min(
-                      Math.max(1, currentPage - Math.floor(WINDOW / 2)),
-                      Math.max(1, totalPages - WINDOW + 1),
-                    );
-                    const end = Math.min(totalPages, start + WINDOW - 1);
-                    const pages: number[] = [];
-                    for (let p = start; p <= end; p++) pages.push(p);
-                    return pages.map((pageNum) => {
-                      const isActive = pageNum === currentPage;
-                      return (
-                        <button
-                          key={pageNum}
-                          onClick={() => onPageChange(pageNum)}
-                          className={`size-8 flex items-center justify-center rounded-lg px-1 py-2.5 font-family-dm-sans font-medium text-sm leading-[1.3] transition-colors cursor-pointer ${
-                            isActive
-                              ? "bg-primary-11 text-primary-1"
-                              : "bg-gray-4 text-gray-12 hover:bg-gray-5"
-                          }`}
-                        >
-                          {pageNum}
-                        </button>
-                      );
-                    });
-                  })()}
-                </div>
-                <button
-                  onClick={() => onPageChange(Math.min(totalPages, currentPage + 1))}
-                  disabled={currentPage >= totalPages}
-                  className="size-8 flex items-center justify-center disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
-                  aria-label="Próxima página"
-                >
-                  <ChevronRight className="size-5 text-gray-12" />
-                </button>
-              </div>
-            </div>
+            <Pagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              onPageChange={onPageChange}
+              className="p-4"
+            />
           )}
 
           {/* Botão Exportar CSV */}

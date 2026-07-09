@@ -1,4 +1,9 @@
 import type { CreateEventFormData } from "@/contexts/CreateEventContext";
+import {
+  parseCoordinate,
+  roundCoordinate,
+  buildGoogleMapsLinkFromCoordinates,
+} from "@/utils/googleMapsGeo";
 import { organizerService } from "@/services";
 import { organizerNewEventClientPage } from "@/lib/organizerAudit";
 import {
@@ -95,8 +100,23 @@ export function buildCreateEventBodyFromForm(
   if ((formData.neighborhood ?? "").trim()) {
     eventData.neighborhood = formData.neighborhood.trim();
   }
-  if (formData.googleMapsLink) {
+  // Local do evento: a fonte de verdade é a SELEÇÃO NO MAPA (coordenadas). Quando
+  // presentes, enviamos lat/lng estruturados E derivamos um `googleMapsLink`
+  // canônico (query=lat,lng) — assim o consumo público existente (EventMap/embed,
+  // que lê o param `query`) segue funcionando sem qualquer mudança de leitura.
+  // Fallback: eventos legados que ainda só têm o link mantêm o link cru.
+  const lat = parseCoordinate(formData.latitude);
+  const lng = parseCoordinate(formData.longitude);
+  if (lat !== null && lng !== null) {
+    eventData.latitude = roundCoordinate(lat);
+    eventData.longitude = roundCoordinate(lng);
+    const derivedLink = buildGoogleMapsLinkFromCoordinates(lat, lng);
+    if (derivedLink) eventData.googleMapsLink = derivedLink;
+  } else if (formData.googleMapsLink) {
     eventData.googleMapsLink = formData.googleMapsLink;
+  }
+  if ((formData.locationName ?? "").trim()) {
+    eventData.locationName = formData.locationName.trim();
   }
   if (registrationStartDateTime) {
     eventData.registrationStartDate = registrationStartDateTime;
@@ -108,6 +128,13 @@ export function buildCreateEventBodyFromForm(
   if (reg && !reg.startsWith("data:")) {
     eventData.regulationUrl = reg;
   }
+
+  // Vagas do evento: string no form. "" (ou 0) → `null` (ilimitado / limpa o teto,
+  // semântica de PATCH). Número válido → inteiro. NÃO enviar 0 (backend exige @Min(1)).
+  const maxP = (formData.maxParticipants ?? "").toString().trim();
+  const maxPNum = maxP ? Number(maxP) : null;
+  eventData.maxParticipants =
+    maxPNum && Number.isFinite(maxPNum) && maxPNum > 0 ? Math.floor(maxPNum) : null;
 
   eventData.contactEmail = formData.contactEmail?.trim() || null;
   eventData.instagram = formData.instagram?.trim() || null;
@@ -187,20 +214,6 @@ export async function ensureCreateEventSyncedFromDraft(options: {
       { clientPage: organizerNewEventClientPage("banner") },
     );
     updateFormData({ bannerUrl });
-  }
-
-  let cardImageUrl = (formData.cardImageUrl || "").trim();
-  if (cardImageUrl) {
-    if (cardImageUrl.startsWith("data:")) {
-      const file = dataUrlToFile(cardImageUrl, "card.jpg");
-      cardImageUrl = await uploadOrganizerImage(file);
-    }
-    await organizerService.updateEvent(
-      id,
-      { cardImageUrl },
-      { clientPage: organizerNewEventClientPage("banner") },
-    );
-    updateFormData({ cardImageUrl: cardImageUrl });
   }
 
   return id;

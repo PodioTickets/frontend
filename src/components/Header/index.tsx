@@ -44,7 +44,7 @@ export function Header() {
     return full || user.email || "Usuário";
   }, [user]);
 
-  const [searchResults, setSearchResults] = useState<Array<{ id: string; title: string; href: string; logoUrl?: string; location?: string; date?: string }>>([]);
+  const [searchResults, setSearchResults] = useState<Array<{ id: string; title: string; href: string; imageUrl?: string; location?: string; date?: string }>>([]);
   useEffect(() => {
     let cancelled = false;
     const q = search.trim();
@@ -77,7 +77,7 @@ export function Header() {
               id: e.id,
               title: e.name || e.title,
               href: `/events/${e.slug || e.id}`,
-              logoUrl: e.logoUrl || e.logo_url || undefined,
+              imageUrl: e.bannerUrl || undefined,
               location,
               date,
             };

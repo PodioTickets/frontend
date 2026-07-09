@@ -2,46 +2,19 @@
 
 import { useSearchParams, useRouter } from "next/navigation";
 import { useMemo, Suspense, useState, useEffect } from "react";
-import { useQueryClient } from "@tanstack/react-query";
 import { EventCard } from "@/components/Event/Card";
 import { HomeFilters } from "@/components/HomeFilters";
 import { Button } from "@/components/Button";
 import { Dropdown, DropdownOption } from "@/components/Dropdown";
 import { useEventSearch } from "@/hooks/useEventSearch";
 import { eventWindowInstant } from "@/utils/datetimeBR";
-import {
-  statusOptions,
-  orderOptions,
-  modalitiesColumns,
-} from "@/constants";
+import { statusOptions, orderOptions } from "@/constants";
 import { resolveLegacyLocationSlug } from "@/constants/legacyLocationSlugs";
-import { useEventLocationFacets } from "@/hooks/useEventLocationFacets";
-import { LocationCascadePicker } from "@/components/LocationCascadePicker";
-import { ArrowLeft, Plus, Minus } from "lucide-react";
-import { LocationIcon } from "@/components/Icons/LocationIcon";
-import { CalendarIcon } from "@/components/Icons/CalendarIcon";
-import { SneakersIcon } from "@/components/Icons/SneakersIcon";
-import { MoneyIcon } from "@/components/Icons/MoneyIcon";
-import { DateRangePicker } from "@/components/DateRangePicker";
-import { PriceRangeSlider } from "@/components/PriceRangeSlider";
-import { Input } from "@/components/Input";
-import Image from "next/image";
-import Link from "next/link";
 import type { DateRange } from "react-day-picker";
 
 function MobileAdvancedSearch() {
-  const router = useRouter();
   const searchParams = useSearchParams();
-  const queryClient = useQueryClient();
   const [currentPage, setCurrentPage] = useState(1);
-  const { facets, isLoading: facetsLoading } = useEventLocationFacets();
-
-  const [expandedSections, setExpandedSections] = useState({
-    local: false,
-    datas: false,
-    modalidade: false,
-    preco: false,
-  });
 
   const legacyLocation = searchParams.get("location");
   const stateFromUrl = searchParams.get("state");
@@ -55,41 +28,6 @@ function MobileAdvancedSearch() {
     if (leg) return { state: leg.state, city: leg.city };
     return { state: null as string | null, city: null as string | null };
   }, [stateFromUrl, cityFromUrl, legacyLocation]);
-
-  const [selectedStateApi, setSelectedStateApi] = useState<string | null>(
-    effectiveLocation.state
-  );
-  const [selectedCityApi, setSelectedCityApi] = useState<string | null>(
-    effectiveLocation.city
-  );
-
-  useEffect(() => {
-    setSelectedStateApi(effectiveLocation.state);
-    setSelectedCityApi(effectiveLocation.city);
-  }, [effectiveLocation.state, effectiveLocation.city]);
-  const [selectedModalities, setSelectedModalities] = useState<string[]>(
-    searchParams.get("modalities")?.split(",").filter(Boolean) || []
-  );
-  const [selectedDateRange, setSelectedDateRange] = useState<
-    DateRange | undefined
-  >(
-    searchParams.get("dateFrom") || searchParams.get("dateTo")
-      ? {
-          from: searchParams.get("dateFrom")
-            ? new Date(searchParams.get("dateFrom")!)
-            : undefined,
-          to: searchParams.get("dateTo")
-            ? new Date(searchParams.get("dateTo")!)
-            : undefined,
-        }
-      : undefined
-  );
-  const [priceRange, setPriceRange] = useState<[number, number]>([
-    searchParams.get("priceMin") ? parseFloat(searchParams.get("priceMin")!) : 0,
-    searchParams.get("priceMax")
-      ? parseFloat(searchParams.get("priceMax")!)
-      : 1000,
-  ]);
 
   const searchQuery = searchParams.get("q") || undefined;
   const dateFrom = searchParams.get("dateFrom") || undefined;
@@ -159,284 +97,46 @@ function MobileAdvancedSearch() {
     legacyLocation,
   ]);
 
-  const toggleSection = (section: keyof typeof expandedSections) => {
-    setExpandedSections((prev) => ({
-      ...prev,
-      [section]: !prev[section],
-    }));
-  };
-
-  const mobileLocationSummary = useMemo(() => {
-    if (!selectedStateApi) return null;
-    const facet = facets.find((f) => f.apiValue === selectedStateApi);
-    const stateName = facet?.displayLabel ?? selectedStateApi;
-    if (!selectedCityApi) {
-      return `${stateName} — todas as cidades`;
-    }
-    return `${selectedCityApi}, ${stateName}`;
-  }, [facets, selectedStateApi, selectedCityApi]);
-
-  const formatDateRange = () => {
-    if (!selectedDateRange?.from) {
-      return "Dia do evento";
-    }
-    const formatDate = (date: Date) => {
-      return new Intl.DateTimeFormat("pt-BR", {
-        day: "2-digit",
-        month: "short",
-      }).format(date);
+  // Props iniciais do HomeFilters (refletem os filtros ativos na URL).
+  const initialDateRange = useMemo<DateRange | undefined>(() => {
+    if (!dateFrom && !dateTo) return undefined;
+    return {
+      from: dateFrom ? new Date(dateFrom) : undefined,
+      to: dateTo ? new Date(dateTo) : undefined,
     };
-    if (selectedDateRange.from && selectedDateRange.to) {
-      return `${formatDate(selectedDateRange.from)} - ${formatDate(
-        selectedDateRange.to
-      )}`;
-    }
-    return formatDate(selectedDateRange.from);
-  };
+  }, [dateFrom, dateTo]);
 
-  const formatPriceRange = () => {
-    if (priceRange[0] === 0 && priceRange[1] === 1000) {
-      return "Todos os preços";
-    }
-    const formatCurrency = (value: number) => {
-      return new Intl.NumberFormat("pt-BR", {
-        style: "currency",
-        currency: "BRL",
-        minimumFractionDigits: 0,
-      }).format(value);
-    };
-    return `${formatCurrency(priceRange[0])} - ${formatCurrency(
-      priceRange[1]
-    )}`;
-  };
-
-  const handleSearch = () => {
-    const params = new URLSearchParams();
-    // Preservar busca textual se existir
-    const q = searchParams.get("q");
-    if (q) params.set("q", q);
-
-    if (selectedStateApi) params.set("state", selectedStateApi);
-    if (selectedCityApi) params.set("city", selectedCityApi);
-    if (selectedModalities.length > 0) params.set("modalities", selectedModalities.join(","));
-    if (selectedDateRange?.from) params.set("dateFrom", selectedDateRange.from.toISOString().split("T")[0]);
-    if (selectedDateRange?.to) params.set("dateTo", selectedDateRange.to.toISOString().split("T")[0]);
-    if (priceRange[0] > 0) params.set("priceMin", priceRange[0].toString());
-    if (priceRange[1] < 1000) params.set("priceMax", priceRange[1].toString());
-    router.push(`/search?${params.toString()}`);
-    // Refetch a cada clique em "Pesquisar", mesmo sem mudança de filtro.
-    queryClient.invalidateQueries({ queryKey: ["events-search"] });
-  };
-
-  const handleClearAll = () => {
-    setSelectedStateApi(null);
-    setSelectedCityApi(null);
-    setSelectedModalities([]);
-    setSelectedDateRange(undefined);
-    setPriceRange([0, 1000]);
-    router.push("/search");
-  };
-
-  const handleModalityToggle = (modalityId: string) => {
-    setSelectedModalities((prev) =>
-      prev.includes(modalityId)
-        ? prev.filter((id) => id !== modalityId)
-        : [...prev, modalityId]
-    );
-  };
-
-  const allModalities = modalitiesColumns.flat();
+  const initialPriceRange = useMemo<[number, number]>(
+    () => [
+      priceMin ? parseFloat(priceMin) : 0,
+      priceMax ? parseFloat(priceMax) : 1000,
+    ],
+    [priceMin, priceMax],
+  );
 
   return (
     <div className="md:hidden flex flex-col min-h-screen bg-gray-2 relative">
-      {/* Mobile Header */}
-      <div className="bg-gray-2 border-b border-gray-6 flex items-center justify-between px-4 py-4">
-        <button
-          onClick={() => router.back()}
-          className="flex items-center justify-center"
-        >
-          <ArrowLeft className="size-5 text-gray-12" />
-        </button>
-        <h1 className="font-medium text-base text-gray-12 font-family-dm-sans">
-          Pesquisa avançada
-        </h1>
-        <div className="size-6 shrink-0" />
-      </div>
+      <div className="flex-1 overflow-y-auto">
+        <div className="flex flex-col gap-4 px-4 pt-0 pb-8">
+          {/* Card de busca (abre o bottom-sheet de filtros) — MESMO da home */}
+          <HomeFilters
+            initialState={effectiveLocation.state}
+            initialCity={effectiveLocation.city}
+            initialLocation={legacyLocation}
+            initialModalities={modalities}
+            initialDateRange={initialDateRange}
+            initialPriceRange={initialPriceRange}
+          />
 
-      {/* Filters Container */}
-      <div className="flex-1 overflow-y-auto pb-24">
-        <div className="flex flex-col gap-4 px-4 pt-6 pb-8">
           {/* Results Header */}
-          <div className="mb-2">
+          <div className="mt-2">
             <h2 className="text-xl font-extrabold text-gray-12">
               {isLoading
                 ? "Carregando..."
                 : hasFilters
-                ? `Resultados (${pagination.total})`
-                : `Todos os eventos (${pagination.total})`}
+                  ? `Resultados (${pagination.total})`
+                  : `Todos os eventos (${pagination.total})`}
             </h2>
-          </div>
-          {/* Local Filter */}
-          <div className="bg-gray-2 border border-gray-6 rounded-xl shadow-[0px_2px_6px_0px_rgba(17,17,17,0.25)] overflow-hidden">
-            <button
-              onClick={() => toggleSection("local")}
-              className="w-full flex items-center gap-2 px-4 py-5 border-b border-gray-6"
-            >
-              <LocationIcon className="size-6 shrink-0" />
-              <div className="flex-1 text-left">
-                <h2 className="font-bold text-sm text-gray-12 font-family-dm-sans">
-                  Local
-                </h2>
-                <p className="font-normal text-xs text-gray-11 font-family-dm-sans truncate">
-                  {mobileLocationSummary ?? "Selecione um local"}
-                </p>
-              </div>
-              {expandedSections.local ? (
-                <Minus className="size-6 text-gray-12 shrink-0" />
-              ) : (
-                <Plus className="size-6 text-gray-12 shrink-0" />
-              )}
-            </button>
-            {expandedSections.local && (
-              <LocationCascadePicker
-                facets={facets}
-                isLoading={facetsLoading}
-                selectedStateApi={selectedStateApi}
-                onSelect={({ stateApi, cityApi }) => {
-                  setSelectedStateApi(stateApi);
-                  setSelectedCityApi(cityApi);
-                }}
-                onClear={() => {
-                  setSelectedStateApi(null);
-                  setSelectedCityApi(null);
-                }}
-                close={() => toggleSection("local")}
-              />
-            )}
-          </div>
-
-          {/* Datas Filter */}
-          <div className="bg-gray-2 border border-gray-6 rounded-xl shadow-[0px_2px_6px_0px_rgba(17,17,17,0.25)] overflow-hidden">
-            <button
-              onClick={() => toggleSection("datas")}
-              className="w-full flex items-center gap-2 px-4 py-5 border-b border-gray-6"
-            >
-              <CalendarIcon className="size-6 shrink-0" />
-              <div className="flex-1 text-left">
-                <h2 className="font-bold text-sm text-gray-12 font-family-dm-sans">
-                  Datas
-                </h2>
-                <p className="font-normal text-xs text-gray-11 font-family-dm-sans truncate">
-                  {formatDateRange()}
-                </p>
-              </div>
-              {expandedSections.datas ? (
-                <Minus className="size-6 text-gray-12 shrink-0" />
-              ) : (
-                <Plus className="size-6 text-gray-12 shrink-0" />
-              )}
-            </button>
-            {expandedSections.datas && (
-              <div className="p-4">
-                <DateRangePicker
-                  onSelect={setSelectedDateRange}
-                  value={selectedDateRange}
-                  className="**:text-sm!"
-                />
-              </div>
-            )}
-          </div>
-
-          {/* Modalidade Filter */}
-          <div className="bg-gray-2 border border-gray-6 rounded-xl shadow-[0px_2px_6px_0px_rgba(17,17,17,0.25)] overflow-hidden">
-            <button
-              onClick={() => toggleSection("modalidade")}
-              className="w-full flex items-center gap-2 px-4 py-5 border-b border-gray-6"
-            >
-              <SneakersIcon className="size-6 shrink-0" />
-              <div className="flex-1 text-left">
-                <h2 className="font-bold text-sm text-gray-12 font-family-dm-sans">
-                  Modalidade
-                </h2>
-                <p className="font-normal text-xs text-gray-11 font-family-dm-sans truncate">
-                  {selectedModalities.length > 0
-                    ? `${selectedModalities.length} selecionada${
-                        selectedModalities.length > 1 ? "s" : ""
-                      }`
-                    : "Qual modalidade?"}
-                </p>
-              </div>
-              {expandedSections.modalidade ? (
-                <Minus className="size-6 text-gray-12 shrink-0" />
-              ) : (
-                <Plus className="size-6 text-gray-12 shrink-0" />
-              )}
-            </button>
-            {expandedSections.modalidade && (
-              <div className="p-4 max-h-[400px] overflow-y-auto">
-                <div className="grid grid-cols-1 gap-2">
-                  {allModalities.map((modality) => (
-                    <button
-                      key={modality.id}
-                      onClick={() => handleModalityToggle(modality.id)}
-                      className={`flex items-center gap-2 h-14 px-4 rounded-lg border transition-colors ${
-                        selectedModalities.includes(modality.id)
-                          ? "bg-primary-5 border-primary-8"
-                          : "bg-gray-2 border-gray-6 hover:bg-gray-3"
-                      }`}
-                    >
-                      {modality.icon && (
-                        <div className="size-6 shrink-0">
-                          <Image
-                            src={modality.icon}
-                            alt={modality.label}
-                            width={24}
-                            height={24}
-                            className="size-6 object-contain"
-                          />
-                        </div>
-                      )}
-                      <span className="font-normal text-sm text-gray-12 font-family-dm-sans text-left">
-                        {modality.label}
-                      </span>
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Preço Filter */}
-          <div className="bg-gray-2 border border-gray-6 rounded-xl shadow-[0px_2px_6px_0px_rgba(17,17,17,0.25)] overflow-hidden">
-            <button
-              onClick={() => toggleSection("preco")}
-              className="w-full flex items-center gap-2 px-4 py-5"
-            >
-              <MoneyIcon className="size-6 shrink-0" />
-              <div className="flex-1 text-left">
-                <h2 className="font-bold text-sm text-gray-12 font-family-dm-sans">
-                  Preço
-                </h2>
-                <p className="font-normal text-xs text-gray-11 font-family-dm-sans">
-                  {formatPriceRange()}
-                </p>
-              </div>
-              {expandedSections.preco ? (
-                <Minus className="size-6 text-gray-12 shrink-0" />
-              ) : (
-                <Plus className="size-6 text-gray-12 shrink-0" />
-              )}
-            </button>
-            {expandedSections.preco && (
-              <div className="p-4">
-                <PriceRangeSlider
-                  min={0}
-                  max={1000}
-                  defaultValue={priceRange}
-                  onChange={setPriceRange}
-                />
-              </div>
-            )}
           </div>
         </div>
 
@@ -459,7 +159,8 @@ function MobileAdvancedSearch() {
             </div>
           ) : (
             <>
-              <div className="grid grid-cols-1 gap-4">
+              {/* Mobile: MESMO card da home (EventCard vertical), em coluna única. */}
+              <div className="grid grid-cols-2 gap-6">
                 {events.map((event) => (
                   <EventCard key={event.id} event={event} />
                 ))}
@@ -477,19 +178,6 @@ function MobileAdvancedSearch() {
             </>
           )}
         </div>
-      </div>
-
-      {/* Footer */}
-      <div className="fixed z-50 bottom-0 left-0 right-0 bg-gray-1 border-t border-gray-6 px-4 py-4 flex items-center justify-between">
-        <button
-          onClick={handleClearAll}
-          className="font-semibold text-base text-gray-12 font-family-dm-sans"
-        >
-          Limpar tudo
-        </button>
-        <Button onClick={handleSearch} className="w-[116px] h-11">
-          Buscar
-        </Button>
       </div>
     </div>
   );
@@ -708,7 +396,9 @@ function SearchContent() {
   return (
     <>
       <MobileAdvancedSearch />
-      <section className="hidden md:flex flex-col min-h-screen items-center max-w-[1280px] mx-auto px-4 lg:px-8">
+      {/* Largura p/ caber 4 cards de 308px por linha (4×308 + 3 gaps = 1304 +
+          padding). Antes 1280 só cabia 3. */}
+      <section className="hidden md:flex flex-col min-h-screen items-center max-w-[1376px] mx-auto px-4 lg:px-8">
         <HomeFilters
           initialState={effectiveLocation.state}
           initialCity={effectiveLocation.city}
@@ -786,9 +476,13 @@ function SearchContent() {
             </div>
           ) : (
             <>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-6">
+              {/* Cards com largura fixa do Figma (308px); no máx. 4 por linha
+                  (max-w = 4×308 + 3 gaps de 24). flex-wrap resolve a responsividade. */}
+              <div className="grid grid-cols-4 2xl:grid-cols-5 w-full justify-start gap-6 mx-auto max-w-[1304px]">
                 {filteredEvents.map((event) => (
-                  <EventCard key={event.id} event={event} />
+                  <div key={event.id} className="w-full md:w-[308px] max-w-full">
+                    <EventCard event={event} />
+                  </div>
                 ))}
               </div>
               {hasMore && (

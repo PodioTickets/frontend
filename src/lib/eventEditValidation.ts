@@ -1,4 +1,5 @@
 import type { EditEventFormData } from "@/contexts/EditEventContext";
+import { hasValidCoordinates } from "@/utils/googleMapsGeo";
 import {
   isEventDateBeforeRegistrationEnd,
   isRegistrationStartNotBeforeEvent,
@@ -20,23 +21,20 @@ export const INFORMATION_FIELDS = [
   "name", "eventDate",
   "registrationStartDate", "registrationStartTime",
   "registrationEndDate", "registrationEndTime",
+  "maxParticipants",
   "cep", "street", "neighborhood", "city", "state", "googleMapsLink",
+  "latitude", "longitude", "locationName",
   "contactEmail", "instagram", "facebook", "youtube", "tiktok", "website",
   "regulationUrl",
 ] as const satisfies readonly (keyof EditEventFormData)[];
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-const CEP_DIGITS = 8;
-
-/** Só os dígitos do CEP (remove máscara). */
-function cepDigitsOf(formData: Pick<EditEventFormData, "cep">): string {
-  return (formData.cep ?? "").replace(/\D/g, "");
-}
 
 /**
  * Valida os campos obrigatórios da etapa de informações e retorna o mapa de
- * erros (vazio = válido). Não muta nada. Endereço (rua/cidade/estado/maps) só é
- * exigido quando o CEP é válido — espelha a UI condicional.
+ * erros (vazio = válido). Não muta nada. O endereço (cep/rua/bairro/cidade/
+ * estado) é DERIVADO do local escolhido no mapa e não é mais preenchido à mão —
+ * a única exigência de local é a SELEÇÃO no mapa (coordenadas).
  */
 export function validateEventInformation(
   formData: EditEventFormData,
@@ -51,22 +49,30 @@ export function validateEventInformation(
     errors.registrationStartDate = REGISTRATION_START_NOT_BEFORE_EVENT_TOAST;
   }
   if (!formData.registrationEndDate?.trim()) errors.registrationEndDate = "Data de encerramento das inscrições é obrigatória";
-  if (wouldRegistrationEndBeforeStart(formData)) errors.registrationPeriod = REGISTRATION_END_BEFORE_START_TOAST;
+  // Vagas do evento: obrigatório e ≥ 1.
+  if (!formData.maxParticipants?.toString().trim()) {
+    errors.maxParticipants = "Vagas do evento é obrigatório";
+  } else if (Number(formData.maxParticipants) < 1) {
+    errors.maxParticipants = "As vagas do evento devem ser ao menos 1.";
+  }
+  // Um erro por vez: só sinaliza "encerramento antes do início" quando o próprio
+  // início NÃO está em erro — senão as duas mensagens (input do início + período)
+  // apareceriam juntas para o mesmo início tardio (redundante).
+  if (!errors.registrationStartDate && wouldRegistrationEndBeforeStart(formData)) {
+    errors.registrationPeriod = REGISTRATION_END_BEFORE_START_TOAST;
+  }
   // Data do evento não pode ser anterior ao encerramento das inscrições.
   if (isEventDateBeforeRegistrationEnd(formData.eventDate, formData.registrationEndDate)) {
     errors.eventDate = EVENT_DATE_NOT_BEFORE_REGISTRATION_END_TOAST;
   }
 
-  const cepDigits = cepDigitsOf(formData);
-  if (!cepDigits) {
-    errors.cep = "CEP é obrigatório";
-  } else if (cepDigits.length !== CEP_DIGITS) {
-    errors.cep = "CEP inválido";
-  } else {
-    if (!formData.street?.trim()) errors.street = "Rua é obrigatória";
-    if (!formData.city?.trim()) errors.city = "Cidade é obrigatória";
-    if (!formData.state?.trim()) errors.state = "Estado é obrigatório";
-    if (!formData.googleMapsLink?.trim()) errors.googleMapsLink = "URL do Google Maps é obrigatória";
+  // Local do evento: exige a SELEÇÃO no mapa (coordenadas válidas). Eventos
+  // LEGADOS que só têm o `googleMapsLink` antigo (sem lat/lng persistidos)
+  // continuam válidos — não forçamos re-seleção ao editar. Erro sob o botão.
+  const hasCoords = hasValidCoordinates(formData.latitude, formData.longitude);
+  const hasLegacyLink = !!formData.googleMapsLink?.trim();
+  if (!hasCoords && !hasLegacyLink) {
+    errors.mapLocation = "Selecione o local do evento no mapa";
   }
 
   if (!formData.contactEmail?.trim()) {
@@ -83,15 +89,17 @@ export function validateEventInformation(
  * mesmo conjunto de campos obrigatórios da `validateEventInformation`.
  */
 export function isEventInformationValid(formData: EditEventFormData): boolean {
+  const hasLocation =
+    hasValidCoordinates(formData.latitude, formData.longitude) ||
+    !!formData.googleMapsLink?.trim();
   return (
     !!formData.name?.trim() &&
     !!formData.eventDate &&
     !!formData.registrationStartDate?.trim() &&
     !!formData.registrationEndDate?.trim() &&
-    cepDigitsOf(formData).length === CEP_DIGITS &&
-    !!formData.street?.trim() &&
-    !!formData.city?.trim() &&
-    !!formData.state?.trim() &&
+    !!formData.maxParticipants?.toString().trim() &&
+    Number(formData.maxParticipants) >= 1 &&
+    hasLocation &&
     !!formData.contactEmail?.trim()
   );
 }
@@ -114,22 +122,25 @@ export function eventInformationHasChanges(
 /**
  * Tradução do nome do campo do BACKEND (DTO de `PATCH /events/:id`) para a CHAVE
  * de erro do formulário (que o `InformationForm` renderiza inline). A maioria
- * casa 1:1; as exceções são o endereço, que o form chama de outro jeito:
- *   - backend `zipCode`  → input `cep`
- *   - backend `location` → input `street`
- * Campos sem slot inline (neighborhood, redes sociais, description, slug…) ficam
- * de fora de propósito → caem no toast geral.
+ * casa 1:1. O endereço não tem mais inputs manuais (é derivado do mapa), então
+ * QUALQUER erro de endereço/local do backend (zipCode/location/city/state/link/
+ * coordenadas) é destacado no ÚNICO slot inline restante: o botão do mapa.
+ * Campos sem slot inline (redes sociais, description, slug…) caem no toast geral.
  */
 const BACKEND_FIELD_TO_FORM_ERROR_KEY: Record<string, string> = {
   name: "name",
   eventDate: "eventDate",
   registrationStartDate: "registrationStartDate",
   registrationEndDate: "registrationEndDate",
-  zipCode: "cep",
-  location: "street",
-  city: "city",
-  state: "state",
-  googleMapsLink: "googleMapsLink",
+  maxParticipants: "maxParticipants",
+  zipCode: "mapLocation",
+  location: "mapLocation",
+  city: "mapLocation",
+  state: "mapLocation",
+  googleMapsLink: "mapLocation",
+  latitude: "mapLocation",
+  longitude: "mapLocation",
+  locationName: "mapLocation",
   contactEmail: "contactEmail",
 };
 
@@ -139,11 +150,12 @@ const FORM_FIELD_ERROR_MESSAGE: Record<string, string> = {
   eventDate: "Data do evento inválida.",
   registrationStartDate: "Data de início das inscrições inválida.",
   registrationEndDate: "Data de encerramento das inscrições inválida.",
+  maxParticipants: "Vagas do evento inválidas.",
   cep: "CEP inválido.",
   street: "Endereço inválido.",
   city: "Cidade inválida.",
   state: "Estado inválido.",
-  googleMapsLink: "URL do Google Maps inválida (use http(s)://).",
+  mapLocation: "Selecione um local válido no mapa.",
   contactEmail: "E-mail de atendimento inválido.",
 };
 
@@ -195,6 +207,16 @@ export function mapEventBackendErrors(error: unknown): MappedBackendErrors {
     for (const msg of errorsArr) {
       if (typeof msg === "string" && msg.trim()) addByBackendField(msg.trim().split(/\s+/)[0]);
     }
+  }
+
+  // 1b) Erro de negócio com CAMPO explícito (`{ code, field, message }`) — ex.:
+  //     vagas do evento abaixo dos inscritos atuais. Preserva a MENSAGEM do servidor
+  //     (informativa, com os números) no input certo, em vez do texto genérico.
+  const bizField = (data as { field?: unknown }).field;
+  const bizMsg = (data as { message?: unknown }).message;
+  if (typeof bizField === 'string' && bizField && typeof bizMsg === 'string' && bizMsg) {
+    const key = BACKEND_FIELD_TO_FORM_ERROR_KEY[bizField];
+    if (key && !fieldErrors[key]) fieldErrors[key] = bizMsg;
   }
 
   // 2) Slug duplicado: o slug é gerado a partir do nome → destaca o campo `name`.

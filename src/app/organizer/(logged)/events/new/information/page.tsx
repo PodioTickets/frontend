@@ -16,6 +16,7 @@ import {
   loadRegulationPdfDraft,
 } from "@/lib/createEventWizardPersistence";
 import { buildCreateEventBodyFromForm } from "@/lib/createEventDraftSync";
+import { hasValidCoordinates } from "@/utils/googleMapsGeo";
 import { useOrganizerPermissions } from "@/contexts/OrganizerPermissionsContext";
 import { useOrganizerAppSurface } from "@/contexts/OrganizerAppSurfaceContext";
 import { organizerExternalHref } from "@/lib/organizerPathPresentation";
@@ -49,17 +50,19 @@ export default function InformacoesPage() {
     return null;
   }
 
-  const cepDigits = (formData.cep ?? "").replace(/\D/g, "");
+  // Local do evento agora vem 100% do mapa (endereço derivado). Exige só a
+  // seleção (coordenadas) — eventos legados com o link antigo seguem válidos.
+  const hasLocation =
+    hasValidCoordinates(formData.latitude, formData.longitude) ||
+    !!formData.googleMapsLink?.trim();
   const canSave =
     !!formData.name?.trim() &&
     !!formData.eventDate &&
     !!formData.registrationStartDate?.trim() &&
     !!formData.registrationEndDate?.trim() &&
-    cepDigits.length === 8 &&
-    !!formData.street?.trim() &&
-    !!formData.city?.trim() &&
-    !!formData.state?.trim() &&
-    !!formData.googleMapsLink?.trim() &&
+    !!formData.maxParticipants?.toString().trim() &&
+    Number(formData.maxParticipants) >= 1 &&
+    hasLocation &&
     !!formData.contactEmail?.trim();
 
   const validateForm = (): boolean => {
@@ -74,16 +77,16 @@ export default function InformacoesPage() {
     }
     if (!formData.registrationEndDate?.trim()) newErrors.registrationEndDate = "Data de encerramento das inscrições é obrigatória";
     if (wouldRegistrationEndBeforeStart(formData)) newErrors.registrationPeriod = REGISTRATION_END_BEFORE_START_TOAST;
-    const cepDigitsValidation = (formData.cep ?? "").replace(/\D/g, "");
-    if (!cepDigitsValidation) {
-      newErrors.cep = "CEP é obrigatório";
-    } else if (cepDigitsValidation.length !== 8) {
-      newErrors.cep = "CEP inválido";
-    } else {
-      if (!formData.street?.trim()) newErrors.street = "Rua é obrigatória";
-      if (!formData.city?.trim()) newErrors.city = "Cidade é obrigatória";
-      if (!formData.state?.trim()) newErrors.state = "Estado é obrigatório";
-      if (!formData.googleMapsLink?.trim()) newErrors.googleMapsLink = "URL do Google Maps é obrigatória";
+    if (!formData.maxParticipants?.toString().trim()) {
+      newErrors.maxParticipants = "Vagas do evento é obrigatório";
+    } else if (Number(formData.maxParticipants) < 1) {
+      newErrors.maxParticipants = "As vagas do evento devem ser ao menos 1.";
+    }
+    if (
+      !hasValidCoordinates(formData.latitude, formData.longitude) &&
+      !formData.googleMapsLink?.trim()
+    ) {
+      newErrors.mapLocation = "Selecione o local do evento no mapa";
     }
     if (!formData.contactEmail?.trim()) {
       newErrors.contactEmail = "Email de atendimento é obrigatório";
@@ -184,6 +187,7 @@ export default function InformacoesPage() {
         onErrorsChange={setErrors}
         onSubmit={handleSubmit}
         loading={loading}
+        enableIpLocationDefault
         hasLocalRegulationDraft={hasLocalRegulationDraft}
         onClearLocalRegulationDraft={() => {
           clearRegulationPdfDraft();

@@ -1,10 +1,11 @@
 /** Proporções e saída do canvas após o recorte (banner topo + card de listagem quadrado). */
 export const EVENT_IMAGE_SPECS = {
-  /** 2× retina: banner exibido a até ~880 px de largura. */
+  /** Banner do evento — formato padrão 1660×930 (≈ 16:9). Resolução ampla o
+   *  suficiente para o hero da página e o preview do OpenGraph. */
   banner: {
-    aspect: 880 / 400,
-    outputWidth: 1760,
-    outputHeight: 800,
+    aspect: 1660 / 930,
+    outputWidth: 1660,
+    outputHeight: 930,
   },
   /** 2× retina: card exibido a até ~300 px de lado. */
   card: {

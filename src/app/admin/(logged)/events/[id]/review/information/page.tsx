@@ -12,6 +12,7 @@ import { WizardStepLayout } from "@/components/Organizer/WizardStepLayout";
 import { InformationForm } from "@/components/Organizer/InformationForm";
 import { buildCreateEventBodyFromForm } from "@/lib/createEventDraftSync";
 import { eventInformationHasChanges } from "@/lib/eventEditValidation";
+import { hasValidCoordinates } from "@/utils/googleMapsGeo";
 import { organizerEventEditClientPage } from "@/lib/organizerAudit";
 import { wouldRegistrationEndBeforeStart, REGISTRATION_END_BEFORE_START_TOAST, isRegistrationStartNotBeforeEvent, REGISTRATION_START_NOT_BEFORE_EVENT_TOAST } from "@/utils/registrationPeriod";
 import toast from "react-hot-toast";
@@ -32,6 +33,7 @@ export default function ReviewInformationPage() {
     errors,
     setErrors,
     loading: eventLoading,
+    event,
   } = useEditEvent();
   const [saving, setSaving] = useState(false);
   const [hasPendingPdf, setHasPendingPdf] = useState(false);
@@ -47,16 +49,16 @@ export default function ReviewInformationPage() {
     }
     if (!formData.registrationEndDate?.trim()) newErrors.registrationEndDate = "Data de encerramento das inscrições é obrigatória";
     if (wouldRegistrationEndBeforeStart(formData)) newErrors.registrationPeriod = REGISTRATION_END_BEFORE_START_TOAST;
-    const cepDigits = (formData.cep ?? "").replace(/\D/g, "");
-    if (!cepDigits) {
-      newErrors.cep = "CEP é obrigatório";
-    } else if (cepDigits.length !== 8) {
-      newErrors.cep = "CEP inválido";
-    } else {
-      if (!formData.street?.trim()) newErrors.street = "Rua é obrigatória";
-      if (!formData.city?.trim()) newErrors.city = "Cidade é obrigatória";
-      if (!formData.state?.trim()) newErrors.state = "Estado é obrigatório";
-      if (!formData.googleMapsLink?.trim()) newErrors.googleMapsLink = "URL do Google Maps é obrigatória";
+    if (!formData.maxParticipants?.toString().trim()) {
+      newErrors.maxParticipants = "Vagas do evento é obrigatório";
+    } else if (Number(formData.maxParticipants) < 1) {
+      newErrors.maxParticipants = "As vagas do evento devem ser ao menos 1.";
+    }
+    if (
+      !hasValidCoordinates(formData.latitude, formData.longitude) &&
+      !formData.googleMapsLink?.trim()
+    ) {
+      newErrors.mapLocation = "Selecione o local do evento no mapa";
     }
     if (!formData.contactEmail?.trim()) {
       newErrors.contactEmail = "Email de atendimento é obrigatório";
@@ -100,16 +102,17 @@ export default function ReviewInformationPage() {
     }
   };
 
-  const cepDigits = (formData.cep ?? "").replace(/\D/g, "");
+  const hasLocation =
+    hasValidCoordinates(formData.latitude, formData.longitude) ||
+    !!formData.googleMapsLink?.trim();
   const isFormValid =
     !!formData.name?.trim() &&
     !!formData.eventDate &&
     !!formData.registrationStartDate?.trim() &&
     !!formData.registrationEndDate?.trim() &&
-    cepDigits.length === 8 &&
-    !!formData.street?.trim() &&
-    !!formData.city?.trim() &&
-    !!formData.state?.trim() &&
+    !!formData.maxParticipants?.toString().trim() &&
+    Number(formData.maxParticipants) >= 1 &&
+    hasLocation &&
     !!formData.contactEmail?.trim();
 
   const hasChanges = eventInformationHasChanges(formData, initialFormData, hasPendingPdf);
@@ -176,6 +179,7 @@ export default function ReviewInformationPage() {
         onSubmit={handleSubmit}
         loading={saving}
         onHasPendingPdfChange={setHasPendingPdf}
+        filledParticipants={event?.registrationsCount}
       />
     </WizardStepLayout>
 

@@ -12,9 +12,9 @@ import { PriceRangeSlider } from "../PriceRangeSlider";
 import { useState, useCallback, useMemo, useEffect, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import type { DateRange } from "react-day-picker";
-import Link from "next/link";
 import { useEventLocationFacets } from "@/hooks/useEventLocationFacets";
 import { LocationCascadePicker } from "@/components/LocationCascadePicker";
+import { MobileFiltersSheet } from "./MobileFiltersSheet";
 import { useQueryClient } from "@tanstack/react-query";
 
 interface HomeFiltersProps {
@@ -140,8 +140,27 @@ export function HomeFilters({
     }
   }, [initialPriceRange]);
 
+  const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
+
   const handleModalitiesChange = useCallback((ids: string[]) => {
     setSelectedModalities(ids);
+  }, []);
+
+  // Toggle de UMA modalidade (grid do bottom-sheet mobile).
+  const handleToggleModality = useCallback((id: string) => {
+    setSelectedModalities((prev) =>
+      prev.includes(id) ? prev.filter((m) => m !== id) : [...prev, id],
+    );
+  }, []);
+
+  // "Limpar tudo" do sheet: zera os filtros no estado (não navega — o usuário
+  // ainda pode ajustar e só então "Buscar").
+  const handleClearAll = useCallback(() => {
+    setSelectedStateApi(null);
+    setSelectedCityApi(null);
+    setSelectedModalities([]);
+    setSelectedDateRange(undefined);
+    setPriceRange([0, 1000]);
   }, []);
 
   const handlePriceRangeChange = useCallback((range: [number, number]) => {
@@ -208,6 +227,27 @@ export function HomeFilters({
     return `${selectedCityApi}, ${stateName}`;
   }, [facets, selectedStateApi, selectedCityApi]);
 
+  // Resumo dos filtros ativos no card mobile (senão, o placeholder padrão).
+  const mobileSummary = useMemo(() => {
+    const parts: string[] = [];
+    if (locationSummary) parts.push(locationSummary);
+    if (selectedDateRange?.from) parts.push(formatDateRange());
+    if (selectedModalities.length > 0) {
+      parts.push(
+        `${selectedModalities.length} modalidade${selectedModalities.length > 1 ? "s" : ""}`,
+      );
+    }
+    if (!isAllPrices) parts.push(formatPriceRange());
+    return parts.length ? parts.join(" · ") : "Local - Data - Modalidade";
+  }, [
+    locationSummary,
+    selectedDateRange,
+    selectedModalities,
+    isAllPrices,
+    formatDateRange,
+    formatPriceRange,
+  ]);
+
   const handleSearch = useCallback(() => {
     const params = new URLSearchParams();
 
@@ -256,23 +296,51 @@ export function HomeFilters({
 
   return (
     <div className="w-full md:px-0 mt-6 md:mt-14">
-      {/* Mobile Layout */}
-      <Link href="/search" className="flex flex-col gap-3 md:hidden relative">
-        <div className="rounded-full border border-gray-6 p-3 px-4 flex items-center gap-4">
-          <div className="flex items-center justify-between">
-            <SearchIcon className="size-5 text-gray-11 shrink-0" />
-          </div>
-          <div className="flex flex-col">
-            <h1 className="text-sm font-medium">
-              Encontre sua próxima corrida
-            </h1>
-            <p className="text-xs text-gray-11">Local - Data - Modalidade</p>
+      {/* Mobile Layout — card que abre o bottom-sheet de filtros (home E /search) */}
+      <button
+        type="button"
+        onClick={() => setMobileFiltersOpen(true)}
+        className="w-full flex md:hidden text-left active:scale-[0.99] transition"
+        aria-label="Abrir filtros de busca"
+      >
+        <div className="w-full rounded-full border border-gray-6 p-3 px-4 flex items-center gap-4">
+          <SearchIcon className="size-5 text-gray-11 shrink-0" />
+          <div className="flex flex-col min-w-0">
+            <h1 className="text-sm font-medium">Encontre sua próxima corrida</h1>
+            <p className="text-xs text-gray-11 truncate">{mobileSummary}</p>
           </div>
         </div>
-      </Link>
+      </button>
+
+      <MobileFiltersSheet
+        open={mobileFiltersOpen}
+        onClose={() => setMobileFiltersOpen(false)}
+        facets={facets}
+        facetsLoading={facetsLoading}
+        selectedStateApi={selectedStateApi}
+        onSelectLocation={({ stateApi, cityApi }) => {
+          setSelectedStateApi(stateApi);
+          setSelectedCityApi(cityApi);
+        }}
+        onClearLocation={() => {
+          setSelectedStateApi(null);
+          setSelectedCityApi(null);
+        }}
+        locationSummary={locationSummary}
+        selectedDateRange={selectedDateRange}
+        onDateRangeSelect={handleDateRangeSelect}
+        dateSummary={formatDateRange()}
+        selectedModalities={selectedModalities}
+        onToggleModality={handleToggleModality}
+        priceRange={priceRange}
+        onPriceChange={handlePriceRangeChange}
+        priceSummary={formatPriceRange()}
+        onSearch={handleSearch}
+        onClearAll={handleClearAll}
+      />
 
       {/* Desktop Layout */}
-      <div className="hidden md:flex relative items-center justify-between shadow-[0_5px_10px_rgba(0,0,0,0.3)] rounded-4xl h-[75px]">
+      <div className="hidden md:flex relative items-center justify-between shadow-[0px_2px_6px_0px_rgba(17,17,17,0.15)] rounded-4xl h-[75px]">
         <Dropdown
           dataAttribute="location"
           width="w-full min-w-[280px] max-w-[320px]"

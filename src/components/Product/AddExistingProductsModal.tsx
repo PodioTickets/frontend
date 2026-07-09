@@ -56,6 +56,28 @@ type LinkedTicketsPopoverPlacement = {
   maxHeight: number;
 };
 
+/**
+ * Extrai os IDs de produto vinculados a um ingresso cobrindo os DOIS shapes que
+ * o backend retorna (ver `hooks/useTickets.ts`): o bundle da listagem traz
+ * `productIds: string[]`, mas respostas de POST/PATCH (e alguns reads) trazem o
+ * vínculo só como `products: [{ productId }]`. Ler apenas `productIds` fazia o
+ * popover "Ver ingressos vinculados" ignorar ingressos que realmente vinculam o
+ * produto quando o shape vinha como `products`.
+ */
+function extractTicketProductIds(ticket: any): string[] {
+  if (Array.isArray(ticket?.productIds)) {
+    return ticket.productIds.filter(
+      (id: unknown): id is string => typeof id === "string",
+    );
+  }
+  if (Array.isArray(ticket?.products)) {
+    return ticket.products
+      .map((tp: any) => tp?.productId ?? tp?.product?.id)
+      .filter((id: unknown): id is string => typeof id === "string");
+  }
+  return [];
+}
+
 function productHasLinkedTickets(
   productId: string,
   tickets: EventTicket[],
@@ -273,7 +295,7 @@ export function AddExistingProductsModal() {
           categoryName: categoryId
             ? catMap.get(categoryId) ?? "Sem categoria"
             : "Sem categoria",
-          productIds: Array.isArray(t.productIds) ? t.productIds : [],
+          productIds: extractTicketProductIds(t),
         };
       });
       setTickets(mapped);
@@ -733,12 +755,12 @@ export function AddExistingProductsModal() {
                       </p>
                     </div>
                     <div className="flex min-h-0 flex-1 flex-wrap content-start gap-2 overflow-y-auto p-2">
-                      {tickets.length === 0 ? (
+                      {ticketsLinkedToExpanded.length === 0 ? (
                         <p className="w-full p-2 text-sm font-family-dm-sans text-gray-11">
-                          Nenhum ingresso disponível
+                          Nenhum ingresso vincula este produto
                         </p>
                       ) : (
-                        tickets.map((ticket) => (
+                        ticketsLinkedToExpanded.map((ticket) => (
                           <span
                             key={ticket.id}
                             className="rounded-md bg-gray-3 px-3 py-1.5 text-sm font-normal font-family-dm-sans text-gray-12"

@@ -528,7 +528,7 @@ export default function AdminRepassePage() {
                   </tr>
                 ) : (
                   items.map((row) => {
-                    const eventImg = row.event.logoUrl;
+                    const eventImg = row.event.bannerUrl;
                     const organizatoinImg = row.event.organization.logoUrl;
                     const d = new Date(row.createdAt);
                     if (Number.isNaN(d.getTime())) return "—";

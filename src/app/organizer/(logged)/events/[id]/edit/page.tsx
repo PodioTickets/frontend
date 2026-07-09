@@ -33,6 +33,7 @@ export default function EditInformationPage() {
     errors,
     setErrors,
     loading: eventLoading,
+    event,
   } = useEditEvent();
   const [saving, setSaving] = useState(false);
   const [hasPendingPdf, setHasPendingPdf] = useState(false);
@@ -148,6 +149,7 @@ export default function EditInformationPage() {
         onSubmit={handleSubmit}
         loading={saving}
         onHasPendingPdfChange={setHasPendingPdf}
+        filledParticipants={event?.registrationsCount}
       />
     </WizardStepLayout>
 

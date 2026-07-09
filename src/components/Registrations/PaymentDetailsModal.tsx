@@ -151,12 +151,16 @@ export function PaymentDetailsModal() {
       <AnimatePresence>
         {isOpen && (
           <>
+            {/* Shell IDÊNTICO ao estado carregado (mesmo z-[60]/z-[61] +
+                pointerEvents:auto) — sem isso o backdrop "pulava" de camada ao
+                carregar (piscada) e ficava atrás de um drawer/overlay em z-50. */}
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               transition={{ duration: 0.2 }}
-              className="fixed inset-0 bg-black/50 z-50"
+              className="fixed inset-0 bg-black/50 z-[60]"
+              style={{ pointerEvents: "auto" }}
               onClick={closePaymentDetailsModal}
             />
             <motion.div
@@ -164,7 +168,8 @@ export function PaymentDetailsModal() {
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
               transition={{ duration: 0.2, ease: "easeOut" }}
-              className="fixed inset-0 flex items-center justify-center z-50 p-4"
+              className="fixed inset-0 z-[61] flex items-center justify-center p-4"
+              style={{ pointerEvents: "auto" }}
               onClick={(e) => e.stopPropagation()}
             >
               <div className="bg-gray-1 rounded-[12px] w-full max-w-[1095px] max-h-[90vh] flex flex-col shadow-2xl p-20">
@@ -595,7 +600,10 @@ export function PaymentDetailsModal() {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.2 }}
-            className="fixed inset-0 bg-black/50 z-50"
+            // z acima do drawer (z-50, evita flash na transição) + pointerEvents:auto
+            // pra vencer o `pointer-events:none` que o vaul aplica no body.
+            className="fixed inset-0 bg-black/50 z-[60]"
+            style={{ pointerEvents: "auto" }}
             onClick={closePaymentDetailsModal}
           />
 
@@ -605,7 +613,8 @@ export function PaymentDetailsModal() {
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 20 }}
             transition={{ duration: 0.2, ease: "easeOut" }}
-            className="fixed inset-0 z-50 flex flex-col md:flex md:items-center md:justify-center p-0 md:p-4"
+            className="fixed inset-0 z-[61] flex flex-col md:flex md:items-center md:justify-center p-0 md:p-4"
+            style={{ pointerEvents: "auto" }}
             onClick={(e) => e.stopPropagation()}
           >
             {/* Mobile: full-screen layout */}
@@ -1448,9 +1457,9 @@ export function PaymentDetailsModal() {
             </div>
           </motion.div>
 
-          {/* Confirmação de cancelamento/estorno — overlay por cima (z-60).
-              Controlado por estado local pra não fechar o PaymentDetailsModal
-              (o modalStore é single-modal). */}
+          {/* Confirmação de cancelamento/estorno — overlay por cima (z-70, acima
+              do conteúdo z-61). Controlado por estado local pra não fechar o
+              PaymentDetailsModal (o modalStore é single-modal). */}
           <CancelOrderModal
             isOpen={showCancelModal}
             onClose={() => setShowCancelModal(false)}
@@ -1466,8 +1475,9 @@ export function PaymentDetailsModal() {
             isFreeCancel={canCancelFreeOrder}
           />
 
-          {/* Reenvio do pedido por e-mail — overlay próprio (z-60), mesmo padrão
-              do CancelOrderModal (estado local, fora do modalStore single-modal). */}
+          {/* Reenvio do pedido por e-mail — overlay próprio (z-70, acima do
+              conteúdo z-61), mesmo padrão do CancelOrderModal (estado local, fora
+              do modalStore single-modal). */}
           <ResendTicketsModal
             isOpen={showResendModal}
             onClose={() => setShowResendModal(false)}

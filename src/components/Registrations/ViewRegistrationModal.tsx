@@ -421,7 +421,10 @@ export function ViewRegistrationModal() {
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               transition={{ duration: 0.2 }}
-              className="fixed inset-0 z-50 flex flex-col md:flex md:items-center md:justify-center bg-black/50"
+              // z acima do drawer (z-50, evita flash na transição) + pointerEvents:auto
+              // pra vencer o `pointer-events:none` que o vaul aplica no body.
+              className="fixed inset-0 z-[60] flex flex-col md:flex md:items-center md:justify-center bg-black/50"
+              style={{ pointerEvents: "auto" }}
               onClick={closeViewRegistrationModal}
             />
             <motion.div
@@ -430,7 +433,7 @@ export function ViewRegistrationModal() {
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
               transition={{ duration: 0.2, ease: "easeOut" }}
               onClick={(e) => e.stopPropagation()}
-              className="fixed inset-0 z-50 flex flex-col md:flex md:items-center md:justify-center pointer-events-none p-0 md:pointer-events-auto"
+              className="fixed inset-0 z-[61] flex flex-col md:flex md:items-center md:justify-center pointer-events-none p-0 md:pointer-events-auto"
             >
               {/* Mobile: full-screen layout (Figma) */}
               <div className="md:hidden flex flex-col flex-1 min-h-0 w-full bg-gray-2 overflow-hidden pt-16 pointer-events-auto">

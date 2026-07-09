@@ -98,7 +98,7 @@ function CalendarCaption({
       ) : (
         <div className="w-7" />
       )}
-      <h2 className="text-sm font-medium text-gray-12 absolute left-1/2 -translate-x-1/2 transition-all duration-300">
+      <h2 className="text-sm font-medium text-gray-12 whitespace-nowrap absolute left-1/2 -translate-x-1/2 transition-all duration-300">
         {calendarMonth.date.toLocaleDateString("pt-BR", {
           month: "long",
           year: "numeric",

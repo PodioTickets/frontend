@@ -203,6 +203,37 @@ export function brasiliaTodayCivilStart(): Date {
   return new Date(brt.getUTCFullYear(), brt.getUTCMonth(), brt.getUTCDate());
 }
 
+const EVENT_HAPPENS_LABEL_OPTS: Intl.DateTimeFormatOptions = {
+  weekday: "long",
+  day: "numeric",
+  month: "long",
+};
+
+/**
+ * Rótulo "Acontece no sábado, 25 de julho" — dia da semana + dia + mês por
+ * extenso, em UTC (wall-clock do evento, sem shift). A preposição concorda com o
+ * gênero do dia: domingo/sábado (m) → "no"; segunda a sexta (…-feira, f) → "na".
+ * Compartilhado pelos cards de evento (home/busca) e de ingresso (meus ingressos).
+ * Retorna "" para valor ausente/ inválido.
+ */
+export function formatEventHappensLabel(value: DateInput): string {
+  const d = toUtcDate(value);
+  if (!d) return "";
+  // `Intl` pt-BR devolve o dia da semana em minúsculo ("sábado, …") →
+  // capitalizamos a 1ª letra ("Sábado, …").
+  const label = formatDateTimeBR(value, EVENT_HAPPENS_LABEL_OPTS);
+  return label ? label.charAt(0).toUpperCase() + label.slice(1) : "";
+}
+
+/**
+ * Só a data por extenso "sábado, 31 de julho" (dia da semana + dia + mês), UTC —
+ * sem o prefixo "Acontece". Para linhas com rótulo próprio ("Inscrições até …")
+ * que devem usar o MESMO formato longo dos cards. Retorna "" p/ valor inválido.
+ */
+export function formatWeekdayDayMonthBR(value: DateInput): string {
+  return formatDateTimeBR(value, EVENT_HAPPENS_LABEL_OPTS);
+}
+
 const MONTHS_BR_SHORT = [
   "Jan", "Fev", "Mar", "Abr", "Mai", "Jun",
   "Jul", "Ago", "Set", "Out", "Nov", "Dez",

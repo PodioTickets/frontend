@@ -482,14 +482,14 @@ export default function OrganizerEventsPage() {
                         >
                           <td className="py-4 px-5">
                             <div className="flex items-center gap-3">
-                              <div className="size-9 rounded-lg border border-gray-6 overflow-hidden shrink-0 relative">
+                              <div className="h-9 aspect-1660/930 rounded-lg border border-gray-6 overflow-hidden shrink-0 relative">
                                 <ImageWithInitialFallback
-                                  src={event.logoUrl ?? event.cardImageUrl ?? event.bannerUrl}
+                                  src={event.bannerUrl}
                                   alt={event.name}
                                   name={event.name}
                                   fallbackId={event.id}
                                   fill
-                                  sizes="36px"
+                                  sizes="64px"
                                   className="size-full border-transparent border-0"
                                   letterClassName="text-sm font-semibold"
                                 />
@@ -691,14 +691,14 @@ export default function OrganizerEventsPage() {
                   >
                     {/* Image + name */}
                     <div className="flex items-center gap-2 min-w-0">
-                      <div className="size-11 rounded-lg border border-gray-6 overflow-hidden shrink-0 relative">
+                      <div className="h-11 aspect-1660/930 rounded-lg border border-gray-6 overflow-hidden shrink-0 relative">
                         <ImageWithInitialFallback
-                          src={event.logoUrl ?? event.cardImageUrl ?? event.bannerUrl}
+                          src={event.bannerUrl}
                           alt={event.name}
                           name={event.name}
                           fallbackId={event.id}
                           fill
-                          sizes="44px"
+                          sizes="78px"
                           className="size-full border-transparent border-0"
                           letterClassName="text-sm font-semibold"
                         />

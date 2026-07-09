@@ -14,14 +14,20 @@ export interface CreateEventFormData {
   registrationStartTime: string;
   registrationEndDate: string;
   registrationEndTime: string;
+  /** Vagas do evento (teto de participantes). String no form; "" = ilimitado. */
+  maxParticipants: string;
   cep: string;
   street: string;
   neighborhood: string;
   city: string;
   state: string;
   googleMapsLink: string;
+  /** Local por coordenadas (seleção no mapa). String no form; "" = não definido. */
+  latitude: string;
+  longitude: string;
+  /** Rótulo do local escolhido (nome do POI / endereço formatado). */
+  locationName: string;
   bannerUrl: string;
-  cardImageUrl: string;
   regulationUrl: string;
   createdEventId: string | null;
   contactEmail: string;
@@ -55,14 +61,17 @@ const initialFormData: CreateEventFormData = {
   registrationStartTime: "",
   registrationEndDate: "",
   registrationEndTime: "",
+  maxParticipants: "",
   cep: "",
   street: "",
   neighborhood: "",
   city: "",
   state: "",
   googleMapsLink: "",
+  latitude: "",
+  longitude: "",
+  locationName: "",
   bannerUrl: "",
-  cardImageUrl: "",
   regulationUrl: "",
   createdEventId: null,
   contactEmail: "",

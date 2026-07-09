@@ -8,7 +8,8 @@ import {
   DrawerHeader,
   DrawerTitle,
 } from "@/components/ui/drawer";
-import { X, ChevronLeft, ChevronRight, FileText } from "lucide-react";
+import { X, FileText } from "lucide-react";
+import { Pagination } from "../Pagination";
 import { PaymentItemDetailsDrawer } from "./PaymentItemDetailsDrawer";
 import { ArrowButton } from "../ArrowButton";
 import { DetailsIcon } from "../Icons/DetailsIcon";
@@ -414,38 +415,12 @@ export function RefundedDrawer({
 
                 {/* Pagination */}
                 {totalPages > 1 && (
-                  <div className="flex items-center justify-center gap-2 py-4 px-5 border-t border-gray-6">
-                    <button
-                      onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
-                      disabled={currentPage === 1}
-                      className="size-8 flex items-center justify-center border border-gray-6 rounded-lg hover:bg-gray-3 disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      <ChevronLeft className="size-4" />
-                    </button>
-                    {Array.from({ length: Math.min(totalPages, 8) }, (_, i) => {
-                      const pageNum = i + 1;
-                      const isActive = pageNum === currentPage;
-                      return (
-                        <button
-                          key={pageNum}
-                          onClick={() => setCurrentPage(pageNum)}
-                          className={`size-8 flex items-center justify-center border rounded-lg text-sm font-inter font-normal transition-colors ${isActive
-                            ? "bg-[#59E373] border-[#59E373] text-gray-12"
-                            : "border-gray-6 hover:bg-gray-3 text-gray-12"
-                            }`}
-                        >
-                          {pageNum}
-                        </button>
-                      );
-                    })}
-                    <button
-                      onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
-                      disabled={currentPage >= totalPages}
-                      className="size-8 flex items-center justify-center border border-gray-6 rounded-lg hover:bg-gray-3 disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      <ChevronRight className="size-4" />
-                    </button>
-                  </div>
+                  <Pagination
+                    currentPage={currentPage}
+                    totalPages={totalPages}
+                    onPageChange={setCurrentPage}
+                    className="border-t border-gray-6 px-5 py-4"
+                  />
                 )}
               </div>
             </div>
