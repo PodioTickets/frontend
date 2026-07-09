@@ -365,7 +365,7 @@ export function EventInfo({ event, onNext, isSubmitting = false, tickets = [], c
   }, [raceQuantities, categorizedTickets, uncategorizedTickets]);
 
   return (
-    <div className="rounded-xl overflow-hidden bg-gray-2 shadow-[0_5px_10px_rgba(0,0,0,0.3)]">
+    <div className="rounded-xl overflow-hidden bg-gray-2 shadow-[0px_2px_6px_0px_rgba(17,17,17,0.15)]">
       <div className="w-full aspect-1660/930 relative">
         <ImageWithInitialFallback
           src={event.bannerUrl}

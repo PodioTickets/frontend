@@ -54,7 +54,7 @@ export function RegistrationQRCode({
   const qrSize = size - (padding * 2);
   return (
     <div
-      className={`relative flex items-center justify-center bg-white rounded-xl shadow-md border-2 border-gray-6 ${className}`}
+      className={`relative flex items-center justify-center bg-white rounded-xl border border-gray-6 ${className}`}
       style={{ width: size, height: size }}
     >
       {/* QR Code com logo integrado */}

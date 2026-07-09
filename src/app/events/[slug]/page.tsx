@@ -318,7 +318,7 @@ export default function EventPage() {
 
         {/* Main Event Card */}
         <div className="">
-          <div className="rounded-2xl mt-4 relative z-10 px-4 pt-6 pb-4 shadow-[0_5px_10px_rgba(0,0,0,0.3)]">
+          <div className="rounded-2xl mt-4 relative z-10 px-4 pt-6 pb-4 shadow-[0px_2px_6px_0px_rgba(17,17,17,0.15)]">
             <h1 className="text-xl font-bold text-gray-12 mb-4">
               {event.name}
             </h1>
@@ -975,7 +975,7 @@ export default function EventPage() {
                 Denunciar) para que acompanhem o scroll juntos. */}
             <div className="min-w-1/4 w-1/4 shrink-0">
               <div className="sticky top-24">
-                <div className="rounded-xl overflow-hidden bg-gray-2 p-5 shadow-[0_5px_10px_rgba(0,0,0,0.3)]">
+                <div className="rounded-xl overflow-hidden bg-gray-2 p-5 shadow-[0px_2px_6px_0px_rgba(17,17,17,0.15)]">
                   <h1 className="text-lg font-bold mb-4">{event.name}</h1>
                   <div className="flex flex-col gap-4">
                     <h1 className="flex items-center gap-2 text-sm text-gray-12 font-medium">

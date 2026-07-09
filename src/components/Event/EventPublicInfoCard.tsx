@@ -442,7 +442,7 @@ export function EventPublicInfoCardMobile(props: EventPublicInfoCardProps) {
   return (
     <>
       <div className="px-4">
-        <div className={cn("relative z-10 mt-10 rounded-2xl px-4 pb-4 pt-6 shadow-[0_5px_10px_rgba(0,0,0,0.3)]", mutedPreview && "select-none")}>
+        <div className={cn("relative z-10 mt-10 rounded-2xl px-4 pb-4 pt-6 shadow-[0px_2px_6px_0px_rgba(17,17,17,0.15)]", mutedPreview && "select-none")}>
           <h1 className={cn("mb-4 text-xl font-bold text-gray-12", mutedPreview && "select-text")}>{event.name}</h1>
           <div className={mutedBody}>
             <EventMetaRows event={event} mobile />
@@ -478,7 +478,7 @@ export function EventPublicInfoCardDesktop(props: EventPublicInfoCardProps) {
 
   return (
     <div className="w-full">
-      <div className={cn("h-full overflow-hidden rounded-xl bg-gray-2 p-5 shadow-[0_5px_10px_rgba(0,0,0,0.3)]", mutedPreview && "select-none")}>
+      <div className={cn("h-full overflow-hidden rounded-xl bg-gray-2 p-5 shadow-[0px_2px_6px_0px_rgba(17,17,17,0.15)]", mutedPreview && "select-none")}>
         <h1 className={cn("mb-4 text-lg font-bold", mutedPreview && "select-text text-gray-12")}>{event.name}</h1>
         <div className={mutedBody}>
           <EventMetaRows event={event} />

@@ -1440,7 +1440,7 @@ export function SubscriptionStep({
         </div>
 
         <div className="w-1/3 shrink-0">
-          <div className="rounded-xl overflow-hidden bg-gray-2 shadow-[0_5px_10px_rgba(0,0,0,0.3)]">
+          <div className="rounded-xl overflow-hidden bg-gray-2 shadow-[0px_2px_6px_0px_rgba(17,17,17,0.15)]">
             <div className="aspect-1660/930 w-full relative shrink-0">
               <ImageWithInitialFallback
                 src={event.bannerUrl}
