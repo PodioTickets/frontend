@@ -110,7 +110,6 @@ export function LocationCascadePicker({
         {/* Mobile: teto de 5 itens (5 × h-12 = 240px) → rola a partir do 6º local.
             Desktop mantém o teto maior (o Dropdown de HomeFilters já limita a altura). */}
         <div className="overflow-y-auto max-h-[240px] md:max-h-[320px] overscroll-contain [-webkit-overflow-scrolling:touch] [touch-action:pan-y]">
-
           {filteredCities.map((city, index) => (
             <button
               key={city.apiValue}

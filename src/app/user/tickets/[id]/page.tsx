@@ -21,6 +21,7 @@ import { formatAnswer } from "@/utils/questionAnswer";
 import { formatDateBRT, formatEventHappensLabel, formatTimeBRT } from "@/utils/datetimeBR";
 import { shortId } from "@/utils/shortId";
 import { EventCardContent } from "@/components/Event/Card/EventCardContent";
+import Link from "next/link";
 
 export default function TicketDetailsPage() {
   const params = useParams();
@@ -349,17 +350,17 @@ export default function TicketDetailsPage() {
             dividerFromClassName="hidden"
             bannerOverlay={event.bannerUrl}
           >
-            <p onClick={undefined} className="[text-box-trim:trim-both] font-family-dm-sans self-start font-bold text-base text-primary-11 cursor-pointer max-md:hidden underline absolute bottom-0 right-0">
+            <Link href={`/events/${event.slug}`} className="[text-box-trim:trim-both] font-family-dm-sans self-start font-bold text-base text-primary-11 cursor-pointer max-md:hidden underline absolute bottom-0 right-0">
               Página do evento
-            </p>
+            </Link>
           </EventCardContent>
         </div>
 
 
 
-        <p onClick={undefined} className="[text-box-trim:trim-both] font-family-dm-sans text-end font-bold text-base text-primary-11 cursor-pointer w-full underline -mt-8 mb-6 md:hidden">
+        <Link href={`/events/${event.slug}`} className="[text-box-trim:trim-both] font-family-dm-sans text-end font-bold text-base text-primary-11 cursor-pointer w-full underline -mt-8 mb-6 md:hidden">
           Páginas do evento
-        </p>
+        </Link>
 
         {/* Participants List */}
         {participants.length === 0 ? (
