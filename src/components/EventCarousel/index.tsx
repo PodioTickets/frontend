@@ -10,15 +10,21 @@ interface EventCarouselProps {
 }
 
 const GAP = 16;
-/** Largura fixa do card (Figma 222:5298 = 308×282). */
-const CARD_WIDTH = 308;
+/** Largura fixa do card (DESKTOP). Reduzida do Figma (308) para 243 px p/ caber 5
+ *  cards INTEIROS no content box de 1280 (max-w 1376 − gutters 96): 5×243 + 4×16 ≈ 1280. */
+const CARD_WIDTH = 243;
+/** MOBILE: nº de cards VISÍVEIS por viewport (2.3 → o 3º card aparece "espiando").
+ *  O slide vira responsivo (`basis` por calc) abaixo do breakpoint md. */
+const MOBILE_PER_VIEW = 2.3;
+/** Breakpoint md do Tailwind — abaixo, layout mobile (2.3 cards por tela). */
+const MD_BREAKPOINT = 768;
 
 export function EventCarousel({ items = 20 }: EventCarouselProps) {
   const { events } = useEvents({ page: 1, limit: items });
 
   // Scroll horizontal NATIVO (momentum, sempre alcança o último card).
   const scrollerRef = useRef<HTMLDivElement>(null);
-  const [perView, setPerView] = useState(4);
+  const [perView, setPerView] = useState(5);
   const [canPrev, setCanPrev] = useState(false);
   const [canNext, setCanNext] = useState(false);
   const [progress, setProgress] = useState(0); // 0..1 (posição no scroll)
@@ -28,10 +34,13 @@ export function EventCarousel({ items = 20 }: EventCarouselProps) {
     if (!el) return;
     const w = el.clientWidth || 1;
 
-    // Cards com LARGURA FIXA de 308px (Figma). perView = quantos cabem INTEIROS
-    // (só pra dots/paginação; o slide tem basis fixa). O +GAP no numerador
-    // compensa o último card não ter gap à direita.
-    setPerView(Math.max(1, Math.floor((w + GAP) / (CARD_WIDTH + GAP))));
+    // perView = quantos cards cabem INTEIROS (só pra dots/paginação). Usa a largura
+    // EFETIVA do card: no mobile o slide é responsivo (MOBILE_PER_VIEW por viewport,
+    // casando com o `basis` calc do slide); no desktop é fixo (CARD_WIDTH). O +GAP
+    // no numerador compensa o último card não ter gap à direita.
+    const cardW =
+      w < MD_BREAKPOINT ? (w - 2 * GAP) / MOBILE_PER_VIEW : CARD_WIDTH;
+    setPerView(Math.max(1, Math.floor((w + GAP) / (cardW + GAP))));
     const max = el.scrollWidth - el.clientWidth;
     setCanPrev(el.scrollLeft > 1);
     setCanNext(el.scrollLeft < max - 1);
@@ -71,10 +80,6 @@ export function EventCarousel({ items = 20 }: EventCarouselProps) {
     el.scrollTo({ left: pageCount > 1 ? (i / (pageCount - 1)) * max : 0, behavior: "smooth" });
   };
 
-  // Slide com largura FIXA do card (308px). O scroller (overflow-x-auto) clipa no
-  // mobile, então cards fixos não estouram a página em telas estreitas.
-  const slideStyle = { flex: `0 0 ${CARD_WIDTH}px` };
-
   const arrowClass =
     "hidden md:flex absolute top-1/2 -translate-y-1/2 z-10 size-9 items-center justify-center rounded-full bg-gray-2 border border-gray-6 shadow-md hover:bg-gray-3 transition-all duration-200 disabled:opacity-0 disabled:pointer-events-none";
 
@@ -83,7 +88,7 @@ export function EventCarousel({ items = 20 }: EventCarouselProps) {
     // laterais em telas grandes (a seção pai é full-bleed; aqui recentralizamos).
     // Padding lateral (desktop) cria a "gutter" onde as setas ficam — assim elas
     // NUNCA sobrepõem os cards (o scroller fica dentro do content box, inset). A
-    // largura (1376) = 4 cards de 308 + 3 gaps (1280) + as gutters das setas (96).
+    // largura (1376) = 5 cards de 243 + 4 gaps (1279) + as gutters das setas (96).
     <div className="relative mx-auto w-full max-w-[1376px] md:px-12">
       <button
         onClick={() => scrollByDir(-1)}
@@ -113,10 +118,15 @@ export function EventCarousel({ items = 20 }: EventCarouselProps) {
             (perView-1) gaps = 100%, os 5 cabem INTEIROS; o overflow dos demais
             mantém a seta de scroll visível. */}
         {events?.map((event) => (
-          // min-w-0: sem isso o slide (flex item) tem `min-width:auto` e pode
-          // CRESCER além de 308px quando o conteúdo tem min-content maior → a
-          // imagem (aspect-ratio) fica mais alta → card "maior". Trava em 308px.
-          <div key={event.id} data-slide className="min-w-0" style={slideStyle}>
+          // Slide: MOBILE = 2.3 cards por viewport (basis `calc((100% − 2·gap)/2.3)`,
+          // o 3º card "espia"); DESKTOP (md+) = 243px fixo. `shrink-0 grow-0` trava o
+          // basis; `min-w-0` evita que o `min-width:auto` do flex item cresça o card
+          // (senão a imagem aspect-ratio ficaria mais alta).
+          <div
+            key={event.id}
+            data-slide
+            className="min-w-0 shrink-0 grow-0 basis-[calc((100%-32px)/2.3)] md:basis-[243px]"
+          >
             <EventCard event={event} />
           </div>
         ))}

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { MapPin } from "lucide-react";
 import { CalendarIcon } from "@/components/Icons/CalendarIcon";
 import { Tooltip } from "@/components/Tooltip";
+import { cn } from "@/utils/cn";
 
 interface EventInfoCardEvent {
   name?: string;
@@ -79,63 +80,26 @@ export function EventInfoCard({
             />
           ) : null}
         </div>
-        <div className="flex flex-col gap-2 flex-1 min-w-0">
-          {/* Tooltip click-to-reveal: mostra o nome completo quando truncado em
-              3 linhas (mobile/desktop). Click trigger pra cobrir mobile sem hover. */}
-          <Tooltip
-            content={event.name || ""}
-            position="topRight"
-            trigger="click"
-            usePortal
-            className="block min-w-0"
-            contentClassName="!w-auto max-w-[calc(100vw-32px)] text-left text-sm text-gray-12 font-family-dm-sans !py-2 !px-3"
-          >
-            <p className="font-manrope font-bold text-base leading-[1.1] text-gray-12 line-clamp-3 cursor-pointer">
+        <div className="min-w-0 w-full pt-2 pb-2 flex items-center">
+          <div className="flex min-w-0 w-full flex-col gap-1 pl-2">
+            <p className="[text-box-trim:trim-both] truncate font-manrope text-base font-bold text-[#202020]">
               {event.name || ""}
             </p>
-          </Tooltip>
-          {/* Meta (location + date) — escondido no mobile (linha separada abaixo), inline no desktop */}
-          <div className="hidden md:flex items-center gap-6 flex-wrap">
-            {cityState && (
-              <div className="flex gap-1 items-center min-w-0">
-                <MapPin size={20} strokeWidth={1.5} className="shrink-0 text-gray-12" />
-                <p className="font-family-dm-sans font-normal text-sm leading-[1.3] text-gray-12 truncate">
-                  {cityState}
-                </p>
-              </div>
-            )}
-            {formattedDate && (
-              <div className="flex gap-1 items-center">
-                <CalendarIcon className="size-5 shrink-0" />
-                <p className="font-family-dm-sans font-normal text-sm leading-[1.3] text-gray-12">
-                  {formattedDate}
-                </p>
-              </div>
-            )}
+            {cityState ? (
+              <p className="[text-box-trim:trim-both] w-full min-w-0 truncate font-family-dm-sans text-sm text-[#646464]">
+                {cityState}
+              </p>
+            ) : null}
+            {formattedDate ? (
+              <p className="[text-box-trim:trim-both] font-family-dm-sans text-sm font-medium text-[#646464]">
+                {formattedDate}
+              </p>
+            ) : null}
           </div>
         </div>
       </div>
 
-      {/* Linha inferior MOBILE: meta + link (mobile only) */}
-      <div className="flex items-center justify-between gap-2 md:hidden">
-        {cityState && (
-          <div className="flex gap-1 items-center min-w-0">
-            <MapPin size={20} strokeWidth={1.5} className="shrink-0 text-gray-12" />
-            <p className="font-family-dm-sans font-normal text-sm leading-[1.3] text-gray-12 truncate">
-              {cityState}
-            </p>
-          </div>
-        )}
-        {showLink && (
-          <Link
-            href={`/events/${event.slug}`}
-            className="font-family-dm-sans font-normal text-sm leading-[1.3] text-primary-10 underline whitespace-nowrap ml-auto"
-          >
-            Ver evento
-          </Link>
-        )}
-      </div>
-
+     
       {/* Link DESKTOP — à direita, na mesma linha que imagem+meta */}
       {showLink && (
         <Link

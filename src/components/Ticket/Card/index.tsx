@@ -148,20 +148,9 @@ export function TicketCard({ ticket, className }: TicketCardProps) {
 
   return (
     <div className={cn("flex w-full flex-col items-start", className)}>
-      {/* Aba de status (folder tab) — encaixa no topo do card via -mb-2 */}
-      <div
-        className={cn(
-          "-mb-2 flex w-fit items-center rounded-tl-lg rounded-tr-lg px-4 pb-4 pt-2",
-          tab.className,
-        )}
-      >
-        <span className="font-family-dm-sans text-sm font-semibold leading-[1.3]">
-          {tab.label}
-        </span>
-      </div>
 
       {/* Card */}
-      <div className="relative flex w-full flex-col overflow-hidden rounded-lg bg-[#F9F9F9]">
+      <div className="relative flex w-full items-center gap-2 overflow-hidden rounded-lg bg-[#F9F9F9]">
         {/* Núcleo compartilhado com o EventCard da home. */}
         <EventCardContent
           name={ticket.event.name}
@@ -170,23 +159,18 @@ export function TicketCard({ ticket, className }: TicketCardProps) {
           addressLabel={addressLabel}
           dateLabel={dateLabel}
           bannerRounded="none"
+          // "Meus ingressos" mantém o visual próprio: banner compacto (metade) +
+          // divisor em primary. Home/busca (EventCard) usam os defaults (w-full/gray-6).
+          bannerWidthClassName="w-1/2"
+          dividerFromClassName="from-primary-7"
           bannerOverlay={invitedByOverlay}
         >
           {peopleLabel ? (
-            <p className="[text-box-trim:trim-both] font-family-dm-sans text-sm text-[#646464]">
-              {peopleLabel}
+            <p onClick={goToTicket} className="[text-box-trim:trim-both] font-family-dm-sans font-bold text-base text-primary-11 cursor-pointer">
+              Ver ingresso
             </p>
           ) : null}
         </EventCardContent>
-
-        {/* Botão */}
-        <button
-          type="button"
-          onClick={goToTicket}
-          className="mt-1 flex h-10 w-full items-center justify-center rounded-lg border border-[#D9D9D9] font-manrope text-base font-bold text-[#202020] transition-colors hover:bg-gray-3"
-        >
-          Visualizar ingresso
-        </button>
       </div>
     </div>
   );

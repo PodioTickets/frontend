@@ -75,13 +75,13 @@ function MobileAdvancedSearch() {
   >(
     searchParams.get("dateFrom") || searchParams.get("dateTo")
       ? {
-          from: searchParams.get("dateFrom")
-            ? new Date(searchParams.get("dateFrom")!)
-            : undefined,
-          to: searchParams.get("dateTo")
-            ? new Date(searchParams.get("dateTo")!)
-            : undefined,
-        }
+        from: searchParams.get("dateFrom")
+          ? new Date(searchParams.get("dateFrom")!)
+          : undefined,
+        to: searchParams.get("dateTo")
+          ? new Date(searchParams.get("dateTo")!)
+          : undefined,
+      }
       : undefined
   );
   const [priceRange, setPriceRange] = useState<[number, number]>([
@@ -272,8 +272,8 @@ function MobileAdvancedSearch() {
               {isLoading
                 ? "Carregando..."
                 : hasFilters
-                ? `Resultados (${pagination.total})`
-                : `Todos os eventos (${pagination.total})`}
+                  ? `Resultados (${pagination.total})`
+                  : `Todos os eventos (${pagination.total})`}
             </h2>
           </div>
           {/* Local Filter */}
@@ -360,9 +360,8 @@ function MobileAdvancedSearch() {
                 </h2>
                 <p className="font-normal text-xs text-gray-11 font-family-dm-sans truncate">
                   {selectedModalities.length > 0
-                    ? `${selectedModalities.length} selecionada${
-                        selectedModalities.length > 1 ? "s" : ""
-                      }`
+                    ? `${selectedModalities.length} selecionada${selectedModalities.length > 1 ? "s" : ""
+                    }`
                     : "Qual modalidade?"}
                 </p>
               </div>
@@ -379,11 +378,10 @@ function MobileAdvancedSearch() {
                     <button
                       key={modality.id}
                       onClick={() => handleModalityToggle(modality.id)}
-                      className={`flex items-center gap-2 h-14 px-4 rounded-lg border transition-colors ${
-                        selectedModalities.includes(modality.id)
+                      className={`flex items-center gap-2 h-14 px-4 rounded-lg border transition-colors ${selectedModalities.includes(modality.id)
                           ? "bg-primary-5 border-primary-8"
                           : "bg-gray-2 border-gray-6 hover:bg-gray-3"
-                      }`}
+                        }`}
                     >
                       {modality.icon && (
                         <div className="size-6 shrink-0">
@@ -460,7 +458,7 @@ function MobileAdvancedSearch() {
           ) : (
             <>
               {/* Mobile: MESMO card da home (EventCard vertical), em coluna única. */}
-              <div className="flex flex-col gap-6">
+              <div className="grid grid-cols-2 gap-6">
                 {events.map((event) => (
                   <EventCard key={event.id} event={event} />
                 ))}
@@ -791,7 +789,7 @@ function SearchContent() {
             <>
               {/* Cards com largura fixa do Figma (308px); no máx. 4 por linha
                   (max-w = 4×308 + 3 gaps de 24). flex-wrap resolve a responsividade. */}
-              <div className="flex flex-col md:flex-row md:flex-wrap w-full justify-start gap-6 mx-auto max-w-[1304px]">
+              <div className="grid grid-cols-4 2xl:grid-cols-5 w-full justify-start gap-6 mx-auto max-w-[1304px]">
                 {filteredEvents.map((event) => (
                   <div key={event.id} className="w-full md:w-[308px] max-w-full">
                     <EventCard event={event} />

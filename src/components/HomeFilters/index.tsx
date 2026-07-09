@@ -272,7 +272,7 @@ export function HomeFilters({
       </Link>
 
       {/* Desktop Layout */}
-      <div className="hidden md:flex relative items-center justify-between shadow-[0_5px_10px_rgba(0,0,0,0.3)] rounded-4xl h-[75px]">
+      <div className="hidden md:flex relative items-center justify-between shadow-[0px_2px_6px_0px_rgba(17,17,17,0.15)] rounded-4xl h-[75px]">
         <Dropdown
           dataAttribute="location"
           width="w-full min-w-[280px] max-w-[320px]"

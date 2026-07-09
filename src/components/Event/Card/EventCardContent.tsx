@@ -23,6 +23,17 @@ interface EventCardContentProps {
    * - "none": banner sem arredondar; o container pai (card de ingresso) clipa.
    */
   bannerRounded?: "all" | "none";
+  /**
+   * Largura do banner (Tailwind). Default `"w-full"` — banner ocupa a largura toda
+   * (cards de home/busca). O `TicketCard` ("Meus ingressos") passa `"w-1/2"` (banner
+   * compacto). Mantém os dois cards divergindo sem duplicar o núcleo.
+   */
+  bannerWidthClassName?: string;
+  /**
+   * Cor inicial do gradiente do divisor à esquerda dos textos. Default
+   * `"from-gray-6"` (home/busca); o `TicketCard` passa `"from-primary-7"`.
+   */
+  dividerFromClassName?: string;
   /** Overlay posicionado sobre o banner (ex.: tag "Inscrição feita por"). */
   bannerOverlay?: ReactNode;
   /** Linhas extras abaixo da data (ex.: "X pessoas"). */
@@ -43,6 +54,8 @@ export function EventCardContent({
   dateLabel,
   nativeImg,
   bannerRounded = "all",
+  bannerWidthClassName = "w-full",
+  dividerFromClassName = "from-gray-6",
   bannerOverlay,
   children,
 }: EventCardContentProps) {
@@ -53,7 +66,8 @@ export function EventCardContent({
           imgClassName), contido dentro da moldura fixa. */}
       <div
         className={cn(
-          "group relative aspect-1660/930 w-full shrink-0 overflow-hidden bg-transparent",
+          "group relative aspect-1660/930 shrink-0 overflow-hidden bg-transparent",
+          bannerWidthClassName,
           bannerRounded === "all" && "rounded-[8px]",
         )}
       >
@@ -76,8 +90,8 @@ export function EventCardContent({
       {/* Título + endereço + data (+ linhas extras). O padding fica no wrapper
           EXTERNO; a borda-esquerda vai no INTERNO (só a altura dos textos), pra
           não passar pela área do padding em cima/embaixo. */}
-      <div className="w-full pt-2 pb-2 flex items-center">
-        <div className="shrink-0 self-stretch w-0.5 rounded-full bg-linear-to-b from-gray-6 to-transparent" />
+      <div className="min-w-0 w-full pt-2 pb-2 flex items-center">
+        <div className={cn("shrink-0 self-stretch w-0.5 rounded-full bg-linear-to-b to-transparent", dividerFromClassName)} />
         <div className="flex min-w-0 w-full flex-col gap-1 pl-2">
           <p className="[text-box-trim:trim-both] truncate font-manrope text-base font-bold text-[#202020]">
             {name}
