@@ -26,6 +26,16 @@ const DEFAULT_TITLE = "PódioTicket";
 const DEFAULT_DESCRIPTION =
   "Descubra e inscreva-se em eventos esportivos na PódioTicket.";
 
+/**
+ * Dimensões declaradas do `og:image`, na MESMA proporção do banner padrão do
+ * evento (1660×930 ≈ 1.785:1). Sem `og:image:width/height` os crawlers
+ * (WhatsApp/Facebook/Telegram) caem num thumbnail QUADRADO; declarar a proporção
+ * paisagem força o card largo do banner. 1200px de largura = tamanho recomendado
+ * p/ previews grandes (`summary_large_image`). Altura = round(1200*930/1660)=672.
+ */
+const OG_IMAGE_WIDTH = 1200;
+const OG_IMAGE_HEIGHT = 672;
+
 /** Garante URL absoluta para a imagem OG (crawlers exigem absoluta). */
 function toAbsoluteImageUrl(raw: string | undefined | null): string | null {
   const v = raw?.trim();
@@ -40,7 +50,6 @@ type PublicEvent = {
   description?: string;
   bannerUrl?: string;
   city?: string;
-  logoUrl?: string;
   state?: string;
   registrationStartDate?: string;
 };
@@ -91,7 +100,8 @@ export async function generateMetadata({
   // "Inscrições abertas a partir de dd/mm/aaaa" (data em UTC, padrão do projeto).
   const description = `Inscrições abertas a partir de ${formatDateBR(event.registrationStartDate)}`;
 
-  const imageUrl = toAbsoluteImageUrl(event.logoUrl);
+  // OG/SEO usa o BANNER do evento (logoUrl descontinuado).
+  const imageUrl = toAbsoluteImageUrl(event.bannerUrl);
 
   return {
     title,
@@ -104,7 +114,16 @@ export async function generateMetadata({
       type: "website",
       siteName: DEFAULT_TITLE,
       ...(imageUrl
-        ? { images: [{ url: imageUrl, alt: event.name }] }
+        ? {
+            images: [
+              {
+                url: imageUrl,
+                width: OG_IMAGE_WIDTH,
+                height: OG_IMAGE_HEIGHT,
+                alt: event.name,
+              },
+            ],
+          }
         : {}),
     },
     twitter: {

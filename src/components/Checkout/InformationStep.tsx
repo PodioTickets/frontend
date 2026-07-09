@@ -1767,9 +1767,10 @@ export function InformationStep({
           <div className="w-full">
             {/* Resumo do pedido (desktop) — layout horizontal: banner à
                 esquerda com overlay do nome, resumo à direita. */}
-            <div className="hidden md:flex items-stretch gap-11 rounded-2xl overflow-hidden bg-gray-2 shadow-[0_5px_10px_rgba(0,0,0,0.3)] mb-10">
-              {/* Banner + gradiente + nome do evento */}
-              <div className="relative w-1/2 shrink-0 self-stretch min-h-[250px]">
+            <div className="hidden md:flex items-start gap-11 rounded-2xl overflow-hidden bg-gray-2 shadow-[0px_2px_6px_0px_rgba(17,17,17,0.15)] mb-10">
+              {/* Banner + gradiente + nome do evento — proporção 1660×930 (não estica
+                  pra altura dos valores, pra o banner não cortar). */}
+              <div className="relative w-[45%] shrink-0 aspect-1660/930">
                 <Image
                   src={event.bannerUrl}
                   alt={event.name}

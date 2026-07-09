@@ -14,6 +14,8 @@ type BaseProps = {
   letterClassName?: string;
   imgClassName?: string;
   priority?: boolean;
+  /** Qualidade do next/image (default 75). Suba p/ banners exibidos "grandes". */
+  quality?: number;
   /** Evita validação de domínio do next/image (útil para ícones de API / http). */
   nativeImg?: boolean;
 };
@@ -32,6 +34,7 @@ export function ImageWithInitialFallback(props: ImageWithInitialFallbackProps) {
     letterClassName,
     imgClassName,
     priority,
+    quality,
     nativeImg,
   } = props;
 
@@ -88,6 +91,7 @@ export function ImageWithInitialFallback(props: ImageWithInitialFallbackProps) {
             fill
             sizes={props.sizes}
             priority={priority}
+            quality={quality}
             className={cn("object-cover", imgClassName)}
             onError={onError}
           />
@@ -99,6 +103,7 @@ export function ImageWithInitialFallback(props: ImageWithInitialFallbackProps) {
             height={props.height}
             sizes={props.sizes}
             priority={priority}
+            quality={quality}
             className={cn("object-cover size-full max-h-full max-w-full", imgClassName)}
             onError={onError}
           />

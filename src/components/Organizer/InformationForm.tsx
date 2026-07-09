@@ -5,20 +5,24 @@ import { surfaceHeader } from "@/lib/authSurface";
 import { Input } from "@/components/Input";
 import { DatePicker } from "@/components/DatePicker";
 import { TimePicker } from "@/components/TimePicker";
-import { InfoIcon } from "@/components/Icons/InfoIcon";
 import { LocationIcon } from "@/components/Icons/LocationIcon";
+import { ParticipantsIcon } from "@/components/Icons/ParticipantsIcon";
 import { Plus, Globe } from "lucide-react";
 import { InstagramIcon } from "@/components/Icons/InstagramIcon";
 import { FacebookIcon } from "@/components/Icons/FacebookIcon";
 import { YoutubeIcon } from "@/components/Icons/YoutubeIcon";
 import { TiktokIcon } from "@/components/Icons/TiktokIcon";
 import { EmailIcon } from "@/components/Icons/EmailIcon";
-import { GoogleMapsUrlHelpTooltip } from "@/components/Organizer/GoogleMapsUrlHelpTooltip";
+import { LocationPickerModal, type LocationPickerResult } from "@/components/Organizer/LocationPickerModal";
+import { hasGoogleMapsApiKey } from "@/hooks/useGoogleMaps";
+import { useIpLocation } from "@/hooks/useIpLocation";
+import {
+  hasValidCoordinates,
+  formatCoordinatesLabel,
+  buildGoogleMapsLinkFromCoordinates,
+} from "@/utils/googleMapsGeo";
 import { ContactEmailHelpTooltip } from "@/components/Organizer/ContactEmailHelpTooltip";
-import { SearchableSelect } from "@/components/SearchableSelect";
-import { BRAZIL_STATES } from "@/utils/locationFacets";
-import { useCitiesByState } from "@/hooks/useCitiesByState";
-import { userService } from "@/services";
+import { FieldHelpTooltip } from "@/components/Organizer/FieldHelpTooltip";
 import {
   EVENT_DATE_NOT_BEFORE_REGISTRATION_END_TOAST,
   isEventDateBeforeRegistrationEnd,
@@ -70,14 +74,6 @@ function getCurrentDatePlaceholder(): string {
   return `00/00/${new Date().getFullYear()}`;
 }
 
-interface ViaCEPResponse {
-  logradouro: string;
-  bairro: string;
-  localidade: string;
-  uf: string;
-  erro?: boolean;
-}
-
 // ─── types ───────────────────────────────────────────────────────────────────
 
 export interface InformationFormValues {
@@ -87,12 +83,19 @@ export interface InformationFormValues {
   registrationStartTime?: string;
   registrationEndDate?: string;
   registrationEndTime?: string;
+  /** Vagas do evento (teto de participantes). String; "" = ilimitado. */
+  maxParticipants?: string;
   cep?: string;
   street?: string;
   neighborhood?: string;
   city?: string;
   state?: string;
   googleMapsLink?: string;
+  /** Local por coordenadas (seleção no mapa). String; "" = não definido. */
+  latitude?: string;
+  longitude?: string;
+  /** Rótulo do local escolhido (nome do POI / endereço formatado). */
+  locationName?: string;
   contactEmail?: string;
   instagram?: string;
   facebook?: string;
@@ -120,6 +123,17 @@ interface InformationFormProps {
   onClearLocalRegulationDraft?: () => void;
   /** Called whenever the pending PDF file presence changes (for dirty tracking). */
   onHasPendingPdfChange?: (has: boolean) => void;
+  /**
+   * Nº de vagas já preenchidas/vendidas (inscrições confirmadas) — exibido no
+   * tooltip de "Vagas do evento". Só nos fluxos de edição; ausente no create (0).
+   */
+  filledParticipants?: number | null;
+  /**
+   * Quando true (fluxo de CRIAR evento), centraliza o mapa na localização
+   * aproximada do usuário (por IP) enquanto ainda não há local escolhido. Nos
+   * fluxos de edição fica off (o evento já tem local salvo).
+   */
+  enableIpLocationDefault?: boolean;
 }
 
 // ─── component ───────────────────────────────────────────────────────────────
@@ -135,9 +149,9 @@ export function InformationForm({
   hasLocalRegulationDraft = false,
   onClearLocalRegulationDraft,
   onHasPendingPdfChange,
+  filledParticipants,
+  enableIpLocationDefault = false,
 }: InformationFormProps) {
-  const { cities: stateCities, loading: loadingCities } = useCitiesByState(values.state ?? "");
-  const [loadingCEP, setLoadingCEP] = useState(false);
   const [uploadingPDF, setUploadingPDF] = useState(false);
   const [pdfFile, setPdfFile] = useState<File | null>(null);
   const [pdfUrl, setPdfUrl] = useState<string>("");
@@ -147,34 +161,57 @@ export function InformationForm({
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const cepDigits = (values.cep ?? "").replace(/\D/g, "");
-  const showAddressFields = cepDigits.length === 8;
+  // ── Local no mapa ──────────────────────────────────────────────────────────
+  const [mapOpen, setMapOpen] = useState(false);
+  const mapsEnabled = hasGoogleMapsApiKey();
+  const hasLocation = hasValidCoordinates(values.latitude, values.longitude);
+  const locationLabel =
+    (values.locationName ?? "").trim() ||
+    formatCoordinatesLabel(values.latitude, values.longitude);
+  // Busca de fallback só para CENTRALIZAR o mapa (cidade/estado do endereço).
+  const mapFallbackQuery = [values.city, values.state, "Brasil"]
+    .filter((s) => (s ?? "").trim())
+    .join(", ");
 
-  // ── CEP ──────────────────────────────────────────────────────────────────
+  // Fluxo de CRIAR: sem local escolhido, centraliza o mapa na localização
+  // aproximada do usuário (por IP, resolvida no servidor). Só busca quando
+  // realmente vai usar — mapa habilitado, fluxo de criação e ainda sem local.
+  const ipCenterEnabled = enableIpLocationDefault && mapsEnabled && !hasLocation;
+  const { data: ipLocation } = useIpLocation(ipCenterEnabled);
+  const mapInitialCenter =
+    ipCenterEnabled && ipLocation
+      ? { lat: ipLocation.lat, lng: ipLocation.lng }
+      : null;
 
-  const handleCEPChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const raw = e.target.value.replace(/\D/g, "");
-    onChange({ cep: formatCEP(raw) });
-    if (errors.cep) onErrorsChange((prev) => ({ ...prev, cep: "" }));
+  // Tooltip de "Vagas do evento": acrescenta as vagas JÁ PREENCHIDAS/vendidas
+  // (inscrições confirmadas) quando a contagem está disponível (fluxos de edição).
+  const vagasTooltipText =
+    typeof filledParticipants === "number" && filledParticipants >= 0
+      ? `Quantidade máxima de participantes permitida no evento. ${filledParticipants} vagas já foram vendidas.`
+      : "Quantidade máxima de participantes permitida no evento.";
 
-    if (raw.length === 8) {
-      setLoadingCEP(true);
-      try {
-        const response = await fetch(`/api/cep?cep=${raw}`);
-        if (!response.ok) throw new Error("Erro na requisição: " + response.status);
-        const data: ViaCEPResponse = await response.json();
-        if (data.erro) {
-          toast.error("CEP não encontrado");
-        } else {
-          onChange({ street: data.logradouro || "", neighborhood: data.bairro || "", city: data.localidade || "", state: data.uf || "" });
-          toast.success("Endereço encontrado!");
-        }
-      } catch {
-        toast.error("Erro ao buscar CEP");
-      } finally {
-        setLoadingCEP(false);
-      }
+  const handleLocationConfirm = (r: LocationPickerResult) => {
+    const updates: Partial<InformationFormValues> = {
+      latitude: String(r.lat),
+      longitude: String(r.lng),
+      locationName: r.name || r.address || "",
+      // `googleMapsLink` derivado (query=lat,lng) mantém o embed/EventMap público.
+      googleMapsLink: buildGoogleMapsLinkFromCoordinates(r.lat, r.lng),
+    };
+    // Endereço derivado do mapa: quando o local foi (re)selecionado, substitui o
+    // bloco de endereço INTEIRO (inclusive vazios) pelo geocode — evita misturar
+    // rua/bairro de um local antigo com o novo. Sem `components` (só reconfirmou),
+    // mantém o endereço já salvo.
+    if (r.components) {
+      const c = r.components;
+      updates.cep = c.cep ? formatCEP(c.cep) : "";
+      updates.street = c.street;
+      updates.neighborhood = c.neighborhood;
+      updates.city = c.city;
+      updates.state = c.state;
     }
+    onChange(updates);
+    if (errors.mapLocation) onErrorsChange((prev) => ({ ...prev, mapLocation: "" }));
   };
 
   // ── field changes ─────────────────────────────────────────────────────────
@@ -184,6 +221,14 @@ export function InformationForm({
     if (name === "name" && value.length > EVENT_NAME_MAX_LENGTH) return;
     onChange({ [name]: value });
     if (errors[name]) onErrorsChange((prev) => ({ ...prev, [name]: "" }));
+  };
+
+  /* Vagas do evento: só dígitos, sem zeros à esquerda. "" = ilimitado (o build
+   * envia null). Cap defensivo em 7 dígitos (o backend valida @Max 10.000.000). */
+  const handleMaxParticipantsChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const digits = e.target.value.replace(/\D/g, "").replace(/^0+(?=\d)/, "").slice(0, 8);
+    onChange({ maxParticipants: digits });
+    if (errors.maxParticipants) onErrorsChange((prev) => ({ ...prev, maxParticipants: "" }));
   };
 
   const clearRegistrationPeriodError = (name: string) => {
@@ -248,7 +293,10 @@ export function InformationForm({
       onErrorsChange((prev) => ({
         ...prev,
         registrationStartDate: startBeforeEvent ? REGISTRATION_START_NOT_BEFORE_EVENT_TOAST : "",
-        registrationPeriod: endBeforeStart ? REGISTRATION_END_BEFORE_START_TOAST : "",
+        // Um erro por vez: quando o próprio início já viola "antes do evento",
+        // o "encerramento antes do início" é consequência redundante do mesmo
+        // início tardio — não exibimos as duas mensagens pro mesmo input.
+        registrationPeriod: !startBeforeEvent && endBeforeStart ? REGISTRATION_END_BEFORE_START_TOAST : "",
       }));
       return;
     }
@@ -384,291 +432,311 @@ export function InformationForm({
 
   // ── render ────────────────────────────────────────────────────────────────
 
+  // Erros das datas de inscrição consolidados numa ÚNICA mensagem (largura total,
+  // rodapé da seção): evita 2 erros simultâneos e a quebra em 2 linhas na coluna
+  // estreita. Prioridade: início > encerramento > período (fim-antes-do-início).
+  const registrationError =
+    errors.registrationStartDate ||
+    errors.registrationEndDate ||
+    errors.registrationPeriod;
+
   return (
-    <form id={formId} onSubmit={(e) => void handleSubmit(e)} className="flex flex-col gap-9 md:gap-[44px]">
+    <>
+      <form id={formId} onSubmit={(e) => void handleSubmit(e)} className="flex flex-col gap-9 md:gap-[44px]">
 
-      {/* Name + event date */}
-      <div className="flex flex-col md:flex-row gap-9 md:gap-3 w-full items-stretch md:items-start">
-        <div className="flex flex-col gap-3 flex-1 min-w-0">
-          <div className="flex flex-col gap-2">
-            <div className="flex items-center justify-between gap-3">
-              <label htmlFor={`${formId}-name`} className="text-gray-12 text-base font-family-dm-sans">Nome do evento</label>
-            </div>
-            <Input
-              id={`${formId}-name`}
-              type="text"
-              name="name"
-              value={values.name}
-              onChange={handleInputChange}
-              placeholder="Ex: Corrida Pena Nubas 2025"
-              className={`h-12 ${errors.name ? "border-red-10" : ""}`}
-              maxLength={EVENT_NAME_MAX_LENGTH}
-            />
-          </div>
-          {errors.name && <p className="text-red-10 text-sm">{errors.name}</p>}
-        </div>
-
-        <div className="flex flex-col gap-3 w-full md:w-1/2 shrink-0">
-          <div className="flex flex-col gap-2">
-            <label className="text-gray-12 text-base font-family-dm-sans">Data do evento</label>
-            <DatePicker
-              value={values.eventDate}
-              onChange={(value) => handleDateChange("eventDate", value || "")}
-              placeholder={getCurrentDatePlaceholder()}
-              className="w-full md:w-max"
-              hideIcon={false}
-              error={!!errors.eventDate}
-              // Seleção livre: qualquer data (a validação de ordem/erro é inline).
-              disablePastDates={false}
-            />
-          </div>
-          <div className="flex items-start gap-2">
-            <InfoIcon className="size-5 text-gray-11 shrink-0 mt-0.5" />
-            <p className="text-gray-11 text-sm md:text-base font-family-dm-sans leading-[1.4]">
-              Use a data oficial em que o evento começa. Modalidades e horários você configura nas próximas etapas.
-            </p>
-          </div>
-          {errors.eventDate && <p className="text-red-10 text-sm">{errors.eventDate}</p>}
-        </div>
-      </div>
-
-      {/* Registration period */}
-      <div className="flex flex-col gap-5 md:gap-[20px]">
-        <h2 className="text-gray-12 text-lg font-semibold font-manrope leading-[1.1]">Inscrição</h2>
-        <div className="flex flex-col md:flex-row gap-9 md:gap-[72px] items-stretch md:items-start">
-          <div className="flex flex-col gap-3 md:gap-[12px] min-w-0">
-            <label className="text-gray-12 text-base font-family-dm-sans">Data de início das inscrições</label>
-            <div className="flex gap-3 items-end w-full">
-              <div className="min-w-0 flex-1 md:flex-none">
-                <DatePicker value={values.registrationStartDate} onChange={(v) => handleDateChange("registrationStartDate", v || "")} placeholder={getCurrentDatePlaceholder()} className="w-full md:w-max" error={!!errors.registrationStartDate} disablePastDates={false} />
+        {/* Name + event date */}
+        <div className="flex flex-col md:flex-row gap-9 md:gap-3 w-full items-stretch md:items-baseline">
+          <div className="flex flex-col gap-3 flex-1 min-w-0">
+            <div className="flex flex-col gap-2">
+              <div className="flex items-center justify-between gap-3">
+                <label htmlFor={`${formId}-name`} className="text-gray-12 text-base font-family-dm-sans">Nome do evento</label>
               </div>
-              <div className="w-[112px] shrink-0 md:w-auto">
-                <TimePicker
-                  value={values.registrationStartDate?.trim() ? values.registrationStartTime?.trim() || "00:00" : values.registrationStartTime || ""}
-                  onChange={(v) => handleTimeChange("registrationStartTime", v)}
-                  className="w-full md:w-max"
+              <Input
+                id={`${formId}-name`}
+                type="text"
+                name="name"
+                value={values.name}
+                onChange={handleInputChange}
+                placeholder="Ex: Corrida Pena Nubas 2025"
+                className={`h-12 shadow-none ${errors.name ? "border-red-10" : ""}`}
+                maxLength={EVENT_NAME_MAX_LENGTH}
+              />
+            </div>
+            {errors.name && <p className="text-red-10 text-sm">{errors.name}</p>}
+          </div>
+
+          <div className="flex flex-col gap-3 w-full md:w-1/2 shrink-0">
+            <div className="flex flex-col gap-2">
+              <div className="flex items-center gap-1.5">
+                <label className="text-gray-12 text-base font-family-dm-sans">Data do evento</label>
+                <FieldHelpTooltip
+                  label="Data do evento"
+                  text="Use a data oficial em que o evento começa."
                 />
               </div>
+              <DatePicker
+                value={values.eventDate}
+                onChange={(value) => handleDateChange("eventDate", value || "")}
+                placeholder={getCurrentDatePlaceholder()}
+                className="w-full md:w-max"
+                hideIcon={false}
+                error={!!errors.eventDate}
+                // Seleção livre: qualquer data (a validação de ordem/erro é inline).
+                disablePastDates={false}
+              />
             </div>
-            {errors.registrationStartDate && <p className="text-red-10 text-sm">{errors.registrationStartDate}</p>}
-          </div>
-
-          <div className="flex flex-col gap-3 md:gap-[12px] min-w-0">
-            <label className="text-gray-12 text-base font-family-dm-sans">Data de encerramento das inscrições</label>
-            <div className="flex gap-3 items-end w-full">
-              <div className="min-w-0 flex-1 md:flex-none">
-                <DatePicker value={values.registrationEndDate} onChange={(v) => handleDateChange("registrationEndDate", v || "")} placeholder={getCurrentDatePlaceholder()} className="w-full md:w-max" error={!!errors.registrationEndDate} disablePastDates={false} />
-              </div>
-              <div className="w-[112px] shrink-0 md:w-auto">
-                <TimePicker
-                  value={values.registrationEndDate?.trim() ? values.registrationEndTime?.trim() || "00:00" : values.registrationEndTime || ""}
-                  onChange={(v) => handleTimeChange("registrationEndTime", v)}
-                  className="w-full md:w-max"
-                />
-              </div>
-            </div>
-            {errors.registrationEndDate && <p className="text-red-10 text-sm">{errors.registrationEndDate}</p>}
-          </div>
-        </div>
-        {errors.registrationPeriod && <p className="text-red-10 text-sm">{errors.registrationPeriod}</p>}
-      </div>
-
-      {/* Location */}
-      <div className="flex flex-col gap-4 md:gap-[12px]">
-        <div className="flex flex-col gap-2 md:gap-[12px]">
-          <h2 className="text-gray-12 text-lg font-semibold font-manrope leading-[1.1]">Local do evento</h2>
-          <p className="text-gray-11 text-sm md:text-base font-family-dm-sans leading-[1.4] md:leading-[1.3]">
-            Informe onde o evento será realizado. Essas informações aparecem na página e ajudam o participante a chegar ao destino.
-          </p>
-        </div>
-
-        <div className="gap-2 w-full grid grid-cols-1 md:grid-cols-2 md:pr-3">
-          <div className="flex flex-col gap-2 w-full">
-            <label className="text-gray-12 text-base font-family-dm-sans">CEP</label>
-            <Input type="text" name="cep" value={values.cep} onChange={handleCEPChange} placeholder="00000-000" maxLength={9} className={`h-12 ${errors.cep ? "border-red-10" : ""}`} />
-            {loadingCEP && <p className="text-gray-11 text-sm">Buscando endereço...</p>}
-            {errors.cep && <p className="text-red-10 text-sm">{errors.cep}</p>}
+            {errors.eventDate && <p className="text-red-10 text-sm">{errors.eventDate}</p>}
           </div>
         </div>
 
-        <div className={`grid transition-[grid-template-rows] duration-300 ease-in-out ${showAddressFields ? "grid-rows-[1fr]" : "grid-rows-[0fr]"}`}>
-          <div className={`overflow-hidden transition-opacity duration-300 ${showAddressFields ? "opacity-100" : "opacity-0"}`}>
-            <div className="flex flex-col md:flex-row md:flex-wrap gap-5 items-stretch md:items-start pt-1">
-              <div className="flex flex-col gap-2 w-full md:min-w-[365px] md:flex-1">
-                <label className="text-gray-12 text-base font-family-dm-sans">Rua</label>
-                <Input type="text" name="street" value={values.street} onChange={handleInputChange} placeholder="Digite o nome da rua" className={`h-12 ${errors.street ? "border-red-10" : ""}`} />
-                {errors.street && <p className="text-red-10 text-sm">{errors.street}</p>}
-              </div>
-
-              <div className="flex flex-col gap-2 w-full md:min-w-[365px] md:flex-1">
-                <label className="text-gray-12 text-base font-family-dm-sans">Bairro</label>
-                <Input type="text" name="neighborhood" value={values.neighborhood} onChange={handleInputChange} placeholder="Digite o nome do bairro" className="h-12" />
-              </div>
-
-              <div className="flex flex-col gap-2 w-full md:min-w-[365px] md:flex-1">
-                <label className="text-gray-12 text-base font-family-dm-sans">Estado</label>
-                <SearchableSelect
-                  options={BRAZIL_STATES.map(({ uf, name }) => ({ id: uf, label: `${name} - ${uf}` }))}
-                  value={values.state ?? ""}
-                  onChange={(val) => { onChange({ state: val, city: "" }); if (errors.state) onErrorsChange((prev) => ({ ...prev, state: "" })); if (errors.city) onErrorsChange((prev) => ({ ...prev, city: "" })); }}
-                  placeholder="Selecione o estado"
-                  searchPlaceholder="Pesquisar estado..."
-                  emptyText="Nenhum estado encontrado"
-                  error={!!errors.state}
-                />
-                {errors.state && <p className="text-red-10 text-sm">{errors.state}</p>}
-              </div>
-
-              <div className="flex flex-col gap-2 w-full md:min-w-[365px] md:flex-1">
-                <label className="text-gray-12 text-base font-family-dm-sans">Cidade</label>
-                <SearchableSelect
-                  options={stateCities.map((c) => ({ id: c, label: c }))}
-                  value={values.city ?? ""}
-                  onChange={(val) => { onChange({ city: val }); if (errors.city) onErrorsChange((prev) => ({ ...prev, city: "" })); }}
-                  placeholder={!values.state ? "Selecione o estado primeiro" : "Selecione a cidade"}
-                  searchPlaceholder="Pesquisar cidade..."
-                  emptyText="Nenhuma cidade encontrada"
-                  disabled={!values.state}
-                  loading={loadingCities}
-                  loadingText="Carregando cidades..."
-                  error={!!errors.city}
-                />
-                {errors.city && <p className="text-red-10 text-sm">{errors.city}</p>}
-              </div>
-
-
-
-              <div className="flex flex-col gap-2 w-full">
-                <div className="flex items-center gap-1.5 flex-wrap">
-                  <label htmlFor={`${formId}-google-maps`} className="text-gray-12 text-base font-family-dm-sans">URL do google</label>
-                  <GoogleMapsUrlHelpTooltip />
-                </div>
-                <div className="relative">
-                  <LocationIcon className="absolute left-3 top-1/2 -translate-y-1/2 size-5 text-gray-12 pointer-events-none" />
-                  <Input id={`${formId}-google-maps`} type="url" name="googleMapsLink" value={values.googleMapsLink} onChange={handleInputChange} placeholder="www.google.com/maps/search/?api=1&query=Av.+Paulista+2084+S%C3%A3o+Paulo+SP" className={`h-12 pl-10 ${errors.googleMapsLink ? "border-red-10" : ""}`} />
-                </div>
-                {errors.googleMapsLink && <p className="text-red-10 text-sm">{errors.googleMapsLink}</p>}
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Contact email */}
-      <div className="flex flex-col gap-4 md:gap-[12px]">
-        <div className="flex flex-col gap-2">
-          <div className="flex items-center gap-2">
-            <h2 className="text-gray-12 text-lg font-semibold font-manrope leading-[1.1]">Email de atendimento</h2>
-            <ContactEmailHelpTooltip />
-          </div>
-          <p className="text-gray-11 text-sm md:text-base font-family-dm-sans leading-[1.4] md:leading-[1.3]">Utilizado para receber dúvidas dos participantes</p>
-        </div>
-        <div className="flex flex-col gap-2 w-full md:w-1/2">
-          <div className="relative">
-            <EmailIcon className="absolute left-3 top-1/2 -translate-y-1/2 size-5 text-gray-11 pointer-events-none" />
-            <Input type="email" name="contactEmail" value={values.contactEmail} onChange={handleInputChange} placeholder="atendimento@seuevento.com.br" className={`h-12 pl-10 ${errors.contactEmail ? "border-red-10" : ""}`} />
-          </div>
-          {errors.contactEmail && <p className="text-red-10 text-sm">{errors.contactEmail}</p>}
-        </div>
-      </div>
-
-      {/* Social networks */}
-      <div className="flex flex-col gap-4 md:gap-3">
-        <div className="flex flex-col gap-2">
-          <h2 className="text-gray-12 text-lg font-semibold font-manrope leading-[1.1]">Redes sociais</h2>
-          <p className="text-gray-11 text-sm md:text-base font-family-dm-sans leading-[1.4] md:leading-[1.3]">
-            Adicione os canais oficiais do evento. Eles aparecem na página pública para que os participantes possam acompanhar atualizações
-          </p>
-        </div>
-        <div className="bg-gray-2 border border-gray-6 rounded-xl p-5 flex flex-col gap-5">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-6">
-            {SOCIAL_NETWORKS.map(({ key, prefix, base, placeholder, Icon }) => {
-              const handle = socialHandle((values as any)[key], base, prefix);
-              return (
-                <div key={key} className="flex items-center gap-4 min-w-0">
-                  <Icon className="size-8 shrink-0 text-gray-12" />
-                  <div className="flex flex-1 min-w-0 h-11 items-stretch rounded-lg border border-gray-6 overflow-hidden focus-within:border-gray-8 transition-colors">
-                    <span className="flex items-center px-3 bg-gray-3 text-gray-12 font-family-dm-sans text-base whitespace-nowrap border-r border-gray-6 select-none">
-                      {prefix}
-                    </span>
-                    <input
-                      type="text"
-                      inputMode="url"
-                      value={handle}
-                      onChange={(e) => {
-                        const h = socialHandle(e.target.value, base, prefix);
-                        onChange({ [key]: h ? base + h : "" } as any);
-                      }}
-                      placeholder={placeholder}
-                      className="flex-1 min-w-0 px-3 bg-transparent outline-none text-gray-12 placeholder:text-gray-11 font-family-dm-sans text-base"
+        {/* Registration period */}
+        <div className="flex flex-col gap-5 md:gap-[20px]">
+          <h2 className="text-gray-12 text-lg font-semibold font-manrope leading-[1.1]">Inscrição</h2>
+          <div className="flex flex-col md:flex-row md:flex-wrap gap-9 md:gap-[72px] items-stretch md:items-baseline">
+            <div className="flex flex-col gap-3 md:gap-[12px] min-w-0">
+              <label className="text-gray-12 text-base font-family-dm-sans">Data de início das inscrições</label>
+              {/* Wrapper md:w-max trava a largura da coluna no grupo de inputs; a
+                mensagem de erro (w-0 min-w-full) contribui 0 pra largura intrínseca
+                e só QUEBRA dentro dela — sem empurrar o campo de encerramento. */}
+              <div className="flex flex-col gap-2 w-full md:w-max">
+                <div className="flex gap-3 items-end w-full">
+                  <div className="min-w-0 flex-1 md:flex-none">
+                    <DatePicker value={values.registrationStartDate} onChange={(v) => handleDateChange("registrationStartDate", v || "")} placeholder={getCurrentDatePlaceholder()} className="w-full md:w-max" error={!!errors.registrationStartDate} disablePastDates={false} />
+                  </div>
+                  <div className="w-[112px] shrink-0 md:w-auto">
+                    <TimePicker
+                      value={values.registrationStartDate?.trim() ? values.registrationStartTime?.trim() || "00:00" : values.registrationStartTime || ""}
+                      onChange={(v) => handleTimeChange("registrationStartTime", v)}
+                      className="w-full md:w-max"
                     />
                   </div>
                 </div>
-              );
-            })}
-          </div>
-        </div>
-      </div>
-
-      {/* PDF regulation */}
-      <div className="flex flex-col items-stretch justify-center w-full">
-        <div
-          className="border-2 border-dashed border-gray-6 rounded-xl md:rounded-[12px] p-4 md:p-6 flex flex-col md:flex-row gap-4 items-center justify-center w-full cursor-pointer hover:border-gray-6 transition-colors min-h-[140px] md:min-h-0"
-          onDrop={handleDrop}
-          onDragOver={(e) => e.preventDefault()}
-          onClick={() => fileInputRef.current?.click()}
-        >
-          <div className="md:hidden flex flex-col items-center justify-center gap-2 text-center px-2">
-            <Plus className="size-10 text-primary-11" strokeWidth={1.5} />
-            <p className="text-primary-11 text-sm font-bold font-family-dm-sans leading-[1.35]">Clique e envie o regulamento do evento em PDF.</p>
-            <p className="text-gray-11 text-xs font-family-dm-sans">Opcional · máx. 10MB</p>
-          </div>
-          <div className="hidden md:flex gap-4 items-center justify-center w-full">
-            <div className="flex items-center justify-center size-16 shrink-0">
-              <Plus className="size-16 text-primary-11" strokeWidth={1.5} />
-            </div>
-            <div className="flex flex-col gap-4 items-start justify-center flex-1">
-              <div className="flex flex-col gap-2 items-start justify-center w-full">
-                <p className="text-primary-11 text-base font-bold font-family-dm-sans leading-[1.3] text-start w-full">Envie o regulamento do evento em PDF para que os participantes possam visualizar na página do evento.</p>
-                <p className="text-gray-12 text-base font-semibold font-manrope leading-[1.1] w-full">Formato recomendado: PDF</p>
               </div>
-              <p className="text-gray-12 text-base font-bold font-family-dm-sans leading-[1.3]">Arraste um arquivo PDF para este campo ou clique aqui</p>
+            </div>
+
+            <div className="flex flex-col gap-3 md:gap-[12px] min-w-0">
+              <label className="text-gray-12 text-base font-family-dm-sans">Data de encerramento das inscrições</label>
+              {/* Mesmo padrão da coluna de início: erro quebra dentro da largura dos
+                inputs (w-0 min-w-full) sem esticar a coluna. */}
+              <div className="flex flex-col gap-2 w-full md:w-max">
+                <div className="flex gap-3 items-end w-full">
+                  <div className="min-w-0 flex-1 md:flex-none">
+                    <DatePicker value={values.registrationEndDate} onChange={(v) => handleDateChange("registrationEndDate", v || "")} placeholder={getCurrentDatePlaceholder()} className="w-full md:w-max" error={!!errors.registrationEndDate} disablePastDates={false} />
+                  </div>
+                  <div className="w-[112px] shrink-0 md:w-auto">
+                    <TimePicker
+                      value={values.registrationEndDate?.trim() ? values.registrationEndTime?.trim() || "00:00" : values.registrationEndTime || ""}
+                      onChange={(v) => handleTimeChange("registrationEndTime", v)}
+                      className="w-full md:w-max"
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Vagas do evento — teto de participantes (à direita do encerramento).
+              Vazio = ilimitado. Só dígitos. Erro (ex.: teto < inscritos, vindo do
+              backend) quebra dentro da largura do input (w-0 min-w-full), sem esticar. */}
+            <div className="flex flex-col gap-3 md:gap-[12px] min-w-0">
+              <div className="flex items-center gap-1.5">
+                <label htmlFor={`${formId}-max-participants`} className="text-gray-12 text-base font-family-dm-sans">
+                  Vagas do evento
+                </label>
+                <FieldHelpTooltip label="Vagas do evento" text={vagasTooltipText} />
+              </div>
+              <div className="flex flex-col gap-2 w-1/2 md:w-[140px]">
+                <div className="relative">
+                  <ParticipantsIcon className="absolute left-3 top-1/2 -translate-y-1/2 size-5 text-gray-11 pointer-events-none" />
+                  <Input
+                    id={`${formId}-max-participants`}
+                    type="text"
+                    inputMode="numeric"
+                    name="maxParticipants"
+                    value={values.maxParticipants ?? ""}
+                    onChange={handleMaxParticipantsChange}
+                    placeholder="Ex: 500"
+                    className={`h-12 w-full pl-10 shadow-none ${errors.maxParticipants ? "border-red-10" : ""}`}
+                  />
+                </div>
+                {errors.maxParticipants && <p className="text-red-10 text-sm w-0 min-w-full">{errors.maxParticipants}</p>}
+              </div>
+            </div>
+          </div>
+          {registrationError && <p className="text-red-10 text-sm">{registrationError}</p>}
+        </div>
+
+        {/* Local do evento — seleção 100% pelo MAPA. O endereço (cep/rua/bairro/
+            cidade/estado) é derivado do local escolhido (reverse geocode) e não
+            é mais editado manualmente. */}
+        <div className="flex flex-col gap-4 md:gap-[12px]">
+          <div className="flex flex-col gap-2 md:gap-[12px]">
+            <h2 className="text-gray-12 text-lg font-semibold font-manrope leading-[1.1]">Local do evento</h2>
+            <p className="text-gray-11 text-sm md:text-base font-family-dm-sans leading-[1.4] md:leading-[1.3]">
+              Informe onde o evento será realizado. Essas informações aparecem na página e ajudam o participante a chegar ao destino.
+            </p>
+          </div>
+
+          <div className="flex flex-col gap-2 w-full md:w-1/2">
+            {hasLocation ? (
+              <div className={`flex items-center justify-between gap-3 h-12 rounded-lg border px-3 ${errors.mapLocation ? "border-red-10" : "border-gray-6"}`}>
+                <span className="flex items-center gap-2 min-w-0">
+                  <LocationIcon className="size-5 text-primary-11 shrink-0" />
+                  <span className="truncate text-gray-12 text-base font-family-dm-sans">{locationLabel}</span>
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setMapOpen(true)}
+                  className="shrink-0 text-primary-11 text-sm font-semibold font-family-dm-sans hover:underline"
+                >
+                  Alterar
+                </button>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setMapOpen(true)}
+                className={`flex items-center gap-2 h-12 rounded-lg border px-3 text-left transition-colors hover:border-gray-8 ${errors.mapLocation ? "border-red-10" : "border-gray-6"}`}
+              >
+                <LocationIcon className="size-5 text-gray-12 shrink-0" />
+                <span className="text-gray-11 text-base font-family-dm-sans">Selecionar local no mapa</span>
+              </button>
+            )}
+            {!mapsEnabled && (
+              <p className="text-gray-11 text-sm font-family-dm-sans leading-[1.4]">
+                A integração de mapa ainda não foi configurada neste ambiente.
+              </p>
+            )}
+            {errors.mapLocation && <p className="text-red-10 text-sm">{errors.mapLocation}</p>}
+          </div>
+        </div>
+
+        {/* Contact email */}
+        <div className="flex flex-col gap-4 md:gap-[12px]">
+          <div className="flex flex-col gap-2">
+            <div className="flex items-center gap-2">
+              <h2 className="text-gray-12 text-lg font-semibold font-manrope leading-[1.1]">Email de atendimento</h2>
+              <ContactEmailHelpTooltip />
+            </div>
+            <p className="text-gray-11 text-sm md:text-base font-family-dm-sans leading-[1.4] md:leading-[1.3]">Utilizado para receber dúvidas dos participantes</p>
+          </div>
+          <div className="flex flex-col gap-2 w-full md:w-1/2">
+            <div className="relative">
+              <EmailIcon className="absolute left-3 top-1/2 -translate-y-1/2 size-5 text-gray-11 pointer-events-none" />
+              <Input type="email" name="contactEmail" value={values.contactEmail} onChange={handleInputChange} placeholder="atendimento@seuevento.com.br" className={`h-12 pl-10 ${errors.contactEmail ? "border-red-10" : ""}`} />
+            </div>
+            {errors.contactEmail && <p className="text-red-10 text-sm">{errors.contactEmail}</p>}
+          </div>
+        </div>
+
+        {/* Social networks */}
+        <div className="flex flex-col gap-4 md:gap-3">
+          <div className="flex flex-col gap-2">
+            <h2 className="text-gray-12 text-lg font-semibold font-manrope leading-[1.1]">Redes sociais</h2>
+            <p className="text-gray-11 text-sm md:text-base font-family-dm-sans leading-[1.4] md:leading-[1.3]">
+              Adicione os canais oficiais do evento. Eles aparecem na página pública para que os participantes possam acompanhar atualizações
+            </p>
+          </div>
+          <div className="bg-gray-2 border border-gray-6 rounded-xl p-5 flex flex-col gap-5">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-6">
+              {SOCIAL_NETWORKS.map(({ key, prefix, base, placeholder, Icon }) => {
+                const handle = socialHandle((values as any)[key], base, prefix);
+                return (
+                  <div key={key} className="flex items-center gap-4 min-w-0">
+                    <Icon className="size-8 shrink-0 text-gray-12" />
+                    <div className="flex flex-1 min-w-0 h-11 items-stretch rounded-lg border border-gray-6 overflow-hidden focus-within:border-gray-8 transition-colors">
+                      <span className="flex items-center px-3 bg-gray-3 text-gray-12 font-family-dm-sans text-base whitespace-nowrap border-r border-gray-6 select-none">
+                        {prefix}
+                      </span>
+                      <input
+                        type="text"
+                        inputMode="url"
+                        value={handle}
+                        onChange={(e) => {
+                          const h = socialHandle(e.target.value, base, prefix);
+                          onChange({ [key]: h ? base + h : "" } as any);
+                        }}
+                        placeholder={placeholder}
+                        className="flex-1 min-w-0 px-3 bg-transparent outline-none text-gray-12 placeholder:text-gray-11 font-family-dm-sans text-base"
+                      />
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </div>
         </div>
-        <input ref={fileInputRef} type="file" accept="application/pdf" onChange={handlePDFSelect} className="hidden" />
 
-        {pdfFile && (
-          <div className="mt-2 flex flex-wrap items-center gap-2">
-            <p className="text-gray-11 text-sm">Arquivo selecionado: {pdfFile.name}</p>
-            <button
-              type="button"
-              onClick={() => {
-                setPdfFile(null);
-                setPdfUrl("");
-                onClearLocalRegulationDraft?.();
-                if (fileInputRef.current) fileInputRef.current.value = "";
-              }}
-              className="text-red-10 text-sm hover:text-red-11"
-            >
-              Remover
-            </button>
+        {/* PDF regulation */}
+        <div className="flex flex-col items-stretch justify-center w-full">
+          <div
+            className="border-2 border-dashed border-gray-6 rounded-xl md:rounded-[12px] p-4 md:p-6 flex flex-col md:flex-row gap-4 items-center justify-center w-full cursor-pointer hover:border-gray-6 transition-colors min-h-[140px] md:min-h-0"
+            onDrop={handleDrop}
+            onDragOver={(e) => e.preventDefault()}
+            onClick={() => fileInputRef.current?.click()}
+          >
+            <div className="md:hidden flex flex-col items-center justify-center gap-2 text-center px-2">
+              <Plus className="size-10 text-primary-11" strokeWidth={1.5} />
+              <p className="text-primary-11 text-sm font-bold font-family-dm-sans leading-[1.35]">Clique e envie o regulamento do evento em PDF.</p>
+              <p className="text-gray-11 text-xs font-family-dm-sans">Opcional · máx. 10MB</p>
+            </div>
+            <div className="hidden md:flex gap-4 items-center justify-center w-full">
+              <div className="flex items-center justify-center size-16 shrink-0">
+                <Plus className="size-16 text-primary-11" strokeWidth={1.5} />
+              </div>
+              <div className="flex flex-col gap-4 items-start justify-center flex-1">
+                <div className="flex flex-col gap-2 items-start justify-center w-full">
+                  <p className="text-primary-11 text-base font-bold font-family-dm-sans leading-[1.3] text-start w-full">Envie o regulamento do evento em PDF para que os participantes possam visualizar na página do evento.</p>
+                  <p className="text-gray-12 text-base font-semibold font-manrope leading-[1.1] w-full">Formato recomendado: PDF</p>
+                </div>
+                <p className="text-gray-12 text-base font-bold font-family-dm-sans leading-[1.3]">Arraste um arquivo PDF para este campo ou clique aqui</p>
+              </div>
+            </div>
           </div>
-        )}
+          <input ref={fileInputRef} type="file" accept="application/pdf" onChange={handlePDFSelect} className="hidden" />
 
-        {!pdfFile && (pdfUrl || (values.regulationUrl && !values.regulationUrl.startsWith("data:")) || hasLocalRegulationDraft) && (
-          <div className="mt-2 flex flex-wrap items-center gap-2">
-            <p className="text-gray-11 text-sm">PDF atual do regulamento</p>
-            {pdfUrl || (values.regulationUrl && !values.regulationUrl.startsWith("data:")) ? (
-              <a href={pdfUrl || values.regulationUrl} target="_blank" rel="noopener noreferrer" className="text-primary-11 text-sm hover:underline">
-                Ver PDF
-              </a>
-            ) : (
-              <span className="text-gray-11 text-sm">Guardado no rascunho (será enviado ao concluir o banner)</span>
-            )}
-          </div>
-        )}
-      </div>
-    </form>
+          {pdfFile && (
+            <div className="mt-2 flex flex-wrap items-center gap-2">
+              <p className="text-gray-11 text-sm">Arquivo selecionado: {pdfFile.name}</p>
+              <button
+                type="button"
+                onClick={() => {
+                  setPdfFile(null);
+                  setPdfUrl("");
+                  onClearLocalRegulationDraft?.();
+                  if (fileInputRef.current) fileInputRef.current.value = "";
+                }}
+                className="text-red-10 text-sm hover:text-red-11"
+              >
+                Remover
+              </button>
+            </div>
+          )}
+
+          {!pdfFile && (pdfUrl || (values.regulationUrl && !values.regulationUrl.startsWith("data:")) || hasLocalRegulationDraft) && (
+            <div className="mt-2 flex flex-wrap items-center gap-2">
+              <p className="text-gray-11 text-sm">PDF atual do regulamento</p>
+              {pdfUrl || (values.regulationUrl && !values.regulationUrl.startsWith("data:")) ? (
+                <a href={pdfUrl || values.regulationUrl} target="_blank" rel="noopener noreferrer" className="text-primary-11 text-sm hover:underline">
+                  Ver PDF
+                </a>
+              ) : (
+                <span className="text-gray-11 text-sm">Guardado no rascunho (será enviado ao concluir o banner)</span>
+              )}
+            </div>
+          )}
+        </div>
+      </form>
+
+      <LocationPickerModal
+        isOpen={mapOpen}
+        onClose={() => setMapOpen(false)}
+        initialLat={values.latitude}
+        initialLng={values.longitude}
+        initialName={values.locationName}
+        fallbackQuery={mapFallbackQuery}
+        initialCenter={mapInitialCenter}
+        onConfirm={handleLocationConfirm}
+      />
+    </>
   );
 }

@@ -15,10 +15,9 @@ export interface Event {
   name: string;
   description: string;
   location: string;
+  // Imagem do evento = BANNER apenas. A antiga "imagem do card" (logoUrl/
+  // cardImageUrl) foi descontinuada — todo o app exibe o banner.
   bannerUrl: string;
-  /** Imagem/ícone do card do evento (logo). Pode vir como logoUrl ou cardImageUrl. */
-  logoUrl?: string | null;
-  cardImageUrl?: string | null;
   city: string;
   state: string;
   country: string;
@@ -29,6 +28,15 @@ export interface Event {
   /** Whitelist de métodos do checkout (tela financeira). Ausente = todos. */
   acceptedPaymentMethods?: AcceptedPaymentMethod[];
   googleMapsLink: string;
+  /**
+   * Local do evento por coordenadas (seleção no mapa). Opcionais até o backend
+   * persistir os novos campos; `googleMapsLink` segue derivado destas para
+   * compatibilidade com o consumo público (embed/EventMap).
+   */
+  latitude?: number | null;
+  longitude?: number | null;
+  /** Rótulo amigável do local escolhido no mapa (nome do POI / endereço). */
+  locationName?: string | null;
   stravaRouteId?: string;
   /** URL do regulamento do evento (ex.: PDF) */
   regulationUrl?: string;
@@ -40,6 +48,12 @@ export interface Event {
   instagram?: string;
   registrationStartDate: string;
   registrationEndDate: string;
+  /**
+   * Vagas do evento: teto máximo de participantes (inscrições). `null`/ausente =
+   * ilimitado. É o limite absoluto sobre a soma dos lotes; o "esgotado" derivado
+   * dele vem em `hasRegistrationSlotsAvailable` (não recalcular no front).
+   */
+  maxParticipants?: number | null;
   hasRegistrationSlotsAvailable?: boolean;
   /** Inscrições suspensas (alternativa ou complemento a status SUSPENDED). */
   isSuspended?: boolean;

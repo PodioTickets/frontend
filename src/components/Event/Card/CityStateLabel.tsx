@@ -125,10 +125,18 @@ export function CityStateLabel({ city, state, className }: CityStateLabelProps) 
           medida, ela já cabe e o CSS não age → sufixo encosta no "…". Se a
           medição falhar e mantivermos a cidade inteira, o CSS trunca normalmente
           (vão de poucos px) — nunca some com o nome. */}
-      <span ref={cityRef} className="min-w-0 truncate">
+      {/* text-box-trim nos spans REAIS de texto (o wrapper é flex → não trima):
+          corta o line-box p/ a altura das maiúsculas, batendo a altura do Figma. */}
+      <span
+        ref={cityRef}
+        className="min-w-0 truncate [text-box-trim:trim-both]"
+      >
         {displayCity}
       </span>
-      <span ref={suffixRef} className="shrink-0 whitespace-nowrap">
+      <span
+        ref={suffixRef}
+        className="shrink-0 whitespace-nowrap [text-box-trim:trim-both]"
+      >
         ,&nbsp;{stateRaw}
       </span>
     </span>

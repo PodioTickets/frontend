@@ -25,7 +25,7 @@ export const organizerService = new OrganizerService(apiClient);
 export const adminService = new AdminService(apiClient);
 export const geoService = new GeoService(apiClient);
 
-export type { GeoState, GeoCity } from "./geo/GeoService";
+export type { GeoState, GeoCity, IpLocation } from "./geo/GeoService";
 
 export type {
   AdminAuditLogItem,

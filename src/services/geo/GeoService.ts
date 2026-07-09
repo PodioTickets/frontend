@@ -23,6 +23,15 @@ export interface GeoCity {
   name: string;
 }
 
+/** Localização aproximada (nível cidade) resolvida pelo IP do cliente no servidor. */
+export interface IpLocation {
+  lat: number;
+  lng: number;
+  city: string | null;
+  region: string | null;
+  country: string | null;
+}
+
 export class GeoService {
   constructor(private apiClient: ApiClient) {}
 
@@ -45,5 +54,23 @@ export class GeoService {
     );
     const cities = data?.data?.cities;
     return Array.isArray(cities) ? (cities as GeoCity[]) : [];
+  }
+
+  /**
+   * Localização aproximada (cidade) pelo IP do cliente — usada só para CENTRALIZAR
+   * o mapa ao criar um evento. Retorna `null` quando o servidor não resolve o IP
+   * (privado/dev, sem match). Resiliente: nunca lança (não é dado crítico).
+   */
+  async getIpLocation(): Promise<IpLocation | null> {
+    try {
+      const { data } = await this.apiClient.get(`/api/v1/geo/ip-location`);
+      const loc = data?.data?.location;
+      if (loc && typeof loc.lat === "number" && typeof loc.lng === "number") {
+        return loc as IpLocation;
+      }
+    } catch {
+      /* sem localização → mapa cai no centro do Brasil */
+    }
+    return null;
   }
 }

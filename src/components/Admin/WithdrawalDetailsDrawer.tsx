@@ -54,7 +54,7 @@ export interface WithdrawalItem {
     id: string;
     name: string;
     slug?: string;
-    logoUrl: string;
+    bannerUrl: string;
     organizationId: string;
     organization: {
       id: string;

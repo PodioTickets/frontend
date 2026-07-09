@@ -46,6 +46,8 @@ export const SearchInput = React.forwardRef<HTMLInputElement, SearchInputProps>(
           type="text"
           value={value}
           className={cn(
+            // text-sm (14px) no desktop; no mobile a trava global em globals.css
+            // sobe pra 16px pra evitar o zoom automático do iOS Safari ao focar.
             "flex h-10 w-full min-w-0 rounded-lg md:rounded-md border bg-[#2A2A2A] pl-[44px] pr-10 py-1 text-sm text-gray-4 placeholder:text-gray-4 border-transparent transition-colors duration-200 outline-none",
             "focus-visible:border-primary-10 focus-visible:ring-primary-10 focus-visible:ring-[1px]",
             "disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50",

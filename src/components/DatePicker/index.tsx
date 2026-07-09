@@ -13,6 +13,14 @@ import { ArrowButton } from "@/components/ArrowButton";
 import { brasiliaTodayCivilStart } from "@/utils/datetimeBR";
 import { Button } from "../Button";
 
+/**
+ * Placeholder padrao dos campos de data: dia/mes zerados + ano ATUAL de Brasilia
+ * ("00/00/2026" em 2026), em vez de "00/00/0000". Ancora em `brasiliaTodayCivilStart`
+ * (nao no fuso do device) pra bater com a regra de "hoje" do resto do componente.
+ */
+const defaultDatePlaceholder = (): string =>
+  `00/00/${brasiliaTodayCivilStart().getFullYear()}`;
+
 const formatDate = (date: Date | null | string | undefined): string => {
   if (!date) return "00/00/0000";
 
@@ -85,7 +93,7 @@ interface DatePickerProps {
 export function DatePicker({
   value,
   onChange,
-  placeholder = "00/00/0000",
+  placeholder = defaultDatePlaceholder(),
   className,
   disabled = false,
   minDate,

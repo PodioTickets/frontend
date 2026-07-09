@@ -38,7 +38,7 @@ export function DateRangePicker({ onSelect, className, value, allowPastDates }: 
   };
   
   return (
-    <div className={cn("p-2 transition-all duration-300", className)}>
+    <div className={cn("p-2 w-full flex justify-center transition-all duration-300", className)}>
       <Calendar
         mode="range"
         defaultMonth={date?.from}

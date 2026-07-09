@@ -23,14 +23,17 @@ function validForm(): EditEventFormData {
     registrationStartTime: "08:00",
     registrationEndDate: "2026-07-01",
     registrationEndTime: "18:00",
+    maxParticipants: "500",
     cep: "01001-000",
     street: "Praça da Sé",
     neighborhood: "Sé",
     city: "São Paulo",
     state: "SP",
-    googleMapsLink: "https://maps.google.com/?q=se",
+    googleMapsLink: "https://www.google.com/maps/search/?api=1&query=-23.5501,-46.6339",
+    latitude: "-23.5501",
+    longitude: "-46.6339",
+    locationName: "Praça da Sé, São Paulo - SP",
     bannerUrl: "",
-    cardImageUrl: "",
     regulationUrl: "",
     description: "",
     contactEmail: "contato@evento.com",
@@ -117,6 +120,21 @@ describe("validateEventInformation", () => {
     );
   });
 
+  it("início depois do evento E depois do encerramento → só UM erro (no início, sem período)", () => {
+    // Início tardio viola as duas regras (antes do evento + antes do encerramento).
+    // Deve exibir apenas o erro específico do input de início, não os dois juntos.
+    const errors = validateEventInformation({
+      ...validForm(),
+      eventDate: "2026-08-10",
+      registrationStartDate: "2026-08-15",
+      registrationEndDate: "2026-08-12", // encerra ANTES do início tardio
+    });
+    expect(errors.registrationStartDate).toBe(
+      "A data de início das inscrições deve ser antes da data do evento.",
+    );
+    expect(errors.registrationPeriod).toBeUndefined();
+  });
+
   it("início das inscrições ANTES do evento → sem erro de início", () => {
     const errors = validateEventInformation({
       ...validForm(),
@@ -149,22 +167,51 @@ describe("validateEventInformation", () => {
     );
   });
 
-  it("valida CEP: obrigatório e 8 dígitos", () => {
-    expect(validateEventInformation({ ...validForm(), cep: "" }).cep).toBe("CEP é obrigatório");
-    expect(validateEventInformation({ ...validForm(), cep: "123" }).cep).toBe("CEP inválido");
+  it("exige vagas do evento (obrigatório e ≥ 1)", () => {
+    expect(validateEventInformation({ ...validForm(), maxParticipants: "" }).maxParticipants).toBe(
+      "Vagas do evento é obrigatório",
+    );
+    expect(validateEventInformation({ ...validForm(), maxParticipants: "0" }).maxParticipants).toBe(
+      "As vagas do evento devem ser ao menos 1.",
+    );
+    expect(validateEventInformation({ ...validForm(), maxParticipants: "500" }).maxParticipants).toBeUndefined();
   });
 
-  it("só exige endereço quando o CEP é válido", () => {
-    // CEP inválido → não cobra rua/cidade/estado/maps (espelha a UI condicional).
-    const semCep = validateEventInformation({ ...validForm(), cep: "", street: "", city: "" });
-    expect(semCep.street).toBeUndefined();
-    expect(semCep.city).toBeUndefined();
-    // CEP válido + endereço vazio → cobra.
-    const comCep = validateEventInformation({ ...validForm(), street: "", city: "", state: "", googleMapsLink: "" });
-    expect(comCep.street).toBeDefined();
-    expect(comCep.city).toBeDefined();
-    expect(comCep.state).toBeDefined();
-    expect(comCep.googleMapsLink).toBeDefined();
+  it("não exige mais endereço manual (cep/rua/cidade/estado) — derivado do mapa", () => {
+    // Endereço vazio, mas com coordenadas válidas → sem erro de endereço/local.
+    const semEndereco = validateEventInformation({
+      ...validForm(),
+      cep: "",
+      street: "",
+      neighborhood: "",
+      city: "",
+      state: "",
+    });
+    expect(semEndereco.cep).toBeUndefined();
+    expect(semEndereco.street).toBeUndefined();
+    expect(semEndereco.city).toBeUndefined();
+    expect(semEndereco.state).toBeUndefined();
+    expect(semEndereco.mapLocation).toBeUndefined();
+  });
+
+  it("exige a seleção no mapa (sem coords E sem link legado → erro de local)", () => {
+    const semLocal = validateEventInformation({
+      ...validForm(),
+      latitude: "",
+      longitude: "",
+      googleMapsLink: "",
+    });
+    expect(semLocal.mapLocation).toBeDefined();
+  });
+
+  it("evento legado (só googleMapsLink, sem lat/lng) continua válido no local", () => {
+    const legado = validateEventInformation({
+      ...validForm(),
+      latitude: "",
+      longitude: "",
+      googleMapsLink: "https://www.google.com/maps/search/?api=1&query=Praca+da+Se",
+    });
+    expect(legado.mapLocation).toBeUndefined();
   });
 
   it("valida formato de email de atendimento", () => {
@@ -177,13 +224,20 @@ describe("isEventInformationValid", () => {
   it("true para form válido, false faltando obrigatório", () => {
     expect(isEventInformationValid(validForm())).toBe(true);
     expect(isEventInformationValid({ ...validForm(), name: "" })).toBe(false);
-    expect(isEventInformationValid({ ...validForm(), cep: "123" })).toBe(false);
     expect(isEventInformationValid({ ...validForm(), contactEmail: "" })).toBe(false);
   });
 
-  it("não exige googleMapsLink (diferente da validação com mensagens)", () => {
-    // O gate do botão é mais leve: maps não entra no `canSave`.
+  it("não exige endereço manual, mas exige local (coords ou link legado)", () => {
+    // Endereço vazio + coords válidas → ainda habilita o botão.
+    expect(
+      isEventInformationValid({ ...validForm(), cep: "", street: "", city: "", state: "" }),
+    ).toBe(true);
+    // Com coords válidas, o link não é necessário.
     expect(isEventInformationValid({ ...validForm(), googleMapsLink: "" })).toBe(true);
+    // Sem coords E sem link → não habilita.
+    expect(
+      isEventInformationValid({ ...validForm(), latitude: "", longitude: "", googleMapsLink: "" }),
+    ).toBe(false);
   });
 });
 
@@ -222,21 +276,28 @@ describe("mapEventBackendErrors", () => {
       }),
     );
     expect(fieldErrors.contactEmail).toBeTruthy();
-    expect(fieldErrors.googleMapsLink).toBeTruthy();
+    // Erro de local do backend cai no slot inline do botão de mapa.
+    expect(fieldErrors.mapLocation).toBeTruthy();
   });
 
-  it("traduz nomes de endereço do backend (zipCode→cep, location→street)", () => {
+  it("erros de endereço do backend (zipCode/location/city/state) caem no slot do mapa", () => {
     const { fieldErrors } = mapEventBackendErrors(
       axiosError(400, {
         message: "Validation failed",
         details: [
           { property: "zipCode", message: "zipCode must be a string" },
           { property: "location", message: "location must be a string" },
+          { property: "city", message: "city must be a string" },
+          { property: "state", message: "state must be a string" },
         ],
       }),
     );
-    expect(fieldErrors.cep).toBeTruthy();
-    expect(fieldErrors.street).toBeTruthy();
+    // Sem inputs manuais de endereço → tudo destacado no botão do mapa.
+    expect(fieldErrors.mapLocation).toBeTruthy();
+    expect(fieldErrors.cep).toBeUndefined();
+    expect(fieldErrors.street).toBeUndefined();
+    expect(fieldErrors.city).toBeUndefined();
+    expect(fieldErrors.state).toBeUndefined();
     expect(fieldErrors.zipCode).toBeUndefined();
     expect(fieldErrors.location).toBeUndefined();
   });
@@ -249,6 +310,23 @@ describe("mapEventBackendErrors", () => {
       }),
     );
     expect(fieldErrors.eventDate).toBeTruthy();
+  });
+
+  it("erro de negócio com { field, message } → mapeia msg do servidor no campo", () => {
+    // Ex.: vagas do evento abaixo dos inscritos atuais (update valida no backend).
+    const { fieldErrors, generalMessage } = mapEventBackendErrors(
+      axiosError(400, {
+        code: "MAX_PARTICIPANTS_BELOW_CURRENT",
+        field: "maxParticipants",
+        message:
+          "As vagas do evento (50) não podem ser menores que o número de inscritos atuais (80).",
+      }),
+    );
+    expect(fieldErrors.maxParticipants).toBe(
+      "As vagas do evento (50) não podem ser menores que o número de inscritos atuais (80).",
+    );
+    // Campo destacado → sem toast geral.
+    expect(generalMessage).toBeUndefined();
   });
 
   it("slug duplicado (DUPLICATE_VALUE) → erro no campo name", () => {
