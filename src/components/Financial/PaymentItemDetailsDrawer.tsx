@@ -9,9 +9,8 @@ import {
 } from "@/components/ui/drawer";
 import { Ticket, CheckCircle, Copy, XCircleIcon } from "lucide-react";
 import { ArrowButton } from "../ArrowButton";
-import { PaymentIcon } from "react-svg-credit-card-payment-icons";
 import { PixIcon } from "@/components/Icons/PixIcon";
-import { CardIcon } from "@/components/Icons/CardIcon";
+import { CreditCardIcon } from "@/components/Icons/CreditCardIcon";
 import { organizerService } from "@/services";
 import { useViewRegistrationModal } from "@/stores/modalStore";
 import type { PaymentDetails } from "@/services/organizer/OrganizerService";
@@ -447,10 +446,8 @@ export function PaymentItemDetailsDrawer({
                   <div className="size-[36px] relative shrink-0 flex items-center justify-center">
                     {payment.method === "PIX" ? (
                       <PixIcon className="size-9 text-gray-12" />
-                    ) : payment.cardBrand ? (
-                      <PaymentIcon type={payment.cardBrand as any} format="flatRounded" className="size-9" />
                     ) : (
-                      <CardIcon className="size-9 text-gray-12" />
+                      <CreditCardIcon className="w-9" />
                     )}
                   </div>
                   <div className="flex flex-col">

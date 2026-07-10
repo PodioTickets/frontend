@@ -360,7 +360,7 @@ export default function TicketDetailsPage() {
 
         <div className="w-full flex items-center md:hidden">
           <Link href={`/events/${event.slug}`} className="[text-box-trim:trim-both] font-family-dm-sans text-end font-bold text-base text-primary-11 cursor-pointer w-full underline -mt-8 mb-6">
-            Páginas do evento
+            Página do evento
           </Link>
         </div>
 
@@ -378,11 +378,6 @@ export default function TicketDetailsPage() {
               const tab = activeTab[index] || "info";
               const qrCode = `${process.env.NEXT_PUBLIC_ROOT_SITE_URL}/user/tickets/${orderId}`;
               const ticket = participant.ticket || {};
-
-              const distance = ticket.distance
-                ? `${ticket.distance} ${ticket.distanceUnit || "Km"}`
-                : null;
-
               return (
                 <div
                   key={participant.id || index}

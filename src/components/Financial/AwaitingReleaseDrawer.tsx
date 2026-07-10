@@ -12,6 +12,7 @@ import { X, FileText, Search } from "lucide-react";
 import { CalendarIcon } from "@/components/Icons/CalendarIcon";
 import { PixIcon } from "@/components/Icons/PixIcon";
 import { CardIcon } from "@/components/Icons/CardIcon";
+import { CreditCardIcon } from "@/components/Icons/CreditCardIcon";
 import { PaymentItemDetailsDrawer } from "./PaymentItemDetailsDrawer";
 import { AnticipationModal } from "./AnticipationModal";
 import { ArrowButton } from "../ArrowButton";
@@ -287,7 +288,7 @@ export function AwaitingReleaseDrawer({
                             {item.paymentMethod === "PIX" ? (
                               <PixIcon className="size-5 text-gray-12" />
                             ) : (
-                              <CardIcon className="size-5 text-gray-12" />
+                              <CreditCardIcon className="w-7" />
                             )}
                           </div>
                         </div>

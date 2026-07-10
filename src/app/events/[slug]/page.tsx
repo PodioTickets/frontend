@@ -108,6 +108,18 @@ export default function EventPage() {
     if (!event) return [];
     return getEnabledTopicsSorted(event);
   }, [event]);
+
+  // Endereço no MESMO formato dos cards (home/busca): "Local, Cidade, Estado".
+  // `locationName` (escolhido no mapa) pode faltar em eventos legados → cai pra
+  // "Cidade, Estado". Ver EventCard (src/components/Event/Card/index.tsx).
+  const addressLabel = useMemo(
+    () =>
+      [event?.locationName, event?.city, event?.state]
+        .map((part) => (part ?? "").trim())
+        .filter(Boolean)
+        .join(", "),
+    [event?.locationName, event?.city, event?.state],
+  );
   const { isAuthenticated } = useAuth();
   const { openLoginModal } = useLoginModal();
   const [imageError, setImageError] = useState(false);
@@ -418,16 +430,7 @@ export default function EventPage() {
                   rel="noopener noreferrer"
                   className="text-sm underline"
                 >
-                  {[
-                    `${event.city} - ${event.state}`,
-                    event.neighborhood,
-                    event.location,
-                  ]
-                    .filter(Boolean)
-                    .join(", ")}
-                  {event.zipCode && (
-                    <span className="whitespace-nowrap">, {event.zipCode}</span>
-                  )}
+                  {addressLabel}
                 </Link>
               </div>
             </div>
@@ -1041,18 +1044,7 @@ export default function EventPage() {
                         rel="noopener noreferrer"
                         className="text-sm underline"
                       >
-                        {[
-                          `${event.city} - ${event.state}`,
-                          event.neighborhood,
-                          event.location,
-                        ]
-                          .filter(Boolean)
-                          .join(", ")}
-                        {event.zipCode && (
-                          <span className="whitespace-nowrap">
-                            , {event.zipCode}
-                          </span>
-                        )}
+                        {addressLabel}
                       </Link>
                     </h1>
                   </div>
