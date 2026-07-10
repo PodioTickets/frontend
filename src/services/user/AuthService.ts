@@ -577,4 +577,22 @@ export class AuthService extends UserServiceBase {
       throw this.handleError(error);
     }
   }
+
+  /**
+   * Exclui (soft-delete/anonimiza) a conta do usuário autenticado.
+   * Exige o código de segurança enviado por e-mail (mesmo canal do 2FA).
+   * O backend preserva inscrições/histórico para os organizadores e invalida
+   * a sessão; o front deve limpar o auth local e redirecionar após o sucesso.
+   */
+  async deleteAccount(code: string): Promise<void> {
+    try {
+      await this.apiClient.post('/api/v1/auth/account/delete', { code });
+    } catch (error: any) {
+      // Código incorreto/expirado ou outra falha: NÃO limpa a sessão (o usuário
+      // segue logado para tentar de novo).
+      throw this.handleError(error);
+    }
+    // Sucesso: o backend invalidou a sessão e limpou os cookies; espelha local.
+    this.apiClient.clearTokens();
+  }
 }

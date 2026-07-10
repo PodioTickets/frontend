@@ -15,7 +15,7 @@ import { ArrowButton } from "../ArrowButton";
 import { DetailsIcon } from "../Icons/DetailsIcon";
 import { PixIcon } from "@/components/Icons/PixIcon";
 import { RemoveIcon } from "@/components/Icons/RemoveIcon";
-import { PaymentIcon } from "react-svg-credit-card-payment-icons";
+import { CreditCardIcon } from "@/components/Icons/CreditCardIcon";
 import { organizerService } from "@/services";
 import toast from "react-hot-toast";
 import Image from "next/image";
@@ -369,11 +369,7 @@ export function RefundedDrawer({
                               {displayItem.paymentMethod === "Pix" || displayItem.paymentMethod === "PIX" ? (
                                 <PixIcon className="size-5 text-gray-12" />
                               ) : (
-                                <PaymentIcon
-                                  type={displayItem.paymentMethod as any}
-                                  format="flatRounded"
-                                  className="size-8 text-gray-12"
-                                />
+                                <CreditCardIcon className="w-8" />
                               )}
                             </div>
                           </div>

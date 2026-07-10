@@ -6,9 +6,8 @@ import { getAvatarUrl } from "@/utils/avatar";
 import { Copy, CheckCircle, ChevronLeft, FileText, Star, X } from "lucide-react";
 import { Pagination } from "../Pagination";
 import { PixIcon } from "@/components/Icons/PixIcon";
-import { CardIcon } from "@/components/Icons/CardIcon";
+import { CreditCardIcon } from "@/components/Icons/CreditCardIcon";
 import { TicketIcon } from "@/components/Icons/TicketIcon";
-import { PaymentIcon } from "react-svg-credit-card-payment-icons";
 import { ArrowButton } from "../ArrowButton";
 import { XCircleIcon } from "lucide-react";
 import { formatShortId } from "@/utils/shortId";
@@ -289,10 +288,8 @@ export function PaymentDetailsMobile({
               <div className="size-10 flex items-center justify-center shrink-0">
                 {paymentMethod === "PIX" ? (
                   <PixIcon className="size-10 text-gray-12" />
-                ) : cardBrand ? (
-                  <PaymentIcon type={cardBrand as any} format="flatRounded" className="size-10" />
                 ) : (
-                  <CardIcon className="size-10 text-gray-12" />
+                  <CreditCardIcon className="w-10" />
                 )}
               </div>
               <div className="flex flex-col gap-3 min-w-0 flex-1">
