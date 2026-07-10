@@ -15,6 +15,41 @@ const ADMIN_USERS_PATH = "/api/v1/admin/users";
 
 const ADMIN_USER_ACTIVITY_PATH = "/api/v1/admin/user-activity";
 
+const ADMIN_EVENTS_PATH = "/api/v1/admin/events";
+
+// ──────────────── Eventos em destaque (carrossel da home) ────────────────
+
+/** Item do carrossel de destaque (payload enxuto do backend). */
+export interface AdminFeaturedEvent {
+  id: string;
+  name: string;
+  slug: string | null;
+  bannerUrl: string | null;
+  city: string | null;
+  state: string | null;
+  locationName: string | null;
+  status: string;
+  eventDate: string | null;
+  registrationStartDate: string | null;
+  registrationEndDate: string | null;
+  featuredOrder: number | null;
+}
+
+/** Item da lista de eventos do picker "Adicionar evento de destaque". */
+export interface AdminPickerEvent {
+  id: string;
+  name: string;
+  bannerUrl: string | null;
+  city: string | null;
+  state: string | null;
+  status: string;
+  eventDate: string | null;
+  registrationStartDate: string | null;
+  registrationEndDate: string | null;
+  /** != null quando o evento JÁ está em destaque (botão vira "Já em destaque"). */
+  featuredOrder: number | null;
+}
+
 // ──────────────── User activity (cliente final + anônimo) ────────────────
 
 export const USER_ACTIVITY_CATEGORIES = [
@@ -1145,5 +1180,163 @@ export class AdminService {
 
   async publishEvent(eventId: string): Promise<void> {
     await this.apiClient.post(`/api/v1/admin/events/${eventId}/publish`);
+  }
+
+  // ──────────────── Eventos em destaque ────────────────
+  // Toda mutação (add/remove/reorder) retorna a LISTA autoritativa já reordenada
+  // pelo backend, então o front só substitui o estado — sem reconciliar índices.
+
+  /** Extrai `data.data.events` (ou `data.events`) tolerando envelopes. */
+  private unwrapFeaturedList(payload: unknown): AdminFeaturedEvent[] {
+    const body =
+      payload && typeof payload === "object" && !Array.isArray(payload)
+        ? (payload as Record<string, unknown>)
+        : {};
+    const nested =
+      body.data && typeof body.data === "object" && !Array.isArray(body.data)
+        ? (body.data as Record<string, unknown>)
+        : body;
+    const arr = Array.isArray(nested.events) ? nested.events : [];
+    return arr
+      .map((e) => this.parseFeatured(e))
+      .filter((e): e is AdminFeaturedEvent => e !== null);
+  }
+
+  private parseFeatured(raw: unknown): AdminFeaturedEvent | null {
+    if (!raw || typeof raw !== "object") return null;
+    const e = raw as Record<string, unknown>;
+    if (typeof e.id !== "string") return null;
+    const s = (v: unknown) => (typeof v === "string" ? v : null);
+    return {
+      id: e.id,
+      name: s(e.name) ?? "",
+      slug: s(e.slug),
+      bannerUrl: s(e.bannerUrl),
+      city: s(e.city),
+      state: s(e.state),
+      locationName: s(e.locationName),
+      status: s(e.status) ?? "",
+      eventDate: s(e.eventDate),
+      registrationStartDate: s(e.registrationStartDate),
+      registrationEndDate: s(e.registrationEndDate),
+      featuredOrder:
+        typeof e.featuredOrder === "number" ? e.featuredOrder : null,
+    };
+  }
+
+  /** GET — eventos em destaque na ordem do carrossel. */
+  async getFeaturedEvents(): Promise<AdminFeaturedEvent[]> {
+    const { data } = await this.apiClient.get(`${ADMIN_EVENTS_PATH}/featured`);
+    return this.unwrapFeaturedList(data);
+  }
+
+  /** POST — adiciona ao destaque. Retorna a lista atualizada. */
+  async addFeaturedEvent(eventId: string): Promise<AdminFeaturedEvent[]> {
+    const { data } = await this.apiClient.post(
+      `${ADMIN_EVENTS_PATH}/${eventId}/featured`,
+    );
+    return this.unwrapFeaturedList(data);
+  }
+
+  /** DELETE — remove do destaque. Retorna a lista atualizada. */
+  async removeFeaturedEvent(eventId: string): Promise<AdminFeaturedEvent[]> {
+    const { data } = await this.apiClient.delete(
+      `${ADMIN_EVENTS_PATH}/${eventId}/featured`,
+    );
+    return this.unwrapFeaturedList(data);
+  }
+
+  /** PATCH — reordena. `orderedIds` = conjunto atual, na nova ordem. */
+  async reorderFeaturedEvents(
+    orderedIds: string[],
+  ): Promise<AdminFeaturedEvent[]> {
+    const { data } = await this.apiClient.patch(
+      `${ADMIN_EVENTS_PATH}/featured/order`,
+      { orderedIds },
+    );
+    return this.unwrapFeaturedList(data);
+  }
+
+  /**
+   * Lista/busca eventos PUBLICADOS para o picker "Adicionar evento de destaque".
+   * Server-side (page/limit/search), espelhando `getAdminUsers`. Reusa o endpoint
+   * global `GET /admin/events` filtrando por status PUBLISHED.
+   */
+  async getEventsForFeaturedPicker(params?: {
+    page?: number;
+    limit?: number;
+    search?: string;
+  }): Promise<{
+    items: AdminPickerEvent[];
+    pagination: OrganizationAuditLogsPagination;
+  }> {
+    const { page = 1, limit = 20, search } = params || {};
+    const safeLimit = Math.min(100, Math.max(1, limit));
+
+    const res = await this.apiClient.get<Record<string, unknown>>(
+      ADMIN_EVENTS_PATH,
+      {
+        params: {
+          page,
+          limit: safeLimit,
+          status: "PUBLISHED",
+          sortBy: "eventDate",
+          sortOrder: "asc",
+          ...(search?.trim() ? { search: search.trim() } : {}),
+        },
+      },
+    );
+
+    const body =
+      res.data && typeof res.data === "object" && !Array.isArray(res.data)
+        ? (res.data as Record<string, unknown>)
+        : {};
+    const nested =
+      body.data && typeof body.data === "object" && !Array.isArray(body.data)
+        ? (body.data as Record<string, unknown>)
+        : body;
+
+    const rawItems = Array.isArray(nested.events) ? nested.events : [];
+    const p =
+      nested.pagination && typeof nested.pagination === "object"
+        ? (nested.pagination as Record<string, unknown>)
+        : {};
+
+    const items = rawItems
+      .map((raw) => this.parsePickerEvent(raw))
+      .filter((e): e is AdminPickerEvent => e !== null);
+
+    return {
+      items,
+      pagination: {
+        page: typeof p.page === "number" ? p.page : page,
+        limit: typeof p.limit === "number" ? p.limit : safeLimit,
+        total: typeof p.total === "number" ? p.total : 0,
+        totalPages: Math.max(
+          1,
+          typeof p.totalPages === "number" ? p.totalPages : 1,
+        ),
+      },
+    };
+  }
+
+  private parsePickerEvent(raw: unknown): AdminPickerEvent | null {
+    if (!raw || typeof raw !== "object") return null;
+    const e = raw as Record<string, unknown>;
+    if (typeof e.id !== "string") return null;
+    const s = (v: unknown) => (typeof v === "string" ? v : null);
+    return {
+      id: e.id,
+      name: s(e.name) ?? "",
+      bannerUrl: s(e.bannerUrl),
+      city: s(e.city),
+      state: s(e.state),
+      status: s(e.status) ?? "",
+      eventDate: s(e.eventDate),
+      registrationStartDate: s(e.registrationStartDate),
+      registrationEndDate: s(e.registrationEndDate),
+      featuredOrder:
+        typeof e.featuredOrder === "number" ? e.featuredOrder : null,
+    };
   }
 }

@@ -58,6 +58,13 @@ export interface Event {
   /** Inscrições suspensas (alternativa ou complemento a status SUSPENDED). */
   isSuspended?: boolean;
   status: string;
+  /**
+   * Ordem no carrossel de "Eventos em destaque" (admin). `null`/ausente = não
+   * destacado. Valor menor aparece primeiro; também é a chave primária da ordem
+   * PADRÃO da busca (destaque no topo). Só exposto nos payloads públicos/admin
+   * relevantes — pode vir undefined em contratos que não o selecionam.
+   */
+  featuredOrder?: number | null;
   createdAt: string;
   updatedAt: string;
   zipCode: string;

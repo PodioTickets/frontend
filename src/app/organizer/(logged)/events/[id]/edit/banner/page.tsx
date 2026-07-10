@@ -48,6 +48,7 @@ export default function EditBannerPage() {
         eventName={formData.name}
         eventDate={formData.eventDate}
         street={formData.street}
+        locationName={formData.locationName}
         city={formData.city}
         state={formData.state}
         socialLinks={{

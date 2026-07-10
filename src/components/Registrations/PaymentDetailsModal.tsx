@@ -13,7 +13,6 @@ import { Loading } from "../Loading";
 import toast from "react-hot-toast";
 import { CheckIcon } from '../Icons/Organizer/CheckIcon';
 import { PixIcon } from '../Icons/PixIcon';
-import { CardIcon } from '../Icons/CardIcon';
 import { CreditCardIcon } from '../Icons/CreditCardIcon';
 import { ArrowButton } from '../ArrowButton';
 import { TicketIcon } from "@/components/Icons/TicketIcon";
@@ -701,17 +700,14 @@ export function PaymentDetailsModal() {
                       <div className="bg-gray-1 border border-gray-6 rounded-lg p-4 flex flex-col gap-4">
                         <div className="flex gap-3 items-center justify-between">
                           <div className="flex gap-3 items-center">
-                            {isCardPayment ? (
-                              <div className="size-10 shrink-0 flex items-center justify-center">
-                                <CreditCardIcon className="w-10" />
-                              </div>
-                            ) : isPixPayment ? (
+                            {isPixPayment ? (
                               <div className="size-10 shrink-0 flex items-center justify-center">
                                 <PixIcon className="size-6 text-gray-12" />
                               </div>
                             ) : (
+                              // Cartão e qualquer outro método (boleto/etc.) → ícone genérico novo.
                               <div className="size-10 shrink-0 flex items-center justify-center">
-                                <CardIcon className="size-6 text-gray-12" />
+                                <CreditCardIcon className="w-10" />
                               </div>
                             )}
                             <div className="flex flex-col gap-0">
@@ -1147,17 +1143,14 @@ export function PaymentDetailsModal() {
                           {/* Payment Method Card */}
                           <div className="bg-gray-2 border border-gray-6 rounded-lg p-4 flex items-center justify-between">
                             <div className="flex gap-4 items-center flex-1">
-                              {isCardPayment ? (
-                                <div className="size-[36px] relative shrink-0 flex items-center justify-center">
-                                  <CreditCardIcon className="w-9" />
-                                </div>
-                              ) : isPixPayment ? (
+                              {isPixPayment ? (
                                 <div className="size-[36px] relative shrink-0 flex items-center justify-center border border-gray-6 rounded">
                                   <PixIcon className="size-6" />
                                 </div>
                               ) : (
-                                <div className="size-[36px] relative shrink-0 flex items-center justify-center border border-gray-6 rounded">
-                                  <CardIcon className="size-6" />
+                                // Cartão e qualquer outro método (boleto/etc.) → ícone genérico novo.
+                                <div className="size-[36px] relative shrink-0 flex items-center justify-center">
+                                  <CreditCardIcon className="w-9" />
                                 </div>
                               )}
                               <div className="flex flex-col">
