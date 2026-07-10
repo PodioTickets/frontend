@@ -421,7 +421,7 @@ export async function proxy(request: NextRequest) {
   );
   response.headers.set(
     "Permissions-Policy",
-    "camera=(), microphone=(), geolocation=(), payment=(), xr-spatial-tracking=(self \"https://challenges.cloudflare.com\")"
+    "camera=(), microphone=(), geolocation=(self), payment=(), xr-spatial-tracking=(self \"https://challenges.cloudflare.com\")"
   );
 
   if (pathname.startsWith("/api/")) {
