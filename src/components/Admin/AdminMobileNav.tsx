@@ -5,7 +5,7 @@ import Link from "next/link";
 import { ImageWithInitialFallback } from "@/components/ImageWithInitialFallback";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/hooks/useAuth";
-import { FileText, Megaphone, Menu, TrendingUp, UserRound } from "lucide-react";
+import { FileText, Megaphone, Menu, Star, TrendingUp, UserRound } from "lucide-react";
 import { getAvatarUrl } from "@/utils/avatar";
 import { Drawer, DrawerClose, DrawerContent, DrawerTitle } from "@/components/ui/drawer";
 import { TicketIcon } from "@/components/Icons/TicketIcon";
@@ -16,6 +16,7 @@ import { useAdminPathname } from "@/hooks/useAdminPathname";
 
 const NAV_ITEMS = [
   { label: "Eventos", href: "/admin/events", icon: TicketIcon },
+  { label: "Eventos destaque", href: "/admin/eventos-destaque", icon: Star },
   { label: "Repasse", href: "/admin/repasse", icon: TrendingUp },
   { label: "Usuários", href: "/admin/users", icon: UserRound },
   { label: "Anúncios", href: "/admin/anuncios", icon: Megaphone },

@@ -157,10 +157,14 @@ export function TwoFASection({
           onClick={!sending && !confirming ? handleToggle : undefined}
           disabled={sending || confirming}
           className={cn(
-            "h-[48px] px-[12px] overflow-hidden rounded-[8px] border border-gray-6",
+            // Largura FLUIDA com teto: ocupa a largura do container no mobile
+            // (não estoura a viewport) e trava no tamanho do design no desktop.
+            // `min-h` (não `h`) evita corte do rótulo quando ele quebra em 2 linhas.
+            "min-h-[48px] py-2 px-[12px] overflow-hidden rounded-[8px] border border-gray-6",
             "flex items-center gap-[10px] hover:bg-gray-3 transition-colors",
             "disabled:opacity-60 disabled:cursor-not-allowed",
-            isOrganizer ? "w-[462px]" : "w-[400px]"
+            "w-full",
+            isOrganizer ? "max-w-[462px]" : "max-w-[400px]"
           )}
         >
           <div className="flex flex-1 items-center gap-2">
@@ -211,7 +215,11 @@ export function TwoFASection({
 
             {/* Inputs OTP + erro + botões */}
             <div className="flex flex-col items-start w-full gap-[36px]">
-              <div className="flex flex-col items-start gap-[16px]">
+              {/* w-full: sem isso o wrapper encolhe pro conteúdo (~404px) e os
+                  quadrados do OTP estouram a viewport no mobile. Com w-full o
+                  `w-full` interno do OtpCodeInput resolve pra largura real e os
+                  inputs (flex-1) encolhem abaixo de 64px. */}
+              <div className="flex flex-col items-start gap-[16px] w-full">
                 <OtpCodeInput
                   value={code}
                   onChange={(v) => {
@@ -225,7 +233,7 @@ export function TwoFASection({
                 />
 
                 {codeError && (
-                  <p className="font-family-dm-sans text-red-500 whitespace-nowrap"
+                  <p className="font-family-dm-sans text-red-500"
                     style={{ fontSize: 16, lineHeight: "20.8px" }}>
                     {codeError}
                   </p>

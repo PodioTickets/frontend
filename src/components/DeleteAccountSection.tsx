@@ -6,6 +6,7 @@ import { AlertTriangle } from "lucide-react";
 import toast from "react-hot-toast";
 import { OtpCodeInput } from "@/components/OtpCodeInput";
 import { userService } from "@/services";
+import { cn } from "@/utils/cn";
 
 interface DeleteAccountSectionProps {
   /** E-mail do usuário — exibido na instrução de código */
@@ -18,6 +19,18 @@ interface DeleteAccountSectionProps {
 }
 
 type Step = "confirm" | "code";
+
+/** Motivos pré-definidos de exclusão. `outro` libera o campo de texto livre. */
+const DELETE_REASONS = [
+  { id: "nao-uso", label: "Não uso mais a plataforma" },
+  { id: "outra-conta", label: "Criei outra conta" },
+  { id: "privacidade", label: "Preocupações com privacidade e dados" },
+  { id: "experiencia", label: "Tive uma experiência ruim" },
+  { id: "sem-eventos", label: "Não encontro eventos do meu interesse" },
+  { id: "outro", label: "Outro motivo" },
+] as const;
+
+const OTHER_REASON_MAX = 500;
 
 /**
  * Seção "Excluir conta" (Figma 5654:56720) — abaixo do 2FA no painel do usuário.
@@ -37,6 +50,8 @@ export function DeleteAccountSection({
 }: DeleteAccountSectionProps) {
   const [open, setOpen] = useState(false);
   const [step, setStep] = useState<Step>("confirm");
+  const [reasonId, setReasonId] = useState("");
+  const [otherText, setOtherText] = useState("");
   const [code, setCode] = useState("");
   const [codeError, setCodeError] = useState("");
   const [sending, setSending] = useState(false);
@@ -64,10 +79,19 @@ export function DeleteAccountSection({
 
   const resetState = () => {
     setStep("confirm");
+    setReasonId("");
+    setOtherText("");
     setCode("");
     setCodeError("");
     setResendCooldown(0);
   };
+
+  // Motivo resolvido enviado ao backend: rótulo da opção, ou o texto livre quando "Outro".
+  const isOther = reasonId === "outro";
+  const resolvedReason = isOther
+    ? otherText.trim()
+    : DELETE_REASONS.find((r) => r.id === reasonId)?.label ?? "";
+  const reasonValid = resolvedReason.length > 0;
 
   const openModal = () => {
     resetState();
@@ -82,10 +106,11 @@ export function DeleteAccountSection({
 
   // Passo 1 → dispara o envio do código e avança para o OTP.
   const handleSendCode = async () => {
+    if (!reasonValid) return; // Motivo obrigatório (botão já fica desabilitado).
     setSending(true);
     setCodeError("");
     try {
-      await userService.send2FACode();
+      await userService.sendAccountDeletionCode();
       setStep("code");
       setCode("");
       setResendCooldown(60);
@@ -101,7 +126,7 @@ export function DeleteAccountSection({
     setSending(true);
     setCodeError("");
     try {
-      await userService.send2FACode();
+      await userService.sendAccountDeletionCode();
       toast.success("Novo código enviado para o seu e-mail.");
       setCode("");
       setResendCooldown(60);
@@ -122,7 +147,7 @@ export function DeleteAccountSection({
     setDeleting(true);
     setCodeError("");
     try {
-      await userService.deleteAccount(code);
+      await userService.deleteAccount(code, resolvedReason);
       toast.success("Conta excluída. Sentiremos sua falta!");
       setOpen(false);
       await onDeleted();
@@ -181,7 +206,7 @@ export function DeleteAccountSection({
               style={{ pointerEvents: "auto" }}
               onClick={(e) => e.stopPropagation()}
             >
-              <div className="bg-gray-1 rounded-[12px] w-full max-w-[474px] shadow-2xl flex flex-col gap-8 pt-6 pb-5 px-5">
+              <div className="bg-gray-1 rounded-[12px] w-full max-w-[474px] max-h-[90vh] overflow-y-auto shadow-2xl flex flex-col gap-8 pt-6 pb-5 px-5">
                 {step === "confirm" ? (
                   <>
                     <div className="flex flex-col gap-4 items-center w-full">
@@ -203,6 +228,59 @@ export function DeleteAccountSection({
                       </div>
                     </div>
 
+                    {/* Motivo da exclusão (obrigatório) */}
+                    <div className="flex flex-col gap-3 w-full">
+                      <p className="font-family-dm-sans font-semibold text-[16px] leading-[1.3] text-gray-12">
+                        Por que você está excluindo sua conta?
+                      </p>
+                      <div className="flex flex-col gap-2 w-full">
+                        {DELETE_REASONS.map((r) => {
+                          const selected = reasonId === r.id;
+                          return (
+                            <button
+                              key={r.id}
+                              type="button"
+                              onClick={() => setReasonId(r.id)}
+                              disabled={busy}
+                              className={cn(
+                                "flex items-center gap-2.5 w-full rounded-[8px] border px-3 py-2.5 text-left transition-colors disabled:opacity-60 disabled:cursor-not-allowed",
+                                selected
+                                  ? "border-red-9 bg-red-2"
+                                  : "border-gray-6 hover:bg-gray-3"
+                              )}
+                            >
+                              <span
+                                className={cn(
+                                  "size-4 shrink-0 rounded-full border-2 flex items-center justify-center",
+                                  selected ? "border-red-9" : "border-gray-7"
+                                )}
+                              >
+                                {selected && (
+                                  <span className="size-2 rounded-full bg-red-9" />
+                                )}
+                              </span>
+                              <span className="font-family-dm-sans text-[14px] leading-[1.3] text-gray-12">
+                                {r.label}
+                              </span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                      {isOther && (
+                        <textarea
+                          value={otherText}
+                          onChange={(e) =>
+                            setOtherText(e.target.value.slice(0, OTHER_REASON_MAX))
+                          }
+                          disabled={busy}
+                          rows={3}
+                          autoFocus
+                          placeholder="Conte pra gente o motivo…"
+                          className="w-full resize-none rounded-[8px] border border-gray-6 bg-gray-1 px-3 py-2.5 text-[14px] text-gray-12 placeholder:text-gray-11 font-family-dm-sans outline-none focus-visible:border-gray-8"
+                        />
+                      )}
+                    </div>
+
                     <div className="flex gap-2 items-center w-full">
                       <button
                         type="button"
@@ -215,7 +293,7 @@ export function DeleteAccountSection({
                       <button
                         type="button"
                         onClick={handleSendCode}
-                        disabled={busy}
+                        disabled={busy || !reasonValid}
                         className="flex-1 h-12 rounded-[8px] bg-red-9 font-sans font-semibold text-white hover:bg-red-10 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
                       >
                         {sending ? "Enviando..." : "Excluir conta"}

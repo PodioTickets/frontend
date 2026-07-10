@@ -268,8 +268,12 @@ function RegistrationCtaBlock({
 /** Linhas de data + endereço — espelha a página pública do evento. */
 function EventMetaRows({ event, mobile }: { event: Event; mobile?: boolean }) {
   const mapsUrl = sanitizeUrl(event.googleMapsLink?.trim()) ?? "";
+  // MESMO formato do card da tela pública do evento (`addressLabel` em
+  // /events/[slug]): "Local, Cidade, UF" — sem bairro/endereço/CEP. `locationName`
+  // ausente (evento legado) cai em "Cidade, UF".
   const addressText =
-    [`${event.city} - ${event.state}`, event.neighborhood, event.location]
+    [event.locationName, event.city, event.state]
+      .map((v) => v?.trim())
       .filter(Boolean)
       .join(", ");
   const textColor = mobile ? "text-gray-12" : "text-gray-12";
@@ -298,17 +302,9 @@ function EventMetaRows({ event, mobile }: { event: Event; mobile?: boolean }) {
             className="text-sm underline"
           >
             {addressText}
-            {event.zipCode && (
-              <span className="whitespace-nowrap">, {event.zipCode}</span>
-            )}
           </Link>
         ) : (
-          <span className="text-sm">
-            {addressText}
-            {event.zipCode && (
-              <span className="whitespace-nowrap">, {event.zipCode}</span>
-            )}
-          </span>
+          <span className="text-sm">{addressText}</span>
         )}
       </div>
     </div>

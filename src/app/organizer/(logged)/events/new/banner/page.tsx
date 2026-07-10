@@ -125,6 +125,7 @@ export default function BannerPage() {
         eventName={formData.name}
         eventDate={formData.eventDate}
         street={formData.street}
+        locationName={formData.locationName}
         city={formData.city}
         state={formData.state}
         socialLinks={{
