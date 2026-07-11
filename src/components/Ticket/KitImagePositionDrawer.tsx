@@ -22,6 +22,8 @@ import {
   Info,
   X,
   Star,
+  Eye,
+  EyeOff,
   Image as ImageIconLucide,
 } from "lucide-react";
 import toast from "react-hot-toast";
@@ -61,13 +63,26 @@ export interface KitImagePositionDrawerProps {
     layout: KitImageLayoutMode;
     primaryByTicket: Record<string, string>;
     primaryByCategory: Record<string, string>;
+    /** Imagens ocultas (URLs) por ingresso/categoria. */
+    hiddenByTicket?: Record<string, string[]>;
+    hiddenByCategory?: Record<string, string[]>;
   } | null;
   onSave?: (payload: {
     layout: KitImageLayoutMode;
     primaryImageUrlByTicketId: Record<string, string>;
     primaryImageUrlByCategoryId: Record<string, string>;
+    hiddenImageUrlsByTicketId: Record<string, string[]>;
+    hiddenImageUrlsByCategoryId: Record<string, string[]>;
   }) => void | Promise<void>;
   saveSuccessMessage?: string;
+}
+
+/** Referência estável p/ "sem ocultas" (evita novo `[]` por render → quebra memo). */
+const EMPTY_URLS: string[] = [];
+
+/** Lista ORDENADA de URLs de imagem de um conjunto de produtos (mesma expansão dos thumbs). */
+function imageUrlsOf(images: KitImagePositionProduct[]): string[] {
+  return images.flatMap(expandProductToImageEntries).map((e) => e.url);
 }
 
 function resolvePrimaryImageUrl(
@@ -312,23 +327,29 @@ type TicketProductStripProps = {
   ticketName: string;
   images: KitImagePositionProduct[];
   primaryImageUrl: string | undefined;
+  hiddenUrls: string[];
   onSelectPrimary: (ticketId: string, imageUrl: string) => void;
+  onSetHidden: (ticketId: string, imageUrl: string, hidden: boolean) => void;
 };
 
 const KitThumb = memo(function KitThumb({
   url,
   isPrimary,
+  isHidden,
   productId,
   productName,
   entityId,
   onSelectPrimary,
+  onSetHidden,
 }: {
   url: string | null;
   isPrimary: boolean;
+  isHidden: boolean;
   productId: string;
   productName?: string | null;
   entityId: string;
-  onSelectPrimary: (entityId: string, productId: string) => void;
+  onSelectPrimary: (entityId: string, imageUrl: string) => void;
+  onSetHidden: (entityId: string, imageUrl: string, hidden: boolean) => void;
 }) {
   const initial = itemInitialLetter(productName, productId);
   const [imageFailed, setImageFailed] = useState(false);
@@ -339,43 +360,103 @@ const KitThumb = memo(function KitThumb({
 
   const showUrl = Boolean(url?.trim()) && !imageFailed;
 
+  // Estrela: define como principal. Se estava oculta, reexibe antes (imagem
+  // principal precisa estar visível). Olho: alterna oculto/visível.
+  const handleStar = () => {
+    if (isHidden) onSetHidden(entityId, url!, false);
+    onSelectPrimary(entityId, url!);
+  };
+  const handleEye = () => onSetHidden(entityId, url!, !isHidden);
+
   return (
-    <button
-      type="button"
-      onClick={() => onSelectPrimary(entityId, url!)}
-      className={cn(
-        "relative shrink-0 size-20 rounded-lg overflow-hidden",
-        isPrimary
-          ? "border-2 border-yellow-8"
-          : "border border-gray-6"
-      )}
-    >
-      {showUrl ? (
-        // eslint-disable-next-line @next/next/no-img-element -- thumbs pequenos: img nativo + lazy pesa menos que next/image em listas longas
-        <img
-          src={url!}
-          alt=""
-          width={80}
-          height={80}
-          loading="lazy"
-          decoding="async"
-          fetchPriority="low"
-          className="size-full object-cover"
-          onError={() => setImageFailed(true)}
-        />
-      ) : (
-        <div className="size-full bg-gray-4 flex items-center justify-center">
-          <span className="font-semibold text-[22px] leading-none text-gray-11 font-manrope select-none">
-            {initial}
-          </span>
+    // `pt-2` reserva o espaço em que os ícones VAZAM pra cima da foto (igual ao
+    // Figma). Como esse espaço faz parte do PRÓPRIO item, nada ultrapassa a caixa
+    // do thumb → o strip (`overflow-x-auto`, que recorta no eixo Y) não corta os badges.
+    <div className="group relative shrink-0 w-20 pt-2">
+      {/* Foto (80×80) — a borda/tracejado e o overflow ficam AQUI, não no wrapper. */}
+      <div
+        className={cn(
+          "relative size-20 rounded-[4px]",
+          isPrimary ? "border border-yellow-8" : "border border-gray-6",
+          isHidden && "border-dashed",
+        )}
+      >
+        <div className="absolute inset-0 overflow-hidden rounded-[4px]">
+          {showUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element -- thumbs pequenos: img nativo + lazy pesa menos que next/image em listas longas
+            <img
+              src={url!}
+              alt=""
+              width={80}
+              height={80}
+              loading="lazy"
+              decoding="async"
+              fetchPriority="low"
+              className="size-full object-cover"
+              onError={() => setImageFailed(true)}
+            />
+          ) : (
+            <div className="size-full bg-gray-4 flex items-center justify-center">
+              <span className="font-semibold text-[22px] leading-none text-gray-11 font-manrope select-none">
+                {initial}
+              </span>
+            </div>
+          )}
         </div>
-      )}
-      {isPrimary ? (
-        <span className="absolute top-0 right-0 z-20 size-5 rounded-full bg-gray-1 flex items-center justify-center border border-yellow-8 pointer-events-none">
-          <Star className="size-3.5 text-yellow-11 fill-yellow-11" />
-        </span>
-      ) : null}
-    </button>
+
+        {/* Overlay "Oculto": escurece a foto (a borda tracejada vem do container). */}
+        {isHidden ? (
+          <div className="absolute inset-0 z-10 flex items-center justify-center rounded-[4px] bg-gray-12/70">
+            <span className="font-family-dm-sans text-sm font-medium leading-none text-gray-1 select-none">
+              Oculto
+            </span>
+          </div>
+        ) : null}
+
+        {/* Rótulo "Principal" (barra inferior) — só na imagem principal. */}
+        {isPrimary ? (
+          <div className="absolute inset-x-0 bottom-0 z-10 rounded-b-[3px] border-t border-yellow-8 bg-yellow-3 text-center">
+            <span className="font-family-dm-sans text-[10px] font-medium leading-none text-yellow-12 select-none">
+              Principal
+            </span>
+          </div>
+        ) : null}
+      </div>
+
+      {/* Ações (estrela = principal, olho = ocultar). Aparecem no HOVER (desktop);
+          em telas sem hover (touch) ficam sempre visíveis. Ficam no topo do wrapper
+          (`top-0`), sobrepondo a borda superior da foto — dentro da caixa do item. */}
+      <div
+        className={cn(
+          "absolute top-0 right-1 z-20 flex items-center gap-[2px] transition-opacity",
+          "opacity-100 [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover:opacity-100",
+        )}
+      >
+        <button
+          type="button"
+          onClick={handleStar}
+          aria-label={isPrimary ? "Imagem principal" : "Definir como imagem principal"}
+          aria-pressed={isPrimary}
+          className="flex size-5 items-center justify-center rounded-[4px] border border-yellow-8 bg-yellow-3 transition-colors"
+        >
+          <Star
+            className={cn(
+              "size-3 text-yellow-11",
+              isPrimary && "fill-yellow-11",
+            )}
+          />
+        </button>
+        <button
+          type="button"
+          onClick={handleEye}
+          aria-label={isHidden ? "Mostrar imagem" : "Ocultar imagem"}
+          aria-pressed={isHidden}
+          className="flex size-5 items-center justify-center rounded-[4px] border border-gray-8 bg-gray-3 text-gray-12 transition-colors hover:bg-gray-4"
+        >
+          {isHidden ? <EyeOff className="size-3" /> : <Eye className="size-3" />}
+        </button>
+      </div>
+    </div>
   );
 });
 
@@ -384,9 +465,12 @@ const TicketProductStrip = memo(function TicketProductStrip({
   ticketName,
   images,
   primaryImageUrl,
+  hiddenUrls,
   onSelectPrimary,
+  onSetHidden,
 }: TicketProductStripProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
+  const hiddenSet = useMemo(() => new Set(hiddenUrls), [hiddenUrls]);
 
   const scrollBy = useCallback((delta: number) => {
     scrollRef.current?.scrollBy({ left: delta, behavior: "smooth" });
@@ -429,7 +513,9 @@ const TicketProductStrip = memo(function TicketProductStrip({
                 productName={entry.name}
                 entityId={ticketId}
                 isPrimary={primaryImageUrl === entry.url}
+                isHidden={hiddenSet.has(entry.url)}
                 onSelectPrimary={onSelectPrimary}
+                onSetHidden={onSetHidden}
               />
             ))
           )}
@@ -481,14 +567,19 @@ const CategoryImageStrip = memo(function CategoryImageStrip({
   categoryId,
   images,
   primaryImageUrl,
+  hiddenUrls,
   onSelectPrimary,
+  onSetHidden,
 }: {
   categoryId: string;
   images: KitImagePositionProduct[];
   primaryImageUrl: string | undefined;
+  hiddenUrls: string[];
   onSelectPrimary: (categoryId: string, imageUrl: string) => void;
+  onSetHidden: (categoryId: string, imageUrl: string, hidden: boolean) => void;
 }) {
   const scrollRef = useRef<HTMLDivElement>(null);
+  const hiddenSet = useMemo(() => new Set(hiddenUrls), [hiddenUrls]);
 
   const scrollBy = useCallback((delta: number) => {
     scrollRef.current?.scrollBy({ left: delta, behavior: "smooth" });
@@ -522,7 +613,9 @@ const CategoryImageStrip = memo(function CategoryImageStrip({
               productName={entry.name}
               entityId={categoryId}
               isPrimary={primaryImageUrl === entry.url}
+              isHidden={hiddenSet.has(entry.url)}
               onSelectPrimary={onSelectPrimary}
+              onSetHidden={onSetHidden}
             />
           ))
         )}
@@ -546,14 +639,18 @@ function categoryBlockCategoriesPropsEqual(
     section: KitImagePositionCategorySection;
     aggregatedImages: KitImagePositionProduct[];
     primaryImageUrl: string | undefined;
+    hiddenUrls: string[];
     onSelectPrimary: (categoryId: string, imageUrl: string) => void;
+    onSetHidden: (categoryId: string, imageUrl: string, hidden: boolean) => void;
   },
   next: typeof prev
 ) {
   if (prev.section !== next.section) return false;
   if (prev.aggregatedImages !== next.aggregatedImages) return false;
   if (prev.primaryImageUrl !== next.primaryImageUrl) return false;
+  if (prev.hiddenUrls !== next.hiddenUrls) return false;
   if (prev.onSelectPrimary !== next.onSelectPrimary) return false;
+  if (prev.onSetHidden !== next.onSetHidden) return false;
   return true;
 }
 
@@ -561,12 +658,16 @@ const CategoryBlockCategoriesMode = memo(function CategoryBlockCategoriesMode({
   section,
   aggregatedImages,
   primaryImageUrl,
+  hiddenUrls,
   onSelectPrimary,
+  onSetHidden,
 }: {
   section: KitImagePositionCategorySection;
   aggregatedImages: KitImagePositionProduct[];
   primaryImageUrl: string | undefined;
+  hiddenUrls: string[];
   onSelectPrimary: (categoryId: string, imageUrl: string) => void;
+  onSetHidden: (categoryId: string, imageUrl: string, hidden: boolean) => void;
 }) {
   const [open, setOpen] = useState(true);
 
@@ -596,7 +697,9 @@ const CategoryBlockCategoriesMode = memo(function CategoryBlockCategoriesMode({
             categoryId={section.id}
             images={aggregatedImages}
             primaryImageUrl={primaryImageUrl}
+            hiddenUrls={hiddenUrls}
             onSelectPrimary={onSelectPrimary}
+            onSetHidden={onSetHidden}
           />
           <CategoryTicketsList tickets={ticketSummaries} />
         </div>
@@ -610,12 +713,16 @@ const UncategorizedCategoriesBlock = memo(
     section,
     aggregatedImages,
     primaryImageUrl,
+    hiddenUrls,
     onSelectPrimary,
+    onSetHidden,
   }: {
     section: KitImagePositionCategorySection;
     aggregatedImages: KitImagePositionProduct[];
     primaryImageUrl: string | undefined;
+    hiddenUrls: string[];
     onSelectPrimary: (categoryId: string, imageUrl: string) => void;
+    onSetHidden: (categoryId: string, imageUrl: string, hidden: boolean) => void;
   }) {
     const ticketSummaries = useMemo(
       () => section.tickets.map((t) => ({ id: t.id, name: t.name })),
@@ -643,7 +750,9 @@ const UncategorizedCategoriesBlock = memo(
             categoryId={UNCATEGORIZED_CATEGORY_KEY}
             images={aggregatedImages}
             primaryImageUrl={primaryImageUrl}
+            hiddenUrls={hiddenUrls}
             onSelectPrimary={onSelectPrimary}
+            onSetHidden={onSetHidden}
           />
           <CategoryTicketsList tickets={ticketSummaries} />
         </div>
@@ -657,18 +766,18 @@ function categoryBlockPropsEqual(
   prev: {
     section: KitImagePositionCategorySection;
     primaryByTicket: Record<string, string>;
+    hiddenByTicket: Record<string, string[]>;
     onSelectPrimary: (ticketId: string, imageUrl: string) => void;
+    onSetHidden: (ticketId: string, imageUrl: string, hidden: boolean) => void;
   },
-  next: {
-    section: KitImagePositionCategorySection;
-    primaryByTicket: Record<string, string>;
-    onSelectPrimary: (ticketId: string, imageUrl: string) => void;
-  }
+  next: typeof prev
 ) {
   if (prev.section !== next.section) return false;
   if (prev.onSelectPrimary !== next.onSelectPrimary) return false;
+  if (prev.onSetHidden !== next.onSetHidden) return false;
   for (const t of prev.section.tickets) {
     if (prev.primaryByTicket[t.id] !== next.primaryByTicket[t.id]) return false;
+    if (prev.hiddenByTicket[t.id] !== next.hiddenByTicket[t.id]) return false;
   }
   return true;
 }
@@ -676,11 +785,15 @@ function categoryBlockPropsEqual(
 const CategoryBlock = memo(function CategoryBlock({
   section,
   primaryByTicket,
+  hiddenByTicket,
   onSelectPrimary,
+  onSetHidden,
 }: {
   section: KitImagePositionCategorySection;
   primaryByTicket: Record<string, string>;
+  hiddenByTicket: Record<string, string[]>;
   onSelectPrimary: (ticketId: string, imageUrl: string) => void;
+  onSetHidden: (ticketId: string, imageUrl: string, hidden: boolean) => void;
 }) {
   const [open, setOpen] = useState(true);
 
@@ -705,7 +818,9 @@ const CategoryBlock = memo(function CategoryBlock({
               ticketName={t.name}
               images={t.images}
               primaryImageUrl={primaryByTicket[t.id]}
+              hiddenUrls={hiddenByTicket[t.id] ?? EMPTY_URLS}
               onSelectPrimary={onSelectPrimary}
+              onSetHidden={onSetHidden}
             />
           ))}
         </div>
@@ -732,6 +847,12 @@ export function KitImagePositionDrawer({
   >({});
   const [primaryByCategory, setPrimaryByCategory] = useState<
     Record<string, string>
+  >({});
+  const [hiddenByTicket, setHiddenByTicket] = useState<
+    Record<string, string[]>
+  >({});
+  const [hiddenByCategory, setHiddenByCategory] = useState<
+    Record<string, string[]>
   >({});
 
   const filteredSections = useMemo(
@@ -769,6 +890,22 @@ export function KitImagePositionDrawer({
     return map;
   }, [filteredSections, filteredUncategorized]);
 
+  /** ticketId → URLs ordenadas (para normalizar primary/oculto). */
+  const ticketImageUrls = useMemo(() => {
+    const map: Record<string, string[]> = {};
+    for (const t of allTicketRows) map[t.id] = imageUrlsOf(t.images);
+    return map;
+  }, [allTicketRows]);
+
+  /** categoryId → URLs ordenadas. */
+  const categoryImageUrls = useMemo(() => {
+    const map: Record<string, string[]> = {};
+    for (const [id, imgs] of Object.entries(categoryAggregates)) {
+      map[id] = imageUrlsOf(imgs);
+    }
+    return map;
+  }, [categoryAggregates]);
+
   useEffect(() => {
     if (!isOpen) return;
 
@@ -781,6 +918,26 @@ export function KitImagePositionDrawer({
       if (pid) nextTicket[t.id] = pid;
     }
     setPrimaryByTicket(nextTicket);
+
+    // Ocultas: só mantém URLs que ainda existem no ingresso/categoria (dropa órfãs).
+    const initHidden = (
+      source: Record<string, string[]> | undefined,
+      urlsById: Record<string, string[]>,
+    ): Record<string, string[]> => {
+      const out: Record<string, string[]> = {};
+      for (const [id, urls] of Object.entries(urlsById)) {
+        const wanted = new Set(source?.[id] ?? []);
+        const kept = urls.filter((u) => wanted.has(u));
+        if (kept.length) out[id] = kept;
+      }
+      return out;
+    };
+    setHiddenByTicket(
+      initHidden(initialKitSelection?.hiddenByTicket, ticketImageUrls),
+    );
+    setHiddenByCategory(
+      initHidden(initialKitSelection?.hiddenByCategory, categoryImageUrls),
+    );
 
     const nextCat: Record<string, string> = {};
     for (const s of filteredSections) {
@@ -808,6 +965,8 @@ export function KitImagePositionDrawer({
     filteredSections,
     filteredUncategorized,
     initialKitSelection,
+    ticketImageUrls,
+    categoryImageUrls,
   ]);
 
   const handleSelectPrimary = useCallback(
@@ -824,12 +983,82 @@ export function KitImagePositionDrawer({
     []
   );
 
+  const handleSetHiddenTicket = useCallback(
+    (ticketId: string, imageUrl: string, hidden: boolean) => {
+      setHiddenByTicket((prev) => {
+        const cur = new Set(prev[ticketId] ?? []);
+        if (hidden) cur.add(imageUrl);
+        else cur.delete(imageUrl);
+        return { ...prev, [ticketId]: [...cur] };
+      });
+    },
+    []
+  );
+
+  const handleSetHiddenCategory = useCallback(
+    (categoryId: string, imageUrl: string, hidden: boolean) => {
+      setHiddenByCategory((prev) => {
+        const cur = new Set(prev[categoryId] ?? []);
+        if (hidden) cur.add(imageUrl);
+        else cur.delete(imageUrl);
+        return { ...prev, [categoryId]: [...cur] };
+      });
+    },
+    []
+  );
+
+  // Normaliza a imagem PRINCIPAL: ela precisa estar VISÍVEL (não oculta) e ainda
+  // existir. Se o organizador ocultar a principal, ela migra para a 1ª visível.
+  // Só reatribui quando inválida — seleção manual de uma visível é preservada.
+  useEffect(() => {
+    setPrimaryByTicket((prev) => {
+      let changed = false;
+      const next = { ...prev };
+      for (const [tid, urls] of Object.entries(ticketImageUrls)) {
+        const hidden = new Set(hiddenByTicket[tid] ?? []);
+        const cur = prev[tid];
+        if (cur && urls.includes(cur) && !hidden.has(cur)) continue;
+        const firstVisible = urls.find((u) => !hidden.has(u));
+        if (next[tid] !== firstVisible) {
+          if (firstVisible) next[tid] = firstVisible;
+          else delete next[tid];
+          changed = true;
+        }
+      }
+      return changed ? next : prev;
+    });
+  }, [hiddenByTicket, ticketImageUrls]);
+
+  useEffect(() => {
+    setPrimaryByCategory((prev) => {
+      let changed = false;
+      const next = { ...prev };
+      for (const [cid, urls] of Object.entries(categoryImageUrls)) {
+        const hidden = new Set(hiddenByCategory[cid] ?? []);
+        const cur = prev[cid];
+        if (cur && urls.includes(cur) && !hidden.has(cur)) continue;
+        const firstVisible = urls.find((u) => !hidden.has(u));
+        if (next[cid] !== firstVisible) {
+          if (firstVisible) next[cid] = firstVisible;
+          else delete next[cid];
+          changed = true;
+        }
+      }
+      return changed ? next : prev;
+    });
+  }, [hiddenByCategory, categoryImageUrls]);
+
   const handleSave = useCallback(async () => {
+    // Remove entradas vazias (ingressos/categorias sem nenhuma imagem oculta).
+    const pruneEmpty = (m: Record<string, string[]>): Record<string, string[]> =>
+      Object.fromEntries(Object.entries(m).filter(([, v]) => v.length > 0));
     try {
       await onSave?.({
         layout,
         primaryImageUrlByTicketId: primaryByTicket,
         primaryImageUrlByCategoryId: primaryByCategory,
+        hiddenImageUrlsByTicketId: pruneEmpty(hiddenByTicket),
+        hiddenImageUrlsByCategoryId: pruneEmpty(hiddenByCategory),
       });
       toast.success(saveSuccessMessage);
       onClose();
@@ -840,6 +1069,8 @@ export function KitImagePositionDrawer({
     layout,
     primaryByTicket,
     primaryByCategory,
+    hiddenByTicket,
+    hiddenByCategory,
     onSave,
     onClose,
     saveSuccessMessage,
@@ -985,7 +1216,9 @@ export function KitImagePositionDrawer({
                       key={section.id}
                       section={section}
                       primaryByTicket={primaryByTicket}
+                      hiddenByTicket={hiddenByTicket}
                       onSelectPrimary={handleSelectPrimary}
+                      onSetHidden={handleSetHiddenTicket}
                     />
                   ))}
                   {filteredUncategorized &&
@@ -1013,7 +1246,9 @@ export function KitImagePositionDrawer({
                             ticketName={t.name}
                             images={t.images}
                             primaryImageUrl={primaryByTicket[t.id]}
+                            hiddenUrls={hiddenByTicket[t.id] ?? EMPTY_URLS}
                             onSelectPrimary={handleSelectPrimary}
+                            onSetHidden={handleSetHiddenTicket}
                           />
                         ))}
                       </div>
@@ -1035,7 +1270,9 @@ export function KitImagePositionDrawer({
                       categoryAggregates[section.id] ?? []
                     }
                     primaryImageUrl={primaryByCategory[section.id]}
+                    hiddenUrls={hiddenByCategory[section.id] ?? EMPTY_URLS}
                     onSelectPrimary={handleSelectPrimaryCategory}
+                    onSetHidden={handleSetHiddenCategory}
                   />
                 ))}
               </div>
