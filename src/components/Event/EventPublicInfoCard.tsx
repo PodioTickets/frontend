@@ -21,6 +21,7 @@ import {
   formatWeekdayDayMonthBR,
 } from "@/utils/datetimeBR";
 import { getEventOrganizer } from "@/utils/organization";
+import { buildGoogleMapsPlaceLink } from "@/utils/googleMapsGeo";
 import { useMemo, useState } from "react";
 
 /**
@@ -267,7 +268,17 @@ function RegistrationCtaBlock({
 
 /** Linhas de data + endereço — espelha a página pública do evento. */
 function EventMetaRows({ event, mobile }: { event: Event; mobile?: boolean }) {
-  const mapsUrl = sanitizeUrl(event.googleMapsLink?.trim()) ?? "";
+  // Clique no endereço mostra o NOME do local (não as coordenadas). Sem
+  // `locationName` (legado) cai no `googleMapsLink` por coordenadas.
+  const mapsUrl =
+    sanitizeUrl(
+      buildGoogleMapsPlaceLink({
+        locationName: event.locationName,
+        city: event.city,
+        state: event.state,
+        fallback: event.googleMapsLink?.trim() || "",
+      }),
+    ) ?? "";
   // MESMO formato do card da tela pública do evento (`addressLabel` em
   // /events/[slug]): "Local, Cidade, UF" — sem bairro/endereço/CEP. `locationName`
   // ausente (evento legado) cai em "Cidade, UF".

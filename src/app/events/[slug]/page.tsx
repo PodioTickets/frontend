@@ -8,6 +8,7 @@ import { ArrowLeft, GlobeIcon } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/Button";
 import { EventMap } from "@/components/EventMap";
+import { buildGoogleMapsPlaceLink } from "@/utils/googleMapsGeo";
 import { useEventBySlug } from "@/hooks/useEvent";
 import {
   formatDateTimeBR,
@@ -259,6 +260,17 @@ export default function EventPage() {
     event.status === "SUSPENDED" || event.isSuspended === true;
 
   const mapsUrl = sanitizeUrl(event.googleMapsLink?.trim()) ?? "";
+  // Link do CLIQUE no endereço: mostra o NOME do local (não as coordenadas).
+  // O embed do mapa continua usando `mapsUrl` (coordenadas → pino exato).
+  const mapsClickUrl =
+    sanitizeUrl(
+      buildGoogleMapsPlaceLink({
+        locationName: event.locationName,
+        city: event.city,
+        state: event.state,
+        fallback: mapsUrl,
+      }),
+    ) ?? mapsUrl;
 
   // "Denunciar evento" → WhatsApp do suporte PodioTickets (mesmo número do contato),
   // com mensagem pré-preenchida identificando o evento (nome + slug).
@@ -425,7 +437,7 @@ export default function EventPage() {
               <div className="flex items-center gap-2 text-gray-12">
                 <LocationIcon className="size-5 text-gray-12 shrink-0" />
                 <Link
-                  href={mapsUrl}
+                  href={mapsClickUrl}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="text-sm underline"
@@ -1039,7 +1051,7 @@ export default function EventPage() {
                     <h1 className="flex items-center gap-2 text-gray-12 font-medium">
                       <LocationIcon className="size-5 shrink-0" />{" "}
                       <Link
-                        href={mapsUrl}
+                        href={mapsClickUrl}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="text-sm underline"
