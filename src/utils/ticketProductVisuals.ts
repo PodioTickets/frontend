@@ -35,7 +35,7 @@ export function orderCarouselItemsWithPreferredInCenter<T extends { id: string }
  */
 export function getTicketProductCarouselItems(
   ticket: Pick<Ticket, "productImages">,
-  options?: { primaryProductId?: string | null },
+  options?: { primaryProductId?: string | null; hiddenUrls?: string[] },
 ): ImageCarouselItem[] {
   if (!ticket.productImages?.length) return [];
 
@@ -49,10 +49,16 @@ export function getTicketProductCarouselItems(
     }
   }
 
+  // Imagens OCULTAS pelo organizador não aparecem para o participante.
+  const hidden = options?.hiddenUrls?.length
+    ? new Set(options.hiddenUrls)
+    : null;
+
   const items: ImageCarouselItem[] = [];
   for (const product of products) {
     if (product.images.length > 0) {
       product.images.forEach((src, i) => {
+        if (hidden?.has(src)) return;
         items.push({ id: `${product.id}-${i}`, name: product.name, src });
       });
     } else {
@@ -71,9 +77,11 @@ export function getTicketProductCarouselItems(
 export function getCategoryKitCarouselItems(
   tickets: Pick<Ticket, "productImages">[],
   primaryImageSrc?: string | null,
+  hiddenUrls?: string[],
 ): ImageCarouselItem[] {
   const seen = new Set<string>();
   const items: ImageCarouselItem[] = [];
+  const hidden = hiddenUrls?.length ? new Set(hiddenUrls) : null;
 
   for (const ticket of tickets) {
     for (const product of ticket.productImages || []) {
@@ -84,6 +92,7 @@ export function getCategoryKitCarouselItems(
         items.push({ id: product.id, name: product.name, src: null });
       } else {
         product.images.forEach((src, i) => {
+          if (hidden?.has(src)) return;
           items.push({ id: `${product.id}-${i}`, name: product.name, src });
         });
       }

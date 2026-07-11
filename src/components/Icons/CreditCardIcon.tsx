@@ -4,14 +4,19 @@ import * as React from "react";
  * Ícone genérico de cartão (bandeira neutra). Usado no ORGANIZADOR no lugar do
  * ícone da bandeira real do cartão (`PaymentIcon` da lib) — telas de inscrições,
  * financeiro e afins. Cores próprias (gradiente azul), não segue `currentColor`.
- * viewBox 32×20: com o `preserveAspectRatio` padrão, escala sem distorcer mesmo
- * dentro de caixas quadradas (`size-*`).
+ *
+ * - `viewBox` 32×20 SEM width/height fixos: a dimensão vem 100% do `className`
+ *   (ex.: `w-9`), e a outra deriva da proporção — sem distorcer nem "encolher"
+ *   quando o caller passa só a largura (bug anterior: height travada em 20px).
+ * - `id` do gradiente ÚNICO por instância (`useId`): nos modais de pagamento
+ *   renderizam VÁRIOS cartões; com id fixo os `<defs>` colidiam e o gradiente
+ *   falhava em alguns (cartão saía preto), pior no Safari/iOS.
  */
 export function CreditCardIcon({ className }: { className?: string }) {
+  const rawId = React.useId();
+  const gradientId = `cc-grad-${rawId.replace(/:/g, "")}`;
   return (
     <svg
-      width="32"
-      height="20"
       viewBox="0 0 32 20"
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
@@ -19,7 +24,7 @@ export function CreditCardIcon({ className }: { className?: string }) {
     >
       <path
         d="M30.8392 0H1.14056C0.510646 0 0 0.510646 0 1.14056V18.8594C0 19.4894 0.510646 20 1.14056 20H30.8392C31.4691 20 31.9798 19.4894 31.9798 18.8594V1.14056C31.9798 0.510646 31.4691 0 30.8392 0Z"
-        fill="url(#paint0_linear_credit_card)"
+        fill={`url(#${gradientId})`}
       />
       <path d="M31.9798 4.29297H0V7.91196H31.9798V4.29297Z" fill="#202020" />
       <path
@@ -40,7 +45,7 @@ export function CreditCardIcon({ className }: { className?: string }) {
       />
       <defs>
         <linearGradient
-          id="paint0_linear_credit_card"
+          id={gradientId}
           x1="32.5"
           y1="-0.239257"
           x2="0.937501"

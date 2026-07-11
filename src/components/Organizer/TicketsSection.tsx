@@ -97,11 +97,15 @@ export interface KitImagePositionDrawerProps {
     layout: KitImageLayoutMode;
     primaryByTicket: Record<string, string>;
     primaryByCategory: Record<string, string>;
+    hiddenByTicket?: Record<string, string[]>;
+    hiddenByCategory?: Record<string, string[]>;
   };
   onSave: (payload: {
     layout: KitImageLayoutMode;
     primaryImageUrlByTicketId: Record<string, string>;
     primaryImageUrlByCategoryId: Record<string, string>;
+    hiddenImageUrlsByTicketId: Record<string, string[]>;
+    hiddenImageUrlsByCategoryId: Record<string, string[]>;
   }) => void;
   saveSuccessMessage?: string;
 }
