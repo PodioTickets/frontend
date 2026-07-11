@@ -854,6 +854,7 @@ export function KitImagePositionDrawer({
   const [hiddenByCategory, setHiddenByCategory] = useState<
     Record<string, string[]>
   >({});
+  const [saving, setSaving] = useState(false);
 
   const filteredSections = useMemo(
     () =>
@@ -1049,9 +1050,11 @@ export function KitImagePositionDrawer({
   }, [hiddenByCategory, categoryImageUrls]);
 
   const handleSave = useCallback(async () => {
+    if (saving) return;
     // Remove entradas vazias (ingressos/categorias sem nenhuma imagem oculta).
     const pruneEmpty = (m: Record<string, string[]>): Record<string, string[]> =>
       Object.fromEntries(Object.entries(m).filter(([, v]) => v.length > 0));
+    setSaving(true);
     try {
       await onSave?.({
         layout,
@@ -1064,8 +1067,11 @@ export function KitImagePositionDrawer({
       onClose();
     } catch {
       toast.error("Não foi possível salvar.");
+    } finally {
+      setSaving(false);
     }
   }, [
+    saving,
     layout,
     primaryByTicket,
     primaryByCategory,
@@ -1284,9 +1290,10 @@ export function KitImagePositionDrawer({
           <Button
             type="button"
             onClick={handleSave}
+            disabled={saving}
             className="h-11 px-5 font-bold text-base font-manrope"
           >
-            Salvar configuração
+            {saving ? "Salvando..." : "Salvar configuração"}
           </Button>
         </div>
       </DrawerContent>

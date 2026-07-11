@@ -88,6 +88,32 @@ export function buildGoogleMapsLinkFromCoordinates(
 }
 
 /**
+ * Link do Google Maps para o CLIQUE do usuário ("abrir no mapa") mostrando o
+ * NOME do local, não as coordenadas. Quando há `locationName` (POI escolhido no
+ * mapa), busca por `"Nome, Cidade, UF"` — o Google rotula com o nome do lugar.
+ * Sem `locationName` (evento legado), cai no `fallback` (link por coordenadas),
+ * que mantém o pino exato mesmo sem nome.
+ *
+ * Obs.: o EMBED (`EventMap`) continua usando o link por coordenadas — pino
+ * preciso; aqui é só o rótulo do clique externo.
+ */
+export function buildGoogleMapsPlaceLink(parts: {
+  locationName?: string | null;
+  city?: string | null;
+  state?: string | null;
+  fallback?: string | null;
+}): string {
+  const name = parts.locationName?.trim();
+  if (name) {
+    const query = [name, parts.city?.trim(), parts.state?.trim()]
+      .filter((v): v is string => !!v)
+      .join(", ");
+    return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`;
+  }
+  return parts.fallback?.trim() || "";
+}
+
+/**
  * Endereço estruturado derivado do local escolhido no mapa. Preenchido no
  * MELHOR ESFORÇO a partir do reverse-geocode/Place do Google — qualquer campo
  * pode vir vazio (ex.: POI sem número, área rural sem bairro).
