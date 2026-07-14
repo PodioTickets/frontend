@@ -8,6 +8,7 @@ import { ArrowLeft, GlobeIcon } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/Button";
 import { EventMap } from "@/components/EventMap";
+import { buildGoogleMapsPlaceLink } from "@/utils/googleMapsGeo";
 import { useEventBySlug } from "@/hooks/useEvent";
 import {
   formatDateTimeBR,
@@ -108,6 +109,18 @@ export default function EventPage() {
     if (!event) return [];
     return getEnabledTopicsSorted(event);
   }, [event]);
+
+  // Endereço no MESMO formato dos cards (home/busca): "Local, Cidade, Estado".
+  // `locationName` (escolhido no mapa) pode faltar em eventos legados → cai pra
+  // "Cidade, Estado". Ver EventCard (src/components/Event/Card/index.tsx).
+  const addressLabel = useMemo(
+    () =>
+      [event?.locationName, event?.city, event?.state]
+        .map((part) => (part ?? "").trim())
+        .filter(Boolean)
+        .join(", "),
+    [event?.locationName, event?.city, event?.state],
+  );
   const { isAuthenticated } = useAuth();
   const { openLoginModal } = useLoginModal();
   const [imageError, setImageError] = useState(false);
@@ -247,6 +260,17 @@ export default function EventPage() {
     event.status === "SUSPENDED" || event.isSuspended === true;
 
   const mapsUrl = sanitizeUrl(event.googleMapsLink?.trim()) ?? "";
+  // Link do CLIQUE no endereço: mostra o NOME do local (não as coordenadas).
+  // O embed do mapa continua usando `mapsUrl` (coordenadas → pino exato).
+  const mapsClickUrl =
+    sanitizeUrl(
+      buildGoogleMapsPlaceLink({
+        locationName: event.locationName,
+        city: event.city,
+        state: event.state,
+        fallback: mapsUrl,
+      }),
+    ) ?? mapsUrl;
 
   // "Denunciar evento" → WhatsApp do suporte PodioTickets (mesmo número do contato),
   // com mensagem pré-preenchida identificando o evento (nome + slug).
@@ -413,21 +437,12 @@ export default function EventPage() {
               <div className="flex items-center gap-2 text-gray-12">
                 <LocationIcon className="size-5 text-gray-12 shrink-0" />
                 <Link
-                  href={mapsUrl}
+                  href={mapsClickUrl}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="text-sm underline"
                 >
-                  {[
-                    `${event.city} - ${event.state}`,
-                    event.neighborhood,
-                    event.location,
-                  ]
-                    .filter(Boolean)
-                    .join(", ")}
-                  {event.zipCode && (
-                    <span className="whitespace-nowrap">, {event.zipCode}</span>
-                  )}
+                  {addressLabel}
                 </Link>
               </div>
             </div>
@@ -1036,23 +1051,12 @@ export default function EventPage() {
                     <h1 className="flex items-center gap-2 text-gray-12 font-medium">
                       <LocationIcon className="size-5 shrink-0" />{" "}
                       <Link
-                        href={mapsUrl}
+                        href={mapsClickUrl}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="text-sm underline"
                       >
-                        {[
-                          `${event.city} - ${event.state}`,
-                          event.neighborhood,
-                          event.location,
-                        ]
-                          .filter(Boolean)
-                          .join(", ")}
-                        {event.zipCode && (
-                          <span className="whitespace-nowrap">
-                            , {event.zipCode}
-                          </span>
-                        )}
+                        {addressLabel}
                       </Link>
                     </h1>
                   </div>

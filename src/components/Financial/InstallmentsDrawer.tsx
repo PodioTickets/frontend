@@ -12,7 +12,7 @@ import { X, FileText, Search } from "lucide-react";
 import { Pagination } from "../Pagination";
 import { CalendarIcon } from "@/components/Icons/CalendarIcon";
 import { PixIcon } from "@/components/Icons/PixIcon";
-import { PaymentIcon } from "react-svg-credit-card-payment-icons";
+import { CreditCardIcon } from "@/components/Icons/CreditCardIcon";
 import { PaymentItemDetailsDrawer } from "./PaymentItemDetailsDrawer";
 import { ArrowButton } from "../ArrowButton";
 import { DetailsIcon } from "../Icons/DetailsIcon";
@@ -307,7 +307,7 @@ export function InstallmentsDrawer({
                             {installment.paymentMethod === "PIX" ? (
                               <PixIcon className="size-5 text-gray-12" />
                             ) : (
-                              <PaymentIcon type="Generic" format="flatRounded" className="size-8 text-gray-12" />
+                              <CreditCardIcon className="w-8" />
                             )}
                           </div>
                         </div>
@@ -498,7 +498,7 @@ export function InstallmentsDrawer({
                             {installment.paymentMethod === "PIX" ? (
                               <PixIcon className="size-5 text-gray-12" />
                             ) : (
-                              <PaymentIcon type="Generic" format="flatRounded" className="size-8 text-gray-12" />
+                              <CreditCardIcon className="w-8" />
                             )}
                           </div>
                         </div>

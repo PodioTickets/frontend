@@ -48,14 +48,24 @@ export class EventService {
       params: { page, limit },
     });
 
-    console.log(data)
-
     return (
       data.data || {
         events: [],
         pagination: { page, limit, total: 0, totalPages: 1 },
       }
     );
+  }
+
+  /**
+   * Eventos em destaque (carrossel da home). Só os marcados pelo admin, na ordem
+   * definida na tela de destaque — o backend recorta por `featured=true`. Mesmo
+   * contrato de `getEvents`, então o `EventCard` renderiza sem adaptação.
+   */
+  async getFeaturedEvents(limit = 20): Promise<Event[]> {
+    const { data } = await this.apiClient.get("/api/v1/events/featured", {
+      params: { limit },
+    });
+    return data.data?.events ?? [];
   }
 
   async getEventById(id: string): Promise<Event> {

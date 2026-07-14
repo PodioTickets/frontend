@@ -198,9 +198,15 @@ const TicketItemMobile = memo(({
     () => showProductImages
       ? getTicketProductCarouselItems(ticket, {
         primaryProductId: kitSelectionDisplay.primaryKitProductByTicketId[ticket.id],
+        hiddenUrls: kitSelectionDisplay.hiddenKitImageUrlsByTicketId[ticket.id],
       })
       : [],
-    [ticket, kitSelectionDisplay.primaryKitProductByTicketId, showProductImages],
+    [
+      ticket,
+      kitSelectionDisplay.primaryKitProductByTicketId,
+      kitSelectionDisplay.hiddenKitImageUrlsByTicketId,
+      showProductImages,
+    ],
   );
 
   // ON_TICKETS mobile: 1 imagem principal + 2x2 thumbs. A 5ª recebe overlay
@@ -557,9 +563,15 @@ const TicketItemDesktop = memo(({
     () => showProductImages
       ? getTicketProductCarouselItems(ticket, {
         primaryProductId: kitSelectionDisplay.primaryKitProductByTicketId[ticket.id],
+        hiddenUrls: kitSelectionDisplay.hiddenKitImageUrlsByTicketId[ticket.id],
       })
       : [],
-    [ticket, kitSelectionDisplay.primaryKitProductByTicketId, showProductImages],
+    [
+      ticket,
+      kitSelectionDisplay.primaryKitProductByTicketId,
+      kitSelectionDisplay.hiddenKitImageUrlsByTicketId,
+      showProductImages,
+    ],
   );
 
   useEffect(() => {
@@ -875,9 +887,16 @@ export function TicketCategoryCard({
         ? getCategoryKitCarouselItems(
           validTickets,
           kitSelectionDisplay.primaryKitProductByCategoryId[categoryId],
+          kitSelectionDisplay.hiddenKitImageUrlsByCategoryId[categoryId],
         )
         : [],
-    [showCategoryLevelKit, validTickets, categoryId, kitSelectionDisplay.primaryKitProductByCategoryId],
+    [
+      showCategoryLevelKit,
+      validTickets,
+      categoryId,
+      kitSelectionDisplay.primaryKitProductByCategoryId,
+      kitSelectionDisplay.hiddenKitImageUrlsByCategoryId,
+    ],
   );
 
   const headerThumbItem = categoryCarouselItems[0] ?? null;

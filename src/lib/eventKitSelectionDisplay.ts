@@ -12,10 +12,17 @@ export interface EventKitSelectionDisplay {
   showKitImagesOnSelection: boolean;
   /** Onde destacar imagens quando `showKitImagesOnSelection` é true. */
   kitImagesLayout: KitImagesLayoutApi;
-  /** Modo por ingresso: ticketId → productId da imagem principal. */
+  /** Modo por ingresso: ticketId → URL da imagem principal (o nome "Product" é histórico). */
   primaryKitProductByTicketId: Record<string, string>;
-  /** Modo por categoria: categoryId ou `uncategorized` → productId. */
+  /** Modo por categoria: categoryId ou `uncategorized` → URL da imagem principal. */
   primaryKitProductByCategoryId: Record<string, string>;
+  /**
+   * Imagens OCULTAS na tela de escolha (não aparecem pro participante). Mesma
+   * identidade do resto da feature: URL da imagem. ticketId → lista de URLs.
+   */
+  hiddenKitImageUrlsByTicketId: Record<string, string[]>;
+  /** Imagens ocultas no modo por categoria: categoryId/`uncategorized` → URLs. */
+  hiddenKitImageUrlsByCategoryId: Record<string, string[]>;
 }
 
 export function defaultEventKitSelectionDisplay(): EventKitSelectionDisplay {
@@ -24,6 +31,8 @@ export function defaultEventKitSelectionDisplay(): EventKitSelectionDisplay {
     kitImagesLayout: "ON_TICKETS",
     primaryKitProductByTicketId: {},
     primaryKitProductByCategoryId: {},
+    hiddenKitImageUrlsByTicketId: {},
+    hiddenKitImageUrlsByCategoryId: {},
   };
 }
 
@@ -57,6 +66,10 @@ export function parseEventKitSelectionDisplay(
     o.primaryKitProductByTicketId ?? o.primary_kit_product_by_ticket_id;
   const byCat =
     o.primaryKitProductByCategoryId ?? o.primary_kit_product_by_category_id;
+  const hiddenByTicket =
+    o.hiddenKitImageUrlsByTicketId ?? o.hidden_kit_image_urls_by_ticket_id;
+  const hiddenByCat =
+    o.hiddenKitImageUrlsByCategoryId ?? o.hidden_kit_image_urls_by_category_id;
 
   return {
     showKitImagesOnSelection:
@@ -75,7 +88,23 @@ export function parseEventKitSelectionDisplay(
       byCat && typeof byCat === "object" && !Array.isArray(byCat)
         ? { ...(byCat as Record<string, string>) }
         : {},
+    hiddenKitImageUrlsByTicketId: parseHiddenUrlsMap(hiddenByTicket),
+    hiddenKitImageUrlsByCategoryId: parseHiddenUrlsMap(hiddenByCat),
   };
+}
+
+/** Normaliza `Record<string, string[]>` tolerando shapes inválidos (dropa não-strings). */
+function parseHiddenUrlsMap(raw: unknown): Record<string, string[]> {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return {};
+  const out: Record<string, string[]> = {};
+  for (const [key, value] of Object.entries(raw as Record<string, unknown>)) {
+    if (!Array.isArray(value)) continue;
+    const urls = value.filter(
+      (u): u is string => typeof u === "string" && u.trim().length > 0,
+    );
+    if (urls.length > 0) out[key] = urls;
+  }
+  return out;
 }
 
 export function layoutToDrawerMode(

@@ -121,6 +121,8 @@ export default function IngressosPage() {
       layout: KitImageLayoutMode;
       primaryImageUrlByTicketId: Record<string, string>;
       primaryImageUrlByCategoryId: Record<string, string>;
+      hiddenImageUrlsByTicketId: Record<string, string[]>;
+      hiddenImageUrlsByCategoryId: Record<string, string[]>;
     }) => {
       setDraftKitSelection((prev) => ({
         ...defaultEventKitSelectionDisplay(),
@@ -128,6 +130,8 @@ export default function IngressosPage() {
         kitImagesLayout: drawerModeToApiLayout(payload.layout),
         primaryKitProductByTicketId: { ...payload.primaryImageUrlByTicketId },
         primaryKitProductByCategoryId: { ...payload.primaryImageUrlByCategoryId },
+        hiddenKitImageUrlsByTicketId: { ...payload.hiddenImageUrlsByTicketId },
+        hiddenKitImageUrlsByCategoryId: { ...payload.hiddenImageUrlsByCategoryId },
       }));
     },
     [],
@@ -138,6 +142,8 @@ export default function IngressosPage() {
       layout: layoutToDrawerMode(draftKitSelection.kitImagesLayout),
       primaryByTicket: { ...draftKitSelection.primaryKitProductByTicketId },
       primaryByCategory: { ...draftKitSelection.primaryKitProductByCategoryId },
+      hiddenByTicket: { ...draftKitSelection.hiddenKitImageUrlsByTicketId },
+      hiddenByCategory: { ...draftKitSelection.hiddenKitImageUrlsByCategoryId },
     }),
     [draftKitSelection],
   );

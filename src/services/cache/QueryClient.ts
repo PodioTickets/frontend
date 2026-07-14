@@ -72,6 +72,9 @@ export const queryClient = new QueryClient({
 export const queryKeys = {
   events: {
     all: ["events"] as const,
+    /** Carrossel público de "Eventos em destaque" da home. */
+    featured: (limit: number) =>
+      [...queryKeys.events.all, "featured", limit] as const,
     details: () => [...queryKeys.events.all, "detail"] as const,
     detail: (id: string) => [...queryKeys.events.details(), id] as const,
     tickets: (eventId: string) => [...queryKeys.events.all, "tickets", eventId] as const,
@@ -199,6 +202,14 @@ export const queryKeys = {
       all: () => [...queryKeys.admin.all, "repasse"] as const,
       list: (params: Record<string, unknown>) =>
         [...queryKeys.admin.repasse.all(), "list", params] as const,
+    },
+    featured: {
+      all: () => [...queryKeys.admin.all, "featured"] as const,
+      /** Lista dos eventos em destaque (carrossel). */
+      list: () => [...queryKeys.admin.featured.all(), "list"] as const,
+      /** Picker "adicionar evento": paginado + busca. */
+      picker: (params: { page: number; search: string }) =>
+        [...queryKeys.admin.featured.all(), "picker", params] as const,
     },
   },
 };

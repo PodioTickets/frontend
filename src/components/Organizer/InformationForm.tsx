@@ -16,6 +16,7 @@ import { EmailIcon } from "@/components/Icons/EmailIcon";
 import { LocationPickerModal, type LocationPickerResult } from "@/components/Organizer/LocationPickerModal";
 import { hasGoogleMapsApiKey } from "@/hooks/useGoogleMaps";
 import { useIpLocation } from "@/hooks/useIpLocation";
+import { useBrowserGeolocation } from "@/hooks/useBrowserGeolocation";
 import {
   hasValidCoordinates,
   formatCoordinatesLabel,
@@ -173,13 +174,22 @@ export function InformationForm({
     .filter((s) => (s ?? "").trim())
     .join(", ");
 
-  // Fluxo de CRIAR: sem local escolhido, centraliza o mapa na localização
-  // aproximada do usuário (por IP, resolvida no servidor). Só busca quando
-  // realmente vai usar — mapa habilitado, fluxo de criação e ainda sem local.
-  const ipCenterEnabled = enableIpLocationDefault && mapsEnabled && !hasLocation;
+  // Fluxo de CRIAR: sem local escolhido, centraliza o mapa na localização do
+  // usuário. Fonte PRIMÁRIA = geolocalização precisa do navegador (com permissão);
+  // FALLBACK = IP (impreciso, resolve a cidade do provedor). Só dispara quando o
+  // usuário ABRE o mapa (não pede permissão no load da tela) — fluxo de criação,
+  // mapa habilitado e ainda sem local.
+  const geoDefaultEnabled =
+    enableIpLocationDefault && mapsEnabled && !hasLocation && mapOpen;
+  const { coords: browserGeo, settled: geoSettled } =
+    useBrowserGeolocation(geoDefaultEnabled);
+  // IP só entra como fallback quando a geo do navegador terminou SEM coordenadas
+  // (negada/indisponível/timeout) — evita busca desnecessária e o "local aleatório".
+  const ipCenterEnabled = geoDefaultEnabled && geoSettled && !browserGeo;
   const { data: ipLocation } = useIpLocation(ipCenterEnabled);
-  const mapInitialCenter =
-    ipCenterEnabled && ipLocation
+  const mapInitialCenter = browserGeo
+    ? browserGeo
+    : ipCenterEnabled && ipLocation
       ? { lat: ipLocation.lat, lng: ipLocation.lng }
       : null;
 

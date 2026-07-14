@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { EventCard } from "@/components/Event/Card";
 import { useEvents } from "@/hooks/useEvents";
+import { useFeaturedEvents } from "@/hooks/useFeaturedEvents";
 
 interface EventCarouselProps {
   items?: number;
@@ -20,7 +21,17 @@ const MOBILE_PER_VIEW = 2.3;
 const MD_BREAKPOINT = 768;
 
 export function EventCarousel({ items = 20 }: EventCarouselProps) {
-  const { events } = useEvents({ page: 1, limit: items });
+  // Prioriza os eventos marcados como destaque pelo admin. Fallback para eventos
+  // recentes só quando NÃO há nenhum destaque — assim a home nunca fica vazia.
+  const { events: featured, isLoading: loadingFeatured } =
+    useFeaturedEvents(items);
+  const useFallback = !loadingFeatured && featured.length === 0;
+  const { events: fallback } = useEvents({
+    page: 1,
+    limit: items,
+    enabled: useFallback,
+  });
+  const events = featured.length > 0 ? featured : fallback;
 
   // Scroll horizontal NATIVO (momentum, sempre alcança o último card).
   const scrollerRef = useRef<HTMLDivElement>(null);

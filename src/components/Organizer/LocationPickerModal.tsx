@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { X, MapPin, AlertTriangle } from "lucide-react";
+import { X, MapPin, AlertTriangle, LocateFixed } from "lucide-react";
+import toast from "react-hot-toast";
 import { Button } from "@/components/Button";
 import { LoadingAnimation } from "@/components/Loading";
 import { useGoogleMaps } from "@/hooks/useGoogleMaps";
@@ -80,6 +81,16 @@ export function LocationPickerModal({
   const mapRef = useRef<any>(null);
   const markerRef = useRef<any>(null);
   const geocoderRef = useRef<any>(null);
+  // Exposto pelo initMap: posiciona o pino/centraliza a partir de coords. Usado
+  // pelo botão "Usar minha localização" (fora do closure do initMap).
+  const applyPositionRef = useRef<
+    | ((
+        pos: { lat: number; lng: number },
+        opts: { reverse: boolean; recenter: boolean },
+      ) => void)
+    | null
+  >(null);
+  const [locating, setLocating] = useState(false);
 
   const [pin, setPin] = useState<{ lat: number; lng: number } | null>(null);
   const [name, setName] = useState("");
@@ -190,6 +201,9 @@ export function LocationPickerModal({
         );
       }
     };
+
+    // Expõe pro botão "Usar minha localização" (fora deste closure).
+    applyPositionRef.current = applyPosition;
 
     if (startPin) {
       applyPosition(startPin, { reverse: false, recenter: false });
@@ -503,6 +517,33 @@ export function LocationPickerModal({
   const canConfirm = pin !== null;
   const showMap = status === "ready" || status === "loading" || status === "idle";
 
+  // "Usar minha localização": puxa a posição PRECISA do navegador (com permissão)
+  // e posiciona o pino + reverse geocode. Funciona sempre, mesmo quando já há um
+  // local salvo (rascunho) — nesse caso a geo automática de abertura é pulada.
+  const handleUseMyLocation = () => {
+    if (typeof navigator === "undefined" || !navigator.geolocation) {
+      toast.error("Seu navegador não suporta geolocalização.");
+      return;
+    }
+    setLocating(true);
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        setLocating(false);
+        applyPositionRef.current?.(
+          { lat: position.coords.latitude, lng: position.coords.longitude },
+          { reverse: true, recenter: true },
+        );
+      },
+      () => {
+        setLocating(false);
+        toast.error(
+          "Não foi possível obter sua localização. Verifique a permissão do navegador.",
+        );
+      },
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 5 * 60 * 1000 },
+    );
+  };
+
   const handleConfirm = () => {
     if (!pin) return;
     const label = name.trim() || address.trim() || formatCoordinatesLabel(pin.lat, pin.lng);
@@ -558,6 +599,24 @@ export function LocationPickerModal({
                   <div className="absolute inset-0 flex items-center justify-center bg-gray-2">
                     <LoadingAnimation />
                   </div>
+                )}
+                {/* Botão "minha localização" (padrão do Google Maps). Puxa a
+                    posição atual sob demanda — funciona mesmo com local já salvo. */}
+                {status === "ready" && (
+                  <button
+                    type="button"
+                    onClick={handleUseMyLocation}
+                    disabled={locating}
+                    className="absolute right-3 top-3 z-10 flex items-center gap-2 h-9 px-3 rounded-lg bg-gray-1 border border-gray-6 shadow-md text-gray-12 text-sm font-medium font-family-dm-sans hover:bg-gray-3 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+                    aria-label="Usar minha localização"
+                  >
+                    <LocateFixed
+                      className={`size-[18px] text-primary-11 ${locating ? "animate-pulse" : ""}`}
+                    />
+                    <span className="hidden sm:inline">
+                      {locating ? "Localizando..." : "Usar minha localização"}
+                    </span>
+                  </button>
                 )}
               </div>
 

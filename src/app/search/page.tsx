@@ -310,12 +310,25 @@ function SearchContent() {
       });
     }
 
+    // Destaque PRIMEIRO só na ordem PADRÃO (data crescente). Ordenações explícitas
+    // do usuário (nome, data-desc) respeitam a escolha dele. `featuredOrder` nulo =
+    // não destacado → vai para o fim (Infinity). O backend já pagina destaque-primeiro,
+    // então a página atual traz os destacados; aqui só garantimos a ordem dentro dela.
+    const byFeatured = (a: (typeof filtered)[number], b: (typeof filtered)[number]) => {
+      const fa = a.featuredOrder ?? Infinity;
+      const fb = b.featuredOrder ?? Infinity;
+      return fa - fb;
+    };
+
     // Ordenar
     return [...filtered].sort((a, b) => {
       switch (orderBy) {
-        case "date-asc":
+        case "date-asc": {
+          const f = byFeatured(a, b);
+          if (f !== 0) return f;
           if (!a.eventDate || !b.eventDate) return 0;
           return new Date(a.eventDate).getTime() - new Date(b.eventDate).getTime();
+        }
         case "date-desc":
           if (!a.eventDate || !b.eventDate) return 0;
           return new Date(b.eventDate).getTime() - new Date(a.eventDate).getTime();
@@ -323,9 +336,13 @@ function SearchContent() {
           return a.name.localeCompare(b.name, "pt-BR");
         case "name-desc":
           return b.name.localeCompare(a.name, "pt-BR");
-        default:
+        default: {
+          // Ordem padrão = data crescente com destaque no topo.
+          const f = byFeatured(a, b);
+          if (f !== 0) return f;
           if (!a.eventDate || !b.eventDate) return 0;
           return new Date(a.eventDate).getTime() - new Date(b.eventDate).getTime();
+        }
       }
     });
   }, [events, priceMin, priceMax, statusFilter, orderBy]);

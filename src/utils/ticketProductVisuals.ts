@@ -31,32 +31,41 @@ export function orderCarouselItemsWithPreferredInCenter<T extends { id: string }
 /**
  * Retorna todos os itens do carrossel para um ingresso, expandindo todas as imagens
  * de cada produto. Produtos sem imagem aparecem com src: null (exibe fallback de letra).
- * O produto `primaryProductId` é movido para a frente.
+ * A imagem principal (`primaryProductId` é uma URL, igual ao modo por categoria) é
+ * movida para a FRENTE — é o item exibido em destaque.
  */
 export function getTicketProductCarouselItems(
   ticket: Pick<Ticket, "productImages">,
-  options?: { primaryProductId?: string | null },
+  options?: { primaryProductId?: string | null; hiddenUrls?: string[] },
 ): ImageCarouselItem[] {
   if (!ticket.productImages?.length) return [];
 
-  let products = [...ticket.productImages];
+  // Imagens OCULTAS pelo organizador não aparecem para o participante.
+  const hidden = options?.hiddenUrls?.length
+    ? new Set(options.hiddenUrls)
+    : null;
 
-  if (options?.primaryProductId) {
-    const idx = products.findIndex((p) => p.id === options.primaryProductId);
-    if (idx > 0) {
-      const [primary] = products.splice(idx, 1);
-      products = [primary, ...products];
-    }
+  // Só imagens USÁVEIS: produtos sem imagem (ou com todas ocultas) NÃO viram um
+  // quadrado de fallback com a letra — se o ingresso fica sem nenhuma imagem
+  // visível, o bloco de imagens simplesmente não aparece (gate `length > 0`).
+  const items: ImageCarouselItem[] = [];
+  for (const product of ticket.productImages) {
+    product.images.forEach((src, i) => {
+      if (!src?.trim() || hidden?.has(src)) return;
+      items.push({ id: `${product.id}-${i}`, name: product.name, src });
+    });
   }
 
-  const items: ImageCarouselItem[] = [];
-  for (const product of products) {
-    if (product.images.length > 0) {
-      product.images.forEach((src, i) => {
-        items.push({ id: `${product.id}-${i}`, name: product.name, src });
-      });
-    } else {
-      items.push({ id: product.id, name: product.name, src: null });
+  // Move a imagem principal (por URL) para a frente — MESMA regra do modo por
+  // categoria. Antes comparava `product.id === primaryProductId`, mas o valor
+  // salvo é a URL da imagem, então nunca casava (principal não aparecia no
+  // formato "por ingresso").
+  const primaryUrl = options?.primaryProductId;
+  if (primaryUrl) {
+    const idx = items.findIndex((it) => it.src === primaryUrl);
+    if (idx > 0) {
+      const [primary] = items.splice(idx, 1);
+      return [primary, ...items];
     }
   }
 
@@ -71,9 +80,11 @@ export function getTicketProductCarouselItems(
 export function getCategoryKitCarouselItems(
   tickets: Pick<Ticket, "productImages">[],
   primaryImageSrc?: string | null,
+  hiddenUrls?: string[],
 ): ImageCarouselItem[] {
   const seen = new Set<string>();
   const items: ImageCarouselItem[] = [];
+  const hidden = hiddenUrls?.length ? new Set(hiddenUrls) : null;
 
   for (const ticket of tickets) {
     for (const product of ticket.productImages || []) {
@@ -84,6 +95,7 @@ export function getCategoryKitCarouselItems(
         items.push({ id: product.id, name: product.name, src: null });
       } else {
         product.images.forEach((src, i) => {
+          if (hidden?.has(src)) return;
           items.push({ id: `${product.id}-${i}`, name: product.name, src });
         });
       }

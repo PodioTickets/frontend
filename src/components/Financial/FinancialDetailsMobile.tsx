@@ -5,7 +5,7 @@ import Image from "next/image";
 import { X, Search, FileText } from "lucide-react";
 import { Pagination } from "../Pagination";
 import { PixIcon } from "@/components/Icons/PixIcon";
-import { PaymentIcon } from "react-svg-credit-card-payment-icons";
+import { CreditCardIcon } from "@/components/Icons/CreditCardIcon";
 import { ArrowButton } from "../ArrowButton";
 import { getAvatarUrl } from "@/utils/avatar";
 import { formatShortId } from "@/utils/shortId";
@@ -243,11 +243,7 @@ export function FinancialDetailsMobile({
                         {item.paymentMethod === "Pix" || item.paymentMethod === "PIX" ? (
                           <PixIcon className="size-6 text-gray-12" />
                         ) : (
-                          <PaymentIcon
-                            type={item.paymentMethod as any}
-                            format="flatRounded"
-                            className="h-4 w-auto"
-                          />
+                          <CreditCardIcon className="h-4" />
                         )}
                       </div>
                     </div>

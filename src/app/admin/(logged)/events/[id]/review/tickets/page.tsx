@@ -92,15 +92,17 @@ export default function ReviewTicketsPage() {
     });
   }, [savedKitSelection]);
 
-  const kitSelectionDirty = useMemo(() => {
-    const norm = (k: EventKitSelectionDisplay) => ({
-      show: k.showKitImagesOnSelection,
-      layout: k.kitImagesLayout,
-      byTicket: k.primaryKitProductByTicketId,
-      byCat: k.primaryKitProductByCategoryId,
-    });
-    return JSON.stringify(norm(draftKitSelection)) !== JSON.stringify(norm(savedKitSelection));
-  }, [draftKitSelection, savedKitSelection]);
+  // Só o radio "Deseja exibir as imagens..." é salvo pela página; layout/principal/
+  // ocultas já salvam no botão do drawer. Por isso o dirty observa SÓ o `show`.
+  const kitSelectionDirty = useMemo(
+    () =>
+      draftKitSelection.showKitImagesOnSelection !==
+      savedKitSelection.showKitImagesOnSelection,
+    [
+      draftKitSelection.showKitImagesOnSelection,
+      savedKitSelection.showKitImagesOnSelection,
+    ],
+  );
 
   const discardLocalChanges = useCallback(async () => {
     if (!eventId) return;
@@ -205,21 +207,47 @@ export default function ReviewTicketsPage() {
     [eventId, draftKitSelection, router],
   );
 
+  // Salva a POSIÇÃO/OCULTAS das imagens JÁ no botão do drawer. O radio "Deseja
+  // exibir as imagens..." NÃO é tocado aqui (persistimos com o `show` já SALVO e
+  // preservamos o toggle não-salvo no draft — ele é salvo pelo botão da página).
   const handleKitDrawerSave = useCallback(
-    (payload: {
+    async (payload: {
       layout: KitImageLayoutMode;
       primaryImageUrlByTicketId: Record<string, string>;
       primaryImageUrlByCategoryId: Record<string, string>;
+      hiddenImageUrlsByTicketId: Record<string, string[]>;
+      hiddenImageUrlsByCategoryId: Record<string, string[]>;
     }) => {
-      setDraftKitSelection((prev) => ({
+      if (!eventId) {
+        toast.error("Evento não encontrado.");
+        throw new Error("missing eventId");
+      }
+      const currentShow = draftKitSelection.showKitImagesOnSelection;
+      const persisted: EventKitSelectionDisplay = {
         ...defaultEventKitSelectionDisplay(),
-        ...prev,
+        ...savedKitSelection,
         kitImagesLayout: drawerModeToApiLayout(payload.layout),
         primaryKitProductByTicketId: { ...payload.primaryImageUrlByTicketId },
         primaryKitProductByCategoryId: { ...payload.primaryImageUrlByCategoryId },
-      }));
+        hiddenKitImageUrlsByTicketId: { ...payload.hiddenImageUrlsByTicketId },
+        hiddenKitImageUrlsByCategoryId: { ...payload.hiddenImageUrlsByCategoryId },
+      };
+      await organizerService.updateEvent(
+        eventId,
+        { kitSelectionDisplay: persisted },
+        { clientPage: `events/${eventId}/tickets` },
+      );
+      // Reflete no draft as imagens já persistidas; o radio (show) mantém o valor
+      // atual. Baseline não muda aqui, então o effect de re-sync não dispara e o
+      // draft é preservado. Como `kitSelectionDirty` só observa o `show`, o botão
+      // "Salvar alterações" some quando só as imagens mudaram.
+      clearTicketsCheckoutPreviewDraft();
+      setDraftKitSelection({
+        ...persisted,
+        showKitImagesOnSelection: currentShow,
+      });
     },
-    [],
+    [eventId, draftKitSelection.showKitImagesOnSelection, savedKitSelection],
   );
 
   const drawerInitialKitSelection = useMemo(
@@ -227,6 +255,8 @@ export default function ReviewTicketsPage() {
       layout: layoutToDrawerMode(draftKitSelection.kitImagesLayout),
       primaryByTicket: { ...draftKitSelection.primaryKitProductByTicketId },
       primaryByCategory: { ...draftKitSelection.primaryKitProductByCategoryId },
+      hiddenByTicket: { ...draftKitSelection.hiddenKitImageUrlsByTicketId },
+      hiddenByCategory: { ...draftKitSelection.hiddenKitImageUrlsByCategoryId },
     }),
     [draftKitSelection],
   );
@@ -265,8 +295,7 @@ export default function ReviewTicketsPage() {
             onClose: () => setKitImagePositionDrawerOpen(false),
             initialKitSelection: drawerInitialKitSelection,
             onSave: handleKitDrawerSave,
-            saveSuccessMessage:
-              "Posição das imagens atualizada no rascunho. Use «Salvar alterações» abaixo para gravar no evento.",
+            saveSuccessMessage: "Posição das imagens salva.",
           }}
           actionSlot={(ticketCount) => (
             <div className="flex w-full flex-col gap-3 sm:flex-row sm:flex-wrap sm:justify-end">

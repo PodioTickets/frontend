@@ -562,6 +562,18 @@ export class AuthService extends UserServiceBase {
     }
   }
 
+  /**
+   * Envia o código OTP para CONFIRMAR a exclusão da conta. Endpoint próprio: o
+   * e-mail tem copy de exclusão (sem card de login), diferente do 2FA/login.
+   */
+  async sendAccountDeletionCode(): Promise<void> {
+    try {
+      await this.apiClient.post('/api/v1/auth/account/delete/send-code', {});
+    } catch (error: any) {
+      throw this.handleError(error);
+    }
+  }
+
   async enable2FA(code: string): Promise<void> {
     try {
       await this.apiClient.post('/api/v1/auth/2fa/enable', { code });
@@ -576,5 +588,23 @@ export class AuthService extends UserServiceBase {
     } catch (error: any) {
       throw this.handleError(error);
     }
+  }
+
+  /**
+   * Exclui (soft-delete/anonimiza) a conta do usuário autenticado.
+   * Exige o código de segurança enviado por e-mail (mesmo canal do 2FA).
+   * O backend preserva inscrições/histórico para os organizadores e invalida
+   * a sessão; o front deve limpar o auth local e redirecionar após o sucesso.
+   */
+  async deleteAccount(code: string, reason: string): Promise<void> {
+    try {
+      await this.apiClient.post('/api/v1/auth/account/delete', { code, reason });
+    } catch (error: any) {
+      // Código incorreto/expirado ou outra falha: NÃO limpa a sessão (o usuário
+      // segue logado para tentar de novo).
+      throw this.handleError(error);
+    }
+    // Sucesso: o backend invalidou a sessão e limpou os cookies; espelha local.
+    this.apiClient.clearTokens();
   }
 }

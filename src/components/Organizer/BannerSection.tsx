@@ -55,6 +55,8 @@ interface BannerSectionProps {
   eventName?: string;
   eventDate?: string;
   street?: string;
+  /** Nome do local (POI escolhido no mapa) — 1ª parte do endereço do card, igual à tela pública. */
+  locationName?: string;
   city?: string;
   state?: string;
   /**
@@ -99,6 +101,7 @@ export function BannerSection({
   eventName,
   eventDate,
   street,
+  locationName,
   city,
   state,
   socialLinks,
@@ -146,6 +149,9 @@ export function BannerSection({
       city: city || (base.city as string) || "",
       state: state || (base.state as string) || "",
       location: street || (base.location as string) || "",
+      // `locationName` alimenta a 1ª parte do endereço do card ("Local, Cidade, UF"),
+      // igual à tela pública. Valor vivo do form > evento base.
+      locationName: locationName || (base.locationName as string) || "",
       eventDate: eventDate || (base.eventDate as string) || "",
       // Imagem do evento = BANNER: preview vivo > já salvo > evento base.
       bannerUrl: bannerPreview || bannerUrl || (base.bannerUrl as string) || "",
@@ -163,6 +169,7 @@ export function BannerSection({
     city,
     state,
     street,
+    locationName,
     eventDate,
     bannerPreview,
     bannerUrl,

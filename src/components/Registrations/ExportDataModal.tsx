@@ -47,6 +47,7 @@ const ALL_FIELDS = [
   { id: "contatoEmergencia", label: "Contato de emergência" },
   { id: "endereco", label: "Endereço de pagamento" },
   { id: "ingresso", label: "Ingresso" },
+  { id: "modalidade", label: "Modalidade" },
   { id: "produtosEscolhidos", label: "Produtos escolhidos" },
   { id: "perguntasRespostas", label: "Perguntas e respostas" },
   { id: "dataPagamento", label: "Data da compra" },

@@ -45,6 +45,7 @@ import { usePendingImageUpload } from "@/hooks/usePendingImageUpload";
 import { COUNTRIES_PT_BR } from "@/data/countries";
 import { ImageWithInitialFallback } from "@/components/ImageWithInitialFallback";
 import { TwoFASection } from "@/components/TwoFASection";
+import { DeleteAccountSection } from "@/components/DeleteAccountSection";
 import UserLoading from "./loading";
 
 /** Alinha valores antigos da API («Brasileira», etc.) ao nome do país da lista de cadastro. */
@@ -133,7 +134,7 @@ const formatGenderToBackend = (
 
 export default function UserProfilePage() {
   const router = useRouter();
-  const { user, refetchUser } = useAuth();
+  const { user, refetchUser, logout } = useAuth();
   const queryClient = useQueryClient();
   const { openChangeEmailModal } = useChangeEmailModal();
   const { openChangePasswordModal } = useChangePasswordModal();
@@ -1119,6 +1120,18 @@ export default function UserProfilePage() {
               initialEnabled={!!user?.mfaEnabled}
               onToggled={refetchUser}
               variant="user"
+            />
+
+            {/* Divisória entre segurança e exclusão de conta */}
+            <div className="h-px w-full bg-gray-6" />
+
+            <DeleteAccountSection
+              userEmail={user?.email ?? ""}
+              onDeleted={async () => {
+                // Backend já invalidou a sessão; limpa auth local e volta à home.
+                await logout();
+                router.replace("/");
+              }}
             />
           </div>
         </div>
