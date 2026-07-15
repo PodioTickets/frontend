@@ -104,7 +104,7 @@ export default function EditFinancialPage() {
     <>
     <WizardStepLayout
       title="Pagamento"
-      className="flex-1 bg-gray-2 -mx-3 px-4 pt-0 pb-[176px] max-md:pb-10"
+      className="flex-1 bg-gray-2 px-5 pt-0 pb-[176px] max-md:pb-10"
       maxWidth="max-w-7xl"
       gutter="5"
       description="A divisão da taxa fica travada após a publicação, mas você pode alterar as formas de pagamento aceitas."

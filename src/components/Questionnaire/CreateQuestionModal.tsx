@@ -712,6 +712,7 @@ export function CreateQuestionModal() {
         }}
         eventId={eventId || null}
         selectedTicketIds={appliesTo === "specific" ? selectedTicketIds : []}
+        context="question"
       />
     </>
   );

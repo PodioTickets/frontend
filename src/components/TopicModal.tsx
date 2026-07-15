@@ -342,6 +342,23 @@ export function TopicModal() {
           topicQuillStravaEmbedRegistered = true;
         }
 
+        /* Ícones dos botões custom de layout de imagem.
+         * Quill NÃO gera ícone para formato custom → o botão nasce vazio (ficavam
+         * invisíveis mas clicáveis, entre "vídeo" e "limpar"). Registrar no
+         * registry `ui/icons` ANTES do `new Quill` faz o PRÓPRIO Quill desenhar o
+         * SVG ao montar a toolbar — imune a timing/exceções de styling pós-init.
+         * Classes `ql-stroke`/`ql-fill` herdam cor, hover e estado `ql-active`
+         * como os ícones nativos. `viewBox="0 0 18 18"` = grade dos ícones padrão. */
+        const quillIcons = Quill.import("ui/icons") as Record<string, string>;
+        quillIcons["topicLayoutLeft"] =
+          '<svg viewBox="0 0 18 18"><rect class="ql-fill" x="3" y="4" width="7" height="7"></rect><line class="ql-stroke" x1="11.5" y1="5.5" x2="15" y2="5.5"></line><line class="ql-stroke" x1="11.5" y1="9" x2="15" y2="9"></line><line class="ql-stroke" x1="3" y1="14" x2="15" y2="14"></line></svg>';
+        quillIcons["topicLayoutRight"] =
+          '<svg viewBox="0 0 18 18"><rect class="ql-fill" x="8" y="4" width="7" height="7"></rect><line class="ql-stroke" x1="3" y1="5.5" x2="6.5" y2="5.5"></line><line class="ql-stroke" x1="3" y1="9" x2="6.5" y2="9"></line><line class="ql-stroke" x1="3" y1="14" x2="15" y2="14"></line></svg>';
+        quillIcons["topicLayoutHalf"] =
+          '<svg viewBox="0 0 18 18"><rect class="ql-fill" x="2.5" y="5" width="5.5" height="8"></rect><rect class="ql-fill" x="10" y="5" width="5.5" height="8"></rect></svg>';
+        quillIcons["topicLayoutClear"] =
+          '<svg viewBox="0 0 18 18"><rect class="ql-stroke" x="3.5" y="3.5" width="11" height="6" fill="none"></rect><line class="ql-stroke" x1="3.5" y1="13" x2="14.5" y2="13"></line><line class="ql-stroke" x1="3.5" y1="15.5" x2="14.5" y2="15.5"></line></svg>';
+
         // Clean up previous instance if exists
         if (quillInstanceRef.current) {
           quillInstanceRef.current = null;
@@ -953,6 +970,7 @@ export function TopicModal() {
               }
             });
 
+            // Tooltips dos botões de layout (os ícones vêm do registry `ui/icons`).
             const layoutBtnTips: [string, string][] = [
               [
                 ".ql-topicLayoutLeft",

@@ -9,7 +9,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { X, ChevronLeft, ChevronRight } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
-import { useState, useMemo, useEffect, useCallback } from "react";
+import { useState, useMemo, useEffect, useCallback, useRef } from "react";
 import toast from "react-hot-toast";
 import { RegistrationQRCode } from "../QRCode/RegistrationQRCode";
 import { getAvatarUrl } from "@/utils/avatar";
@@ -150,6 +150,36 @@ export function ViewRegistrationModal() {
       document.body.style.pointerEvents = prev;
     };
   }, [isOpen]);
+
+  /* Isolamento de scroll: quando este modal abre SOBRE um vaul Drawer (fluxo
+   * financeiro: parcelados → detalhes → ver ingressos), o Drawer usa o Dialog do
+   * Radix, cujo Overlay embrulha o app em `react-remove-scroll`. Esse pacote
+   * registra um `touchmove`/`wheel` não-passivo no `document` (fase de bubble)
+   * que dá `preventDefault()` em qualquer rolagem FORA do drawer — e este modal é
+   * portalado no ROOT, fora dele. Resultado: o conteúdo não rolava no mobile.
+   *
+   * Solução cirúrgica e sem dependência nova: interrompemos a PROPAGAÇÃO de
+   * touchmove/wheel no wrapper do modal (bubble), então o evento nunca chega ao
+   * `document` e o lock global não o cancela. NÃO damos `preventDefault` — a
+   * rolagem nativa do container interno (`overflow-y-auto`) segue funcionando, e
+   * o fundo continua travado (o lock só é neutralizado dentro do modal).
+   *
+   * Callback ref (não `useEffect`): o conteúdo monta de forma assíncrona (após o
+   * fetch da inscrição), então precisamos anexar no momento exato em que o nó
+   * aparece/some, o que um efeito preso a `isOpen` perderia. */
+  const scrollIsolationCleanup = useRef<(() => void) | null>(null);
+  const contentRef = useCallback((node: HTMLDivElement | null) => {
+    scrollIsolationCleanup.current?.();
+    scrollIsolationCleanup.current = null;
+    if (!node) return;
+    const stopPropagation = (event: Event) => event.stopPropagation();
+    node.addEventListener("touchmove", stopPropagation, { passive: false });
+    node.addEventListener("wheel", stopPropagation, { passive: false });
+    scrollIsolationCleanup.current = () => {
+      node.removeEventListener("touchmove", stopPropagation);
+      node.removeEventListener("wheel", stopPropagation);
+    };
+  }, []);
 
   const currentRegistration = registrationData;
 
@@ -439,6 +469,7 @@ export function ViewRegistrationModal() {
               onClick={closeViewRegistrationModal}
             />
             <motion.div
+              ref={contentRef}
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 20 }}

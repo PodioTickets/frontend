@@ -943,6 +943,7 @@ export function CreateProductModal() {
                             </p>
                           }
                           position="topRight"
+                          usePortal
                         >
                           <button
                             type="button"
@@ -1038,6 +1039,7 @@ export function CreateProductModal() {
                               </p>
                             }
                             position="topRight"
+                            usePortal
                           >
                             <button
                               type="button"
