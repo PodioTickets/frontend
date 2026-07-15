@@ -679,14 +679,22 @@ export default function EventPage() {
           )}
         </div>
 
-        <div
-          className={`fixed bottom-0 left-0 right-0 bg-gray-2 border-t border-gray-6 shadow-lg px-4 py-4 z-50 md:hidden transition-all duration-300 ease-in-out ${
-            showFixedButton
-              ? "translate-y-0 opacity-100"
-              : "translate-y-full opacity-0 pointer-events-none"
-          }`}
-        >
-          <div className="flex flex-col gap-4 max-w-[1280px] mx-auto">
+        {/* Barra fixa de CTA (mobile). No estado OCULTO o conteúdo desliza via
+            `translate-y-full`. No iOS Safari, transladar um `position:fixed` PARA
+            BAIXO do viewport faz o WebKit contá-lo como área rolável → "espaço em
+            branco gigante" no fim da página. Fix: o elemento `fixed` NÃO se move
+            (fica em bottom-0, sem transform); o slide acontece num wrapper INTERNO
+            recortado por `overflow-hidden`, então nada ultrapassa o documento.
+            `pointer-events` volta a `auto` só quando a barra está visível. */}
+        <div className="fixed bottom-0 left-0 right-0 z-50 md:hidden overflow-hidden pointer-events-none">
+          <div
+            className={`bg-gray-2 border-t border-gray-6 shadow-lg px-4 py-4 transition-transform duration-300 ease-in-out ${
+              showFixedButton
+                ? "translate-y-0 pointer-events-auto"
+                : "translate-y-full"
+            }`}
+          >
+            <div className="flex flex-col gap-4 max-w-[1280px] mx-auto">
             <h1 className="font-semibold font-family-manrope truncate">
               {event.name}
             </h1>
@@ -856,6 +864,7 @@ export default function EventPage() {
                 Inscreva-se
               </Button>
             )}
+            </div>
           </div>
         </div>
       </div>
