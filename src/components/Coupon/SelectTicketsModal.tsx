@@ -39,6 +39,13 @@ interface SelectTicketsModalProps {
    * Usado ao editar um voucher (a vinculação é imutável no backend).
    */
   readOnly?: boolean;
+  /**
+   * Contexto de uso do modal. Dirige a copy e a regra de elegibilidade:
+   * - "coupon"/"voucher": ingresso gratuito é inelegível (não há valor a descontar).
+   * - "question": qualquer ingresso é elegível (a pergunta independe de preço).
+   * Default "coupon" mantém o comportamento histórico de cupom/voucher.
+   */
+  context?: "coupon" | "voucher" | "question";
 }
 
 export function SelectTicketsModal({
@@ -49,7 +56,11 @@ export function SelectTicketsModal({
   selectedTicketIds = [],
   singleSelect = false,
   readOnly = false,
+  context = "coupon",
 }: SelectTicketsModalProps) {
+  // Na tela de questionário a pergunta pode ser direcionada a qualquer ingresso,
+  // inclusive gratuito — a regra de "gratuito é inelegível" é exclusiva de cupom/voucher.
+  const isQuestion = context === "question";
   const [selectedIds, setSelectedIds] = useState<string[]>(selectedTicketIds);
   const { tickets, loading } = useTickets(eventId, isOpen);
   const { categories } = useTicketCategories(eventId, isOpen);
@@ -69,7 +80,7 @@ export function SelectTicketsModal({
     // Bloqueia SELECIONAR um gratuito, mas permite remover uma seleção pré-existente
     // (ex.: vínculo legado criado antes desta regra).
     const ticket = tickets.find((t) => t.id === ticketId);
-    if (ticket && isFreeTicket(ticket) && !selectedIds.includes(ticketId)) return;
+    if (!isQuestion && ticket && isFreeTicket(ticket) && !selectedIds.includes(ticketId)) return;
     if (singleSelect) {
       setSelectedIds((prev) => (prev.includes(ticketId) ? [] : [ticketId]));
     } else {
@@ -112,7 +123,11 @@ export function SelectTicketsModal({
               <ArrowLeft className="size-5 text-gray-12" />
             </button>
             <h2 className="text-gray-12 text-lg md:text-xl font-semibold font-family-dm-sans leading-[1.3] truncate">
-              {readOnly ? "Ingressos vinculados" : "Vincular ingressos"}
+              {readOnly
+                ? "Ingressos vinculados"
+                : isQuestion
+                  ? "Selecionar ingressos"
+                  : "Vincular ingressos"}
             </h2>
           </div>
           <button
@@ -132,9 +147,11 @@ export function SelectTicketsModal({
               <p className="text-gray-11 text-sm md:text-base font-family-dm-sans leading-[1.3]">
                 {readOnly
                   ? "Ingressos vinculados a este voucher (somente leitura)"
-                  : singleSelect
-                    ? "Selecione o ingresso que deseja vincular a este voucher"
-                    : "Selecione os ingressos que deseja vincular a este cupom"}
+                  : isQuestion
+                    ? "Selecione os ingressos aos quais esta pergunta será direcionada"
+                    : singleSelect
+                      ? "Selecione o ingresso que deseja vincular a este voucher"
+                      : "Selecione os ingressos que deseja vincular a este cupom"}
               </p>
               <div className="flex items-center gap-4 md:gap-6 shrink-0">
                 <div className="flex items-center gap-1">
@@ -187,7 +204,7 @@ export function SelectTicketsModal({
                     // Gratuito e ainda não selecionado → inelegível a cupom/voucher.
                     // (Já selecionado permanece removível, tratado no toggle.) Em
                     // somente-leitura é apenas exibição, então não marca inelegível.
-                    const ineligible = !readOnly && isFreeTicket(ticket) && !selected;
+                    const ineligible = !readOnly && !isQuestion && isFreeTicket(ticket) && !selected;
                     return (
                       <TicketCard
                         key={ticket.id}
@@ -218,7 +235,7 @@ export function SelectTicketsModal({
               disabled={selectedIds.length === 0}
               className="w-full md:w-auto disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              Adicionar ao cupom
+              {isQuestion ? "Confirmar seleção" : "Adicionar ao cupom"}
             </Button>
           )}
         </div>

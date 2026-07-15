@@ -665,15 +665,18 @@ export function CreateCouponModal() {
               <div
                 className={cn(
                   "flex flex-col overflow-hidden bg-gray-1 shadow-2xl",
-                  "max-md:h-full max-md:w-full max-md:pt-14",
+                  "max-md:h-full max-md:w-full",
                   "md:w-full md:max-w-[1098px] md:max-h-[90vh] md:rounded-xl md:border md:border-gray-6",
                 )}
               >
-                {/* Header */}
+                {/* Header — em fluxo (shrink-0): fica no topo naturalmente porque só o
+                    conteúdo rola. NÃO usar position:fixed no mobile: o painel é animado
+                    por framer-motion e o transform retido vira containing block, tornando
+                    o header fixo imprevisível. */}
                 <div
                   className={cn(
                     "flex shrink-0 items-center justify-between border-b border-gray-6",
-                    "max-md:fixed max-md:inset-x-0 max-md:top-0 max-md:z-10 max-md:h-[52px] max-md:bg-gray-1 max-md:px-4",
+                    "max-md:h-[52px] max-md:bg-gray-1 max-md:px-4",
                     "md:px-5 md:py-3",
                   )}
                 >
@@ -1199,7 +1202,7 @@ export function CreateCouponModal() {
                                     {/* Aplicar cupom nos adicionais */}
                                     <div className="flex flex-col gap-5">
                                       <div className="flex flex-col gap-2">
-                                        <h3 className="text-gray-12 text-lg font-semibold font-manrope leading-[1.1]">
+                                        <h3 className="text-gray-12 text-lg font-medium font-family-dm-sans leading-[1.3]">
                                           Aplicar cupom nos adicionais?
                                         </h3>
                                         <p className="text-gray-11 text-base font-family-dm-sans leading-[1.3]">
@@ -1225,7 +1228,7 @@ export function CreateCouponModal() {
                                     </div>
 
                                     <div className="flex flex-col gap-2">
-                                      <h3 className="text-gray-12 text-lg font-semibold font-manrope leading-[1.1]">
+                                      <h3 className="text-gray-12 text-lg font-medium font-family-dm-sans leading-[1.3]">
                                         Validade do cupom
                                       </h3>
                                       <p className="text-gray-11 text-base font-family-dm-sans leading-[1.3]">
@@ -1269,7 +1272,7 @@ export function CreateCouponModal() {
                                   {/* Limite por cupom */}
                                   <div className="flex flex-col gap-5">
                                     <div className="flex flex-col gap-2">
-                                      <h3 className="text-gray-12 text-lg font-semibold font-manrope leading-[1.1]">
+                                      <h3 className="text-gray-12 text-lg font-medium font-family-dm-sans leading-[1.3]">
                                         Limite por cupom
                                       </h3>
                                       <p className="text-gray-11 text-base font-family-dm-sans leading-[1.3]">

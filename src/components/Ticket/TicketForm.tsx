@@ -1115,7 +1115,7 @@ export function TicketForm({
     <div className={cn(className, "max-md:pb-20 max-w-7xl w-full mx-auto")}>
       <div className="w-full flex flex-col gap-9">
         {/* Title Section */}
-        <div className="flex flex-wrap items-center gap-2 border-gray-6 pb-3 pt-3 max-md:border-b md:gap-3 md:border-0 md:pb-0 -mx-4 px-4">
+        <div className="flex flex-wrap items-center gap-2 border-gray-6 max-md:h-[52px] max-md:border-b md:gap-3 md:border-0 md:pb-0 md:pt-3 -mx-4 px-4">
           <button
             type="button"
             onClick={handleBack}
