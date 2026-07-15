@@ -212,8 +212,11 @@ export function PaymentItemDetailsDrawer({
         if (!open) onClose();
       }}
       direction="right"
+      // Desliga o preventScroll iOS do vaul (default `true` o mantém ATIVO — semântica
+      // invertida) que travava o scroll do ViewRegistrationModal portalado fora do drawer.
+      disablePreventScroll={false}
     >
-        <DrawerContent className="bg-gray-1 h-full w-full sm:max-w-[970px] border-l border-gray-6">
+        <DrawerContent data-vaul-no-drag className="bg-gray-1 h-full w-full sm:max-w-[970px] border-l border-gray-6">
           <DrawerTitle className="sr-only">Comprovante do pagamento</DrawerTitle>
           <div className="flex items-center justify-center h-full">
             <Loading />
@@ -287,8 +290,14 @@ export function PaymentItemDetailsDrawer({
         if (!open) onClose();
       }}
       direction="right"
+      // Desliga o preventScroll iOS do vaul (default `true` o mantém ATIVO — semântica
+      // invertida) que travava o scroll do ViewRegistrationModal portalado fora do drawer.
+      disablePreventScroll={false}
     >
-      <DrawerContent className="bg-gray-1 h-full w-full sm:max-w-[970px] border-l border-gray-6">
+      {/* data-vaul-no-drag: vaul em direction="right" trata swipe vertical como
+          arraste-pra-fechar e bloqueia o scroll nativo do conteúdo (PaymentDetailsMobile).
+          Desliga o drag → scroll interno volta a funcionar; fecha pelos botões. */}
+      <DrawerContent data-vaul-no-drag className="bg-gray-1 h-full w-full sm:max-w-[970px] border-l border-gray-6">
         <DrawerTitle className="sr-only">Comprovante do pagamento</DrawerTitle>
 
         {/* Mobile body — fiel ao Figma 2770:51521 */}

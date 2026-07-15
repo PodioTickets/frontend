@@ -290,7 +290,7 @@ export function RequestTransferModal() {
                             onClick={() => setShowChooseAccount(true)}
                             className="text-sm font-family-dm-sans font-semibold text-blue-10 hover:text-blue-11 text-left"
                           >
-                            Precisa alterar conta?
+                            Trocar conta
                           </button>
                         </div>
                       </div>

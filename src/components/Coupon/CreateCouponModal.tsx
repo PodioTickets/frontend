@@ -926,9 +926,14 @@ export function CreateCouponModal() {
 
                           {/* Aplicar em quais ingressos */}
                           <div className="flex flex-col gap-3">
-                            <label className="font-family-dm-sans text-base font-normal leading-[1.3] text-gray-12">
-                              Quer aplicar esse cupom a todos os ingressos?
-                            </label>
+                            <div className="flex flex-col gap-2">
+                              <h3 className="text-gray-12 text-lg font-medium font-family-dm-sans leading-[1.3]">
+                                Selecionar ingressos
+                              </h3>
+                              <label className="font-family-dm-sans text-base font-normal leading-[1.3] text-gray-12">
+                                Quer aplicar esse cupom a todos os ingressos?
+                              </label>
+                            </div>
                             <div className="flex flex-wrap gap-6 max-md:gap-10">
                               <label className="flex cursor-pointer items-center gap-2">
                                 <Radio

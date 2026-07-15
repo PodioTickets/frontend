@@ -49,7 +49,7 @@ function isEventSuspended(event: { status?: string }) {
   return event.status === "SUSPENDED";
 }
 
-/** Opções do filtro de status — usadas no dropdown mobile. */
+/** Opções do filtro de status — usadas no dropdown (desktop + mobile). */
 const STATUS_FILTER_OPTIONS: Array<{ value: string; label: string }> = [
   { value: "all", label: "Todos" },
   { value: "DRAFT", label: "Rascunhos" },
@@ -380,8 +380,8 @@ export default function OrganizerEventsPage() {
           )}
         </div>
 
-        {/* Status filter — Mobile */}
-        <div className="md:hidden mb-6">
+        {/* Status filter — Desktop + Mobile (mesmo controle nas duas larguras) */}
+        <div className="mb-6 md:hidden">
           <Popover open={statusFilterOpen} onOpenChange={setStatusFilterOpen}>
             <PopoverTrigger asChild>
               <button
