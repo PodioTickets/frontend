@@ -17,7 +17,8 @@ import { formatShortId } from "@/utils/shortId";
  * - Header: back + nome do evento + close
  * - Pill central com ícone + título
  * - 2 cards de stats (Total + Quantidade)
- * - Search bar (visual — funcionalidade fica a cargo do caller)
+ * - Search bar (server-side: o caller passa searchValue/onSearchChange e faz o
+ *   fetch com debounce; sem esses props o input fica readOnly/desabilitado)
  * - Lista vertical de cards de transação (avatar + nome/email + bandeira,
  *   ID pedido, valor em destaque, divider, botão "Ver detalhes")
  * - Paginação
@@ -69,7 +70,7 @@ interface FinancialDetailsMobileProps {
   totalPages: number;
   onPageChange: (page: number) => void;
 
-  /* Search (placeholder visual por enquanto — o caller pode plugar depois) */
+  /* Search (server-side; sem onSearchChange o input fica readOnly) */
   searchPlaceholder?: string;
   searchValue?: string;
   onSearchChange?: (value: string) => void;

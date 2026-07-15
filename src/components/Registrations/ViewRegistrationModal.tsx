@@ -6,7 +6,7 @@ import {
   useModalStore,
 } from "@/stores/modalStore";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, ChevronLeft, ChevronRight, ChevronDown } from "lucide-react";
+import { X, ChevronLeft, ChevronRight } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { useState, useMemo, useEffect, useCallback } from "react";
@@ -17,8 +17,6 @@ import { organizerService } from "@/services";
 import { Loading } from "../Loading";
 import { DistanceIcon } from "../Icons/DistanceIcon";
 import { ArrowButton } from "../ArrowButton";
-import { EventMobileTabs, getEventTabs } from "@/components/Organizer/EventMobileTabs";
-import { useOrganizerPermissions } from "@/contexts/OrganizerPermissionsContext";
 import {
   isPersonBr,
   documentLabel,
@@ -56,10 +54,7 @@ export function ViewRegistrationModal() {
     return data?.registrationId || data?.registration?.id || null;
   }, [data]);
 
-  const eventId = data?.eventId as string | undefined;
   const eventName = (data?.eventName as string) || "Evento";
-  const { hasPermission } = useOrganizerPermissions();
-  const eventTabs = eventId ? getEventTabs(eventId, hasPermission) : [];
 
   const showBackToPaymentDetails = Boolean(
     data?.returnToPaymentDetails &&
@@ -139,6 +134,22 @@ export function ViewRegistrationModal() {
 
     fetchRegistration();
   }, [isOpen, registrationId]);
+
+  // Quando aberto SOBRE um vaul Drawer (fluxo financeiro), o vaul deixa
+  // `document.body { pointer-events: none }`. Este modal é portalado no ROOT (fora
+  // do drawer) e reabilita pointer-events nos próprios elementos, mas no Android
+  // Chrome isso não basta pro SCROLL do conteúdo — o gesto de toque não inicia a
+  // rolagem enquanto o body está travado. Forçamos o body de volta a `auto`
+  // enquanto o modal está aberto (o modal cobre a tela toda, então nada indevido
+  // fica clicável atrás) e restauramos ao fechar.
+  useEffect(() => {
+    if (!isOpen) return;
+    const prev = document.body.style.pointerEvents;
+    document.body.style.pointerEvents = "auto";
+    return () => {
+      document.body.style.pointerEvents = prev;
+    };
+  }, [isOpen]);
 
   const currentRegistration = registrationData;
 
@@ -435,8 +446,12 @@ export function ViewRegistrationModal() {
               onClick={(e) => e.stopPropagation()}
               className="fixed inset-0 z-[61] flex flex-col md:flex md:items-center md:justify-center pointer-events-none p-0 md:pointer-events-auto"
             >
-              {/* Mobile: full-screen layout (Figma) */}
-              <div className="md:hidden flex flex-col flex-1 min-h-0 w-full bg-gray-2 overflow-hidden pt-16 pointer-events-auto">
+              {/* Mobile: full-screen layout (Figma).
+                  Altura presa ao viewport VISÍVEL (100dvh) — não a `inset-0`, que em
+                  navegador mobile estica até o layout viewport (atrás da barra de URL),
+                  fazendo o conteúdo "caber" e não rolar + rodapé abaixo da dobra.
+                  Sem `pt-16`: o modal cobre o topo, então aquele vão só bugava o header. */}
+              <div className="md:hidden flex flex-col h-[100dvh] min-h-0 w-full bg-gray-2 overflow-hidden pointer-events-auto">
                 <div className="bg-gray-1 border-b border-gray-6 shrink-0">
                   <div className="flex items-center gap-1 h-[52px] px-4">
                     <button
@@ -458,28 +473,21 @@ export function ViewRegistrationModal() {
                     <p className="font-manrope font-extrabold text-base leading-[1.1] text-gray-12 truncate flex-1 min-w-0">
                       {eventName}
                     </p>
+                    <button
+                      type="button"
+                      onClick={closeViewRegistrationModal}
+                      className="size-8 flex items-center justify-center shrink-0 rounded-lg hover:bg-gray-3 transition-colors"
+                      aria-label="Fechar"
+                    >
+                      <X className="size-5 text-gray-11" />
+                    </button>
                   </div>
-                  {eventId && (
-                    <EventMobileTabs
-                      tabs={eventTabs}
-                      activeHref={`/organizer/events/${eventId}/registrations`}
-                      onLinkClick={closeViewRegistrationModal}
-                      eventId={eventId}
-                    />
-                  )}
                 </div>
 
-                <div className="flex-1 overflow-y-auto min-h-0 px-4 py-4">
-                  <div className="flex items-center justify-center gap-2 flex-wrap text-sm text-gray-11 font-family-dm-sans mb-4">
-                    <span>Eventos</span>
-                    <ChevronDown className="size-4 -rotate-90 shrink-0" />
-                    <span>Inscrições</span>
-                    <ChevronDown className="size-4 -rotate-90 shrink-0" />
-                    <span>Detalhes do pedido</span>
-                    <ChevronDown className="size-4 -rotate-90 shrink-0" />
-                    <span className="text-gray-12">Informações da inscrição</span>
-                  </div>
-
+                <div
+                  className="flex-1 overflow-y-auto min-h-0 px-4 py-4 overscroll-contain touch-pan-y"
+                  style={{ WebkitOverflowScrolling: "touch" }}
+                >
                   <h1 className="font-manrope font-bold text-xl text-gray-12 mb-5">
                     Informações da inscrição
                   </h1>

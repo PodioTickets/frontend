@@ -357,6 +357,7 @@ export class OrganizerReportingService extends OrganizerServiceBase {
     params?: {
       page?: number;
       limit?: number;
+      search?: string;
     },
   ): Promise<{
     refunded: Array<{
@@ -498,6 +499,7 @@ export class OrganizerReportingService extends OrganizerServiceBase {
     params?: {
       page?: number;
       limit?: number;
+      search?: string;
     },
   ): Promise<{
     chargebacks: Array<{

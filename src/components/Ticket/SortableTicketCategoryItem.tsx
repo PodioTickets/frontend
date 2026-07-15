@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, GripVertical } from "lucide-react";
 import { categorySortableId } from "@/lib/ticketCategoryOrder";
 import type { ModalityGroup } from "@/services/organizer/OrganizerService";
 import { PencilIcon } from "@/components/Icons/PencilIcon";
@@ -198,8 +198,11 @@ export function SortableTicketCategoryItem({
           </button>
         </div>
 
-        {/* Mobile — Figma: título, descrição, rodapé com contagem e ações */}
-        <div className="flex flex-col border-b border-gray-6 md:hidden" {...listeners}>
+        {/* Mobile — Figma: título, descrição, rodapé com contagem e ações.
+            Sem {...listeners} no container: no touch, arrastar o card inteiro
+            exigiria touch-none e mataria o SCROLL da página. O drag fica numa
+            alça dedicada (GripVertical) no rodapé — só ela tem touch-none. */}
+        <div className="flex flex-col border-b border-gray-6 md:hidden">
           <div className="flex flex-col gap-4 px-4 py-5">
             <div className="flex w-full flex-col gap-3">
               {onMobileEditCategory ? (
@@ -279,6 +282,15 @@ export function SortableTicketCategoryItem({
                 {ingressosLabel}
               </p>
               <div className="flex shrink-0 items-center gap-2">
+                <button
+                  type="button"
+                  title="Arrastar para reordenar"
+                  className="flex size-8 shrink-0 cursor-grab touch-none items-center justify-center rounded-lg text-gray-11 transition-colors hover:bg-gray-3 active:cursor-grabbing"
+                  aria-label="Arrastar para reordenar a categoria"
+                  {...listeners}
+                >
+                  <GripVertical className="size-5" />
+                </button>
                 <button
                   type="button"
                   title="Editar"
