@@ -158,8 +158,17 @@ export function InstallmentsDrawer({
 
   return (
     <>
-      <Drawer open={isOpen} onOpenChange={onClose} direction="right">
-        <DrawerContent className="bg-gray-2 md:bg-gray-1 h-full w-full sm:max-w-[969px] border-l border-gray-6">
+      {/* disablePreventScroll={false} DESLIGA o preventScroll iOS do vaul (semântica
+          invertida na lib: default `true` mantém ATIVO um touchmove/preventDefault
+          global em capture). Esse handler travava o scroll do ViewRegistrationModal,
+          que é portalado FORA do drawer (fluxo: parcelados → detalhes → ver ingressos).
+          O lock de fundo continua via position:fixed (usePositionFixed, independente). */}
+      <Drawer open={isOpen} onOpenChange={onClose} direction="right" disablePreventScroll={false}>
+        {/* data-vaul-no-drag: em drawers direction="right" o vaul trata TODO swipe
+            (incl. vertical) como arraste-pra-fechar e mata o scroll nativo do
+            conteúdo. Este atributo desliga o drag → o scroll interno volta a
+            funcionar. Fechamento continua pelos botões/overlay. */}
+        <DrawerContent data-vaul-no-drag className="bg-gray-2 md:bg-gray-1 h-full w-full sm:max-w-[969px] border-l border-gray-6">
           <DrawerTitle className="sr-only">Parcelados a receber - Detalhes</DrawerTitle>
           {/* ========== MOBILE Header (Figma) ========== */}
           <DrawerHeader className="md:hidden border-b border-gray-6 p-0">

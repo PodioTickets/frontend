@@ -172,8 +172,13 @@ export function ChargebackDrawer({
 
   return (
     <>
-      <Drawer open={isOpen} onOpenChange={onClose} direction="right">
-        <DrawerContent className="bg-gray-1 h-full w-full sm:max-w-[969px] border-l border-gray-6">
+      {/* disablePreventScroll={false}: desliga o preventScroll iOS do vaul (default
+          `true` o mantém ATIVO — semântica invertida) que travava o scroll do
+          ViewRegistrationModal aberto pelo detalhe do pedido (fora do drawer). */}
+      <Drawer open={isOpen} onOpenChange={onClose} direction="right" disablePreventScroll={false}>
+        {/* data-vaul-no-drag: destrava o scroll interno (vaul right-drawer trata
+            swipe vertical como arraste-pra-fechar). Fecha pelos botões/overlay. */}
+        <DrawerContent data-vaul-no-drag className="bg-gray-1 h-full w-full sm:max-w-[969px] border-l border-gray-6">
           <DrawerTitle className="sr-only">Chargebacks - Detalhes</DrawerTitle>
 
           {/* Mobile body — fiel ao Figma 2680:110005 (mesmo template do Refunded) */}
