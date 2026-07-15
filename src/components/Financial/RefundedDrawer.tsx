@@ -80,6 +80,10 @@ export function RefundedDrawer({
   const [selectedPayment, setSelectedPayment] = useState<any | null>(null);
   const [refundedItems, setRefundedItems] = useState<RefundedItem[]>([]);
   const [loading, setLoading] = useState(false);
+  // Busca server-side (todos os registros, não só a página). `search` alimenta o
+  // input (controlado, resposta imediata); `debouncedSearch` dispara o fetch.
+  const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [pagination, setPagination] = useState({
     page: 1,
     limit: 10,
@@ -88,11 +92,31 @@ export function RefundedDrawer({
   });
   const itemsPerPage = 10;
 
+  // Debounce do termo (evita um request por tecla).
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedSearch(search.trim()), 350);
+    return () => clearTimeout(t);
+  }, [search]);
+
+  // Novo termo → volta pra página 1 (senão ficaria numa página inexistente do
+  // resultado filtrado). Se já estava na 1, o fetch dispara pela dep abaixo.
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [debouncedSearch]);
+
+  // Limpa a busca ao fechar (não reabrir com termo/resultado obsoleto).
+  useEffect(() => {
+    if (!isOpen) {
+      setSearch("");
+      setDebouncedSearch("");
+    }
+  }, [isOpen]);
+
   useEffect(() => {
     if (isOpen && eventId) {
       loadRefundedItems();
     }
-  }, [isOpen, eventId, currentPage]);
+  }, [isOpen, eventId, currentPage, debouncedSearch]);
 
   const loadRefundedItems = async () => {
     try {
@@ -100,6 +124,7 @@ export function RefundedDrawer({
       const data = await organizerService.getEventRefunded(eventId, {
         page: currentPage,
         limit: itemsPerPage,
+        search: debouncedSearch || undefined,
       });
       setRefundedItems(data.refunded);
       setPagination(data.pagination);
@@ -208,6 +233,8 @@ export function RefundedDrawer({
             currentPage={currentPage}
             totalPages={totalPages}
             onPageChange={setCurrentPage}
+            searchValue={search}
+            onSearchChange={setSearch}
           />
 
           {/* Desktop header */}
