@@ -151,35 +151,44 @@ export function ViewRegistrationModal() {
     };
   }, [isOpen]);
 
-  /* Isolamento de scroll: quando este modal abre SOBRE um vaul Drawer (fluxo
-   * financeiro: parcelados → detalhes → ver ingressos), o Drawer usa o Dialog do
-   * Radix, cujo Overlay embrulha o app em `react-remove-scroll`. Esse pacote
-   * registra um `touchmove`/`wheel` não-passivo no `document` (fase de bubble)
-   * que dá `preventDefault()` em qualquer rolagem FORA do drawer — e este modal é
-   * portalado no ROOT, fora dele. Resultado: o conteúdo não rolava no mobile.
+  /* Isolamento de scroll — POR QUÊ.
+   * Este modal abre SOBRE dois vaul Drawers aninhados (parcelados → detalhes →
+   * ver ingressos). Cada Drawer usa o Dialog do Radix, cujo Overlay embrulha o
+   * app em `react-remove-scroll`, que registra um listener GLOBAL de
+   * `touchmove`/`wheel` no `document` e dá `preventDefault()` em qualquer rolagem
+   * FORA do conteúdo do drawer. Como este modal é portalado no ROOT (fora dos
+   * drawers), toda rolagem interna dele era cancelada no mobile.
    *
-   * Solução cirúrgica e sem dependência nova: interrompemos a PROPAGAÇÃO de
-   * touchmove/wheel no wrapper do modal (bubble), então o evento nunca chega ao
-   * `document` e o lock global não o cancela. NÃO damos `preventDefault` — a
-   * rolagem nativa do container interno (`overflow-y-auto`) segue funcionando, e
-   * o fundo continua travado (o lock só é neutralizado dentro do modal).
+   * COMO. Instalamos um guard no `document` na fase de CAPTURA (roda ANTES do
+   * listener de bubble do react-remove-scroll). Para todo `touchmove`/`wheel`
+   * cujo alvo esteja DENTRO do modal, chamamos `stopImmediatePropagation()` — o
+   * evento nunca chega ao lock global, então ele não cancela a rolagem. NÃO
+   * damos `preventDefault`, logo o scroll nativo do container interno
+   * (`overflow-y-auto`) segue funcionando. O fundo continua travado (só
+   * neutralizamos eventos internos ao modal).
    *
-   * Callback ref (não `useEffect`): o conteúdo monta de forma assíncrona (após o
-   * fetch da inscrição), então precisamos anexar no momento exato em que o nó
-   * aparece/some, o que um efeito preso a `isOpen` perderia. */
-  const scrollIsolationCleanup = useRef<(() => void) | null>(null);
-  const contentRef = useCallback((node: HTMLDivElement | null) => {
-    scrollIsolationCleanup.current?.();
-    scrollIsolationCleanup.current = null;
-    if (!node) return;
-    const stopPropagation = (event: Event) => event.stopPropagation();
-    node.addEventListener("touchmove", stopPropagation, { passive: false });
-    node.addEventListener("wheel", stopPropagation, { passive: false });
-    scrollIsolationCleanup.current = () => {
-      node.removeEventListener("touchmove", stopPropagation);
-      node.removeEventListener("wheel", stopPropagation);
+   * Capturamos no `document` (não no nó do modal) de propósito: (1) é imune ao
+   * `pointer-events:none` do wrapper e ao momento em que o conteúdo monta — o
+   * `contains()` é avaliado no disparo do evento, lendo a ref já preenchida;
+   * (2) a captura garante ordem determinística à frente do lock. */
+  const scrollRegionRef = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    if (!isOpen) return;
+    const allowScrollInsideModal = (event: Event) => {
+      const region = scrollRegionRef.current;
+      const target = event.target as Node | null;
+      if (region && target && region.contains(target)) {
+        event.stopImmediatePropagation();
+      }
     };
-  }, []);
+    const opts = { capture: true, passive: false } as const;
+    document.addEventListener("touchmove", allowScrollInsideModal, opts);
+    document.addEventListener("wheel", allowScrollInsideModal, opts);
+    return () => {
+      document.removeEventListener("touchmove", allowScrollInsideModal, opts);
+      document.removeEventListener("wheel", allowScrollInsideModal, opts);
+    };
+  }, [isOpen]);
 
   const currentRegistration = registrationData;
 
@@ -469,7 +478,7 @@ export function ViewRegistrationModal() {
               onClick={closeViewRegistrationModal}
             />
             <motion.div
-              ref={contentRef}
+              ref={scrollRegionRef}
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 20 }}

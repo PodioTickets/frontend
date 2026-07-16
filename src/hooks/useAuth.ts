@@ -310,11 +310,31 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         throw new Error("Erro ao realizar cadastro: usuário não retornado");
       }
 
-      const apiClient = (userService as any).apiClient;
-      if (createdUser.access_token && apiClient?.setAccessToken) {
-        apiClient.setAccessToken(createdUser.access_token);
-        if (createdUser.refresh_token) {
-          apiClient.setRefreshToken(createdUser.refresh_token);
+      /* Estabelece a SESSÃO httpOnly pós-cadastro.
+       * Auth é por cookie httpOnly: o front não grava mais token em JS
+       * (`setAccessToken` é no-op). O `/auth/register` devolve os tokens no BODY
+       * mas — diferente do `/auth/login` — NÃO seta os cookies de sessão. Sem isto,
+       * o usuário recém-criado fica "logado" no React (via `setUser` abaixo) porém
+       * SEM cookie → a 1ª chamada autenticada (reserve do checkout, um `fetch` cru
+       * que só usa o cookie) volta 401 "não autorizado".
+       *
+       * Fix: trocamos o `refresh_token` recém-emitido pela sessão httpOnly via
+       * `/auth/refresh` (aceita o token no body como fallback e responde com
+       * Set-Cookie dos tokens + hint da superfície). `withCredentials` grava o
+       * cookie; não precisa de turnstile (já validado no cadastro). Gate por
+       * `isAuthenticated()`: se o backend um dia passar a estabelecer a sessão no
+       * próprio /register, pulamos a chamada redundante. */
+      if (createdUser.refresh_token && !userService.isAuthenticated()) {
+        try {
+          await userService.refreshToken(createdUser.refresh_token);
+        } catch (sessionErr) {
+          // Falha aqui = sessão não estabelecida → o checkout cairia em 401.
+          // Propaga pra o fluxo de cadastro tratar (toast) em vez de seguir com
+          // uma sessão fantasma.
+          console.error("Falha ao estabelecer sessão pós-cadastro:", sessionErr);
+          throw new Error(
+            "Conta criada, mas houve um problema ao iniciar sua sessão. Faça login para continuar.",
+          );
         }
       }
 
