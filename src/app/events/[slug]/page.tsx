@@ -2,13 +2,10 @@
 
 import { useParams, useRouter } from "next/navigation";
 import Image from "next/image";
-import { CalendarIcon } from "@/components/Icons/CalendarIcon";
-import { LocationIcon } from "@/components/Icons/LocationIcon";
-import { ArrowLeft, GlobeIcon } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/Button";
 import { EventMap } from "@/components/EventMap";
-import { buildGoogleMapsPlaceLink } from "@/utils/googleMapsGeo";
 import { useEventBySlug } from "@/hooks/useEvent";
 import {
   formatDateTimeBR,
@@ -18,10 +15,14 @@ import {
 } from "@/utils/datetimeBR";
 import { useQueryClient } from "@tanstack/react-query";
 import { RegistrationCountdown } from "@/components/Event/RegistrationCountdown";
-import { ShareIcon } from "@/components/Icons/ShareIcon";
 import { ShareModal } from "@/components/ShareModal";
 import { ContactOrganizerFlow } from "@/components/Event/ContactOrganizerFlow";
 import { PODIO_SUPPORT_WHATSAPP } from "@/components/Event/ContactSubjectModal";
+import {
+  EventPublicInfoCardMobile,
+  EventPublicInfoCardDesktop,
+  type EventPublicInfoCardLive,
+} from "@/components/Event/EventPublicInfoCard";
 import { Fragment, useState, useEffect, useMemo, useRef } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useLoginModal } from "@/stores/modalStore";
@@ -37,10 +38,6 @@ import { normalizeTopicHtmlAnchorHrefs } from "@/lib/normalizeTopicHtmlLinks";
 import { TopicRichContent } from "@/components/TopicRichContent";
 import { trackMetaPixel } from "@/lib/metaPixel";
 import { trackEventPageView } from "@/lib/activityTelemetry";
-import { InstagramIcon } from "@/components/Icons/InstagramIcon";
-import { FacebookIcon } from "@/components/Icons/FacebookIcon";
-import { YoutubeIcon } from "@/components/Icons/YoutubeIcon";
-import { TiktokIcon } from "@/components/Icons/TiktokIcon";
 
 const sanitizeUrl = (url: string | null | undefined): string | null => {
   if (!url) return null;
@@ -53,39 +50,6 @@ const sanitizeUrl = (url: string | null | undefined): string | null => {
     return null;
   }
 };
-
-function OrganizerAvatar({
-  logoUrl,
-  name,
-  className,
-}: {
-  logoUrl?: string;
-  name: string;
-  className?: string;
-}) {
-  const initial = name?.charAt(0).toUpperCase() || "O";
-  return (
-    <div
-      className={cn(
-        "relative shrink-0 size-10 rounded-full overflow-hidden bg-primary-10/20 flex items-center justify-center",
-        className,
-      )}
-    >
-      {logoUrl?.trim() ? (
-        <Image
-          src={logoUrl.trim()}
-          alt=""
-          width={40}
-          height={40}
-          className="size-full object-cover"
-          unoptimized
-        />
-      ) : (
-        <span className="text-primary-11 font-semibold text-sm">{initial}</span>
-      )}
-    </div>
-  );
-}
 
 export default function EventPage() {
   const params = useParams();
@@ -110,17 +74,6 @@ export default function EventPage() {
     return getEnabledTopicsSorted(event);
   }, [event]);
 
-  // Endereço no MESMO formato dos cards (home/busca): "Local, Cidade, Estado".
-  // `locationName` (escolhido no mapa) pode faltar em eventos legados → cai pra
-  // "Cidade, Estado". Ver EventCard (src/components/Event/Card/index.tsx).
-  const addressLabel = useMemo(
-    () =>
-      [event?.locationName, event?.city, event?.state]
-        .map((part) => (part ?? "").trim())
-        .filter(Boolean)
-        .join(", "),
-    [event?.locationName, event?.city, event?.state],
-  );
   const { isAuthenticated } = useAuth();
   const { openLoginModal } = useLoginModal();
   const [imageError, setImageError] = useState(false);
@@ -259,18 +212,9 @@ export default function EventPage() {
   const eventSuspendedByOrganizer =
     event.status === "SUSPENDED" || event.isSuspended === true;
 
+  // Embed do mapa (EventMap) usa coordenadas → pino exato. O link do CLIQUE no
+  // endereço (que mostra o NOME do local) agora vive dentro do EventPublicInfoCard.
   const mapsUrl = sanitizeUrl(event.googleMapsLink?.trim()) ?? "";
-  // Link do CLIQUE no endereço: mostra o NOME do local (não as coordenadas).
-  // O embed do mapa continua usando `mapsUrl` (coordenadas → pino exato).
-  const mapsClickUrl =
-    sanitizeUrl(
-      buildGoogleMapsPlaceLink({
-        locationName: event.locationName,
-        city: event.city,
-        state: event.state,
-        fallback: mapsUrl,
-      }),
-    ) ?? mapsUrl;
 
   // "Denunciar evento" → WhatsApp do suporte PodioTickets (mesmo número do contato),
   // com mensagem pré-preenchida identificando o evento (nome + slug).
@@ -286,6 +230,19 @@ export default function EventPage() {
   // Banner visível (desktop): controla a coluna esquerda (banner + tópicos).
   const hasBanner =
     !!event.bannerUrl && event.bannerUrl.trim() !== "" && !imageError;
+
+  // Handlers "live" compartilhados pelos cards (mobile/desktop). O card é a FONTE
+  // ÚNICA (EventPublicInfoCard), a mesma usada nas prévias do organizador — assim
+  // datas/endereço/estados de inscrição nunca divergem. `registerAnchorRef` é
+  // adicionado só no mobile (âncora do IntersectionObserver da barra fixa).
+  const liveCard: EventPublicInfoCardLive = {
+    onContactClick: () => setIsContactModalOpen(true),
+    onShareClick: () => setIsShareModalOpen(true),
+    reportUrl: reportWhatsappUrl,
+    registrationOpensInstant,
+    registrationOpensDateText,
+    onRegistrationCountdownExpire: handleRegistrationCountdownExpire,
+  };
 
   return (
     <>
@@ -340,270 +297,17 @@ export default function EventPage() {
           );
         })()}
 
-        {/* Main Event Card */}
-        <div className="">
-          <div className="rounded-2xl mt-4 relative z-10 px-4 pt-6 pb-4 shadow-[0px_2px_6px_0px_rgba(17,17,17,0.15)]">
-            <h1 className="text-xl font-bold text-gray-12 mb-4">
-              {event.name}
-            </h1>
-
-            <div className="flex flex-col gap-3 mb-4">
-              <div className="flex items-center gap-2 text-gray-12">
-                <svg
-                  width="20"
-                  height="20"
-                  viewBox="0 0 20 20"
-                  fill="none"
-                  xmlns="http://www.w3.org/2000/svg"
-                >
-                  <path
-                    d="M13.3335 1.66699V4.16699"
-                    stroke="#202020"
-                    strokeWidth="1"
-                    strokeLinecap="round"
-                  />
-                  <path
-                    d="M6.6665 1.66699V4.16699"
-                    stroke="#202020"
-                    strokeWidth="1"
-                    strokeLinecap="round"
-                  />
-                  <path
-                    d="M2.5 6.91699C2.5 4.70786 4.29086 2.91699 6.5 2.91699H13.5C15.7091 2.91699 17.5 4.70785 17.5 6.91699V14.3337C17.5 16.5428 15.7091 18.3337 13.5 18.3337H6.5C4.29086 18.3337 2.5 16.5428 2.5 14.3337V6.91699Z"
-                    stroke="#202020"
-                    strokeWidth="1"
-                  />
-                  <path
-                    d="M2.5 7.5H17.5"
-                    stroke="#202020"
-                    strokeWidth="1"
-                    strokeLinecap="round"
-                  />
-                </svg>
-
-                <span className="text-sm">
-                  {formatEventHappensLabel(event.eventDate)}
-                </span>
-              </div>
-              <div className="flex items-center gap-2 text-gray-12">
-                <svg
-                  width="20"
-                  height="20"
-                  viewBox="0 0 20 20"
-                  fill="none"
-                  xmlns="http://www.w3.org/2000/svg"
-                >
-                  <path
-                    d="M6.6665 1.66699V4.16699"
-                    stroke="#202020"
-                    strokeWidth="1"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                  <path
-                    d="M13.3335 1.66699V4.16699"
-                    stroke="#202020"
-                    strokeWidth="1"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                  <path
-                    d="M2.5 6.91699C2.5 4.70786 4.29086 2.91699 6.5 2.91699H13.5C15.7091 2.91699 17.5 4.70785 17.5 6.91699V14.3337C17.5 16.5428 15.7091 18.3337 13.5 18.3337H6.5C4.29086 18.3337 2.5 16.5428 2.5 14.3337V6.91699Z"
-                    stroke="#202020"
-                    strokeWidth="1"
-                  />
-                  <path
-                    d="M7.5 12.4997L8.83616 13.5686C9.25403 13.9029 9.86103 13.849 10.2134 13.4462L12.5 10.833"
-                    stroke="#202020"
-                    strokeWidth="1"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                  <path
-                    d="M2.5 7.5H17.5"
-                    stroke="#202020"
-                    stroke-width="1"
-                    strokeLinecap="round"
-                  />
-                </svg>
-
-                {event.registrationEndDate && (
-                  <span className="text-sm">
-                    Inscrições até{" "}
-                    {formatWeekdayDayMonthBR(event.registrationEndDate)}
-                  </span>
-                )}
-              </div>
-              <div className="flex items-center gap-2 text-gray-12">
-                <LocationIcon className="size-5 text-gray-12 shrink-0" />
-                <Link
-                  href={mapsClickUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-sm underline"
-                >
-                  {addressLabel}
-                </Link>
-              </div>
-            </div>
-
-            <div className="bg-gray-3 border border-gray-6 rounded-lg p-4 mb-4">
-              {(() => {
-                const organizer = getEventOrganizer(event);
-                if (!organizer) return null;
-
-                const socialLinks = [
-                  { url: sanitizeUrl(event.instagram), icon: InstagramIcon },
-                  { url: sanitizeUrl(event.facebook), icon: FacebookIcon },
-                  { url: sanitizeUrl(event.youtube), icon: YoutubeIcon },
-                  { url: sanitizeUrl(event.tiktok), icon: TiktokIcon },
-                  { url: sanitizeUrl(event.website), icon: GlobeIcon },
-                ];
-
-                return (
-                  <>
-                    <div className="flex items-center gap-3 mb-3">
-                      <OrganizerAvatar
-                        logoUrl={organizer.logoUrl}
-                        name={organizer.name}
-                      />
-                      <div className="flex-1 min-w-0 flex flex-col gap-1">
-                        <p className="text-sm font-semibold text-gray-12">
-                          {organizer.name}
-                        </p>
-                        <div className="flex items-center gap-1">
-                          {socialLinks.map(({ url, icon: Icon }, index) => {
-                            if (!url) return null;
-
-                            return (
-                              <Link
-                                key={index}
-                                href={url}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="border border-gray-6 size-8 rounded-full text-gray-12 flex items-center justify-center"
-                              >
-                                <Icon className="size-4" />
-                              </Link>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    </div>
-                    <Button
-                      variant="outline"
-                      className="w-full text-gray-12 border-gray-6"
-                      onClick={() => setIsContactModalOpen(true)}
-                    >
-                      Falar com o organizador
-                    </Button>
-                  </>
-                );
-              })()}
-            </div>
-
-            <div ref={topButtonRef} className="h-px w-full" aria-hidden />
-            <div>
-              {eventRealizationPassed ? (
-                <>
-                  <Button
-                    className="w-full mb-3 bg-gray-4 text-gray-10 border-0 disabled:opacity-100 disabled:cursor-not-allowed"
-                    disabled
-                    variant="outline"
-                  >
-                    Evento realizado
-                  </Button>
-                  <p className="text-sm text-gray-11 text-center mt-2">
-                    Este evento já foi realizado.
-                  </p>
-                </>
-              ) : registrationPeriodEnded ? (
-                <>
-                  <Button
-                    className="w-full mb-3 bg-gray-4 text-gray-10 border-0 disabled:opacity-100 disabled:cursor-not-allowed"
-                    disabled
-                    variant="outline"
-                  >
-                    Inscrições encerradas!
-                  </Button>
-                  <p className="text-sm text-gray-11 text-center mt-2">
-                    O prazo de inscrições para este evento foi encerrado.
-                  </p>
-                </>
-              ) : eventSuspendedByOrganizer ? (
-                <>
-                  <Button
-                    className="w-full mb-3 bg-gray-4 text-gray-10 border-0 disabled:opacity-100 disabled:cursor-not-allowed"
-                    disabled
-                    variant="outline"
-                  >
-                    Inscreva-se
-                  </Button>
-                  <p className="text-sm text-gray-11 text-center mt-2">
-                    As inscrições para este evento não estão disponíveis no
-                    momento.
-                  </p>
-                </>
-              ) : registrationSlotsSoldOut ? (
-                <>
-                  <Button
-                    className="w-full mb-3 bg-gray-4 text-gray-10 border-0 disabled:opacity-100 disabled:cursor-not-allowed"
-                    disabled
-                    variant="outline"
-                  >
-                    Esgotado
-                  </Button>
-                  <p className="text-sm text-gray-11 text-center mt-2">
-                    Este evento não possui mais vagas disponíveis.
-                  </p>
-                </>
-              ) : registrationsNotOpenYet ? (
-                <>
-                  <Button
-                    className="w-full mb-3 bg-gray-4 text-gray-10 border-0 disabled:opacity-100 disabled:cursor-not-allowed"
-                    disabled
-                    variant="outline"
-                  >
-                    Em breve!
-                  </Button>
-                  <p className="text-sm text-gray-11 text-center mt-2">
-                    Inscrições abrem em <br />{" "}
-                    <RegistrationCountdown
-                      targetDate={registrationOpensInstant}
-                      fallbackText={registrationOpensDateText}
-                      onExpire={handleRegistrationCountdownExpire}
-                      className="font-semibold"
-                    />
-                  </p>
-                </>
-              ) : (
-                <Button onClick={handleCheckoutClick} className="w-full mb-3">
-                  Inscreva-se
-                </Button>
-              )}
-            </div>
-          </div>
-        </div>
-
-        <div className="px-4 flex flex-col items-center justify-center gap-2 mt-8">
-          <Button
-            variant="outline"
-            className="w-1/2 text-gray-12 border-gray-6 bg-gray-1 mb-2"
-            onClick={() => setIsShareModalOpen(true)}
-          >
-            <ShareIcon className="size-5" />
-            Compartilhar
-          </Button>
-
-          <a
-            href={reportWhatsappUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="underline font-semibold text-gray-11 text-sm cursor-pointer hover:text-gray-12 transition-colors"
-          >
-            Denunciar evento
-          </a>
-        </div>
+        {/* Card de informações — FONTE ÚNICA (EventPublicInfoCard), o MESMO card
+            das prévias do organizador. `px-0`: o container mobile já provê o
+            padding. `mt-4`: a prévia usa mt-10 (fica sob o banner); aqui é mt-4.
+            `registerAnchorRef` = âncora do IntersectionObserver da barra fixa. */}
+        <EventPublicInfoCardMobile
+          event={event}
+          onRegisterClick={handleCheckoutClick}
+          outerClassName="px-0"
+          cardClassName="mt-4"
+          live={{ ...liveCard, registerAnchorRef: topButtonRef }}
+        />
 
         {/* Apenas tópicos habilitados (sem descrição do evento). */}
         <div className="px-4 space-y-4 mt-10">
@@ -999,244 +703,13 @@ export default function EventPage() {
                 Denunciar) para que acompanhem o scroll juntos. */}
             <div className="min-w-1/4 w-1/4 shrink-0">
               <div className="sticky top-24">
-                <div className="rounded-xl overflow-hidden bg-gray-2 p-5 shadow-[0px_2px_6px_0px_rgba(17,17,17,0.15)]">
-                  <h1 className="text-lg font-bold mb-4">{event.name}</h1>
-                  <div className="flex flex-col gap-4">
-                    <h1 className="flex items-center gap-2 text-sm text-gray-12 font-medium">
-                      <CalendarIcon className="size-5" />{" "}
-                      <span>
-                        {formatEventHappensLabel(event.eventDate)}
-                      </span>
-                    </h1>
-                    {event.registrationEndDate && (
-                      <div className="flex items-center gap-2 text-sm text-gray-12 font-medium">
-                        <svg
-                          width="20"
-                          height="20"
-                          viewBox="0 0 20 20"
-                          fill="none"
-                          xmlns="http://www.w3.org/2000/svg"
-                          className="shrink-0"
-                        >
-                          <path
-                            d="M6.6665 1.66699V4.16699"
-                            stroke="#202020"
-                            strokeWidth="1"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                          />
-                          <path
-                            d="M13.3335 1.66699V4.16699"
-                            stroke="#202020"
-                            strokeWidth="1"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                          />
-                          <path
-                            d="M2.5 6.91699C2.5 4.70786 4.29086 2.91699 6.5 2.91699H13.5C15.7091 2.91699 17.5 4.70785 17.5 6.91699V14.3337C17.5 16.5428 15.7091 18.3337 13.5 18.3337H6.5C4.29086 18.3337 2.5 16.5428 2.5 14.3337V6.91699Z"
-                            stroke="#202020"
-                            strokeWidth="1"
-                          />
-                          <path
-                            d="M7.5 12.4997L8.83616 13.5686C9.25403 13.9029 9.86103 13.849 10.2134 13.4462L12.5 10.833"
-                            stroke="#202020"
-                            strokeWidth="1"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                          />
-                          <path
-                            d="M2.5 7.5H17.5"
-                            stroke="#202020"
-                            strokeWidth="1"
-                            strokeLinecap="round"
-                          />
-                        </svg>
-                        <span>
-                          Inscrições até{" "}
-                          {formatWeekdayDayMonthBR(event.registrationEndDate)}
-                        </span>
-                      </div>
-                    )}
-                    <h1 className="flex items-center gap-2 text-gray-12 font-medium">
-                      <LocationIcon className="size-5 shrink-0" />{" "}
-                      <Link
-                        href={mapsClickUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-sm underline"
-                      >
-                        {addressLabel}
-                      </Link>
-                    </h1>
-                  </div>
-
-                  <div className="bg-gray-3 border border-gray-6 rounded-xl p-3 mt-6">
-                    <p className="text-sm font-medium text-gray-11 mb-3">
-                      Organizador
-                    </p>
-
-                    {(() => {
-                      const organizer = getEventOrganizer(event);
-                      if (!organizer) return null;
-
-                      const socialLinks = [
-                        {
-                          url: sanitizeUrl(event.instagram),
-                          icon: InstagramIcon,
-                        },
-                        {
-                          url: sanitizeUrl(event.facebook),
-                          icon: FacebookIcon,
-                        },
-                        { url: sanitizeUrl(event.youtube), icon: YoutubeIcon },
-                        { url: sanitizeUrl(event.tiktok), icon: TiktokIcon },
-                        { url: sanitizeUrl(event.website), icon: GlobeIcon },
-                      ];
-
-                      return (
-                        <div className="space-y-3">
-                          <div className="flex items-center gap-3">
-                            <OrganizerAvatar
-                              logoUrl={organizer.logoUrl}
-                              name={organizer.name}
-                            />
-                            <div className="flex-1 min-w-0 flex flex-col gap-1">
-                              <p className="text-sm font-semibold text-gray-12 truncate">
-                                {organizer.name}
-                              </p>
-                              <div className="flex items-center gap-1">
-                                {socialLinks.map(
-                                  ({ url, icon: Icon }, index) => {
-                                    if (!url) return null;
-                                    return (
-                                      <Link
-                                        key={index}
-                                        href={url}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className="border border-gray-6 size-8 rounded-full text-gray-12 flex items-center justify-center"
-                                      >
-                                        <Icon className="size-4" />
-                                      </Link>
-                                    );
-                                  },
-                                )}
-                              </div>
-                            </div>
-                          </div>
-
-                          <Button
-                            variant="outline"
-                            className="w-full text-gray-12 border-gray-6"
-                            onClick={() => setIsContactModalOpen(true)}
-                          >
-                            Falar com o organizador
-                          </Button>
-                        </div>
-                      );
-                    })()}
-                  </div>
-
-                  {eventRealizationPassed ? (
-                    <>
-                      <Button
-                        className="w-full mt-8 bg-gray-4 text-gray-10 border-0 disabled:opacity-100 disabled:cursor-not-allowed"
-                        disabled
-                        variant="outline"
-                      >
-                        Evento realizado
-                      </Button>
-                      <p className="text-sm text-gray-11 text-center mt-2">
-                        Este evento já foi realizado.
-                      </p>
-                    </>
-                  ) : registrationPeriodEnded ? (
-                    <>
-                      <Button
-                        className="w-full mt-8 bg-gray-4 text-gray-10 border-0 disabled:opacity-100 disabled:cursor-not-allowed"
-                        disabled
-                        variant="outline"
-                      >
-                        Inscrições encerradas!
-                      </Button>
-                      <p className="text-sm text-gray-11 text-center mt-2">
-                        O prazo de inscrições para este evento foi encerrado.
-                      </p>
-                    </>
-                  ) : eventSuspendedByOrganizer ? (
-                    <>
-                      <Button
-                        className="w-full mt-8 bg-gray-4 text-gray-10 border-0 disabled:opacity-100 disabled:cursor-not-allowed"
-                        disabled
-                        variant="outline"
-                      >
-                        Inscreva-se
-                      </Button>
-                      <p className="text-sm text-gray-11 text-center mt-2">
-                        As inscrições para este evento não estão disponíveis no
-                        momento.
-                      </p>
-                    </>
-                  ) : registrationSlotsSoldOut ? (
-                    <>
-                      <Button
-                        className="w-full mt-8 bg-gray-4 text-gray-10 border-0 disabled:opacity-100 disabled:cursor-not-allowed"
-                        disabled
-                        variant="outline"
-                      >
-                        Esgotado
-                      </Button>
-                      <p className="text-sm text-gray-11 text-center mt-2">
-                        Este evento não possui mais vagas disponíveis.
-                      </p>
-                    </>
-                  ) : registrationsNotOpenYet ? (
-                    <>
-                      <Button
-                        className="w-full mt-8 bg-gray-4 text-gray-10 border-0 disabled:opacity-100 disabled:cursor-not-allowed"
-                        disabled
-                        variant="outline"
-                      >
-                        Em breve!
-                      </Button>
-                      <p className="text-sm text-gray-11 text-center mt-2">
-                        Inscrições abrem em <br />{" "}
-                        <RegistrationCountdown
-                          targetDate={registrationOpensInstant}
-                          fallbackText={registrationOpensDateText}
-                          onExpire={handleRegistrationCountdownExpire}
-                          className="font-semibold"
-                        />
-                      </p>
-                    </>
-                  ) : (
-                    <Button
-                      onClick={handleCheckoutClick}
-                      className="w-full mt-8"
-                    >
-                      Inscreva-se
-                    </Button>
-                  )}
-                </div>
-                <div className="flex flex-col items-center justify-center gap-4">
-                  <Button
-                    variant="outline"
-                    className="mt-8 text-gray-11 border-gray-6"
-                    onClick={() => setIsShareModalOpen(true)}
-                  >
-                    <ShareIcon className="size-5" />
-                    Compartilhar
-                  </Button>
-
-                  <a
-                    href={reportWhatsappUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="underline font-semibold text-gray-11 text-sm cursor-pointer hover:text-gray-12 transition-colors"
-                  >
-                    Denunciar evento
-                  </a>
-                </div>
+                {/* Card de informações — FONTE ÚNICA (EventPublicInfoCard), o
+                    MESMO card das prévias do organizador (banner/tópicos). */}
+                <EventPublicInfoCardDesktop
+                  event={event}
+                  onRegisterClick={handleCheckoutClick}
+                  live={liveCard}
+                />
               </div>
             </div>
           </div>
