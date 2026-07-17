@@ -17,6 +17,7 @@ import { FinancialStepIcon } from "@/components/Icons/Organizer/FinancialStepIco
 import { useEventPermissionGuard } from "@/hooks/useEventPermissionGuard";
 import { useOrganizerPermissions } from "@/contexts/OrganizerPermissionsContext";
 import { EventMobileHeader } from "@/components/Organizer/EventMobileHeader";
+import { isTicketsCheckoutPreviewPath } from "@/lib/ticketsCheckoutPreviewRoute";
 
 function EditProgressBar() {
   const pathname = usePathname();
@@ -159,6 +160,24 @@ function EditLayoutContent({ children }: { children: ReactNode }) {
   /** No mobile a navegação entre passos fica na aba «Editar» (`EventMobileTabs` variant pageHeader). */
   const hideEditStepperOnMobile = pathname.includes("/edit");
 
+  /* Sub-telas de formulário de ingresso (`/edit/tickets/create` e `/edit/tickets/<id>`)
+   * renderizam o `TicketForm`, que JÁ traz header próprio no mobile (barra de 52px com
+   * voltar + "Editar ingresso"). Sem isto o mobile fica com DOIS headers empilhados: o do
+   * evento (nome + abas Dashboard/Inscrições/…) e o do formulário.
+   *
+   * `/edit/tickets` (lista) NÃO entra: é um passo do wizard e precisa da faixa. Só o
+   * mobile é afetado — `EventMobileHeader` é `md:hidden`, e no desktop o header do
+   * evento convive bem com o título da página. */
+  const ticketFormSegment = /\/edit\/tickets\/([^/]+)$/.exec(
+    pathname.split("?")[0].replace(/\/+$/, ""),
+  )?.[1];
+  const isTicketFormScreen = !!ticketFormSegment && ticketFormSegment !== "preview";
+
+  /* A prévia reproduz a tela do participante: sem header do evento (desktop e
+   * mobile) e sem stepper de etapas — só o conteúdo. A própria página traz o
+   * header de voltar. */
+  const isTicketsCheckoutPreview = isTicketsCheckoutPreviewPath(pathname);
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-2 flex items-center justify-center">
@@ -169,19 +188,25 @@ function EditLayoutContent({ children }: { children: ReactNode }) {
 
   return (
     <div className="min-h-screen bg-gray-2">
-      <div className="hidden md:block">
-        <EventPageHeader eventName={event?.name} eventSlug={event?.slug} />
-      </div>
-      <EventMobileHeader
-        eventId={eventId}
-        eventName={event?.name}
-        activeHref={pathname}
-        backHref={`/organizer/events`}
-      />
-      <div className="max-w-7xl mx-auto px-4 lg:px-6 2xl:px-0">
-        <div className={cn(hideEditStepperOnMobile && "hidden md:block")}>
-          <EditProgressBar />
+      {!isTicketsCheckoutPreview && (
+        <div className="hidden md:block">
+          <EventPageHeader eventName={event?.name} eventSlug={event?.slug} />
         </div>
+      )}
+      {!isTicketFormScreen && !isTicketsCheckoutPreview && (
+        <EventMobileHeader
+          eventId={eventId}
+          eventName={event?.name}
+          activeHref={pathname}
+          backHref={`/organizer/events`}
+        />
+      )}
+      <div className="max-w-7xl mx-auto px-4 lg:px-6 2xl:px-0">
+        {!isTicketsCheckoutPreview && (
+          <div className={cn(hideEditStepperOnMobile && "hidden md:block")}>
+            <EditProgressBar />
+          </div>
+        )}
         <div className={cn(readOnly && "pointer-events-none select-none opacity-70 [&_[data-nav]]:pointer-events-auto [&_[data-nav]]:cursor-pointer [&_[data-nav]]:select-auto")}>
           {children}
         </div>

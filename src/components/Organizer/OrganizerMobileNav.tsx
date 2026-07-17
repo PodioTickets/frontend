@@ -14,6 +14,7 @@ import { Drawer, DrawerClose, DrawerContent, DrawerTitle } from "@/components/ui
 import { TicketIcon } from "../Icons/TicketIcon";
 import { UsersIcon } from "../Icons/Organizer/UsersIcon";
 import { LogOutIcon } from "../Icons/LogOutIcon";
+import { ConfigIcon } from "../Icons/ConfigIcon";
 
 import { PlusCircleIcon } from "../Icons/PlusCircleIcon";
 import { InfoIcon } from "../Icons/InfoIcon";
@@ -207,23 +208,26 @@ export function OrganizerMobileNav() {
                   </Link>
                 );
               })}
-              <button
-                type="button"
-                onClick={() => {
-                  setOpen(false);
-                  openAccessAllOrganizationsModal();
-                }}
-                className="flex items-center gap-3 h-12 px-4 rounded-lg border border-[#3A3A3A] bg-white/5 text-white hover:bg-white/10 transition-colors text-left font-family-dm-sans"
+
+              {/* Configurações do perfil do organizador — paridade com a sidebar
+                  do desktop (link no popover de perfil). Sem gate de permissão:
+                  é o perfil do próprio usuário logado (/organizer/settings). */}
+              <Link
+                ref={(el) => setNavItemRef("/organizer/settings", el)}
+                href={navHref("/organizer/settings")}
+                onClick={() => setOpen(false)}
+                className={`flex items-center gap-3 h-12 px-4 rounded-lg border border-[#3A3A3A] bg-white/5 transition-colors ${isActive("/organizer/settings") ? "bg-[#25482D] border-[#25482D] text-[#C2F0C2]" : "text-white hover:bg-white/10 font-family-dm-sans"}`}
               >
-                <PlusCircleIcon className="size-5 shrink-0" />
-                <span className="text-sm font-medium">Trocar organização</span>
-              </button>
+                <ConfigIcon className="size-5 shrink-0" />
+                <span className="text-sm font-medium">Configurações</span>
+              </Link>
+
               <button
                 type="button"
                 onClick={handleLogout}
                 className="flex items-center gap-3 h-12 px-4 rounded-lg border border-[#3A3A3A] bg-white/5 text-white hover:bg-white/10 transition-colors text-left font-family-dm-sans"
               >
-                <LogOutIcon className="size-4 shrink-0" />
+                <LogOutIcon className="size-5 shrink-0" />
                 <span className="text-sm font-medium">Sair</span>
               </button>
             </div>

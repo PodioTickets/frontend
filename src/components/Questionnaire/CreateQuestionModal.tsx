@@ -674,8 +674,7 @@ export function CreateQuestionModal() {
                         "max-md:h-12 max-md:flex-1",
                       )}
                     >
-                      <span className="md:hidden">Fechar</span>
-                      <span className="hidden md:inline">Cancelar</span>
+                      Fechar
                     </Button>
 
                     <Button
@@ -712,6 +711,7 @@ export function CreateQuestionModal() {
         }}
         eventId={eventId || null}
         selectedTicketIds={appliesTo === "specific" ? selectedTicketIds : []}
+        context="question"
       />
     </>
   );

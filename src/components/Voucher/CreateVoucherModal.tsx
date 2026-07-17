@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useLayoutEffect, useRef, useMemo } from "react";
-import { useCreateVoucherModal } from "@/stores/modalStore";
+import { useCreateVoucherModal, useDeleteVoucherModal } from "@/stores/modalStore";
 import { Button } from "@/components/Button";
 import { Input } from "@/components/Input";
 import { Checkbox } from "@/components/CheckBox";
@@ -24,6 +24,7 @@ type ExpiryStatus = "DISABLED" | "ENABLED";
 
 export function CreateVoucherModal() {
   const { isOpen, closeCreateVoucherModal, data, onModalSave } = useCreateVoucherModal();
+  const { openDeleteVoucherModal } = useDeleteVoucherModal();
   const [name, setName] = useState("");
   const [quantity, setQuantity] = useState("");
   const [appliesTo, setAppliesTo] = useState<"all" | "specific">("specific");
@@ -69,6 +70,42 @@ export function CreateVoucherModal() {
 
   const isEditing = data?.voucherId !== undefined;
   const eventId = data?.eventId;
+
+  /* Dirty check — espelha o `CreateCouponModal`. Sem isto o "Editar voucher" ficava
+   * SEMPRE ativo, mesmo sem alteração nenhuma.
+   *
+   * Cada campo é comparado contra o mesmo default que o efeito de inicialização
+   * aplica ao abrir (ex.: `cpfListStatus || "DISABLED"`); qualquer divergência entre
+   * os dois lados faria o modal nascer "sujo". `quantity` fica de fora: não é
+   * editável em modo de edição (o input é `disabled={isEditing}`). */
+  const hasChanges = useMemo(() => {
+    if (!isEditing) {
+      return !!(name || quantity);
+    }
+    const v = data?.voucher;
+    if (!v) return false;
+
+    const originalAppliesTo = (v.appliesTo === "all" || !v.appliesTo) ? "all" : "specific";
+    const originalTicketIds = Array.isArray(v.appliesTo)
+      ? v.appliesTo
+        .map((t: string | { id: string }) => (typeof t === "string" ? t : t.id))
+        .sort()
+      : [];
+
+    return (
+      name !== (v.name || "") ||
+      appliesTo !== originalAppliesTo ||
+      JSON.stringify([...selectedTicketIds].sort()) !== JSON.stringify(originalTicketIds) ||
+      expiryStatus !== (v.expiryDate ? "ENABLED" : "DISABLED") ||
+      expiryDate !== (v.expiryDate ? toCivilDayBRT(v.expiryDate) : null) ||
+      cpfListStatus !== (v.cpfListStatus || "DISABLED") ||
+      JSON.stringify(cpfList) !== JSON.stringify(v.cpfList || []) ||
+      applyToProducts !== !!(v as { applyToProducts?: boolean }).applyToProducts
+    );
+  }, [
+    isEditing, data, name, quantity, appliesTo, selectedTicketIds,
+    expiryStatus, expiryDate, cpfListStatus, cpfList, applyToProducts,
+  ]);
 
   // Piso da validade = HOJE em Brasília (não no fuso do device), pra o mínimo ser
   // o mesmo pra quem cria o voucher de qualquer país.
@@ -246,6 +283,25 @@ export function CreateVoucherModal() {
     }
   };
 
+  /* Delegação ao `DeleteVoucherModal` (mesmo fluxo do cupom e da lista de vouchers):
+   * a confirmação e o tratamento de erro vivem lá; aqui só passamos o alvo e o que
+   * fazer no confirm. `onModalSave` é lido ANTES do callback porque o store é
+   * resetado ao trocar de modal — sem isso a lista não recarregaria. */
+  const handleDelete = () => {
+    const voucherId = data?.voucherId;
+    if (!eventId || !voucherId) return;
+    const refresh = onModalSave;
+    openDeleteVoucherModal({
+      voucherId,
+      voucherCode: name || data?.voucher?.name,
+      onConfirm: async () => {
+        await organizerService.deleteVoucher(eventId, voucherId);
+        toast.success("Voucher deletado com sucesso!");
+        if (refresh) await refresh(undefined);
+      },
+    });
+  };
+
   if (!isOpen) return null;
 
   const panelMotion = isMdUp
@@ -395,16 +451,25 @@ export function CreateVoucherModal() {
             >
               <div
                 className={cn(
-                  "flex flex-col overflow-hidden bg-gray-1 shadow-2xl",
-                  "max-md:h-full max-md:w-full max-md:pt-14",
+                  // pt-16 (64px = `h-16` da OrganizerMobileNav) reserva o topo no
+                  // mobile: a nav é `fixed top-0 z-50` e vem DEPOIS dos modais no DOM
+                  // (ModalsProvider é irmão anterior de `children`), então com z-50
+                  // empatado ela pinta por cima. Sem esse respiro, o header do modal
+                  // (52px) fica todo embaixo da nav e o voltar/título somem — mesmo
+                  // padrão de CreateQuestionModal/CreateProductModal.
+                  "flex flex-col overflow-hidden bg-gray-1 shadow-2xl pt-16 md:pt-0",
+                  "max-md:h-full max-md:w-full",
                   "md:w-full md:max-w-[1098px] md:max-h-[90vh] md:rounded-xl md:border md:border-gray-6",
                 )}
               >
-                {/* Header */}
+                {/* Header — em fluxo (shrink-0): fica no topo naturalmente porque só o
+                    conteúdo rola. NÃO usar position:fixed no mobile: o painel é animado
+                    por framer-motion e o transform retido vira containing block, tornando
+                    o header fixo imprevisível. */}
                 <div
                   className={cn(
                     "flex shrink-0 items-center justify-between border-b border-gray-6",
-                    "max-md:fixed max-md:inset-x-0 max-md:top-0 max-md:z-10 max-md:h-[52px] max-md:bg-gray-1 max-md:px-4",
+                    "max-md:h-[52px] max-md:bg-gray-1 max-md:px-4",
                     "md:px-5 md:py-3",
                   )}
                 >
@@ -546,7 +611,7 @@ export function CreateVoucherModal() {
                             >
                               <div className="flex flex-col gap-4">
                                 <div className="flex flex-col gap-2">
-                                  <h3 className="text-gray-12 text-lg font-medium font-family-dm-sans leading-[1.3]">
+                                  <h3 className="text-gray-12 text-lg font-semibold font-manrope leading-[1.1]">
                                     Deseja ativar lista exclusiva por CPF?
                                   </h3>
                                   <p className="text-gray-11 text-base font-family-dm-sans leading-[1.3]">
@@ -800,19 +865,36 @@ export function CreateVoucherModal() {
                     "md:justify-end md:px-5 md:py-3",
                   )}
                 >
+                  {/* Editando: no mobile o "Fechar" dá lugar ao "Deletar voucher"
+                      (fechar segue disponível pelo X/voltar do header); no desktop
+                      mantém o "Fechar" — a exclusão continua acessível pela lista.
+                      Mesmo padrão do `CreateCouponModal`. */}
+                  {isEditing && (
+                    <Button
+                      onClick={handleDelete}
+                      variant="destructive"
+                      className="h-11 px-5 max-md:flex-1 md:hidden"
+                      disabled={isSubmitting}
+                    >
+                      Deletar voucher
+                    </Button>
+                  )}
                   <Button
                     onClick={closeCreateVoucherModal}
                     variant="outline"
-                    className="border-gray-6 text-gray-12 h-11 px-5 max-md:flex-1"
+                    className={cn(
+                      "border-gray-6 text-gray-12 h-11 px-5 max-md:flex-1",
+                      isEditing && "max-md:hidden",
+                    )}
                     disabled={isSubmitting}
                   >
-                    Cancelar
+                    Fechar
                   </Button>
                   <Button
                     onClick={handleSave}
                     variant="default"
                     className="h-11 px-5 max-md:flex-1"
-                    disabled={isSubmitting || (!isEditing && appliesTo === 'specific' && selectedTicketIds.length === 0)}
+                    disabled={isSubmitting || !hasChanges || (!isEditing && appliesTo === 'specific' && selectedTicketIds.length === 0)}
                   >
                     {isSubmitting ? "Salvando..." : isEditing ? "Editar voucher" : "Criar voucher"}
                   </Button>

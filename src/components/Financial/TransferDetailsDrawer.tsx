@@ -16,6 +16,43 @@ import Image from "next/image";
 import { formatDateBRT, formatTimeBRT } from "@/utils/datetimeBR";
 import { formatShortId } from "@/utils/shortId";
 
+// ── Formatação do destino PIX (espelha WithdrawalDetailsDrawer, fonte única) ──
+const formatDocumentBr = (value: string) => {
+  const d = value.replace(/\D/g, "");
+  if (d.length === 14) return d.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, "$1.$2.$3/$4-$5");
+  if (d.length === 11) return d.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4");
+  return value;
+};
+
+const formatPhoneBr = (value: string) => {
+  const d = value.replace(/\D/g, "");
+  if (d.length === 11) return d.replace(/(\d{2})(\d{5})(\d{4})/, "($1) $2-$3");
+  if (d.length === 10) return d.replace(/(\d{2})(\d{4})(\d{4})/, "($1) $2-$3");
+  return value;
+};
+
+/** Formata a chave conforme o tipo (CPF/CNPJ e telefone ganham máscara; e-mail/aleatória cruas). */
+const formatPixKey = (key?: string | null, keyType?: string | null): string => {
+  if (!key) return "—";
+  const type = keyType?.toUpperCase();
+  if (type === "CPF" || type === "CNPJ") return formatDocumentBr(key);
+  if (type === "PHONE" || type === "TELEFONE") return formatPhoneBr(key);
+  return key;
+};
+
+/** Snapshot imutável da chave PIX no momento do saque (fonte de verdade do destino). */
+interface PixSnapshot {
+  key: string;
+  keyType: string;
+  bankName?: string | null;
+  accountHolderName?: string | null;
+  accountHolderDocument?: string | null;
+}
+
+interface PixKeyLive extends PixSnapshot {
+  id: string;
+}
+
 interface TransferDetail {
   id: string;
   eventId: string;
@@ -28,6 +65,9 @@ interface TransferDetail {
   notes: string | null;
   createdAt: string;
   completedAt: string | null;
+  pixKeyId: string | null;
+  pixKeySnapshot: PixSnapshot | null;
+  pixKey: PixKeyLive | null;
 }
 
 interface Organization {
@@ -109,8 +149,15 @@ export function TransferDetailsDrawer({
   const netValue = data ? data.transfer.netAmount / 100 : transfer.value;
 
   const org = data?.organization;
-  const bankDisplay = org?.bankName ?? "—";
-  const pixKeyDisplay = org?.pix ?? "—";
+  // Fonte de verdade do destino: snapshot imutável do saque → chave viva → legado da org.
+  // Os campos org.bankName/org.pix são LEGADOS (chaves migraram p/ tabela PixKey por saque)
+  // e hoje vêm vazios — por isso o destino aparecia como "—".
+  const dest = data?.transfer.pixKeySnapshot ?? data?.transfer.pixKey ?? null;
+  const bankDisplay = dest?.bankName?.trim() || org?.bankName?.trim() || "Conta PIX";
+  const pixKeyDisplay = dest
+    ? formatPixKey(dest.key, dest.keyType)
+    : org?.pix?.trim() || "—";
+  const holderDisplay = dest?.accountHolderName?.trim() || org?.accountHolderName?.trim() || null;
 
   const getStatusBadge = (status: string) => {
     if (status === "Concluído" || status === "COMPLETED") return "bg-primary-11 text-primary-2";
@@ -242,6 +289,11 @@ export function TransferDetailsDrawer({
                       <p className="font-family-dm-sans font-semibold text-[16px] leading-[1.3] text-gray-12">
                         {loading ? "Carregando..." : bankDisplay}
                       </p>
+                      {!loading && holderDisplay && (
+                        <p className="font-family-dm-sans font-normal text-[16px] leading-[1.3] text-gray-11">
+                          Titular: {holderDisplay}
+                        </p>
+                      )}
                       <p className="font-family-dm-sans font-normal text-[16px] leading-[1.3] text-gray-11">
                         Chave: {loading ? "..." : pixKeyDisplay}
                       </p>
@@ -256,11 +308,16 @@ export function TransferDetailsDrawer({
                   <div className="size-9 rounded-lg bg-[#ebe4ff] flex items-center justify-center shrink-0">
                     <FinanceIcon className="size-6 text-gray-12" />
                   </div>
-                  <div className="flex flex-col gap-1">
-                    <p className="font-family-dm-sans font-semibold text-[15px] leading-[1.3] text-gray-12">
+                  <div className="flex flex-col gap-1 min-w-0">
+                    <p className="font-family-dm-sans font-semibold text-[15px] leading-[1.3] text-gray-12 wrap-break-word">
                       {loading ? "Carregando..." : bankDisplay}
                     </p>
-                    <p className="font-family-dm-sans font-normal text-[13px] leading-[1.3] text-gray-11">
+                    {!loading && holderDisplay && (
+                      <p className="font-family-dm-sans font-normal text-[13px] leading-[1.3] text-gray-11 wrap-break-word">
+                        Titular: {holderDisplay}
+                      </p>
+                    )}
+                    <p className="font-family-dm-sans font-normal text-[13px] leading-[1.3] text-gray-11 wrap-break-word">
                       Chave: {loading ? "..." : pixKeyDisplay}
                     </p>
                   </div>

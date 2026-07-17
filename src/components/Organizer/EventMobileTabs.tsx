@@ -2,17 +2,11 @@
 
 import Link from "next/link";
 import { Fragment } from "react";
+import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import { useOrganizerAppSurface } from "@/contexts/OrganizerAppSurfaceContext";
 import { organizerExternalHref } from "@/lib/organizerPathPresentation";
 import { EventTabLabel } from "@/components/Icons/EventTabLabel";
-import {
-  useRef,
-  useState,
-  useEffect,
-  useLayoutEffect,
-  useCallback,
-} from "react";
-import { createPortal } from "react-dom";
+import { useRef, useState, useLayoutEffect, useCallback } from "react";
 
 export interface EventTabItem {
   label: string;
@@ -92,6 +86,16 @@ export function getEditStepOptions(eventId: string, onLinkClick?: () => void) {
       href: `/organizer/events/${eventId}/edit/questionnaire`,
       onClick: onLinkClick,
     },
+    // Espelha o passo 6 do `EditProgressBar` (stepper do desktop, escondido no
+    // mobile): sem esta entrada não havia como chegar em /edit/financial pelo
+    // menu «Editar» do mobile. Rótulo "Pagamento" segue o stepper do organizador
+    // (o admin usa "Financeiro" no menu equivalente).
+    {
+      id: "pagamento",
+      label: "Pagamento",
+      href: `/organizer/events/${eventId}/edit/financial`,
+      onClick: onLinkClick,
+    },
   ];
 }
 
@@ -108,6 +112,18 @@ interface EventMobileTabsProps {
    * pageHeader — faixa compacta do `EventPageHeader` (desktop: «Editar» é link; mobile: botão + menu).
    */
   variant?: "default" | "pageHeader";
+  /**
+   * Classe de z-index do menu. Os dropdowns são portalados no `body`, então o z deles
+   * é comparado no contexto RAIZ — não herdam o do container da faixa.
+   *
+   * Default `z-40`: ABAIXO da `OrganizerMobileNav` (`fixed z-50`), pra o menu passar por
+   * baixo do header ao rolar (e acima do conteúdo da página, que fica em z ≤ 20).
+   *
+   * Quando esta faixa é renderizada DENTRO de um modal, o portal precisa VENCER o z do
+   * modal, senão o menu abre atrás dele — nesse caso passe um valor maior (ver
+   * `PaymentDetailsModal` e `ExportDataModal`).
+   */
+  menuZClass?: string;
 }
 
 export function EventMobileTabs({
@@ -116,6 +132,7 @@ export function EventMobileTabs({
   onLinkClick,
   eventId,
   variant = "default",
+  menuZClass = "z-40",
 }: EventMobileTabsProps) {
   const appSurface = useOrganizerAppSurface();
   const navHref = (internal: string) =>
@@ -129,7 +146,6 @@ export function EventMobileTabs({
   const editarLinkRef = useRef<HTMLAnchorElement | null>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const tabLinkRefs = useRef<Map<string, HTMLElement>>(new Map());
-  const [menuPosition, setMenuPosition] = useState({ top: 0, left: 0 });
 
   const isDiscountActive = activeHref.includes("/discount");
   const isEditActive = activeHref.includes("/edit");
@@ -152,7 +168,7 @@ export function EventMobileTabs({
 
   const tabsKey = tabs.map((t) => t.href).join("|");
 
-  /** Alinha a aba ativa à esquerda da faixa horizontal e reposiciona o menu (portal) após o scroll. */
+  /** Alinha a aba ativa à esquerda da faixa horizontal. */
   const scrollActiveTabIntoStart = useCallback(() => {
     if (typeof window === "undefined") return;
 
@@ -160,23 +176,6 @@ export function EventMobileTabs({
       typeof window.matchMedia === "function" &&
       window.matchMedia("(min-width: 768px)").matches;
 
-    const updateMenuAnchor = () => {
-      if (editarOpen) {
-        const menuEl =
-          variant === "pageHeader" && isDesktop && editarLinkRef.current
-            ? editarLinkRef.current
-            : editarTriggerRef.current;
-        if (menuEl) {
-          const rect = menuEl.getBoundingClientRect();
-          setMenuPosition({ top: rect.bottom + 4, left: rect.left });
-        }
-      } else if (descontoOpen && descontoTriggerRef.current) {
-        const rect = descontoTriggerRef.current.getBoundingClientRect();
-        setMenuPosition({ top: rect.bottom + 4, left: rect.left });
-      }
-    };
-
-    const container = scrollContainerRef.current;
     let el: HTMLElement | null = null;
 
     if (editarOpen || isEditActive) {
@@ -206,15 +205,11 @@ export function EventMobileTabs({
         const nextLeft = c.scrollLeft + (eRect.left - cRect.left);
         c.scrollTo({ left: Math.max(0, nextLeft), behavior: "auto" });
       }
-      if (editarOpen || descontoOpen) {
-        updateMenuAnchor();
-      }
     };
 
     run();
     requestAnimationFrame(() => requestAnimationFrame(run));
   }, [
-    tabsKey,
     tabs,
     editarOpen,
     descontoOpen,
@@ -234,21 +229,6 @@ export function EventMobileTabs({
     variant,
     scrollActiveTabIntoStart,
   ]);
-
-  useEffect(() => {
-    if (!descontoOpen && !editarOpen) return;
-    const handleClickOutside = (e: MouseEvent) => {
-      const target = e.target as Node;
-      if (descontoTriggerRef.current?.contains(target)) return;
-      if (editarTriggerRef.current?.contains(target)) return;
-      if (document.getElementById("event-mobile-desconto-menu")?.contains(target)) return;
-      if (document.getElementById("event-mobile-editar-menu")?.contains(target)) return;
-      setDescontoOpen(false);
-      setEditarOpen(false);
-    };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [descontoOpen, editarOpen]);
 
   if (tabs.length === 0) return null;
 
@@ -284,57 +264,45 @@ export function EventMobileTabs({
         : "border-transparent font-normal text-gray-11"
       }`;
 
-  const descontoPortal =
-    typeof document !== "undefined" &&
-    descontoOpen &&
-    createPortal(
-      <div
-        id="event-mobile-desconto-menu"
-        className="fixed z-100 w-40 rounded-lg border border-gray-6 bg-gray-1 py-1 shadow-lg"
-        style={{ top: menuPosition.top, left: menuPosition.left }}
+  /* Conteúdo do menu (Radix DropdownMenu — mesmo padrão de `admin/events/page.tsx`).
+   * O Radix ancora o Content no Trigger via Floating UI e reposiciona sozinho no
+   * scroll/resize; era isso que o posicionamento manual (`fixed` + rect lido só na
+   * abertura) não fazia, e o menu descolava do botão ao rolar a página. Também traz
+   * clique-fora, Esc, foco e collision detection de graça.
+   *
+   * `modal={false}` de propósito (no Root), por DOIS motivos:
+   * 1. O default `true` trava a rolagem da página (react-remove-scroll) enquanto o
+   *    menu está aberto — mudaria o comportamento atual, em que dá pra rolar.
+   * 2. Esta faixa também é renderizada DENTRO de `PaymentDetailsModal`/`ExportDataModal`,
+   *    que abrem sobre vaul Drawers. Um lock a mais na pilha do react-remove-scroll ali
+   *    é justamente o tipo de conflito que já custou caro neste fluxo. */
+  const renderMenuContent = (
+    options: ReturnType<typeof getDiscountOptions>,
+    widthClass: string,
+  ) => (
+    <DropdownMenu.Portal>
+      <DropdownMenu.Content
+        align="start"
+        sideOffset={4}
+        collisionPadding={8}
+        className={`${menuZClass} ${widthClass} rounded-lg border border-gray-6 bg-gray-1 py-1 shadow-lg outline-none`}
       >
-        {discountOptions.map((opt) => (
-          <Link
-            key={opt.id}
-            href={navHref(opt.href)}
-            onClick={() => {
-              opt.onClick?.();
-              setDescontoOpen(false);
-            }}
-            className="flex h-12 items-center px-4 text-sm text-gray-12 transition-colors hover:bg-gray-3"
-          >
-            {opt.label}
-          </Link>
+        {options.map((opt) => (
+          // asChild: o Link do Next vira o item (navegação client-side preservada).
+          // O Radix fecha o menu ao selecionar — não precisa de setOpen(false) manual.
+          <DropdownMenu.Item key={opt.id} asChild>
+            <Link
+              href={navHref(opt.href)}
+              onClick={opt.onClick}
+              className="flex h-12 cursor-pointer items-center px-4 text-sm text-gray-12 outline-none transition-colors hover:bg-gray-3 focus:bg-gray-3"
+            >
+              {opt.label}
+            </Link>
+          </DropdownMenu.Item>
         ))}
-      </div>,
-      document.body,
-    );
-
-  const editarPortal =
-    typeof document !== "undefined" &&
-    editarOpen &&
-    createPortal(
-      <div
-        id="event-mobile-editar-menu"
-        className="fixed z-100 min-w-44 rounded-lg border border-gray-6 bg-gray-1 py-1 shadow-lg"
-        style={{ top: menuPosition.top, left: menuPosition.left }}
-      >
-        {editStepOptions.map((opt) => (
-          <Link
-            key={opt.id}
-            href={navHref(opt.href)}
-            onClick={() => {
-              opt.onClick?.();
-              setEditarOpen(false);
-            }}
-            className="flex h-12 items-center px-4 text-sm text-gray-12 transition-colors hover:bg-gray-3"
-          >
-            {opt.label}
-          </Link>
-        ))}
-      </div>,
-      document.body,
-    );
+      </DropdownMenu.Content>
+    </DropdownMenu.Portal>
+  );
 
   return (
     <>
@@ -351,21 +319,50 @@ export function EventMobileTabs({
             if (isDescontoTab) {
               return (
                 <div key="desconto" className="shrink-0 md:-mb-0.5" ref={descontoTriggerRef}>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setEditarOpen(false);
-                      setDescontoOpen((o) => !o);
+                  <DropdownMenu.Root
+                    open={descontoOpen}
+                    onOpenChange={(open) => {
+                      if (open) setEditarOpen(false);
+                      setDescontoOpen(open);
                     }}
-                    className={menuTriggerClass(isDiscountActive || descontoOpen)}
+                    modal={false}
                   >
-                    <EventTabLabel label={tab.label} />
-                  </button>
+                    <DropdownMenu.Trigger asChild>
+                      <button
+                        type="button"
+                        className={menuTriggerClass(isDiscountActive || descontoOpen)}
+                      >
+                        <EventTabLabel label={tab.label} />
+                      </button>
+                    </DropdownMenu.Trigger>
+                    {renderMenuContent(discountOptions, "w-40")}
+                  </DropdownMenu.Root>
                 </div>
               );
             }
 
             if (isEditarTab) {
+              const editarMenu = (
+                <DropdownMenu.Root
+                  open={editarOpen}
+                  onOpenChange={(open) => {
+                    if (open) setDescontoOpen(false);
+                    setEditarOpen(open);
+                  }}
+                  modal={false}
+                >
+                  <DropdownMenu.Trigger asChild>
+                    <button
+                      type="button"
+                      className={menuTriggerClass(isEditActive || editarOpen)}
+                    >
+                      <EventTabLabel label={tab.label} />
+                    </button>
+                  </DropdownMenu.Trigger>
+                  {renderMenuContent(editStepOptions, "min-w-44")}
+                </DropdownMenu.Root>
+              );
+
               if (isPageHeader) {
                 return (
                   <Fragment key={tab.href}>
@@ -377,32 +374,14 @@ export function EventMobileTabs({
                       <EventTabLabel label={tab.label} />
                     </Link>
                     <div className="shrink-0 md:hidden" ref={editarTriggerRef}>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setDescontoOpen(false);
-                          setEditarOpen((o) => !o);
-                        }}
-                        className={menuTriggerClass(isEditActive || editarOpen)}
-                      >
-                        <EventTabLabel label={tab.label} />
-                      </button>
+                      {editarMenu}
                     </div>
                   </Fragment>
                 );
               }
               return (
                 <div key="editar" className="shrink-0" ref={editarTriggerRef}>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setDescontoOpen(false);
-                      setEditarOpen((o) => !o);
-                    }}
-                    className={menuTriggerClass(isEditActive || editarOpen)}
-                  >
-                    <EventTabLabel label={tab.label} />
-                  </button>
+                  {editarMenu}
                 </div>
               );
             }
@@ -427,8 +406,6 @@ export function EventMobileTabs({
           })}
         </div>
       </div>
-      {descontoPortal}
-      {editarPortal}
     </>
   );
 }

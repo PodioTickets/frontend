@@ -15,6 +15,40 @@ import { ChooseAccountModal, mapPixKeyToAccount, type PixAccount } from "./Choos
 import { organizerService } from "@/services";
 import { useModalSubmitState } from "@/hooks/useModalSubmitState";
 
+// Formata (centavos → reais) no padrão pt-BR usado no restante do modal.
+const formatCentsBRL = (cents: number) =>
+  `R$ ${(Math.max(0, cents) / 100)
+    .toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
+/**
+ * Traduz o erro de solicitação de saque para uma mensagem amigável em pt-BR.
+ *
+ * O AxiosError expõe apenas `err.message` genérico ("Request failed with status
+ * code 400"); a mensagem real do backend vive em `err.response.data.message`.
+ * O caso mais comum (solicitar repasse 2x) retorna 400 em INGLÊS e em CENTAVOS
+ * ("Insufficient available balance. Available: X cents, requested: Y cents"),
+ * que precisa virar reais/pt-BR antes de exibir.
+ */
+function formatWithdrawalError(err: any): string {
+  const raw = err?.response?.data?.message ?? err?.message ?? "";
+  const message = Array.isArray(raw) ? String(raw[0] ?? "") : String(raw);
+
+  // Saldo insuficiente: dispara ao pedir um novo repasse com outro já PENDENTE
+  // (o pendente reduz o saldo sacável). Available <= 0 ⇒ nada mais a sacar.
+  const insufficient = message.match(
+    /Insufficient available balance\.\s*Available:\s*(-?\d+)\s*cents/i
+  );
+  if (insufficient) {
+    const availableCents = parseInt(insufficient[1], 10) || 0;
+    return availableCents > 0
+      ? `Saldo insuficiente para este valor. Disponível para saque: ${formatCentsBRL(availableCents)}.`
+      : "Você já possui um repasse em processamento. Aguarde a conclusão para solicitar um novo.";
+  }
+
+  // Demais erros do backend já chegam em pt-BR — repassa direto.
+  return message || "Não foi possível solicitar o repasse. Tente novamente.";
+}
+
 export function RequestTransferModal() {
   const { isOpen, closeRequestTransferModal, data } = useRequestTransferModal();
   const [amount, setAmount] = useState("");
@@ -148,7 +182,7 @@ export function RequestTransferModal() {
         setTransferAmount(formatAmount(amount));
         setShowSuccess(true);
       } catch (err: any) {
-        toast.error(err?.message || "Erro ao solicitar saque");
+        toast.error(formatWithdrawalError(err));
       }
     });
   };
@@ -290,7 +324,7 @@ export function RequestTransferModal() {
                             onClick={() => setShowChooseAccount(true)}
                             className="text-sm font-family-dm-sans font-semibold text-blue-10 hover:text-blue-11 text-left"
                           >
-                            Precisa alterar conta?
+                            Trocar conta
                           </button>
                         </div>
                       </div>

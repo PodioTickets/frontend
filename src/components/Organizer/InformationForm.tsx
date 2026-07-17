@@ -450,6 +450,38 @@ export function InformationForm({
     errors.registrationEndDate ||
     errors.registrationPeriod;
 
+  // Campo "Vagas do evento" renderizado em 2 posições distintas por breakpoint:
+  // no MOBILE fica logo abaixo de "Data do evento"; no DESKTOP permanece na seção
+  // "Inscrição" (à direita do encerramento). Um único render (DRY) evita divergência;
+  // só uma instância é visível por vez (md:hidden / hidden md:flex), então `idSuffix`
+  // garante `id`/`htmlFor` únicos e o estado (values.maxParticipants) mantém-se sincronizado.
+  const renderVagasField = (idSuffix: string, rootClassName: string) => (
+    <div className={rootClassName}>
+      <div className="flex items-center gap-1.5">
+        <label htmlFor={`${formId}-max-participants${idSuffix}`} className="text-gray-12 text-base font-family-dm-sans">
+          Vagas do evento
+        </label>
+        <FieldHelpTooltip label="Vagas do evento" text={vagasTooltipText} />
+      </div>
+      <div className="flex flex-col gap-2 w-1/2 md:w-[140px]">
+        <div className="relative">
+          <ParticipantsIcon className="absolute left-3 top-1/2 -translate-y-1/2 size-5 text-gray-11 pointer-events-none" />
+          <Input
+            id={`${formId}-max-participants${idSuffix}`}
+            type="text"
+            inputMode="numeric"
+            name="maxParticipants"
+            value={values.maxParticipants ?? ""}
+            onChange={handleMaxParticipantsChange}
+            placeholder="Ex: 500"
+            className={`h-12 w-full pl-10 shadow-none ${errors.maxParticipants ? "border-red-10" : ""}`}
+          />
+        </div>
+        {errors.maxParticipants && <p className="text-red-10 text-sm w-0 min-w-full">{errors.maxParticipants}</p>}
+      </div>
+    </div>
+  );
+
   return (
     <>
       <form id={formId} onSubmit={(e) => void handleSubmit(e)} className="flex flex-col gap-9 md:gap-[44px]">
@@ -497,6 +529,11 @@ export function InformationForm({
             </div>
             {errors.eventDate && <p className="text-red-10 text-sm">{errors.eventDate}</p>}
           </div>
+
+          {/* MOBILE: "Vagas do evento" abaixo de "Data do evento" (Figma mobile).
+              No desktop este bloco some (md:hidden) e o campo aparece na seção
+              "Inscrição". Ver `renderVagasField`. */}
+          {renderVagasField("-mobile", "md:hidden flex flex-col gap-3 min-w-0 w-full")}
         </div>
 
         {/* Registration period */}
@@ -546,31 +583,10 @@ export function InformationForm({
 
             {/* Vagas do evento — teto de participantes (à direita do encerramento).
               Vazio = ilimitado. Só dígitos. Erro (ex.: teto < inscritos, vindo do
-              backend) quebra dentro da largura do input (w-0 min-w-full), sem esticar. */}
-            <div className="flex flex-col gap-3 md:gap-[12px] min-w-0">
-              <div className="flex items-center gap-1.5">
-                <label htmlFor={`${formId}-max-participants`} className="text-gray-12 text-base font-family-dm-sans">
-                  Vagas do evento
-                </label>
-                <FieldHelpTooltip label="Vagas do evento" text={vagasTooltipText} />
-              </div>
-              <div className="flex flex-col gap-2 w-1/2 md:w-[140px]">
-                <div className="relative">
-                  <ParticipantsIcon className="absolute left-3 top-1/2 -translate-y-1/2 size-5 text-gray-11 pointer-events-none" />
-                  <Input
-                    id={`${formId}-max-participants`}
-                    type="text"
-                    inputMode="numeric"
-                    name="maxParticipants"
-                    value={values.maxParticipants ?? ""}
-                    onChange={handleMaxParticipantsChange}
-                    placeholder="Ex: 500"
-                    className={`h-12 w-full pl-10 shadow-none ${errors.maxParticipants ? "border-red-10" : ""}`}
-                  />
-                </div>
-                {errors.maxParticipants && <p className="text-red-10 text-sm w-0 min-w-full">{errors.maxParticipants}</p>}
-              </div>
-            </div>
+              backend) quebra dentro da largura do input (w-0 min-w-full), sem esticar.
+              DESKTOP-only: no mobile o mesmo campo é renderizado abaixo de "Data do
+              evento" (ver `renderVagasField` + bloco md:hidden acima). */}
+            {renderVagasField("", "hidden md:flex flex-col md:gap-[12px] min-w-0")}
           </div>
           {registrationError && <p className="text-red-10 text-sm">{registrationError}</p>}
         </div>

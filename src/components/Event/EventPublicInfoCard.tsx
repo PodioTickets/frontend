@@ -12,6 +12,7 @@ import { FacebookIcon } from "@/components/Icons/FacebookIcon";
 import { YoutubeIcon } from "@/components/Icons/YoutubeIcon";
 import { TiktokIcon } from "@/components/Icons/TiktokIcon";
 import { ShareModal } from "@/components/ShareModal";
+import { RegistrationCountdown } from "@/components/Event/RegistrationCountdown";
 import type { Event } from "@/interfaces/event";
 import { cn } from "@/utils/cn";
 import {
@@ -25,14 +26,19 @@ import { buildGoogleMapsPlaceLink } from "@/utils/googleMapsGeo";
 import { useMemo, useState } from "react";
 
 /**
- * Card de informações do evento usado nas PRÉVIAS do organizador/admin.
+ * Card de informações do evento — FONTE ÚNICA usada tanto na página pública real
+ * (`/events/[slug]`) quanto nas PRÉVIAS do organizador/admin (banner, tópicos).
  *
- * Espelha 1:1 o card inline da página pública do evento (`/events/[slug]`):
- * mesmas linhas de data ("Acontece em" + "Inscrições até"), endereço completo com
- * link do mapa, bloco do organizador com NOME FANTASIA (via `getEventOrganizer`,
- * que prioriza `tradeName`) e REDES SOCIAIS (não telefone — contato não é público).
- * `isPreview` mantém os mesmos estados visuais, porém sem ações reais (checkout,
- * compartilhar e denunciar desabilitados).
+ * Dois modos:
+ * - **prévia** (`isPreview`/`mutedPreview`): mesmos estados visuais, porém sem
+ *   ações reais (checkout, contato, compartilhar e denunciar desabilitados).
+ * - **live** (`live` presente): comportamentos reais injetados pela página —
+ *   checkout, contagem regressiva de abertura, contato com o organizador,
+ *   compartilhar e denunciar. A página é dona dos modais (Share/Contact); o card
+ *   só dispara os callbacks.
+ *
+ * Mantê-lo como componente único garante que prévia e tela real NUNCA divirjam
+ * (datas, endereço, estados de inscrição, layout).
  */
 
 const sanitizeUrl = (url: string | null | undefined): string | null => {
@@ -136,6 +142,7 @@ function useEventRegistrationUiState(event: Event) {
       event.status === "SUSPENDED" || event.isSuspended === true;
 
     return {
+      registrationOpensInstant,
       registrationOpensDateText,
       registrationsNotOpenYet,
       registrationSlotsSoldOut,
@@ -145,6 +152,27 @@ function useEventRegistrationUiState(event: Event) {
     };
   }, [event]);
 }
+
+/**
+ * Comportamentos VIVOS injetados pela página pública real (`/events/[slug]`).
+ * Quando ausente, o card fica em modo PRÉVIA (ações desabilitadas).
+ */
+export type EventPublicInfoCardLive = {
+  /** Abre o fluxo "Falar com o organizador". */
+  onContactClick: () => void;
+  /** Abre o modal de compartilhar (a página é dona do `ShareModal`). */
+  onShareClick: () => void;
+  /** URL do "Denunciar evento" (WhatsApp do suporte). */
+  reportUrl: string;
+  /** Instante real (BRT) de abertura das inscrições — alvo da contagem regressiva. */
+  registrationOpensInstant: Date | null;
+  /** Texto de fallback quando a contagem não se aplica. */
+  registrationOpensDateText: string;
+  /** Chamado quando a contagem chega a zero (revalida o evento). */
+  onRegistrationCountdownExpire: () => void;
+  /** Âncora do IntersectionObserver da barra fixa mobile (só no card mobile). */
+  registerAnchorRef?: React.Ref<HTMLDivElement>;
+};
 
 type EventPublicInfoCardProps = {
   event: Event;
@@ -158,12 +186,19 @@ type EventPublicInfoCardProps = {
    */
   mutedPreview?: boolean;
   onRegisterClick?: (e: React.MouseEvent) => void;
+  /** Presente = modo LIVE (página pública real). Ausente = prévia. */
+  live?: EventPublicInfoCardLive;
+  /** Override do wrapper externo (ex.: `px-0` quando o container já provê padding). */
+  outerClassName?: string;
+  /** Override do elemento-card (ex.: ajustar a margem superior). */
+  cardClassName?: string;
 };
 
 function RegistrationCtaBlock({
   event,
   isPreview,
   onRegisterClick,
+  live,
   desktopSpacing,
 }: EventPublicInfoCardProps & { desktopSpacing: boolean }) {
   const {
@@ -221,7 +256,7 @@ function RegistrationCtaBlock({
     return (
       <>
         <Button className={disabledBtn} disabled variant="outline">
-          {desktopSpacing ? "Esgotado!" : "Esgotado"}
+          Esgotado
         </Button>
         <p className="mt-2 text-center text-sm text-gray-11">
           Este evento não possui mais vagas disponíveis.
@@ -236,7 +271,19 @@ function RegistrationCtaBlock({
           Em breve!
         </Button>
         <p className="mt-2 text-center text-sm text-gray-11">
-          Inscrições abrem em {registrationOpensDateText}
+          {live ? (
+            <>
+              Inscrições abrem em <br />{" "}
+              <RegistrationCountdown
+                targetDate={live.registrationOpensInstant}
+                fallbackText={live.registrationOpensDateText}
+                onExpire={live.onRegistrationCountdownExpire}
+                className="font-semibold"
+              />
+            </>
+          ) : (
+            <>Inscrições abrem em {registrationOpensDateText}</>
+          )}
         </p>
       </>
     );
@@ -325,9 +372,11 @@ function EventMetaRows({ event, mobile }: { event: Event; mobile?: boolean }) {
 function OrganizerBlock({
   event,
   mobile,
+  live,
 }: {
   event: Event;
   mobile?: boolean;
+  live?: EventPublicInfoCardLive;
 }) {
   const organizer = getEventOrganizer(event);
   const boxClass = mobile
@@ -373,9 +422,11 @@ function OrganizerBlock({
               </div>
             </div>
           </div>
+          {/* Live: abre o fluxo de contato; prévia: desabilitado. */}
           <Button
             variant="outline"
-            disabled
+            disabled={!live}
+            onClick={live?.onContactClick}
             className={cn(
               "w-full border-gray-6 text-gray-12",
               mobile && "bg-gray-1",
@@ -395,28 +446,44 @@ function OrganizerBlock({
 function ShareAndReport({
   mobile,
   onShare,
+  live,
 }: {
   mobile?: boolean;
   onShare: () => void;
+  live?: EventPublicInfoCardLive;
 }) {
+  // "Denunciar evento": live vira link real (WhatsApp); prévia é span desabilitado.
+  const reportNode = live ? (
+    <a
+      href={live.reportUrl}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="cursor-pointer text-sm font-semibold text-gray-11 underline transition-colors hover:text-gray-12"
+    >
+      Denunciar evento
+    </a>
+  ) : (
+    <span className="cursor-not-allowed text-sm font-semibold text-gray-11 underline">
+      Denunciar evento
+    </span>
+  );
+
   if (mobile) {
-    // Prévia (mobile): "Compartilhar" + "Denunciar evento", ambos desabilitados
-    // (o card inteiro fica apagado via mutedPreview).
+    // "Compartilhar" + "Denunciar evento". Em prévia ambos ficam apagados
+    // (o card inteiro fica cinza via mutedPreview) e o compartilhar desabilitado.
     return (
       <div className="mt-8 flex flex-col items-center justify-center gap-2 px-4">
         <Button
           variant="outline"
           type="button"
-          disabled
+          disabled={!live}
           className="mb-2 w-1/2 border-gray-6 bg-gray-1 text-gray-12"
           onClick={onShare}
         >
           <ShareIcon className="size-5" />
           Compartilhar
         </Button>
-        <span className="cursor-not-allowed text-sm font-semibold text-gray-11 underline">
-          Denunciar evento
-        </span>
+        {reportNode}
       </div>
     );
   }
@@ -426,87 +493,99 @@ function ShareAndReport({
       <Button
         variant="outline"
         type="button"
-        disabled
+        disabled={!live}
         className="mt-8 border-gray-6 text-gray-11"
         onClick={onShare}
       >
         <ShareIcon className="size-5" />
         Compartilhar
       </Button>
-      <span className="cursor-not-allowed text-sm font-semibold text-gray-11 underline">
-        Denunciar evento
-      </span>
+      {reportNode}
     </div>
   );
 }
 
 export function EventPublicInfoCardMobile(props: EventPublicInfoCardProps) {
-  const { event, isPreview, mutedPreview, onRegisterClick } = props;
+  const { event, isPreview, mutedPreview, onRegisterClick, live, outerClassName, cardClassName } = props;
   const [shareOpen, setShareOpen] = useState(false);
   const eventUrl = event.slug ? `/events/${event.slug}` : "";
   const mutedBody = mutedPreview ? "pointer-events-none select-none opacity-50" : "";
+  // Live: a página é dona do ShareModal; prévia: modal interno (nunca abre pois
+  // o botão fica desabilitado, mas mantido para não alterar o comportamento).
+  const onShare = live ? live.onShareClick : () => setShareOpen(true);
 
   return (
     <>
-      <div className="px-4">
-        <div className={cn("relative z-10 mt-10 rounded-2xl px-4 pb-4 pt-6 shadow-[0px_2px_6px_0px_rgba(17,17,17,0.15)]", mutedPreview && "select-none")}>
+      <div className={cn("px-4", outerClassName)}>
+        <div className={cn("relative z-10 mt-10 rounded-2xl px-4 pb-4 pt-6 shadow-[0px_2px_6px_0px_rgba(17,17,17,0.15)]", mutedPreview && "select-none", cardClassName)}>
           <h1 className={cn("mb-4 text-xl font-bold text-gray-12", mutedPreview && "select-text")}>{event.name}</h1>
           <div className={mutedBody}>
             <EventMetaRows event={event} mobile />
-            <OrganizerBlock event={event} mobile />
+            <OrganizerBlock event={event} mobile live={live} />
+            {/* Âncora do IntersectionObserver da barra fixa mobile (só live). */}
+            {live?.registerAnchorRef && (
+              <div ref={live.registerAnchorRef} className="h-px w-full" aria-hidden />
+            )}
             <RegistrationCtaBlock
               event={event}
               isPreview={isPreview}
               onRegisterClick={onRegisterClick}
+              live={live}
               desktopSpacing={false}
             />
           </div>
         </div>
       </div>
       <div className={mutedBody}>
-        <ShareAndReport mobile onShare={() => setShareOpen(true)} />
+        <ShareAndReport mobile onShare={onShare} live={live} />
       </div>
-      <ShareModal
-        isOpen={shareOpen}
-        onClose={() => setShareOpen(false)}
-        eventName={event.name}
-        eventUrl={eventUrl}
-      />
+      {!live && (
+        <ShareModal
+          isOpen={shareOpen}
+          onClose={() => setShareOpen(false)}
+          eventName={event.name}
+          eventUrl={eventUrl}
+        />
+      )}
     </>
   );
 }
 
 export function EventPublicInfoCardDesktop(props: EventPublicInfoCardProps) {
-  const { event, isPreview, mutedPreview, onRegisterClick } = props;
+  const { event, isPreview, mutedPreview, onRegisterClick, live, outerClassName, cardClassName } = props;
   const [shareOpen, setShareOpen] = useState(false);
   const eventUrl = event.slug ? `/events/${event.slug}` : "";
   // Aspecto "apagado" aplicado a tudo MENOS o título (que fica nítido e selecionável).
   const mutedBody = mutedPreview ? "pointer-events-none select-none opacity-50" : "";
+  const onShare = live ? live.onShareClick : () => setShareOpen(true);
 
   return (
-    <div className="w-full">
-      <div className={cn("h-full overflow-hidden rounded-xl bg-gray-2 p-5 shadow-[0px_2px_6px_0px_rgba(17,17,17,0.15)]", mutedPreview && "select-none")}>
+    <div className={cn("w-full", outerClassName)}>
+      <div className={cn("h-full overflow-hidden rounded-xl bg-gray-2 p-5 shadow-[0px_2px_6px_0px_rgba(17,17,17,0.15)]", mutedPreview && "select-none", cardClassName)}>
         <h1 className={cn("mb-4 text-lg font-bold", mutedPreview && "select-text text-gray-12")}>{event.name}</h1>
         <div className={mutedBody}>
           <EventMetaRows event={event} />
-          <OrganizerBlock event={event} />
+          <OrganizerBlock event={event} live={live} />
           <RegistrationCtaBlock
             event={event}
             isPreview={isPreview}
             onRegisterClick={onRegisterClick}
+            live={live}
             desktopSpacing
           />
         </div>
       </div>
       <div className={mutedBody}>
-        <ShareAndReport onShare={() => setShareOpen(true)} />
+        <ShareAndReport onShare={onShare} live={live} />
       </div>
-      <ShareModal
-        isOpen={shareOpen}
-        onClose={() => setShareOpen(false)}
-        eventName={event.name}
-        eventUrl={eventUrl}
-      />
+      {!live && (
+        <ShareModal
+          isOpen={shareOpen}
+          onClose={() => setShareOpen(false)}
+          eventName={event.name}
+          eventUrl={eventUrl}
+        />
+      )}
     </div>
   );
 }

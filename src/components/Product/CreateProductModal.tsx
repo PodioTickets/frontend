@@ -943,6 +943,7 @@ export function CreateProductModal() {
                             </p>
                           }
                           position="topRight"
+                          usePortal
                         >
                           <button
                             type="button"
@@ -1038,6 +1039,7 @@ export function CreateProductModal() {
                               </p>
                             }
                             position="topRight"
+                            usePortal
                           >
                             <button
                               type="button"
@@ -1164,7 +1166,7 @@ export function CreateProductModal() {
                     disabled={isSubmitting || isDeleting || isProductLoading}
                     className="border-gray-6 px-4 py-2 text-gray-11 max-md:min-h-11 max-md:flex-1"
                   >
-                    Cancelar
+                    Fechar
                   </Button>
                   <Button
                     onClick={requestSave}

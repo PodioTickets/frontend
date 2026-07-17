@@ -78,6 +78,10 @@ export function ChargebackDrawer({
   const [selectedPayment, setSelectedPayment] = useState<any | null>(null);
   const [chargebackItems, setChargebackItems] = useState<ChargebackItem[]>([]);
   const [loading, setLoading] = useState(false);
+  // Busca server-side (todos os registros). `search` = input controlado;
+  // `debouncedSearch` = valor que dispara o fetch (evita request por tecla).
+  const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [pagination, setPagination] = useState({
     page: 1,
     limit: 10,
@@ -87,10 +91,28 @@ export function ChargebackDrawer({
   const itemsPerPage = 10;
 
   useEffect(() => {
+    const t = setTimeout(() => setDebouncedSearch(search.trim()), 350);
+    return () => clearTimeout(t);
+  }, [search]);
+
+  // Novo termo → página 1 (senão ficaria numa página inexistente do resultado).
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [debouncedSearch]);
+
+  // Limpa a busca ao fechar (não reabrir com termo/resultado obsoleto).
+  useEffect(() => {
+    if (!isOpen) {
+      setSearch("");
+      setDebouncedSearch("");
+    }
+  }, [isOpen]);
+
+  useEffect(() => {
     if (isOpen && eventId) {
       loadChargebackItems();
     }
-  }, [isOpen, eventId, currentPage]);
+  }, [isOpen, eventId, currentPage, debouncedSearch]);
 
   const loadChargebackItems = async () => {
     try {
@@ -98,6 +120,7 @@ export function ChargebackDrawer({
       const data = await organizerService.getEventChargebacks(eventId, {
         page: currentPage,
         limit: itemsPerPage,
+        search: debouncedSearch || undefined,
       });
       setChargebackItems(data.chargebacks);
       setPagination(data.pagination);
@@ -172,8 +195,13 @@ export function ChargebackDrawer({
 
   return (
     <>
-      <Drawer open={isOpen} onOpenChange={onClose} direction="right">
-        <DrawerContent className="bg-gray-1 h-full w-full sm:max-w-[969px] border-l border-gray-6">
+      {/* disablePreventScroll={false}: desliga o preventScroll iOS do vaul (default
+          `true` o mantém ATIVO — semântica invertida) que travava o scroll do
+          ViewRegistrationModal aberto pelo detalhe do pedido (fora do drawer). */}
+      <Drawer open={isOpen} onOpenChange={onClose} direction="right" disablePreventScroll={false}>
+        {/* data-vaul-no-drag: destrava o scroll interno (vaul right-drawer trata
+            swipe vertical como arraste-pra-fechar). Fecha pelos botões/overlay. */}
+        <DrawerContent data-vaul-no-drag className="bg-gray-1 h-full w-full sm:max-w-[969px] border-l border-gray-6">
           <DrawerTitle className="sr-only">Chargebacks - Detalhes</DrawerTitle>
 
           {/* Mobile body — fiel ao Figma 2680:110005 (mesmo template do Refunded) */}
@@ -200,6 +228,8 @@ export function ChargebackDrawer({
             currentPage={currentPage}
             totalPages={totalPages}
             onPageChange={setCurrentPage}
+            searchValue={search}
+            onSearchChange={setSearch}
           />
 
           {/* Desktop header */}

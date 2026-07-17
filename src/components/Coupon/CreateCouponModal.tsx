@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useLayoutEffect, useRef, useMemo } from "react";
-import { useCreateCouponModal } from "@/stores/modalStore";
+import { useCreateCouponModal, useDeleteCouponModal } from "@/stores/modalStore";
 import { Button } from "@/components/Button";
 import { Input } from "@/components/Input";
 import { Radio } from "@/components/Radio";
@@ -25,6 +25,7 @@ type CPFListStatus = "DISABLED" | "ENABLED";
 
 export function CreateCouponModal() {
   const { isOpen, closeCreateCouponModal, data, onModalSave } = useCreateCouponModal();
+  const { openDeleteCouponModal } = useDeleteCouponModal();
   const [couponType, setCouponType] = useState<CouponType | null>(null);
   const [code, setCode] = useState("");
   const [note, setNote] = useState("");
@@ -489,6 +490,24 @@ export function CreateCouponModal() {
     }
   };
 
+  // Abre o modal de confirmação de exclusão. Captura eventId/couponId/refresh
+  // localmente: `openDeleteCouponModal` troca o `data` do store único (fecha este
+  // modal), então o closure NÃO pode depender do `data` do store após a troca.
+  const handleDelete = () => {
+    const couponId = data?.couponId;
+    if (!eventId || !couponId) return;
+    const refresh = onModalSave;
+    openDeleteCouponModal({
+      couponId,
+      couponCode: code || data?.coupon?.code,
+      onConfirm: async () => {
+        await organizerService.deleteCoupon(eventId, couponId);
+        toast.success("Cupom deletado com sucesso!");
+        if (refresh) await refresh(undefined);
+      },
+    });
+  };
+
   if (!isOpen) return null;
 
   const panelMotion = isMdUp
@@ -505,20 +524,11 @@ export function CreateCouponModal() {
 
   const couponTypeLabel =
     couponType === "DISCOUNT"
-      ? "Cupom de desconto"
+      ? "Código do cupom"
       : couponType === "QUANTITY"
-        ? "Cupom por quantidade (automático)"
+        ? "Quantidade mínima"
         : couponType === "AGE"
-          ? "Cupom por idade (automático)"
-          : null;
-
-  const couponTypeDescription =
-    couponType === "DISCOUNT"
-      ? "Crie um código para o participante digitar no pagamento e receber o desconto"
-      : couponType === "QUANTITY"
-        ? "Desconto automático quando o carrinho atingir uma quantidade mínima de ingressos"
-        : couponType === "AGE"
-          ? "Desconto automático para participantes dentro de uma faixa de idade na data do evento"
+          ? "Regra de idade"
           : null;
 
   return (
@@ -664,16 +674,25 @@ export function CreateCouponModal() {
             >
               <div
                 className={cn(
-                  "flex flex-col overflow-hidden bg-gray-1 shadow-2xl",
-                  "max-md:h-full max-md:w-full max-md:pt-14",
+                  // pt-16 (64px = `h-16` da OrganizerMobileNav) reserva o topo no
+                  // mobile: a nav é `fixed top-0 z-50` e vem DEPOIS dos modais no DOM
+                  // (ModalsProvider é irmão anterior de `children`), então com z-50
+                  // empatado ela pinta por cima. Sem esse respiro, o header do modal
+                  // (52px) fica todo embaixo da nav e o voltar/título somem — mesmo
+                  // padrão de CreateQuestionModal/CreateProductModal.
+                  "flex flex-col overflow-hidden bg-gray-1 shadow-2xl pt-16 md:pt-0",
+                  "max-md:h-full max-md:w-full",
                   "md:w-full md:max-w-[1098px] md:max-h-[90vh] md:rounded-xl md:border md:border-gray-6",
                 )}
               >
-                {/* Header */}
+                {/* Header — em fluxo (shrink-0): fica no topo naturalmente porque só o
+                    conteúdo rola. NÃO usar position:fixed no mobile: o painel é animado
+                    por framer-motion e o transform retido vira containing block, tornando
+                    o header fixo imprevisível. */}
                 <div
                   className={cn(
                     "flex shrink-0 items-center justify-between border-b border-gray-6",
-                    "max-md:fixed max-md:inset-x-0 max-md:top-0 max-md:z-10 max-md:h-[52px] max-md:bg-gray-1 max-md:px-4",
+                    "max-md:h-[52px] max-md:bg-gray-1 max-md:px-4",
                     "md:px-5 md:py-3",
                   )}
                 >
@@ -762,102 +781,98 @@ export function CreateCouponModal() {
                             <h3 className="text-gray-12 text-xl font-bold font-manrope leading-[1.1]">
                               {couponTypeLabel}
                             </h3>
-                            <p className="text-gray-11 text-base font-family-dm-sans leading-[1.3]">
-                              {couponTypeDescription}
-                            </p>
-                          </div>
 
-                          {/* Código do cupom — apenas DISCOUNT */}
-                          {couponType === "DISCOUNT" && (
-                            <div className="flex flex-col gap-2">
-                              <label className="text-gray-12 text-base font-family-dm-sans leading-[1.3]">
-                                Código do cupom
-                              </label>
-                              <div className="relative">
-                                <Input
-                                  type="text"
-                                  placeholder="Ex: PODIO10"
-                                  value={code}
-                                  onChange={(e) => {
-                                    const val = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, "");
-                                    if (val.length <= 25) setCode(val);
-                                    if (codeError) setCodeError("");
-                                  }}
-                                  maxLength={25}
-                                  className={cn("h-12 pr-16", codeError && "border-red-9 focus-visible:border-red-9")}
-                                />
-                                {codeError && (
-                                  <p className="text-sm text-red-9 font-family-dm-sans">{codeError}</p>
-                                )}
-                              </div>
-                            </div>
-                          )}
-
-                          {/* Quantidade mínima — QUANTITY */}
-                          {couponType === "QUANTITY" && (
-                            <div className="flex flex-col gap-2.5 md:w-[596px]">
+                            {/* Código do cupom — apenas DISCOUNT */}
+                            {couponType === "DISCOUNT" && (
                               <div className="flex flex-col gap-2">
-                                <label className="text-gray-12 text-base font-family-dm-sans leading-[1.3]">
-                                  Quantidade mínima de ingressos
-                                </label>
-                                <Input
-                                  type="text"
-                                  placeholder="Ex: 3"
-                                  value={minQuantity}
-                                  onChange={(e) => setMinQuantity(e.target.value.replace(/[^0-9]/g, ""))}
-                                  className="h-12"
-                                />
-                              </div>
-                              <p className="text-gray-11 text-base font-family-dm-sans leading-[1.3]">
-                                Ao atingir essa quantidade no carrinho, o cupom é aplicado automaticamente
-                              </p>
-                            </div>
-                          )}
-
-                          {/* Faixa de idade — AGE */}
-                          {couponType === "AGE" && (
-                            <div className="flex flex-col gap-5 w-full">
-                              <div className="flex flex-col gap-3">
-                                <h3 className="text-gray-12 text-lg font-semibold font-manrope leading-[1.1]">
-                                  Regra de idade
-                                </h3>
                                 <p className="text-gray-11 text-base font-family-dm-sans leading-[1.3]">
-                                  O cupom será aplicado automaticamente para participantes dentro da faixa de idade definida. Preencha ao menos um campo.
+                                  Crie um código para o participante digitar no pagamento e receber o desconto
+                                </p>
+                                <div className="relative">
+                                  <Input
+                                    type="text"
+                                    placeholder="Ex: PODIO10"
+                                    value={code}
+                                    onChange={(e) => {
+                                      const val = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, "");
+                                      if (val.length <= 25) setCode(val);
+                                      if (codeError) setCodeError("");
+                                    }}
+                                    maxLength={25}
+                                    className={cn("h-12 pr-16", codeError && "border-red-9 focus-visible:border-red-9")}
+                                  />
+                                  {codeError && (
+                                    <p className="text-sm text-red-9 font-family-dm-sans">{codeError}</p>
+                                  )}
+                                </div>
+                              </div>
+                            )}
+
+                            {/* Quantidade mínima — QUANTITY */}
+                            {couponType === "QUANTITY" && (
+                              <div className="flex flex-col gap-2.5 md:w-[596px]">
+                                <div className="flex flex-col gap-2">
+                                  <label className="text-gray-11 text-base font-family-dm-sans leading-[1.3]">
+                                    Quantidade mínima de ingressos
+                                  </label>
+                                  <Input
+                                    type="text"
+                                    placeholder="Ex: 3"
+                                    value={minQuantity}
+                                    onChange={(e) => setMinQuantity(e.target.value.replace(/[^0-9]/g, ""))}
+                                    className="h-12"
+                                  />
+                                </div>
+                                <p className="text-gray-11 text-base font-family-dm-sans leading-[1.3]">
+                                  Ao atingir essa quantidade no carrinho, o cupom é aplicado automaticamente
                                 </p>
                               </div>
-                              <div className="flex flex-col gap-2">
-                                <div className="flex gap-4">
-                                  <div className="flex flex-col gap-2 flex-1 max-w-[130px]">
-                                    <label className="text-gray-12 text-base font-family-dm-sans leading-[1.3]">
-                                      Idade mínima
-                                    </label>
-                                    <Input
-                                      type="text"
-                                      placeholder="Ex: 18"
-                                      value={minAge}
-                                      onChange={(e) => { setMinAge(e.target.value.replace(/[^0-9]/g, "")); if (apiError) setApiError(""); }}
-                                      className={cn("h-12", apiError && "border-red-9 focus-visible:border-red-9")}
-                                    />
-                                  </div>
-                                  <div className="flex flex-col gap-2 flex-1 max-w-[130px]">
-                                    <label className="text-gray-12 text-base font-family-dm-sans leading-[1.3]">
-                                      Idade máxima
-                                    </label>
-                                    <Input
-                                      type="text"
-                                      placeholder="Ex: 65"
-                                      value={maxAge}
-                                      onChange={(e) => { setMaxAge(e.target.value.replace(/[^0-9]/g, "")); if (apiError) setApiError(""); }}
-                                      className={cn("h-12", apiError && "border-red-9 focus-visible:border-red-9")}
-                                    />
-                                  </div>
+                            )}
+
+                            {/* Faixa de idade — AGE */}
+                            {couponType === "AGE" && (
+                              <div className="flex flex-col gap-5 w-full">
+                                <div className="flex flex-col gap-3">
+                                  <p className="text-gray-11 text-base font-family-dm-sans leading-[1.3]">
+                                    O cupom será aplicado automaticamente para participantes dentro da faixa de idade definida. Preencha ao menos um campo.
+                                  </p>
                                 </div>
-                                {apiError && (
-                                  <p className="text-sm text-red-11 font-family-dm-sans leading-[1.3]">{apiError}</p>
-                                )}
+                                <div className="flex flex-col gap-2">
+                                  <div className="flex gap-4">
+                                    <div className="flex flex-col gap-2 flex-1 max-w-[130px]">
+                                      <label className="text-gray-12 text-base font-family-dm-sans leading-[1.3]">
+                                        Idade mínima
+                                      </label>
+                                      <Input
+                                        type="text"
+                                        placeholder="Ex: 18"
+                                        value={minAge}
+                                        onChange={(e) => { setMinAge(e.target.value.replace(/[^0-9]/g, "")); if (apiError) setApiError(""); }}
+                                        className={cn("h-12", apiError && "border-red-9 focus-visible:border-red-9")}
+                                      />
+                                    </div>
+                                    <div className="flex flex-col gap-2 flex-1 max-w-[130px]">
+                                      <label className="text-gray-12 text-base font-family-dm-sans leading-[1.3]">
+                                        Idade máxima
+                                      </label>
+                                      <Input
+                                        type="text"
+                                        placeholder="Ex: 65"
+                                        value={maxAge}
+                                        onChange={(e) => { setMaxAge(e.target.value.replace(/[^0-9]/g, "")); if (apiError) setApiError(""); }}
+                                        className={cn("h-12", apiError && "border-red-9 focus-visible:border-red-9")}
+                                      />
+                                    </div>
+                                  </div>
+                                  {apiError && (
+                                    <p className="text-sm text-red-11 font-family-dm-sans leading-[1.3]">{apiError}</p>
+                                  )}
+                                </div>
                               </div>
-                            </div>
-                          )}
+                            )}
+                          </div>
+
+
 
                           {/* Tipo de desconto */}
                           <div className="flex flex-col gap-4">
@@ -926,9 +941,14 @@ export function CreateCouponModal() {
 
                           {/* Aplicar em quais ingressos */}
                           <div className="flex flex-col gap-3">
-                            <label className="font-family-dm-sans text-base font-normal leading-[1.3] text-gray-12">
-                              Quer aplicar esse cupom a todos os ingressos?
-                            </label>
+                            <div className="flex flex-col gap-2">
+                              <h3 className="text-gray-12 text-lg font-medium font-family-dm-sans leading-[1.3]">
+                                Selecionar ingressos
+                              </h3>
+                              <label className="text-gray-11 text-base font-family-dm-sans leading-[1.3]">
+                                Quer aplicar esse cupom a todos os ingressos?
+                              </label>
+                            </div>
                             <div className="flex flex-wrap gap-6 max-md:gap-10">
                               <label className="flex cursor-pointer items-center gap-2">
                                 <Radio
@@ -1194,7 +1214,7 @@ export function CreateCouponModal() {
                                     {/* Aplicar cupom nos adicionais */}
                                     <div className="flex flex-col gap-5">
                                       <div className="flex flex-col gap-2">
-                                        <h3 className="text-gray-12 text-lg font-semibold font-manrope leading-[1.1]">
+                                        <h3 className="text-gray-12 text-lg font-medium font-family-dm-sans leading-[1.3]">
                                           Aplicar cupom nos adicionais?
                                         </h3>
                                         <p className="text-gray-11 text-base font-family-dm-sans leading-[1.3]">
@@ -1220,7 +1240,7 @@ export function CreateCouponModal() {
                                     </div>
 
                                     <div className="flex flex-col gap-2">
-                                      <h3 className="text-gray-12 text-lg font-semibold font-manrope leading-[1.1]">
+                                      <h3 className="text-gray-12 text-lg font-medium font-family-dm-sans leading-[1.3]">
                                         Validade do cupom
                                       </h3>
                                       <p className="text-gray-11 text-base font-family-dm-sans leading-[1.3]">
@@ -1264,7 +1284,7 @@ export function CreateCouponModal() {
                                   {/* Limite por cupom */}
                                   <div className="flex flex-col gap-5">
                                     <div className="flex flex-col gap-2">
-                                      <h3 className="text-gray-12 text-lg font-semibold font-manrope leading-[1.1]">
+                                      <h3 className="text-gray-12 text-lg font-medium font-family-dm-sans leading-[1.3]">
                                         Limite por cupom
                                       </h3>
                                       <p className="text-gray-11 text-base font-family-dm-sans leading-[1.3]">
@@ -1337,13 +1357,29 @@ export function CreateCouponModal() {
                     "md:justify-end md:px-5 md:py-3",
                   )}
                 >
+                  {/* Editando: no mobile o "Fechar" dá lugar ao "Deletar cupom"
+                      (fechar segue disponível pelo X/voltar do header); no desktop
+                      mantém o "Fechar" — a exclusão continua acessível pela lista. */}
+                  {isEditing && (
+                    <Button
+                      onClick={handleDelete}
+                      variant="destructive"
+                      className="h-11 px-5 max-md:flex-1 md:hidden"
+                      disabled={isSubmitting}
+                    >
+                      Deletar cupom
+                    </Button>
+                  )}
                   <Button
                     onClick={closeCreateCouponModal}
                     variant="outline"
-                    className="border-gray-6 text-gray-12 h-11 px-5 max-md:flex-1"
+                    className={cn(
+                      "border-gray-6 text-gray-12 h-11 px-5 max-md:flex-1",
+                      isEditing && "max-md:hidden",
+                    )}
                     disabled={isSubmitting}
                   >
-                    Cancelar
+                    Fechar
                   </Button>
                   <Button
                     onClick={handleSave}
