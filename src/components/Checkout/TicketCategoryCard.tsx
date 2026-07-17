@@ -632,8 +632,21 @@ const TicketItemDesktop = memo(({
       className={cn(
         "w-full",
         productItems.length > 0
-          ? "grid grid-cols-[auto_1fr] gap-x-4 items-center"
-          : "flex flex-col gap-2",
+          /* Linha 1 = imagem + card; linha 2 = descrição. `gap-x-4` só na
+           * horizontal: sem row-gap, a descrição encosta no card.
+           *
+           * SEM `items-center` de propósito. Com ele, um card mais baixo que a
+           * imagem (136px) ficava centralizado na linha e sobrava folga embaixo —
+           * a descrição, que vem só depois da LINHA, aparecia solta longe do card
+           * (visível sobretudo no ingresso avulso, que sempre recebe imagem por
+           * não ter categoria pra hospedar o carrossel). No stretch padrão o card
+           * preenche a linha, então a descrição encosta nele em todo caso e a
+           * imagem (`self-center`) fica centralizada com o card. */
+          ? "grid grid-cols-[auto_1fr] gap-x-4"
+          // Sem `gap-2`: aqui os únicos filhos são o card e a descrição, e o gap
+          // afastava a descrição 8px — deixando este layout diferente do de cima.
+          // O respiro vem do `p-5` do card, igual nos dois casos.
+          : "flex flex-col",
       )}
     >
       {productItems.length > 0 && (
@@ -697,8 +710,10 @@ const TicketItemDesktop = memo(({
           </div>
         </div>
       )}
-      <div className={cn("min-w-0", productItems.length > 0 ? "row-start-1 col-start-2" : "w-full")}>
-        <div className="relative bg-gray-2 border border-gray-6 rounded-xl p-5 flex flex-col gap-2 w-full">
+      {/* `flex` no wrapper + `h-full` no card: a célula é esticada pela linha do
+          grid, e assim o card acompanha essa altura em vez de flutuar centralizado. */}
+      <div className={cn("min-w-0 flex", productItems.length > 0 ? "row-start-1 col-start-2" : "w-full")}>
+        <div className="relative bg-gray-2 border border-gray-6 rounded-xl p-5 flex flex-col gap-2 w-full h-full justify-center">
           {showAgeLimit ? (
             <div className="absolute top-5 right-5 bg-yellow-3 text-yellow-12 rounded-full px-3 py-1">
               <p className="text-xs font-medium font-family-dm-sans whitespace-nowrap">
@@ -786,11 +801,21 @@ const TicketItemDesktop = memo(({
           </div>
         </div>
       </div>
+      {/* Descrição: 2ª linha do grid, FORA da célula do card de propósito — a
+       * imagem (`row-start-1 self-center`) se alinha ao centro do CARD, e só dele.
+       * Pôr a descrição dentro da mesma célula faria a imagem centralizar contra
+       * card + descrição.
+       *
+       * Sem margem negativa: antes havia um `-mt-3` que puxava o texto 12px pra
+       * cima e o card (`position: relative`) pintava por cima, escondendo-o. Isso
+       * só passava despercebido enquanto o card era mais baixo que a coluna de
+       * imagens (136px) e o `items-center` deixava folga embaixo — bastava a linha
+       * da modalidade (ícone + distância) crescer o card pra folga sumir. */}
       {ticket.description?.trim() ? (
         <span
           className={cn(
             "pl-3 text-sm text-gray-11 font-family-dm-sans",
-            productItems.length > 0 ? "col-start-2 -mt-3" : "",
+            productItems.length > 0 ? "col-start-2" : "",
           )}
         >
           {ticket.description.trim()}

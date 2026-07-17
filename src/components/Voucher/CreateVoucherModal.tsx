@@ -611,7 +611,7 @@ export function CreateVoucherModal() {
                             >
                               <div className="flex flex-col gap-4">
                                 <div className="flex flex-col gap-2">
-                                  <h3 className="text-gray-12 text-lg font-medium font-family-dm-sans leading-[1.3]">
+                                  <h3 className="text-gray-12 text-lg font-semibold font-manrope leading-[1.1]">
                                     Deseja ativar lista exclusiva por CPF?
                                   </h3>
                                   <p className="text-gray-11 text-base font-family-dm-sans leading-[1.3]">
