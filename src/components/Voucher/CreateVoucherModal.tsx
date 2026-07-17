@@ -71,6 +71,42 @@ export function CreateVoucherModal() {
   const isEditing = data?.voucherId !== undefined;
   const eventId = data?.eventId;
 
+  /* Dirty check — espelha o `CreateCouponModal`. Sem isto o "Editar voucher" ficava
+   * SEMPRE ativo, mesmo sem alteração nenhuma.
+   *
+   * Cada campo é comparado contra o mesmo default que o efeito de inicialização
+   * aplica ao abrir (ex.: `cpfListStatus || "DISABLED"`); qualquer divergência entre
+   * os dois lados faria o modal nascer "sujo". `quantity` fica de fora: não é
+   * editável em modo de edição (o input é `disabled={isEditing}`). */
+  const hasChanges = useMemo(() => {
+    if (!isEditing) {
+      return !!(name || quantity);
+    }
+    const v = data?.voucher;
+    if (!v) return false;
+
+    const originalAppliesTo = (v.appliesTo === "all" || !v.appliesTo) ? "all" : "specific";
+    const originalTicketIds = Array.isArray(v.appliesTo)
+      ? v.appliesTo
+        .map((t: string | { id: string }) => (typeof t === "string" ? t : t.id))
+        .sort()
+      : [];
+
+    return (
+      name !== (v.name || "") ||
+      appliesTo !== originalAppliesTo ||
+      JSON.stringify([...selectedTicketIds].sort()) !== JSON.stringify(originalTicketIds) ||
+      expiryStatus !== (v.expiryDate ? "ENABLED" : "DISABLED") ||
+      expiryDate !== (v.expiryDate ? toCivilDayBRT(v.expiryDate) : null) ||
+      cpfListStatus !== (v.cpfListStatus || "DISABLED") ||
+      JSON.stringify(cpfList) !== JSON.stringify(v.cpfList || []) ||
+      applyToProducts !== !!(v as { applyToProducts?: boolean }).applyToProducts
+    );
+  }, [
+    isEditing, data, name, quantity, appliesTo, selectedTicketIds,
+    expiryStatus, expiryDate, cpfListStatus, cpfList, applyToProducts,
+  ]);
+
   // Piso da validade = HOJE em Brasília (não no fuso do device), pra o mínimo ser
   // o mesmo pra quem cria o voucher de qualquer país.
   const minSelectableExpiryDate = useMemo(() => brasiliaTodayCivilStart(), [isOpen]);
@@ -858,7 +894,7 @@ export function CreateVoucherModal() {
                     onClick={handleSave}
                     variant="default"
                     className="h-11 px-5 max-md:flex-1"
-                    disabled={isSubmitting || (!isEditing && appliesTo === 'specific' && selectedTicketIds.length === 0)}
+                    disabled={isSubmitting || !hasChanges || (!isEditing && appliesTo === 'specific' && selectedTicketIds.length === 0)}
                   >
                     {isSubmitting ? "Salvando..." : isEditing ? "Editar voucher" : "Criar voucher"}
                   </Button>
