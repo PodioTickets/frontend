@@ -13,6 +13,7 @@ import { TopicsIcon } from "@/components/Icons/TopicsIcon";
 import Link from "next/link";
 import { BannerIcon } from "@/components/Icons/Organizer/BannerIcon";
 import { FinancialStepIcon } from "@/components/Icons/Organizer/FinancialStepIcon";
+import { isTicketsCheckoutPreviewPath } from "@/lib/ticketsCheckoutPreviewRoute";
 
 function EditProgressBar() {
   const pathname = usePathname();
@@ -138,6 +139,10 @@ function EditLayoutContent({ children }: { children: ReactNode }) {
 
   const hideEditStepperOnMobile = pathname.includes("/edit");
 
+  /* A prévia reproduz a tela do participante: sem header do evento e sem
+   * stepper de etapas — só o conteúdo (a página traz o header de voltar). */
+  const isTicketsCheckoutPreview = isTicketsCheckoutPreviewPath(pathname);
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-2 flex items-center justify-center">
@@ -148,15 +153,19 @@ function EditLayoutContent({ children }: { children: ReactNode }) {
 
   return (
     <div className="min-h-screen bg-gray-2">
-      <AdminEventHeader
-        eventId={eventId}
-        eventName={event?.name}
-        eventSlug={event?.slug}
-      />
+      {!isTicketsCheckoutPreview && (
+        <AdminEventHeader
+          eventId={eventId}
+          eventName={event?.name}
+          eventSlug={event?.slug}
+        />
+      )}
       <div className="max-w-7xl mx-auto px-4 lg:px-6 2xl:px-0">
-        <div className={cn(hideEditStepperOnMobile && "hidden md:block")}>
-          <EditProgressBar />
-        </div>
+        {!isTicketsCheckoutPreview && (
+          <div className={cn(hideEditStepperOnMobile && "hidden md:block")}>
+            <EditProgressBar />
+          </div>
+        )}
         {children}
       </div>
     </div>

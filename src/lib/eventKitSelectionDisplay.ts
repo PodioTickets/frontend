@@ -107,6 +107,44 @@ function parseHiddenUrlsMap(raw: unknown): Record<string, string[]> {
   return out;
 }
 
+/**
+ * Payload emitido pelo drawer de posição das imagens (botões "Salvar
+ * configuração" e "Prévia"). Vive aqui — e não no drawer — para que os fluxos
+ * e o `applyKitDrawerPayload` o compartilhem sem import circular.
+ */
+export interface KitImagePositionPayload {
+  layout: KitImageLayoutDrawerMode;
+  primaryImageUrlByTicketId: Record<string, string>;
+  primaryImageUrlByCategoryId: Record<string, string>;
+  hiddenImageUrlsByTicketId: Record<string, string[]>;
+  hiddenImageUrlsByCategoryId: Record<string, string[]>;
+}
+
+/**
+ * Projeta o payload do drawer sobre uma base de exibição, clonando os mapas
+ * (o payload vem do state do drawer — não pode vazar referência pro draft).
+ *
+ * `base` é quem define o `showKitImagesOnSelection`: o drawer NÃO mexe no radio
+ * "Deseja exibir as imagens...". Por isso o chamador escolhe a base conforme a
+ * intenção — `savedKitSelection` ao PERSISTIR (mantém o radio já salvo, o toggle
+ * pendente continua sendo do botão da página) e `draftKitSelection` na PRÉVIA
+ * (o participante precisa ver o estado que o organizador tem na tela agora).
+ */
+export function applyKitDrawerPayload(
+  base: EventKitSelectionDisplay,
+  payload: KitImagePositionPayload,
+): EventKitSelectionDisplay {
+  return {
+    ...defaultEventKitSelectionDisplay(),
+    ...base,
+    kitImagesLayout: drawerModeToApiLayout(payload.layout),
+    primaryKitProductByTicketId: { ...payload.primaryImageUrlByTicketId },
+    primaryKitProductByCategoryId: { ...payload.primaryImageUrlByCategoryId },
+    hiddenKitImageUrlsByTicketId: { ...payload.hiddenImageUrlsByTicketId },
+    hiddenKitImageUrlsByCategoryId: { ...payload.hiddenImageUrlsByCategoryId },
+  };
+}
+
 export function layoutToDrawerMode(
   layout: EventKitSelectionDisplay["kitImagesLayout"]
 ): KitImageLayoutDrawerMode {

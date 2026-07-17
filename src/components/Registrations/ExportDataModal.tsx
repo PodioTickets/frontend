@@ -255,6 +255,9 @@ export function ExportDataModal() {
                   activeHref={`/organizer/events/${eventId}/registrations`}
                   onLinkClick={closeExportDataModal}
                   eventId={eventId}
+                  // Este modal é z-99999: o menu (portalado no body) precisa vencê-lo.
+                  // Antes era `z-100` fixo, ou seja, o dropdown abria ATRÁS do modal.
+                  menuZClass="z-[100000]"
                 />
               )}
             </div>

@@ -63,7 +63,9 @@ function SortableTopicCard({
         isDragging && "z-10 opacity-60 shadow-lg ring-2 ring-primary-8/30",
       )}
     >
-      {/* Cabeçalho — mobile Figma: «Ações»; desktop: título do tópico */}
+      {/* Cabeçalho — título do tópico + ações, igual no mobile e no desktop.
+          (Antes o mobile mostrava o rótulo fixo «Ações» aqui e repetia o título no
+          corpo; o título no cabeçalho identifica o card sem duplicar.) */}
       <div
         className="flex cursor-grab items-center justify-between gap-2 border-b border-gray-6 bg-gray-1 px-5 py-2 active:cursor-grabbing"
         aria-label="Arrastar para reordenar o tópico"
@@ -71,10 +73,7 @@ function SortableTopicCard({
         {...listeners}
       >
         <div className="-mx-1 -my-0.5 flex min-w-0 flex-1 items-center rounded-md px-1 py-1 touch-none outline-none focus-visible:ring-2 focus-visible:ring-primary-8/35 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-1">
-          <p className="min-w-0 truncate font-manrope text-base font-semibold leading-[1.1] text-gray-12 md:hidden">
-            Ações
-          </p>
-          <p className="hidden min-w-0 truncate font-manrope text-base font-semibold leading-[1.1] text-gray-12 md:block">
+          <p className="min-w-0 truncate font-manrope text-base font-semibold leading-[1.1] text-gray-12">
             {topic.title}
           </p>
         </div>
@@ -91,7 +90,7 @@ function SortableTopicCard({
         </div>
       </div>
 
-      {/* Mobile Figma: título no corpo + colapsável + «Ver mais» */}
+      {/* Desktop: conteúdo rolável. */}
       <div className="hidden min-h-0 flex-col md:flex">
         <div className="flex min-h-0 flex-col gap-4 p-5">
           <TopicRichContent
@@ -104,11 +103,9 @@ function SortableTopicCard({
         </div>
       </div>
 
+      {/* Mobile: conteúdo colapsável + «Ver mais» (o título fica no cabeçalho). */}
       <div className="flex min-h-0 flex-col md:hidden">
-        <div className="flex flex-col gap-6 p-5">
-          <p className="font-manrope text-lg font-bold leading-[1.1] text-gray-12">
-            {topic.title}
-          </p>
+        <div className="flex flex-col p-5">
           <TopicRichContent
             html={html}
             className={cn(

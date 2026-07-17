@@ -50,6 +50,7 @@ import {
   type KitImageLayoutMode,
   type KitImagePositionCategorySection,
 } from "@/components/Ticket/KitImagePositionDrawer";
+import type { KitImagePositionPayload } from "@/lib/eventKitSelectionDisplay";
 import {
   DndContext,
   KeyboardSensor,
@@ -100,13 +101,9 @@ export interface KitImagePositionDrawerProps {
     hiddenByTicket?: Record<string, string[]>;
     hiddenByCategory?: Record<string, string[]>;
   };
-  onSave: (payload: {
-    layout: KitImageLayoutMode;
-    primaryImageUrlByTicketId: Record<string, string>;
-    primaryImageUrlByCategoryId: Record<string, string>;
-    hiddenImageUrlsByTicketId: Record<string, string[]>;
-    hiddenImageUrlsByCategoryId: Record<string, string[]>;
-  }) => void;
+  onSave: (payload: KitImagePositionPayload) => void | Promise<void>;
+  /** Quando fornecido, o drawer mostra o botão "Prévia" (estado atual, sem salvar). */
+  onPreview?: (payload: KitImagePositionPayload) => void;
   saveSuccessMessage?: string;
 }
 
@@ -1428,6 +1425,7 @@ export const TicketsSection = forwardRef<TicketsSectionRef, TicketsSectionProps>
             uncategorized={kitImagePositionDrawerData.uncategorized}
             initialKitSelection={kitImagePositionDrawer.initialKitSelection}
             onSave={kitImagePositionDrawer.onSave}
+            onPreview={kitImagePositionDrawer.onPreview}
             saveSuccessMessage={kitImagePositionDrawer.saveSuccessMessage}
           />
         )}

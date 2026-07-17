@@ -8,15 +8,16 @@ import { organizerService } from "@/services";
 import { Button } from "@/components/Button";
 import { TicketsSection, type TicketsSectionRef } from "@/components/Organizer/TicketsSection";
 import { TicketAdvancedKitDisplayOptions } from "@/components/Ticket/TicketAdvancedKitDisplayOptions";
-import { type KitImageLayoutMode } from "@/components/Ticket/KitImagePositionDrawer";
 import {
+  applyKitDrawerPayload,
   defaultEventKitSelectionDisplay,
   initialEventKitSelectionDisplayForCreation,
-  drawerModeToApiLayout,
   layoutToDrawerMode,
   type EventKitSelectionDisplay,
+  type KitImagePositionPayload,
 } from "@/lib/eventKitSelectionDisplay";
 import {
+  consumeTicketsCheckoutPreviewDraftReopenFlag,
   readTicketsCheckoutPreviewDraft,
   writeTicketsCheckoutPreviewDraft,
 } from "@/lib/ticketsCheckoutPreviewDraft";
@@ -50,6 +51,14 @@ export default function IngressosPage() {
       primaryKitProductByTicketId: { ...draft.kitSelectionDisplay.primaryKitProductByTicketId },
       primaryKitProductByCategoryId: { ...draft.kitSelectionDisplay.primaryKitProductByCategoryId },
     });
+    // Prévia disparada de DENTRO do drawer: reabre com as escolhas do rascunho
+    // (`drawerInitialKitSelection` deriva do draft que acabamos de hidratar).
+    // A flag é consumida aqui — one-shot, senão o drawer reabriria sozinho em
+    // toda reentrada na tela enquanto o rascunho existir.
+    if (draft.reopenKitDrawer) {
+      setKitImagePositionDrawerOpen(true);
+      consumeTicketsCheckoutPreviewDraftReopenFlag();
+    }
   }, [eventId]);
 
   // Difere do default? Usado só pra já abrir o painel avançado quando o usuário
@@ -116,23 +125,26 @@ export default function IngressosPage() {
     orgNav.push("/organizer/events/new/tickets/preview");
   }, [eventId, draftKitSelection, orgNav]);
 
+  // Prévia disparada de DENTRO do drawer: leva o estado NÃO salvo dele
+  // (layout/principal/ocultas) e marca o retorno pra reabrir o drawer com essas
+  // mesmas escolhas. Aqui não há baseline salvo — a base é sempre o draft.
+  const handleKitDrawerPreview = useCallback(
+    (payload: KitImagePositionPayload) => {
+      if (!eventId) return;
+      writeTicketsCheckoutPreviewDraft({
+        v: 1,
+        eventId,
+        kitSelectionDisplay: applyKitDrawerPayload(draftKitSelection, payload),
+        reopenKitDrawer: true,
+      });
+      orgNav.push("/organizer/events/new/tickets/preview");
+    },
+    [eventId, draftKitSelection, orgNav],
+  );
+
   const handleKitDrawerSave = useCallback(
-    (payload: {
-      layout: KitImageLayoutMode;
-      primaryImageUrlByTicketId: Record<string, string>;
-      primaryImageUrlByCategoryId: Record<string, string>;
-      hiddenImageUrlsByTicketId: Record<string, string[]>;
-      hiddenImageUrlsByCategoryId: Record<string, string[]>;
-    }) => {
-      setDraftKitSelection((prev) => ({
-        ...defaultEventKitSelectionDisplay(),
-        ...prev,
-        kitImagesLayout: drawerModeToApiLayout(payload.layout),
-        primaryKitProductByTicketId: { ...payload.primaryImageUrlByTicketId },
-        primaryKitProductByCategoryId: { ...payload.primaryImageUrlByCategoryId },
-        hiddenKitImageUrlsByTicketId: { ...payload.hiddenImageUrlsByTicketId },
-        hiddenKitImageUrlsByCategoryId: { ...payload.hiddenImageUrlsByCategoryId },
-      }));
+    (payload: KitImagePositionPayload) => {
+      setDraftKitSelection((prev) => applyKitDrawerPayload(prev, payload));
     },
     [],
   );
@@ -184,6 +196,7 @@ export default function IngressosPage() {
             onClose: () => setKitImagePositionDrawerOpen(false),
             initialKitSelection: drawerInitialKitSelection,
             onSave: handleKitDrawerSave,
+            onPreview: handleKitDrawerPreview,
             saveSuccessMessage:
               "Posição das imagens atualizada. Use «Confirmar ingressos» abaixo para gravar no evento.",
           }}
