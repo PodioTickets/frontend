@@ -87,7 +87,10 @@ export default function FinancialPage() {
     <WizardStepLayout
       title="Pagamento"
       onBack={handleBack}
-      className="flex-1 bg-gray-2 px-5 pt-[52px] pb-[176px] max-md:pb-40"
+      // `pt-[52px]` reserva a ProgressBar do wizard, que é `hidden md:block` — no
+      // mobile virava espaço morto acima do header. `md:` restringe ao desktop,
+      // igual ao irmão `new/questionnaire`.
+      className="flex-1 bg-gray-2 px-5 pt-0 md:pt-[52px] pb-[176px] max-md:pb-40"
       maxWidth="max-w-7xl"
       gutter="5"
       description="Configure a divisão da taxa da plataforma e as formas de pagamento aceitas. Estes dados ficam travados após a publicação."

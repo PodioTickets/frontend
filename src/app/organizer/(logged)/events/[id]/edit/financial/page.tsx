@@ -104,7 +104,11 @@ export default function EditFinancialPage() {
     <>
     <WizardStepLayout
       title="Pagamento"
-      className="flex-1 bg-gray-2 px-5 pt-0 pb-[176px] max-md:pb-10"
+      // `max-md:pb-40`: no mobile a barra de ações do `WizardStepLayout` é
+      // `fixed bottom-0`, então o padding do container é o que evita que ela cubra
+      // o conteúdo. O `pb-10` (40px) era menor que a barra e espremia o fim da
+      // página. 40 = mesmo valor do irmão `edit/questionnaire` e da criação.
+      className="flex-1 bg-gray-2 px-5 pt-0 pb-[176px] max-md:pb-40"
       maxWidth="max-w-7xl"
       gutter="5"
       description="A divisão da taxa fica travada após a publicação, mas você pode alterar as formas de pagamento aceitas."
