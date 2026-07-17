@@ -68,22 +68,40 @@ async function uploadPdfFileToApi(file: File): Promise<string> {
  * Corpo de criação/atualização alinhado à página de informações.
  * `regulationUrlForCreate` só URLs remotas já conhecidas (não data URL).
  */
+/**
+ * Junta data (`YYYY-MM-DD`) + hora (`HH:mm`) do form num instante ISO.
+ *
+ * Wall-clock do organizador vira UTC EXPLÍCITO (`Z`). Sem o `Z`, o backend faz
+ * `new Date("2026-07-05T20:00:00")` e interpreta no fuso LOCAL do servidor — num
+ * servidor em America/Sao_Paulo (ex.: ambiente local) isso desloca +3h no save
+ * (20:00 vira 23:00Z). Com `Z` o instante é sempre o wall-clock digitado (20:00Z),
+ * determinístico em qualquer fuso, e casa com a exibição/hidratação (que leem UTC).
+ *
+ * Compartilhado entre o corpo de criação e a PRÉVIA do banner — o card lê os
+ * mesmos campos ISO do `Event`, então a prévia precisa compor igual ao save.
+ */
+export function composeRegistrationDateTime(
+  date?: string,
+  time?: string,
+): string | undefined {
+  const d = date?.trim();
+  if (!d) return undefined;
+  const t = (time?.trim() || "00:00").slice(0, 5);
+  return `${d}T${t}:00.000Z`;
+}
+
 export function buildCreateEventBodyFromForm(
   formData: CreateEventFormData,
   regulationUrlForCreate?: string | null,
 ): Record<string, unknown> {
-  const rs = formData.registrationStartDate?.trim();
-  const re = formData.registrationEndDate?.trim();
-  const rst = (formData.registrationStartTime?.trim() || "00:00").slice(0, 5);
-  const ret = (formData.registrationEndTime?.trim() || "00:00").slice(0, 5);
-
-  // Wall-clock do organizador enviado como UTC EXPLÍCITO (`Z`). Sem o `Z`, o backend
-  // faz `new Date("2026-07-05T20:00:00")` e interpreta no fuso LOCAL do servidor — num
-  // servidor em America/Sao_Paulo (ex.: ambiente local) isso desloca +3h no save (20:00
-  // vira 23:00Z). Com `Z` o instante gravado é sempre o wall-clock digitado (20:00Z),
-  // determinístico em qualquer fuso, e casa com a exibição/hidratação (que leem UTC).
-  const registrationStartDateTime = rs ? `${rs}T${rst}:00.000Z` : undefined;
-  const registrationEndDateTime = re ? `${re}T${ret}:00.000Z` : undefined;
+  const registrationStartDateTime = composeRegistrationDateTime(
+    formData.registrationStartDate,
+    formData.registrationStartTime,
+  );
+  const registrationEndDateTime = composeRegistrationDateTime(
+    formData.registrationEndDate,
+    formData.registrationEndTime,
+  );
 
   const eventData: Record<string, unknown> = {
     name: formData.name.trim(),

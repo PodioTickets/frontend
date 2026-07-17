@@ -54,6 +54,18 @@ interface BannerSectionProps {
   /** Event preview data */
   eventName?: string;
   eventDate?: string;
+  /**
+   * Janela de inscrições em ISO (instante UTC — compor com
+   * `composeRegistrationDateTime`). Alimentam a linha "Inscrições até" do card e o
+   * estado do CTA ("Inscrições abrem em…"/"encerradas").
+   *
+   * Necessárias no fluxo NOVO, que não tem `previewEvent`: sem elas o card cai no
+   * `base` vazio, `registrationEndDate` fica `undefined` e a linha "Inscrições até"
+   * some da prévia (a de `eventDate` é incondicional). Na EDIÇÃO podem ser omitidas
+   * — chegam pelo `previewEvent`.
+   */
+  registrationStartDate?: string;
+  registrationEndDate?: string;
   street?: string;
   /** Nome do local (POI escolhido no mapa) — 1ª parte do endereço do card, igual à tela pública. */
   locationName?: string;
@@ -100,6 +112,8 @@ export function BannerSection({
   bannerUrl,
   eventName,
   eventDate,
+  registrationStartDate,
+  registrationEndDate,
   street,
   locationName,
   city,
@@ -153,6 +167,13 @@ export function BannerSection({
       // igual à tela pública. Valor vivo do form > evento base.
       locationName: locationName || (base.locationName as string) || "",
       eventDate: eventDate || (base.eventDate as string) || "",
+      // Janela de inscrições: valor vivo do form (fluxo NOVO) > evento base (edição).
+      // Sem isto o fluxo novo não tem `registrationEndDate` e o card esconde a linha
+      // "Inscrições até".
+      registrationStartDate:
+        registrationStartDate || (base.registrationStartDate as string) || "",
+      registrationEndDate:
+        registrationEndDate || (base.registrationEndDate as string) || "",
       // Imagem do evento = BANNER: preview vivo > já salvo > evento base.
       bannerUrl: bannerPreview || bannerUrl || (base.bannerUrl as string) || "",
       // Redes sociais VIVAS do form (fallback ao evento base). Fazem os ícones
@@ -171,6 +192,8 @@ export function BannerSection({
     street,
     locationName,
     eventDate,
+    registrationStartDate,
+    registrationEndDate,
     bannerPreview,
     bannerUrl,
     organizer.name,

@@ -12,7 +12,10 @@ import { useOrganizerPermissions } from "@/contexts/OrganizerPermissionsContext"
 import { Loading } from "@/components/Loading";
 import { BannerSection, type BannerSectionOrganizerData } from "@/components/Organizer/BannerSection";
 import { WizardStepLayout } from "@/components/Organizer/WizardStepLayout";
-import { ensureCreateEventSyncedFromDraft } from "@/lib/createEventDraftSync";
+import {
+  composeRegistrationDateTime,
+  ensureCreateEventSyncedFromDraft,
+} from "@/lib/createEventDraftSync";
 import { organizerNewEventClientPage } from "@/lib/organizerAudit";
 import { getAvatarUrl } from "@/utils/avatar";
 import toast from "react-hot-toast";
@@ -124,6 +127,16 @@ export default function BannerPage() {
         bannerUrl={formData.bannerUrl}
         eventName={formData.name}
         eventDate={formData.eventDate}
+        // O form guarda data e hora SEPARADAS; o card lê o ISO do `Event`. Compomos
+        // com o mesmo helper do save pra prévia e evento salvo baterem.
+        registrationStartDate={composeRegistrationDateTime(
+          formData.registrationStartDate,
+          formData.registrationStartTime,
+        )}
+        registrationEndDate={composeRegistrationDateTime(
+          formData.registrationEndDate,
+          formData.registrationEndTime,
+        )}
         street={formData.street}
         locationName={formData.locationName}
         city={formData.city}
