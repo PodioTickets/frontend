@@ -785,6 +785,9 @@ export function CreateCouponModal() {
                             {/* Código do cupom — apenas DISCOUNT */}
                             {couponType === "DISCOUNT" && (
                               <div className="flex flex-col gap-2">
+                                <p className="text-gray-11 text-base font-family-dm-sans leading-[1.3]">
+                                  Crie um código para o participante digitar no pagamento e receber o desconto
+                                </p>
                                 <div className="relative">
                                   <Input
                                     type="text"
