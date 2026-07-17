@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useLayoutEffect, useRef, useMemo } from "react";
-import { useCreateVoucherModal } from "@/stores/modalStore";
+import { useCreateVoucherModal, useDeleteVoucherModal } from "@/stores/modalStore";
 import { Button } from "@/components/Button";
 import { Input } from "@/components/Input";
 import { Checkbox } from "@/components/CheckBox";
@@ -24,6 +24,7 @@ type ExpiryStatus = "DISABLED" | "ENABLED";
 
 export function CreateVoucherModal() {
   const { isOpen, closeCreateVoucherModal, data, onModalSave } = useCreateVoucherModal();
+  const { openDeleteVoucherModal } = useDeleteVoucherModal();
   const [name, setName] = useState("");
   const [quantity, setQuantity] = useState("");
   const [appliesTo, setAppliesTo] = useState<"all" | "specific">("specific");
@@ -246,6 +247,25 @@ export function CreateVoucherModal() {
     }
   };
 
+  /* Delegação ao `DeleteVoucherModal` (mesmo fluxo do cupom e da lista de vouchers):
+   * a confirmação e o tratamento de erro vivem lá; aqui só passamos o alvo e o que
+   * fazer no confirm. `onModalSave` é lido ANTES do callback porque o store é
+   * resetado ao trocar de modal — sem isso a lista não recarregaria. */
+  const handleDelete = () => {
+    const voucherId = data?.voucherId;
+    if (!eventId || !voucherId) return;
+    const refresh = onModalSave;
+    openDeleteVoucherModal({
+      voucherId,
+      voucherCode: name || data?.voucher?.name,
+      onConfirm: async () => {
+        await organizerService.deleteVoucher(eventId, voucherId);
+        toast.success("Voucher deletado com sucesso!");
+        if (refresh) await refresh(undefined);
+      },
+    });
+  };
+
   if (!isOpen) return null;
 
   const panelMotion = isMdUp
@@ -395,7 +415,13 @@ export function CreateVoucherModal() {
             >
               <div
                 className={cn(
-                  "flex flex-col overflow-hidden bg-gray-1 shadow-2xl",
+                  // pt-16 (64px = `h-16` da OrganizerMobileNav) reserva o topo no
+                  // mobile: a nav é `fixed top-0 z-50` e vem DEPOIS dos modais no DOM
+                  // (ModalsProvider é irmão anterior de `children`), então com z-50
+                  // empatado ela pinta por cima. Sem esse respiro, o header do modal
+                  // (52px) fica todo embaixo da nav e o voltar/título somem — mesmo
+                  // padrão de CreateQuestionModal/CreateProductModal.
+                  "flex flex-col overflow-hidden bg-gray-1 shadow-2xl pt-16 md:pt-0",
                   "max-md:h-full max-md:w-full",
                   "md:w-full md:max-w-[1098px] md:max-h-[90vh] md:rounded-xl md:border md:border-gray-6",
                 )}
@@ -803,13 +829,30 @@ export function CreateVoucherModal() {
                     "md:justify-end md:px-5 md:py-3",
                   )}
                 >
+                  {/* Editando: no mobile o "Fechar" dá lugar ao "Deletar voucher"
+                      (fechar segue disponível pelo X/voltar do header); no desktop
+                      mantém o "Fechar" — a exclusão continua acessível pela lista.
+                      Mesmo padrão do `CreateCouponModal`. */}
+                  {isEditing && (
+                    <Button
+                      onClick={handleDelete}
+                      variant="destructive"
+                      className="h-11 px-5 max-md:flex-1 md:hidden"
+                      disabled={isSubmitting}
+                    >
+                      Deletar voucher
+                    </Button>
+                  )}
                   <Button
                     onClick={closeCreateVoucherModal}
                     variant="outline"
-                    className="border-gray-6 text-gray-12 h-11 px-5 max-md:flex-1"
+                    className={cn(
+                      "border-gray-6 text-gray-12 h-11 px-5 max-md:flex-1",
+                      isEditing && "max-md:hidden",
+                    )}
                     disabled={isSubmitting}
                   >
-                    Cancelar
+                    Fechar
                   </Button>
                   <Button
                     onClick={handleSave}

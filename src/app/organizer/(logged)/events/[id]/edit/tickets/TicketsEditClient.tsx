@@ -12,17 +12,16 @@ import { UnsavedChangesModal } from "@/components/UnsavedChangesModal";
 import { useUnsavedLeaveGuard } from "@/hooks/useUnsavedLeaveGuard";
 import { TicketAdvancedKitDisplayOptions } from "@/components/Ticket/TicketAdvancedKitDisplayOptions";
 import {
-  type KitImageLayoutMode,
-} from "@/components/Ticket/KitImagePositionDrawer";
-import {
+  applyKitDrawerPayload,
   defaultEventKitSelectionDisplay,
-  drawerModeToApiLayout,
   layoutToDrawerMode,
   parseEventKitSelectionDisplay,
   type EventKitSelectionDisplay,
+  type KitImagePositionPayload,
 } from "@/lib/eventKitSelectionDisplay";
 import {
   clearTicketsCheckoutPreviewDraft,
+  consumeTicketsCheckoutPreviewDraftReopenFlag,
   readTicketsCheckoutPreviewDraft,
   writeTicketsCheckoutPreviewDraft,
 } from "@/lib/ticketsCheckoutPreviewDraft";
@@ -95,6 +94,14 @@ export function TicketsEditClient({ initialBundle }: TicketsEditClientProps) {
       primaryKitProductByTicketId: { ...draft.kitSelectionDisplay.primaryKitProductByTicketId },
       primaryKitProductByCategoryId: { ...draft.kitSelectionDisplay.primaryKitProductByCategoryId },
     });
+    // Prévia disparada de DENTRO do drawer: reabre com as escolhas do rascunho
+    // (`drawerInitialKitSelection` deriva do draft que acabamos de hidratar).
+    // A flag é consumida aqui — one-shot, senão o drawer reabriria sozinho em
+    // toda reentrada na tela enquanto o rascunho existir.
+    if (draft.reopenKitDrawer) {
+      setKitImagePositionDrawerOpen(true);
+      consumeTicketsCheckoutPreviewDraftReopenFlag();
+    }
     hydratedFromStorageRef.current = true;
   }, [eventId]);
 
@@ -226,33 +233,41 @@ export function TicketsEditClient({ initialBundle }: TicketsEditClientProps) {
     [eventId, draftKitSelection, orgNav],
   );
 
+  // Prévia disparada de DENTRO do drawer: leva o estado NÃO salvo dele
+  // (layout/principal/ocultas) e marca o retorno pra reabrir o drawer com essas
+  // mesmas escolhas. Base = draft (não `savedKitSelection`): a prévia tem que
+  // refletir o radio que está na tela agora.
+  const handleKitDrawerPreview = useCallback(
+    (payload: KitImagePositionPayload) => {
+      if (!eventId) return;
+      writeTicketsCheckoutPreviewDraft({
+        v: 1,
+        eventId,
+        kitSelectionDisplay: applyKitDrawerPayload(draftKitSelection, payload),
+        reopenKitDrawer: true,
+      });
+      orgNav.push(`/organizer/events/${eventId}/edit/tickets/preview`);
+    },
+    [eventId, draftKitSelection, orgNav],
+  );
+
   // Salva a POSIÇÃO/OCULTAS das imagens JÁ no botão do drawer (não espera o
   // "Salvar alterações" da página). O radio "Deseja exibir as imagens..." NÃO é
   // tocado aqui: persistimos com o `showKitImagesOnSelection` já SALVO
   // (`savedKitSelection`) e preservamos o toggle não-salvo do radio no draft —
   // ele continua sendo salvo pelo botão da página.
   const handleKitDrawerSave = useCallback(
-    async (payload: {
-      layout: KitImageLayoutMode;
-      primaryImageUrlByTicketId: Record<string, string>;
-      primaryImageUrlByCategoryId: Record<string, string>;
-      hiddenImageUrlsByTicketId: Record<string, string[]>;
-      hiddenImageUrlsByCategoryId: Record<string, string[]>;
-    }) => {
+    async (payload: KitImagePositionPayload) => {
       if (!eventId) {
         toast.error("Evento não encontrado.");
         throw new Error("missing eventId");
       }
       const currentShow = draftKitSelection.showKitImagesOnSelection;
-      const persisted: EventKitSelectionDisplay = {
-        ...defaultEventKitSelectionDisplay(),
-        ...savedKitSelection, // baseline: mantém o `show` SALVO (não o toggle do draft)
-        kitImagesLayout: drawerModeToApiLayout(payload.layout),
-        primaryKitProductByTicketId: { ...payload.primaryImageUrlByTicketId },
-        primaryKitProductByCategoryId: { ...payload.primaryImageUrlByCategoryId },
-        hiddenKitImageUrlsByTicketId: { ...payload.hiddenImageUrlsByTicketId },
-        hiddenKitImageUrlsByCategoryId: { ...payload.hiddenImageUrlsByCategoryId },
-      };
+      // Base `savedKitSelection`: mantém o `show` SALVO (não o toggle do draft).
+      const persisted: EventKitSelectionDisplay = applyKitDrawerPayload(
+        savedKitSelection,
+        payload,
+      );
       await organizerService.updateEvent(
         eventId,
         { kitSelectionDisplay: persisted },
@@ -319,6 +334,7 @@ export function TicketsEditClient({ initialBundle }: TicketsEditClientProps) {
             onClose: () => setKitImagePositionDrawerOpen(false),
             initialKitSelection: drawerInitialKitSelection,
             onSave: handleKitDrawerSave,
+            onPreview: handleKitDrawerPreview,
             saveSuccessMessage: "Posição das imagens salva.",
           }}
           actionSlot={(ticketCount) => (

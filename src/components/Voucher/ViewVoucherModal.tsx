@@ -1,9 +1,9 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useLayoutEffect } from "react";
 import { useViewVoucherModal } from "@/stores/modalStore";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, ChevronLeft, ChevronRight, Download } from "lucide-react";
+import { X } from "lucide-react";
 import { organizerService } from "@/services";
 import toast from "react-hot-toast";
 import { useClipboard } from "@/hooks/useClipboard";
@@ -12,8 +12,11 @@ import { formatDateBRT } from "@/utils/datetimeBR";
 import { CopyIcon } from "@/components/Icons/CopyIcon";
 import { Button } from "@/components/Button";
 import { TicketIcon } from "@/components/Icons/TicketIcon";
+import { Pagination } from "@/components/Pagination";
 import { useTickets } from "@/hooks/useTickets";
 import { useTicketCategories } from "@/hooks/useTicketCategories";
+import { ArrowButton } from "../ArrowButton";
+import { cn } from "@/utils/cn";
 import { Loading } from "../Loading";
 
 interface Voucher {
@@ -61,6 +64,21 @@ export function ViewVoucherModal() {
   const [voucherData, setVoucherData] = useState<VoucherGroupData | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [groupInfo, setGroupInfo] = useState<VoucherGroupInfo | null>(null);
+  // Mobile = painel full-screen (sem scale/slide); desktop = diálogo centrado.
+  // Mesmo par de effects do `CreateVoucherModal`: o `useLayoutEffect` acerta o
+  // valor antes da pintura (SSR começa em `true`) e o listener acompanha resize.
+  const [isMdUp, setIsMdUp] = useState(true);
+
+  useLayoutEffect(() => {
+    setIsMdUp(window.matchMedia("(min-width: 768px)").matches);
+  }, []);
+
+  useEffect(() => {
+    const mq = window.matchMedia("(min-width: 768px)");
+    const onChange = () => setIsMdUp(mq.matches);
+    mq.addEventListener("change", onChange);
+    return () => mq.removeEventListener("change", onChange);
+  }, []);
 
   const eventId = data?.eventId;
   const groupName = data?.groupName;
@@ -194,6 +212,10 @@ export function ViewVoucherModal() {
     });
   };
 
+  const panelMotion = isMdUp
+    ? { initial: { opacity: 0, scale: 0.95, y: 20 }, animate: { opacity: 1, scale: 1, y: 0 }, exit: { opacity: 0, scale: 0.95, y: 20 } }
+    : { initial: { opacity: 0 }, animate: { opacity: 1 }, exit: { opacity: 0 } };
+
   return (
     <AnimatePresence>
       {isOpen && (
@@ -210,45 +232,73 @@ export function ViewVoucherModal() {
 
           {/* Modal */}
           <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.2 }}
-            className="fixed inset-0 z-50 flex items-center justify-center p-4"
+            {...panelMotion}
+            transition={{ duration: 0.2, ease: "easeOut" }}
+            className="fixed inset-0 z-50 md:flex md:items-center md:justify-center md:p-4"
             onClick={(e) => e.stopPropagation()}
           >
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95, y: 20 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              transition={{ duration: 0.2, ease: "easeOut" }}
-              className="bg-gray-1 rounded-xl border border-gray-6 w-full max-w-[916px] max-h-[90vh] flex flex-col shadow-2xl overflow-hidden"
+            <div
+              className={cn(
+                // pt-16 (64px = `h-16` da OrganizerMobileNav) reserva o topo no
+                // mobile: a nav é `fixed top-0 z-50` e vem DEPOIS dos modais no DOM,
+                // então com z-50 empatado ela pinta por cima e engoliria o header.
+                // Mesmo padrão do `CreateVoucherModal`.
+                "flex flex-col overflow-hidden bg-gray-1 shadow-2xl pt-16 md:pt-0",
+                "max-md:h-full max-md:w-full",
+                "md:w-full md:max-w-[916px] md:max-h-[90vh] md:rounded-xl md:border md:border-gray-6",
+              )}
             >
-              {/* Header */}
-              <div className="border-b border-gray-6 flex items-center justify-between px-5 py-3 shrink-0">
-                <h2 className="text-gray-12 text-[20px] font-semibold font-family-dm-sans leading-[1.3]">
-                  Lista de vouchers
-                </h2>
+              {/* Header — em fluxo (shrink-0): só o conteúdo rola. */}
+              <div
+                className={cn(
+                  "flex shrink-0 items-center justify-between border-b border-gray-6",
+                  "max-md:h-[52px] max-md:bg-gray-1 max-md:px-4",
+                  "md:px-5 md:py-3",
+                )}
+              >
+                <div className="flex min-w-0 flex-1 items-center gap-2 md:contents">
+                  <button
+                    type="button"
+                    onClick={closeViewVoucherModal}
+                    className="flex size-8 shrink-0 rotate-180 items-center justify-center rounded-[52px] border-gray-6 transition-colors hover:bg-gray-3 md:hidden md:border"
+                    aria-label="Fechar"
+                  >
+                    <ArrowButton isOpen={false} />
+                  </button>
+                  <h2
+                    className={cn(
+                      "truncate leading-[1.3] text-gray-12",
+                      "max-md:font-manrope max-md:text-base max-md:font-extrabold",
+                      "md:font-family-dm-sans md:text-[20px] md:font-semibold",
+                    )}
+                  >
+                    Lista de vouchers
+                  </h2>
+                </div>
                 <button
                   onClick={closeViewVoucherModal}
-                  className="text-gray-11 hover:text-gray-12 transition-colors p-1 rounded-lg hover:bg-gray-3 size-9 flex items-center justify-center"
+                  className="hidden size-9 items-center justify-center rounded-lg p-1 text-gray-11 transition-colors hover:bg-gray-3 hover:text-gray-12 md:flex"
+                  aria-label="Fechar"
                 >
                   <X className="size-6" />
                 </button>
               </div>
 
               {/* Content */}
-              <div className="flex-1 overflow-y-auto p-5">
+              <div className="flex-1 overflow-y-auto p-4 md:p-5">
                 {loading ? (
                   <div className="flex items-center justify-center py-12">
                     <Loading />
                   </div>
                 ) : voucherData ? (
                   <div className="flex flex-col gap-8">
-                    {/* Top Section - Ticket card + Group info */}
-                    <div className="flex gap-6 items-center">
+                    {/* Top Section - Ticket card + Group info.
+                        No mobile empilha: o card tinha `w-[343px] shrink-0`, que
+                        sozinho já estoura a viewport de 360px e esmagava a coluna
+                        de infos ao lado. */}
+                    <div className="flex flex-col gap-4 md:flex-row md:gap-6 md:items-center">
                       {/* Card do ingresso vinculado */}
-                      <div className="bg-gray-2 border border-gray-6 rounded-xl flex flex-col shrink-0 w-[343px]">
+                      <div className="bg-gray-2 border border-gray-6 rounded-xl flex flex-col w-full md:w-[343px] md:shrink-0">
                         {linkedTicket ? (
                           <>
                             <div className="flex flex-col gap-2 p-4 w-full">
@@ -291,8 +341,8 @@ export function ViewVoucherModal() {
                       </div>
 
                       {/* Informações do grupo */}
-                      <div className="flex flex-col gap-4">
-                        <p className="text-gray-12 text-lg font-semibold font-family-dm-sans leading-[1.3]">
+                      <div className="flex min-w-0 flex-1 flex-col gap-4">
+                        <p className="text-gray-12 text-lg font-semibold font-family-dm-sans leading-[1.3] break-words">
                           {groupInfo?.name || groupName}
                         </p>
 
@@ -352,83 +402,60 @@ export function ViewVoucherModal() {
 
                     {/* Vouchers Grid */}
                     <div className="flex flex-col gap-5">
+                      {/* 1 coluna no mobile → 2 → 3 no desktop. As células tinham
+                          `min-w-[245px]` num `grid-cols-3` fixo (~735px mínimos), o
+                          que estourava o modal no celular.
+                          As bordas são CSS puro: cada célula desenha direita+baixo e o
+                          `-mr-px -mb-px` joga as externas pra fora do `overflow-hidden`
+                          do pai, que as recorta. Antes eram calculadas em JS com `% 3`
+                          — o que passaria a desenhar linhas erradas assim que o número
+                          de colunas variasse por breakpoint. */}
                       <div className="border border-gray-6 rounded-xl overflow-hidden">
-                        <div className="grid grid-cols-3">
-                          {voucherData.vouchers.map((voucher, index) => {
-                            const isLastColumn = (index + 1) % 3 === 0;
-                            const totalItems = voucherData.vouchers.length;
-                            const lastRowStart = Math.floor((totalItems - 1) / 3) * 3;
-                            const isLastRow = index >= lastRowStart;
-
-                            return (
-                              <div
-                                key={voucher.id || index}
-                                className={`flex items-center p-4 min-w-[245px] flex-1 ${!isLastRow ? "border-b border-gray-6" : ""
-                                  } ${!isLastColumn ? "border-r border-gray-6" : ""
-                                  }`}
-                              >
-                                <div className="flex gap-1 items-center flex-1">
-                                  <p
-                                    className={`text-sm font-semibold font-family-dm-sans leading-[1.3] flex-1 ${voucher.status === "USED" || voucher.status === "EXPIRED"
+                        <div className="-mb-px -mr-px grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3">
+                          {voucherData.vouchers.map((voucher, index) => (
+                            <div
+                              key={voucher.id || index}
+                              className="flex min-w-0 items-center border-b border-r border-gray-6 p-4"
+                            >
+                              <div className="flex min-w-0 flex-1 items-center gap-1">
+                                <p
+                                  className={cn(
+                                    "min-w-0 flex-1 truncate text-sm font-semibold font-family-dm-sans leading-[1.3]",
+                                    voucher.status === "USED" || voucher.status === "EXPIRED"
                                       ? "text-gray-9"
-                                      : "text-gray-12"
-                                      }`}
-                                  >
-                                    {voucher.code}
-                                  </p>
-                                  {(voucher.status === "ACTIVE" || voucher.status === "INACTIVE") && (
-                                    <button
-                                      onClick={() => handleCopyCode(voucher.code)}
-                                      className="size-7 rounded-lg flex items-center justify-center hover:bg-gray-3 transition-colors cursor-pointer"
-                                      title="Copiar link do voucher"
-                                    >
-                                      <CopyIcon className="size-4 text-gray-11" />
-                                    </button>
+                                      : "text-gray-12",
                                   )}
-                                </div>
+                                  title={voucher.code}
+                                >
+                                  {voucher.code}
+                                </p>
+                                {(voucher.status === "ACTIVE" || voucher.status === "INACTIVE") && (
+                                  <button
+                                    onClick={() => handleCopyCode(voucher.code)}
+                                    className="size-7 shrink-0 rounded-lg flex items-center justify-center hover:bg-gray-3 transition-colors cursor-pointer"
+                                    title="Copiar link do voucher"
+                                  >
+                                    <CopyIcon className="size-4 text-gray-11" />
+                                  </button>
+                                )}
                               </div>
-                            );
-                          })}
+                            </div>
+                          ))}
                         </div>
                       </div>
 
-                      {/* Pagination */}
+                      {/* Paginação: componente compartilhado — reticências + scroll
+                          horizontal contido. O inline anterior renderizava TODAS as
+                          páginas (um grupo de 500 vouchers = 25 botões), o que por si
+                          só já estourava a largura no mobile. */}
                       {voucherData.pagination.totalPages > 1 && (
-                        <div className="flex items-center justify-end gap-1">
-                          <button
-                            onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
-                            disabled={currentPage === 1}
-                            className="size-8 rounded-full border border-gray-6 bg-gray-1 hover:bg-gray-2 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center transition-colors"
-                          >
-                            <ChevronLeft className="size-4 text-gray-11" />
-                          </button>
-                          {Array.from(
-                            { length: voucherData.pagination.totalPages },
-                            (_, i) => i + 1
-                          ).map((page) => (
-                            <button
-                              key={page}
-                              onClick={() => setCurrentPage(page)}
-                              className={`size-8 rounded-full border transition-colors font-family-dm-sans text-sm ${currentPage === page
-                                ? "bg-primary-11 text-white border-primary-11"
-                                : "bg-gray-1 border-gray-6 text-gray-12 hover:bg-gray-2"
-                                }`}
-                            >
-                              {page}
-                            </button>
-                          ))}
-                          <button
-                            onClick={() =>
-                              setCurrentPage((prev) =>
-                                Math.min(voucherData.pagination.totalPages, prev + 1)
-                              )
-                            }
-                            disabled={currentPage === voucherData.pagination.totalPages}
-                            className="size-8 rounded-full border border-gray-6 bg-gray-1 hover:bg-gray-2 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center transition-colors"
-                          >
-                            <ChevronRight className="size-4 text-gray-11" />
-                          </button>
-                        </div>
+                        <Pagination
+                          currentPage={currentPage}
+                          totalPages={voucherData.pagination.totalPages}
+                          onPageChange={setCurrentPage}
+                          disabled={loading}
+                          className="md:justify-end"
+                        />
                       )}
                     </div>
                   </div>
@@ -439,23 +466,31 @@ export function ViewVoucherModal() {
                 )}
               </div>
 
-              {/* Footer */}
-              <div className="border-t border-gray-6 bg-gray-2 flex items-center justify-end gap-2 px-4 py-3 shrink-0">
+              {/* Footer — no mobile os botões dividem a largura; `env(safe-area-inset-bottom)`
+                  cobre a barra de gestos do iOS. Mesmo padrão do `CreateVoucherModal`. */}
+              <div
+                className={cn(
+                  "flex shrink-0 items-center gap-2 border-t border-gray-6 bg-gray-2",
+                  "max-md:p-4 max-md:pb-[max(1rem,env(safe-area-inset-bottom))]",
+                  "md:justify-end md:px-4 md:py-3",
+                )}
+              >
                 <Button
                   variant="outline"
                   onClick={closeViewVoucherModal}
-                  className="border border-gray-6 text-gray-12 h-11 px-5"
+                  className="border border-gray-6 text-gray-12 h-11 px-5 max-md:flex-1"
                 >
                   Fechar
                 </Button>
                 <Button
                   variant="default"
                   onClick={handleDownloadCSV}
+                  className="h-11 px-5 max-md:flex-1"
                 >
                   Baixar CSV
                 </Button>
               </div>
-            </motion.div>
+            </div>
           </motion.div>
         </>
       )}

@@ -1305,33 +1305,38 @@ export function TopicModal() {
           >
             <div
               className={cn(
-                "flex min-h-0 w-full flex-col overflow-visible bg-gray-1 shadow-2xl",
+                // pt-16 (64px) reserva o topo no mobile: Organizer/AdminMobileNav são
+                // `fixed top-0 z-50 h-16` e vêm DEPOIS dos modais no DOM
+                // (ModalsProvider é irmão anterior de `children`), então com z-50
+                // empatado pintam por cima e engoliriam o header (52px) deste modal.
+                // Vale nas duas superfícies — as navs têm a mesma geometria.
+                "flex min-h-0 w-full flex-col overflow-visible bg-gray-1 shadow-2xl pt-16 md:pt-0",
                 "max-md:h-dvh max-md:max-h-dvh max-md:rounded-none max-md:border-0",
                 "md:max-h-[90vh] md:max-w-[1098px] md:rounded-xl md:border md:border-gray-6",
               )}
             >
-              {/* Header */}
+              {/* Header — mesmo padrão do `CreateQuestionModal` (mobile: barra de 52px
+                  com seta de voltar; desktop: título + X). */}
               <div
                 className={cn(
                   "flex shrink-0 items-center justify-between border-b border-gray-6",
-                  "max-md:h-[52px] max-md:bg-gray-2 max-md:px-4 max-md:py-2",
-                  "md:px-5 md:py-3",
+                  "max-md:h-[52px] max-md:bg-gray-2 max-md:px-4 md:px-5 md:py-3",
                 )}
               >
                 <div className="flex min-w-0 flex-1 items-center gap-2 md:contents">
                   <button
                     type="button"
                     onClick={closeTopicModal}
-                    className="flex size-8 shrink-0 items-center justify-center rounded-lg border border-gray-6 text-gray-12 transition-colors hover:bg-gray-3 md:hidden"
-                    aria-label="Voltar"
+                    className="flex size-8 shrink-0 items-center justify-center rounded-[52px] md:border border-gray-6 transition-colors hover:bg-gray-3 md:hidden rotate-180"
+                    aria-label="Fechar"
                   >
-                    <ArrowButton isOpen={false} className="rotate-180" />
+                    <ArrowButton isOpen={false} />
                   </button>
                   <h2
                     className={cn(
-                      "min-w-0 text-gray-12 leading-[1.1]",
+                      "truncate leading-[1.3] text-gray-12",
                       "max-md:font-manrope max-md:text-base max-md:font-extrabold",
-                      "md:font-family-dm-sans md:text-[20px] md:font-semibold md:leading-[1.3]",
+                      "md:font-family-dm-sans md:text-[20px] md:font-semibold",
                     )}
                   >
                     {isEditing ? "Editar seção" : "Criar seção"}
@@ -1431,7 +1436,7 @@ export function TopicModal() {
                     onClick={closeTopicModal}
                     className="h-11 w-full border-gray-6 text-gray-12 md:h-auto md:w-auto md:px-4 md:py-2"
                   >
-                    Cancelar
+                    Fechar
                   </Button>
                   <Button
                     onClick={handleSave}

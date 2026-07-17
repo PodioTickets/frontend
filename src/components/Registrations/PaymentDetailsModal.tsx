@@ -638,6 +638,10 @@ export function PaymentDetailsModal() {
                     activeHref={`/organizer/events/${eventId}/registrations`}
                     onLinkClick={closePaymentDetailsModal}
                     eventId={eventId}
+                    // O menu é portalado no body: precisa vencer o z deste modal
+                    // (z-[61]), senão abre atrás dele. O default (`z-40`) serve à
+                    // faixa na PÁGINA, onde ela deve passar sob a nav.
+                    menuZClass="z-100"
                   />
                 )}
               </div>

@@ -14,6 +14,7 @@ import { TopicsIcon } from "@/components/Icons/TopicsIcon";
 import { BannerIcon } from "@/components/Icons/Organizer/BannerIcon";
 import { FinancialStepIcon } from "@/components/Icons/Organizer/FinancialStepIcon";
 import { ArrowButton } from "@/components/ArrowButton";
+import { isTicketsCheckoutPreviewPath } from "@/lib/ticketsCheckoutPreviewRoute";
 
 const STEPS = [
   { step: 1, label: "Informações", segment: "information", icon: OrganizerInfoIcon },
@@ -85,24 +86,31 @@ function ReviewLayoutContent({ children }: { children: ReactNode }) {
   const isSubPage = STEPS.every((s) => !pathname.endsWith(`/review/${s.segment}`)) &&
     STEPS.some((s) => pathname.includes(`/review/${s.segment}/`));
 
+  /* A prévia reproduz a tela do participante: sem a barra de auditoria — só o
+   * conteúdo (a página traz o próprio header de voltar). O stepper já cai no
+   * `isSubPage`. */
+  const isTicketsCheckoutPreview = isTicketsCheckoutPreviewPath(pathname);
+
   return (
     <div className="min-h-screen bg-gray-2">
       {/* Back bar */}
-      <div className="">
-        <div className="flex h-[52px] items-center gap-2 px-4 md:px-6 max-w-7xl mx-auto">
-          <button
-            type="button"
-            onClick={() => router.push("/admin/auditoria-evento")}
-            className="flex items-center gap-2 text-sm font-medium text-gray-11 hover:text-gray-12 transition-colors"
-            aria-label="Voltar à auditoria"
-          >
-            <div className="flex size-8 shrink-0 items-center justify-center rounded-full border border-gray-6 text-gray-11 transition-colors hover:bg-gray-3 rotate-180">
-              <ArrowButton className="size-3" />
-            </div>
-            Voltar para auditoria
-          </button>
+      {!isTicketsCheckoutPreview && (
+        <div className="">
+          <div className="flex h-[52px] items-center gap-2 px-4 md:px-6 max-w-7xl mx-auto">
+            <button
+              type="button"
+              onClick={() => router.push("/admin/auditoria-evento")}
+              className="flex items-center gap-2 text-sm font-medium text-gray-11 hover:text-gray-12 transition-colors"
+              aria-label="Voltar à auditoria"
+            >
+              <div className="flex size-8 shrink-0 items-center justify-center rounded-full border border-gray-6 text-gray-11 transition-colors hover:bg-gray-3 rotate-180">
+                <ArrowButton className="size-3" />
+              </div>
+              Voltar para auditoria
+            </button>
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Progress bar — hidden on sub-pages (ticket create/edit, previews) */}
       {!isSubPage && (

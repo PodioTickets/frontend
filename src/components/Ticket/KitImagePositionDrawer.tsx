@@ -27,7 +27,10 @@ import {
   Image as ImageIconLucide,
 } from "lucide-react";
 import toast from "react-hot-toast";
-import { UNCATEGORIZED_CATEGORY_KEY } from "@/lib/eventKitSelectionDisplay";
+import {
+  UNCATEGORIZED_CATEGORY_KEY,
+  type KitImagePositionPayload,
+} from "@/lib/eventKitSelectionDisplay";
 import { ArrowButton } from "../ArrowButton";
 import { itemInitialLetter } from "@/utils/itemInitial";
 
@@ -67,14 +70,21 @@ export interface KitImagePositionDrawerProps {
     hiddenByTicket?: Record<string, string[]>;
     hiddenByCategory?: Record<string, string[]>;
   } | null;
-  onSave?: (payload: {
-    layout: KitImageLayoutMode;
-    primaryImageUrlByTicketId: Record<string, string>;
-    primaryImageUrlByCategoryId: Record<string, string>;
-    hiddenImageUrlsByTicketId: Record<string, string[]>;
-    hiddenImageUrlsByCategoryId: Record<string, string[]>;
-  }) => void | Promise<void>;
+  onSave?: (payload: KitImagePositionPayload) => void | Promise<void>;
+  /**
+   * Quando fornecido, o rodapé ganha o botão "Prévia" (mesma prévia da tela de
+   * ingressos) com o estado ATUAL do drawer — inclusive o não salvo. Cabe ao
+   * fluxo persistir o rascunho e navegar.
+   */
+  onPreview?: (payload: KitImagePositionPayload) => void;
   saveSuccessMessage?: string;
+}
+
+/** Remove entradas vazias (ingressos/categorias sem nenhuma imagem oculta). */
+function pruneEmptyUrlLists(
+  map: Record<string, string[]>,
+): Record<string, string[]> {
+  return Object.fromEntries(Object.entries(map).filter(([, v]) => v.length > 0));
 }
 
 /** Referência estável p/ "sem ocultas" (evita novo `[]` por render → quebra memo). */
@@ -839,6 +849,7 @@ export function KitImagePositionDrawer({
   uncategorized,
   initialKitSelection,
   onSave,
+  onPreview,
   saveSuccessMessage = "Configuração salva.",
 }: KitImagePositionDrawerProps) {
   const [layout, setLayout] = useState<KitImageLayoutMode>("on_tickets");
@@ -1049,20 +1060,23 @@ export function KitImagePositionDrawer({
     });
   }, [hiddenByCategory, categoryImageUrls]);
 
+  /** Estado atual do drawer no formato do contrato (salvar e prévia compartilham). */
+  const buildSelectionPayload = useCallback(
+    (): KitImagePositionPayload => ({
+      layout,
+      primaryImageUrlByTicketId: primaryByTicket,
+      primaryImageUrlByCategoryId: primaryByCategory,
+      hiddenImageUrlsByTicketId: pruneEmptyUrlLists(hiddenByTicket),
+      hiddenImageUrlsByCategoryId: pruneEmptyUrlLists(hiddenByCategory),
+    }),
+    [layout, primaryByTicket, primaryByCategory, hiddenByTicket, hiddenByCategory],
+  );
+
   const handleSave = useCallback(async () => {
     if (saving) return;
-    // Remove entradas vazias (ingressos/categorias sem nenhuma imagem oculta).
-    const pruneEmpty = (m: Record<string, string[]>): Record<string, string[]> =>
-      Object.fromEntries(Object.entries(m).filter(([, v]) => v.length > 0));
     setSaving(true);
     try {
-      await onSave?.({
-        layout,
-        primaryImageUrlByTicketId: primaryByTicket,
-        primaryImageUrlByCategoryId: primaryByCategory,
-        hiddenImageUrlsByTicketId: pruneEmpty(hiddenByTicket),
-        hiddenImageUrlsByCategoryId: pruneEmpty(hiddenByCategory),
-      });
+      await onSave?.(buildSelectionPayload());
       toast.success(saveSuccessMessage);
       onClose();
     } catch {
@@ -1070,17 +1084,17 @@ export function KitImagePositionDrawer({
     } finally {
       setSaving(false);
     }
-  }, [
-    saving,
-    layout,
-    primaryByTicket,
-    primaryByCategory,
-    hiddenByTicket,
-    hiddenByCategory,
-    onSave,
-    onClose,
-    saveSuccessMessage,
-  ]);
+  }, [saving, buildSelectionPayload, onSave, onClose, saveSuccessMessage]);
+
+  /**
+   * Prévia SEM salvar: o fluxo grava o estado atual no rascunho e navega. Não
+   * fechamos o drawer — a navegação desmonta a tela, e ao voltar ele reabre
+   * exatamente com estas escolhas.
+   */
+  const handlePreview = useCallback(() => {
+    if (saving) return;
+    onPreview?.(buildSelectionPayload());
+  }, [saving, onPreview, buildSelectionPayload]);
 
   const hasAnyImages = useMemo(
     () => allTicketRows.some((t) => t.images.length > 0),
@@ -1286,7 +1300,18 @@ export function KitImagePositionDrawer({
           </div>
         </div>
 
-        <div className="shrink-0 border-t border-gray-6 px-4 py-3 flex justify-end bg-gray-1">
+        <div className="shrink-0 border-t border-gray-6 px-4 py-3 flex justify-end gap-3 bg-gray-1">
+          {onPreview ? (
+            <Button
+              type="button"
+              variant="outline"
+              onClick={handlePreview}
+              disabled={saving}
+              className="h-11 px-5 font-bold text-base font-manrope border-gray-6 text-gray-12 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              Prévia
+            </Button>
+          ) : null}
           <Button
             type="button"
             onClick={handleSave}

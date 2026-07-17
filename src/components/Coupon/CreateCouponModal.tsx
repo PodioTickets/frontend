@@ -674,7 +674,13 @@ export function CreateCouponModal() {
             >
               <div
                 className={cn(
-                  "flex flex-col overflow-hidden bg-gray-1 shadow-2xl",
+                  // pt-16 (64px = `h-16` da OrganizerMobileNav) reserva o topo no
+                  // mobile: a nav é `fixed top-0 z-50` e vem DEPOIS dos modais no DOM
+                  // (ModalsProvider é irmão anterior de `children`), então com z-50
+                  // empatado ela pinta por cima. Sem esse respiro, o header do modal
+                  // (52px) fica todo embaixo da nav e o voltar/título somem — mesmo
+                  // padrão de CreateQuestionModal/CreateProductModal.
+                  "flex flex-col overflow-hidden bg-gray-1 shadow-2xl pt-16 md:pt-0",
                   "max-md:h-full max-md:w-full",
                   "md:w-full md:max-w-[1098px] md:max-h-[90vh] md:rounded-xl md:border md:border-gray-6",
                 )}
@@ -803,7 +809,7 @@ export function CreateCouponModal() {
                             {couponType === "QUANTITY" && (
                               <div className="flex flex-col gap-2.5 md:w-[596px]">
                                 <div className="flex flex-col gap-2">
-                                  <label className="text-gray-12 text-base font-family-dm-sans leading-[1.3]">
+                                  <label className="text-gray-11 text-base font-family-dm-sans leading-[1.3]">
                                     Quantidade mínima de ingressos
                                   </label>
                                   <Input
@@ -936,7 +942,7 @@ export function CreateCouponModal() {
                               <h3 className="text-gray-12 text-lg font-medium font-family-dm-sans leading-[1.3]">
                                 Selecionar ingressos
                               </h3>
-                              <label className="font-family-dm-sans text-base font-normal leading-[1.3] text-gray-12">
+                              <label className="text-gray-11 text-base font-family-dm-sans leading-[1.3]">
                                 Quer aplicar esse cupom a todos os ingressos?
                               </label>
                             </div>
@@ -1348,9 +1354,9 @@ export function CreateCouponModal() {
                     "md:justify-end md:px-5 md:py-3",
                   )}
                 >
-                  {/* Editando: no mobile o "Cancelar" dá lugar ao "Deletar cupom"
-                      (o cancelar segue disponível pelo X/voltar do header); no desktop
-                      mantém o "Cancelar" — a exclusão continua acessível pela lista. */}
+                  {/* Editando: no mobile o "Fechar" dá lugar ao "Deletar cupom"
+                      (fechar segue disponível pelo X/voltar do header); no desktop
+                      mantém o "Fechar" — a exclusão continua acessível pela lista. */}
                   {isEditing && (
                     <Button
                       onClick={handleDelete}
@@ -1370,7 +1376,7 @@ export function CreateCouponModal() {
                     )}
                     disabled={isSubmitting}
                   >
-                    Cancelar
+                    Fechar
                   </Button>
                   <Button
                     onClick={handleSave}

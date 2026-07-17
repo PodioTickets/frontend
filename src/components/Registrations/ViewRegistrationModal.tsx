@@ -9,8 +9,16 @@ import { motion, AnimatePresence } from "framer-motion";
 import { X, ChevronLeft, ChevronRight } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
-import { useState, useMemo, useEffect, useCallback, useRef } from "react";
+import {
+  useState,
+  useMemo,
+  useEffect,
+  useLayoutEffect,
+  useCallback,
+  useRef,
+} from "react";
 import toast from "react-hot-toast";
+import { Drawer, DrawerContent, DrawerTitle } from "@/components/ui/drawer";
 import { RegistrationQRCode } from "../QRCode/RegistrationQRCode";
 import { getAvatarUrl } from "@/utils/avatar";
 import { organizerService } from "@/services";
@@ -49,6 +57,28 @@ export function ViewRegistrationModal() {
   const [loadingRegistration, setLoadingRegistration] = useState(false);
   const [registrationData, setRegistrationData] = useState<any>(null);
   const [isDownloadingTicket, setIsDownloadingTicket] = useState(false);
+
+  /* Split de superfície: mobile usa Drawer (vaul) full-screen rolável; desktop
+   * mantém o modal centralizado original. Mesmo padrão do
+   * `FiscalExportFormatModal` e dos demais drawers do módulo financeiro.
+   *
+   * O split precisa ser em JS (não `md:hidden`): um Drawer apenas escondido por
+   * CSS ainda montaria seu Dialog/scroll-lock e travaria a rolagem no desktop.
+   * `mounted` + `useLayoutEffect` evitam o flash do layout errado no 1º paint. */
+  const [isMdUp, setIsMdUp] = useState(true);
+  const [mounted, setMounted] = useState(false);
+
+  useLayoutEffect(() => {
+    setMounted(true);
+    setIsMdUp(window.matchMedia("(min-width: 768px)").matches);
+  }, []);
+
+  useEffect(() => {
+    const mq = window.matchMedia("(min-width: 768px)");
+    const onChange = () => setIsMdUp(mq.matches);
+    mq.addEventListener("change", onChange);
+    return () => mq.removeEventListener("change", onChange);
+  }, []);
 
   const registrationId = useMemo(() => {
     return data?.registrationId || data?.registration?.id || null;
@@ -135,45 +165,42 @@ export function ViewRegistrationModal() {
     fetchRegistration();
   }, [isOpen, registrationId]);
 
-  // Quando aberto SOBRE um vaul Drawer (fluxo financeiro), o vaul deixa
-  // `document.body { pointer-events: none }`. Este modal é portalado no ROOT (fora
-  // do drawer) e reabilita pointer-events nos próprios elementos, mas no Android
-  // Chrome isso não basta pro SCROLL do conteúdo — o gesto de toque não inicia a
-  // rolagem enquanto o body está travado. Forçamos o body de volta a `auto`
-  // enquanto o modal está aberto (o modal cobre a tela toda, então nada indevido
-  // fica clicável atrás) e restauramos ao fechar.
+  /* DESKTOP apenas. Quando aberto SOBRE um vaul Drawer (fluxo financeiro), o vaul
+   * deixa `document.body { pointer-events: none }`. O modal do desktop é portalado
+   * no ROOT (fora do drawer), então reabilitamos o body enquanto ele está aberto —
+   * ele cobre a tela toda, nada indevido fica clicável atrás — e restauramos ao
+   * fechar. No mobile isso não é mais necessário: o Drawer é um Dialog próprio e o
+   * vaul/Radix gerenciam pointer-events e scroll lock corretamente. */
   useEffect(() => {
-    if (!isOpen) return;
+    if (!isOpen || !isMdUp) return;
     const prev = document.body.style.pointerEvents;
     document.body.style.pointerEvents = "auto";
     return () => {
       document.body.style.pointerEvents = prev;
     };
-  }, [isOpen]);
+  }, [isOpen, isMdUp]);
 
-  /* Isolamento de scroll — POR QUÊ.
+  /* Isolamento de scroll (DESKTOP) — POR QUÊ.
    * Este modal abre SOBRE dois vaul Drawers aninhados (parcelados → detalhes →
    * ver ingressos). Cada Drawer usa o Dialog do Radix, cujo Overlay embrulha o
    * app em `react-remove-scroll`, que registra um listener GLOBAL de
    * `touchmove`/`wheel` no `document` e dá `preventDefault()` em qualquer rolagem
    * FORA do conteúdo do drawer. Como este modal é portalado no ROOT (fora dos
-   * drawers), toda rolagem interna dele era cancelada no mobile.
+   * drawers), a rolagem interna dele é cancelada.
    *
-   * COMO. Instalamos um guard no `document` na fase de CAPTURA (roda ANTES do
-   * listener de bubble do react-remove-scroll). Para todo `touchmove`/`wheel`
-   * cujo alvo esteja DENTRO do modal, chamamos `stopImmediatePropagation()` — o
-   * evento nunca chega ao lock global, então ele não cancela a rolagem. NÃO
-   * damos `preventDefault`, logo o scroll nativo do container interno
-   * (`overflow-y-auto`) segue funcionando. O fundo continua travado (só
-   * neutralizamos eventos internos ao modal).
+   * COMO. Guard no `document` na fase de CAPTURA (roda antes do listener de bubble
+   * do react-remove-scroll): para eventos cujo alvo esteja DENTRO do modal,
+   * `stopImmediatePropagation()` impede que o lock global os veja. Não damos
+   * `preventDefault`, então o scroll nativo do container interno segue.
    *
-   * Capturamos no `document` (não no nó do modal) de propósito: (1) é imune ao
-   * `pointer-events:none` do wrapper e ao momento em que o conteúdo monta — o
-   * `contains()` é avaliado no disparo do evento, lendo a ref já preenchida;
-   * (2) a captura garante ordem determinística à frente do lock. */
+   * LIMITE CONHECIDO: no MOBILE isso não bastava (rolagem seguia travada) — daí o
+   * mobile ter migrado pro Drawer, que resolve na raiz: um Dialog próprio empilha
+   * seu lock e o `react-remove-scroll` só deixa o ÚLTIMO lock da pilha agir
+   * (`lockStack`), neutralizando os drawers de baixo e liberando o conteúdo. Este
+   * guard fica só pro desktop, onde a rolagem por `wheel` funciona hoje. */
   const scrollRegionRef = useRef<HTMLDivElement | null>(null);
   useEffect(() => {
-    if (!isOpen) return;
+    if (!isOpen || !isMdUp) return;
     const allowScrollInsideModal = (event: Event) => {
       const region = scrollRegionRef.current;
       const target = event.target as Node | null;
@@ -188,7 +215,7 @@ export function ViewRegistrationModal() {
       document.removeEventListener("touchmove", allowScrollInsideModal, opts);
       document.removeEventListener("wheel", allowScrollInsideModal, opts);
     };
-  }, [isOpen]);
+  }, [isOpen, isMdUp]);
 
   const currentRegistration = registrationData;
 
@@ -205,6 +232,11 @@ export function ViewRegistrationModal() {
     return labels[gender] || labels[gender.toLowerCase()] || gender;
   };
 
+  // Evita o flash do layout de desktop antes do 1º paint decidir o breakpoint.
+  if (!mounted) {
+    return null;
+  }
+
   // Se não houver registration, não renderizar nada
   if (!currentRegistration && !loadingRegistration) {
     return null;
@@ -212,6 +244,30 @@ export function ViewRegistrationModal() {
 
   // Mostrar loading enquanto busca os dados
   if (loadingRegistration && !currentRegistration) {
+    // Mobile: dentro do próprio Drawer, pra não abrir um overlay solto sobre ele.
+    if (!isMdUp) {
+      return (
+        <Drawer
+          open={isOpen}
+          onOpenChange={(open) => {
+            if (!open) closeViewRegistrationModal();
+          }}
+          direction="right"
+          disablePreventScroll={false}
+        >
+          <DrawerContent
+            data-vaul-no-drag
+            className="bg-gray-2 h-full w-full border-l border-gray-6"
+          >
+            <DrawerTitle className="sr-only">Informações da inscrição</DrawerTitle>
+            <div className="flex flex-1 items-center justify-center">
+              <Loading />
+            </div>
+          </DrawerContent>
+        </Drawer>
+      );
+    }
+
     return (
       <AnimatePresence>
         {isOpen && (
@@ -461,6 +517,256 @@ export function ViewRegistrationModal() {
     </Button>
   );
 
+  /* MOBILE: Drawer (vaul) full-screen — abre SOBRE os drawers do fluxo financeiro
+   * (parcelados → detalhes → ver ingressos). Rola nativamente porque o Drawer é um
+   * Dialog próprio: seu lock entra por último na pilha do `react-remove-scroll`, que
+   * só deixa o ÚLTIMO lock agir — os drawers de baixo viram no-op e este conteúdo
+   * passa a ser a região liberada. Substitui o guard manual de `touchmove`, que não
+   * dava conta. Altura vem do Drawer (viewport visível), dispensando o `100dvh`.
+   *
+   * `direction="right"` + `data-vaul-no-drag`: mesma combinação dos demais drawers
+   * do módulo financeiro — em right-drawers o vaul trata TODO swipe vertical como
+   * arrasto, então sem `data-vaul-no-drag` a rolagem do corpo continuaria travada.
+   * `disablePreventScroll={false}` desliga o lock iOS do vaul (a prop é invertida:
+   * o default `true` o mantém ATIVO), igual aos drawers que envolvem este fluxo. */
+  if (!isMdUp) {
+    return (
+      <Drawer
+        open={isOpen}
+        onOpenChange={(open) => {
+          if (!open) closeViewRegistrationModal();
+        }}
+        direction="right"
+        disablePreventScroll={false}
+      >
+        <DrawerContent
+          data-vaul-no-drag
+          className="bg-gray-2 h-full w-full border-l border-gray-6"
+        >
+          <DrawerTitle className="sr-only">Informações da inscrição</DrawerTitle>
+          <div className="flex flex-col h-full min-h-0 w-full overflow-hidden">
+            <div className="bg-gray-1 border-b border-gray-6 shrink-0">
+              <div className="flex items-center gap-1 h-[52px] px-4">
+                <button
+                  type="button"
+                  onClick={
+                    showBackToPaymentDetails
+                      ? handleBackToPaymentDetails
+                      : closeViewRegistrationModal
+                  }
+                  className="size-8 flex items-center justify-center shrink-0 rounded-lg hover:bg-gray-3 transition-colors -rotate-180"
+                  aria-label={
+                    showBackToPaymentDetails
+                      ? "Voltar para detalhes de pagamento"
+                      : "Voltar"
+                  }
+                >
+                  <ArrowButton isOpen={false} />
+                </button>
+                <p className="font-manrope font-extrabold text-base leading-[1.1] text-gray-12 truncate flex-1 min-w-0">
+                  {eventName}
+                </p>
+                <button
+                  type="button"
+                  onClick={closeViewRegistrationModal}
+                  className="size-8 flex items-center justify-center shrink-0 rounded-lg hover:bg-gray-3 transition-colors"
+                  aria-label="Fechar"
+                >
+                  <X className="size-5 text-gray-11" />
+                </button>
+              </div>
+            </div>
+
+            <div
+              className="flex-1 overflow-y-auto min-h-0 px-4 py-4 overscroll-contain"
+              style={{ WebkitOverflowScrolling: "touch" }}
+            >
+              <h1 className="font-manrope font-bold text-xl text-gray-12 mb-5">
+                Informações da inscrição
+              </h1>
+
+              {/* Participant ticket block */}
+              <div className="flex flex-col gap-5 pb-6 border-b border-gray-6">
+                <p className="font-family-dm-sans font-medium text-base text-gray-12">
+                  Participante 1
+                </p>
+                <div className="flex flex-col gap-4">
+                  <p className="font-family-dm-sans font-normal text-base text-gray-11">
+                    {categoryName}
+                  </p>
+                  <p className="font-manrope font-bold text-lg text-gray-12">
+                    {ticketName}
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <DistanceIcon className="size-6 shrink-0 text-gray-12" />
+                  <p className="font-family-dm-sans font-medium text-base text-gray-12">
+                    {ticketDistance}
+                  </p>
+                </div>
+                <div className="relative shrink-0 size-[130px]">
+                  {currentRegistration?.qrCode ? (
+                    <RegistrationQRCode
+                      qrCodeData={currentRegistration.qrCode}
+                      size={130}
+                      className="w-full h-full"
+                    />
+                  ) : (
+                    <div className="w-full h-full bg-gray-2 border border-gray-6 rounded-lg flex items-center justify-center">
+                      <span className="text-xs text-gray-11">QR Code</span>
+                    </div>
+                  )}
+                </div>
+                <div className="border border-gray-6 rounded-xl p-3">
+                  <div className="flex gap-2 items-center">
+                    <div className="relative shrink-0 size-10 rounded-full overflow-hidden">
+                      {user?.avatarUrl ? (
+                        <Image
+                          src={getAvatarUrl(user.avatarUrl || "") as string}
+                          alt={participantName}
+                          width={40}
+                          height={40}
+                          className="rounded-full object-cover w-full h-full"
+                        />
+                      ) : (
+                        <div className="size-10 rounded-full bg-primary-10/20 flex items-center justify-center">
+                          <span className="text-primary-11 font-semibold text-sm">
+                            {participantName.charAt(0).toUpperCase()}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex flex-col gap-3 min-w-0 flex-1">
+                      <p className="font-family-dm-sans font-semibold text-sm text-gray-12 truncate">
+                        {participantName}
+                      </p>
+                      <div className="flex flex-wrap items-center gap-2 text-sm text-gray-11 font-family-dm-sans">
+                        <span>{participantBirthDate}</span>
+                        <span className="size-1 bg-gray-11 rounded-full shrink-0" />
+                        <span>{participantGender}</span>
+                        <span className="size-1 bg-gray-11 rounded-full shrink-0" />
+                        <span>{participantCPF}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Personal info fields */}
+              <div className="flex flex-col gap-0 pt-8 pb-6">
+                {[
+                  { label: "Nome", value: participantName },
+                  { label: "Email", value: participantEmail },
+                  { label: documentLabel(participantIsBr), value: formatDocumentDisplay(participantCPFRaw, participantIsBr) || "—" },
+                  { label: "Data de nascimento", value: participantBirthDate },
+                  { label: "Telefone", value: formatPhone(participantPhone) || "—" },
+                  { label: "Telefone de emergência", value: emergencyPhone || "—" },
+                  { label: "Sexo", value: participantGender || "—" },
+                ].map(({ label, value }) => (
+                  <div key={label} className="flex flex-col gap-1 py-4 first:pt-0">
+                    <p className="font-family-dm-sans font-normal text-base text-gray-12">
+                      {label}
+                    </p>
+                    <p className="font-family-dm-sans font-medium text-base text-gray-12">
+                      {value}
+                    </p>
+                  </div>
+                ))}
+              </div>
+
+              <div className="w-full h-px bg-gray-6" />
+
+              {/* Perguntas do Organizador */}
+              <div className="py-8">
+                <h2 className="font-manrope font-bold text-lg text-gray-12 mb-4">
+                  Perguntas do Organizador
+                </h2>
+                {questions.length > 0 ? (
+                  <div className="flex flex-col gap-4">
+                    {questions.map((q: any, index: number) => (
+                      <div key={q.id || index} className="flex flex-col gap-1 py-4">
+                        <p className="font-family-dm-sans font-normal text-base text-gray-12">
+                          {q.question?.question || q.question || `Pergunta ${index + 1}`}
+                        </p>
+                        <p className="font-family-dm-sans font-medium text-base text-gray-12">
+                          {formatAnswer(q.answer)}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="font-family-dm-sans font-normal text-base text-gray-11">
+                    Nenhuma pergunta respondida
+                  </p>
+                )}
+              </div>
+
+              <div className="w-full h-px bg-gray-6" />
+
+              {/* Produtos */}
+              <div className="py-8">
+                <h2 className="font-manrope font-bold text-lg text-gray-12 mb-4">
+                  Produtos
+                </h2>
+                {products.length > 0 ? (
+                  <div className="flex flex-col gap-4">
+                    {products.map((product: any, index: number) => (
+                      <div
+                        key={product.id || index}
+                        className="bg-gray-1 border border-gray-6 rounded-xl p-4"
+                      >
+                        <div className="flex gap-3">
+                          <div className="size-[100px] rounded-lg border border-gray-6 shrink-0 overflow-hidden">
+                            <ImageWithInitialFallback
+                              src={product.productImage}
+                              alt={product.productName}
+                              name={product.productName}
+                              sizes="100"
+                              fill
+                              className="object-cover w-full h-full border-0"
+                            />
+                          </div>
+                          <div className="flex-1 flex flex-col justify-between min-w-0">
+                            <p className="font-family-dm-sans font-semibold text-base text-gray-12 line-clamp-2">
+                              {product.productName}
+                            </p>
+                            {product.variationName && (
+                              <p className="font-family-dm-sans font-normal text-sm text-gray-11">
+                                {product.variationType || "Variação"}: {product.variationName}
+                              </p>
+                            )}
+                            {product.variationEdited && (
+                              <div className="mt-1">
+                                <VariationEditedBadge />
+                              </div>
+                            )}
+                            <p className="font-manrope font-semibold text-base text-gray-12 mt-1">
+                              {product.isIncluded ? "Incluído" : `R$ ${typeof product.price === "number" ? (product.price / 100).toFixed(2).replace(".", ",") : product.price}`}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="font-family-dm-sans font-normal text-base text-gray-11">
+                    Nenhum produto adicionado
+                  </p>
+                )}
+              </div>
+            </div>
+
+            {/* Footer: baixar ingresso (PDF) */}
+            <div className="shrink-0 border-t border-gray-6 bg-gray-1 px-4 py-3">
+              {downloadTicketButton}
+            </div>
+          </div>
+        </DrawerContent>
+      </Drawer>
+    );
+  }
+
+  /* DESKTOP: modal centralizado original (framer-motion sobre o drawer). */
   return (
     <>
       <AnimatePresence>
@@ -473,7 +779,7 @@ export function ViewRegistrationModal() {
               transition={{ duration: 0.2 }}
               // z acima do drawer (z-50, evita flash na transição) + pointerEvents:auto
               // pra vencer o `pointer-events:none` que o vaul aplica no body.
-              className="fixed inset-0 z-[60] flex flex-col md:flex md:items-center md:justify-center bg-black/50"
+              className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50"
               style={{ pointerEvents: "auto" }}
               onClick={closeViewRegistrationModal}
             />
@@ -484,233 +790,11 @@ export function ViewRegistrationModal() {
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
               transition={{ duration: 0.2, ease: "easeOut" }}
               onClick={(e) => e.stopPropagation()}
-              className="fixed inset-0 z-[61] flex flex-col md:flex md:items-center md:justify-center pointer-events-none p-0 md:pointer-events-auto"
+              // pointer-events auto (como no `md:pointer-events-auto` original): o
+              // wrapper cobre o overlay, então clicar fora do card NÃO fecha o modal.
+              className="fixed inset-0 z-[61] flex items-center justify-center pointer-events-auto"
             >
-              {/* Mobile: full-screen layout (Figma).
-                  Altura presa ao viewport VISÍVEL (100dvh) — não a `inset-0`, que em
-                  navegador mobile estica até o layout viewport (atrás da barra de URL),
-                  fazendo o conteúdo "caber" e não rolar + rodapé abaixo da dobra.
-                  Sem `pt-16`: o modal cobre o topo, então aquele vão só bugava o header. */}
-              <div className="md:hidden flex flex-col h-[100dvh] min-h-0 w-full bg-gray-2 overflow-hidden pointer-events-auto">
-                <div className="bg-gray-1 border-b border-gray-6 shrink-0">
-                  <div className="flex items-center gap-1 h-[52px] px-4">
-                    <button
-                      type="button"
-                      onClick={
-                        showBackToPaymentDetails
-                          ? handleBackToPaymentDetails
-                          : closeViewRegistrationModal
-                      }
-                      className="size-8 flex items-center justify-center shrink-0 rounded-lg hover:bg-gray-3 transition-colors -rotate-180"
-                      aria-label={
-                        showBackToPaymentDetails
-                          ? "Voltar para detalhes de pagamento"
-                          : "Voltar"
-                      }
-                    >
-                      <ArrowButton isOpen={false} />
-                    </button>
-                    <p className="font-manrope font-extrabold text-base leading-[1.1] text-gray-12 truncate flex-1 min-w-0">
-                      {eventName}
-                    </p>
-                    <button
-                      type="button"
-                      onClick={closeViewRegistrationModal}
-                      className="size-8 flex items-center justify-center shrink-0 rounded-lg hover:bg-gray-3 transition-colors"
-                      aria-label="Fechar"
-                    >
-                      <X className="size-5 text-gray-11" />
-                    </button>
-                  </div>
-                </div>
-
-                <div
-                  className="flex-1 overflow-y-auto min-h-0 px-4 py-4 overscroll-contain touch-pan-y"
-                  style={{ WebkitOverflowScrolling: "touch" }}
-                >
-                  <h1 className="font-manrope font-bold text-xl text-gray-12 mb-5">
-                    Informações da inscrição
-                  </h1>
-
-                  {/* Participant ticket block */}
-                  <div className="flex flex-col gap-5 pb-6 border-b border-gray-6">
-                    <p className="font-family-dm-sans font-medium text-base text-gray-12">
-                      Participante 1
-                    </p>
-                    <div className="flex flex-col gap-4">
-                      <p className="font-family-dm-sans font-normal text-base text-gray-11">
-                        {categoryName}
-                      </p>
-                      <p className="font-manrope font-bold text-lg text-gray-12">
-                        {ticketName}
-                      </p>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <DistanceIcon className="size-6 shrink-0 text-gray-12" />
-                      <p className="font-family-dm-sans font-medium text-base text-gray-12">
-                        {ticketDistance}
-                      </p>
-                    </div>
-                    <div className="relative shrink-0 size-[130px]">
-                      {currentRegistration?.qrCode ? (
-                        <RegistrationQRCode
-                          qrCodeData={currentRegistration.qrCode}
-                          size={130}
-                          className="w-full h-full"
-                        />
-                      ) : (
-                        <div className="w-full h-full bg-gray-2 border border-gray-6 rounded-lg flex items-center justify-center">
-                          <span className="text-xs text-gray-11">QR Code</span>
-                        </div>
-                      )}
-                    </div>
-                    <div className="border border-gray-6 rounded-xl p-3">
-                      <div className="flex gap-2 items-center">
-                        <div className="relative shrink-0 size-10 rounded-full overflow-hidden">
-                          {user?.avatarUrl ? (
-                            <Image
-                              src={getAvatarUrl(user.avatarUrl || "") as string}
-                              alt={participantName}
-                              width={40}
-                              height={40}
-                              className="rounded-full object-cover w-full h-full"
-                            />
-                          ) : (
-                            <div className="size-10 rounded-full bg-primary-10/20 flex items-center justify-center">
-                              <span className="text-primary-11 font-semibold text-sm">
-                                {participantName.charAt(0).toUpperCase()}
-                              </span>
-                            </div>
-                          )}
-                        </div>
-                        <div className="flex flex-col gap-3 min-w-0 flex-1">
-                          <p className="font-family-dm-sans font-semibold text-sm text-gray-12 truncate">
-                            {participantName}
-                          </p>
-                          <div className="flex flex-wrap items-center gap-2 text-sm text-gray-11 font-family-dm-sans">
-                            <span>{participantBirthDate}</span>
-                            <span className="size-1 bg-gray-11 rounded-full shrink-0" />
-                            <span>{participantGender}</span>
-                            <span className="size-1 bg-gray-11 rounded-full shrink-0" />
-                            <span>{participantCPF}</span>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Personal info fields */}
-                  <div className="flex flex-col gap-0 pt-8 pb-6">
-                    {[
-                      { label: "Nome", value: participantName },
-                      { label: "Email", value: participantEmail },
-                      { label: documentLabel(participantIsBr), value: formatDocumentDisplay(participantCPFRaw, participantIsBr) || "—" },
-                      { label: "Data de nascimento", value: participantBirthDate },
-                      { label: "Telefone", value: formatPhone(participantPhone) || "—" },
-                      { label: "Telefone de emergência", value: emergencyPhone || "—" },
-                      { label: "Sexo", value: participantGender || "—" },
-                    ].map(({ label, value }) => (
-                      <div key={label} className="flex flex-col gap-1 py-4 first:pt-0">
-                        <p className="font-family-dm-sans font-normal text-base text-gray-12">
-                          {label}
-                        </p>
-                        <p className="font-family-dm-sans font-medium text-base text-gray-12">
-                          {value}
-                        </p>
-                      </div>
-                    ))}
-                  </div>
-
-                  <div className="w-full h-px bg-gray-6" />
-
-                  {/* Perguntas do Organizador */}
-                  <div className="py-8">
-                    <h2 className="font-manrope font-bold text-lg text-gray-12 mb-4">
-                      Perguntas do Organizador
-                    </h2>
-                    {questions.length > 0 ? (
-                      <div className="flex flex-col gap-4">
-                        {questions.map((q: any, index: number) => (
-                          <div key={q.id || index} className="flex flex-col gap-1 py-4">
-                            <p className="font-family-dm-sans font-normal text-base text-gray-12">
-                              {q.question?.question || q.question || `Pergunta ${index + 1}`}
-                            </p>
-                            <p className="font-family-dm-sans font-medium text-base text-gray-12">
-                              {formatAnswer(q.answer)}
-                            </p>
-                          </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <p className="font-family-dm-sans font-normal text-base text-gray-11">
-                        Nenhuma pergunta respondida
-                      </p>
-                    )}
-                  </div>
-
-                  <div className="w-full h-px bg-gray-6" />
-
-                  {/* Produtos */}
-                  <div className="py-8">
-                    <h2 className="font-manrope font-bold text-lg text-gray-12 mb-4">
-                      Produtos
-                    </h2>
-                    {products.length > 0 ? (
-                      <div className="flex flex-col gap-4">
-                        {products.map((product: any, index: number) => (
-                          <div
-                            key={product.id || index}
-                            className="bg-gray-1 border border-gray-6 rounded-xl p-4"
-                          >
-                            <div className="flex gap-3">
-                              <div className="size-[100px] rounded-lg border border-gray-6 shrink-0 overflow-hidden">
-                                <ImageWithInitialFallback
-                                  src={product.productImage}
-                                  alt={product.productName}
-                                  name={product.productName}
-                                  sizes="100"
-                                  fill
-                                  className="object-cover w-full h-full border-0"
-                                />
-                              </div>
-                              <div className="flex-1 flex flex-col justify-between min-w-0">
-                                <p className="font-family-dm-sans font-semibold text-base text-gray-12 line-clamp-2">
-                                  {product.productName}
-                                </p>
-                                {product.variationName && (
-                                  <p className="font-family-dm-sans font-normal text-sm text-gray-11">
-                                    {product.variationType || "Variação"}: {product.variationName}
-                                  </p>
-                                )}
-                                {product.variationEdited && (
-                                  <div className="mt-1">
-                                    <VariationEditedBadge />
-                                  </div>
-                                )}
-                                <p className="font-manrope font-semibold text-base text-gray-12 mt-1">
-                                  {product.isIncluded ? "Incluído" : `R$ ${typeof product.price === "number" ? (product.price / 100).toFixed(2).replace(".", ",") : product.price}`}
-                                </p>
-                              </div>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <p className="font-family-dm-sans font-normal text-base text-gray-11">
-                        Nenhum produto adicionado
-                      </p>
-                    )}
-                  </div>
-                </div>
-
-                {/* Footer: baixar ingresso (PDF) */}
-                <div className="shrink-0 border-t border-gray-6 bg-gray-1 px-4 py-3">
-                  {downloadTicketButton}
-                </div>
-              </div>
-
-              {/* Desktop: centered modal */}
-              <div className="hidden md:flex flex-col bg-gray-1 rounded-lg shadow-2xl w-full max-w-[1095px] mx-4 relative overflow-hidden pointer-events-auto">
+              <div className="flex flex-col bg-gray-1 rounded-lg shadow-2xl w-full max-w-[1095px] mx-4 relative overflow-hidden pointer-events-auto">
                 {/* Header */}
                 <div className="flex items-center justify-between px-5 py-3 border-b border-gray-6 gap-2">
                   <div className="flex items-center gap-2 min-w-0 flex-1">
