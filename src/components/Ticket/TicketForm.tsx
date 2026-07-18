@@ -1433,7 +1433,7 @@ export function TicketForm({
       <div
         data-fixed-bottom-bar="true"
         className={cn(
-          "fixed inset-x-0 bottom-0 z-40 flex flex-col gap-3 border-t border-gray-6 bg-gray-1 p-4 pb-[max(1rem,env(safe-area-inset-bottom))] md:static md:z-auto md:mt-9 md:flex-row md:items-center md:justify-between md:border-0 md:bg-transparent md:p-0 md:pb-0",
+          "fixed inset-x-0 bottom-0 z-40 flex gap-3 border-t border-gray-6 bg-gray-1 p-4 pb-[max(1rem,env(safe-area-inset-bottom))] md:static md:z-auto md:mt-9 md:flex-row md:items-center md:justify-between md:border-0 md:bg-transparent md:p-0 md:pb-0",
           mode === "edit" && ticketId ? "" : "md:justify-end",
         )}
       >
@@ -1442,7 +1442,7 @@ export function TicketForm({
             type="button"
             variant="destructive"
             onClick={() => setDeleteModalOpen(true)}
-            className="w-full py-0 bg-red-11 text-red-2 font-bold font-manrope leading-[1.1] rounded-lg transition-colors duration-200 flex items-center justify-center hover:bg-red-12 disabled:pointer-events-none disabled:opacity-50 md:w-auto"
+            className="max-md:flex-1 min-w-0 py-0 bg-red-11 text-red-2 font-bold font-manrope leading-[1.1] rounded-lg transition-colors duration-200 flex items-center justify-center hover:bg-red-12 disabled:pointer-events-none disabled:opacity-50 md:w-auto"
           >
             Deletar ingresso
           </Button>
@@ -1451,7 +1451,7 @@ export function TicketForm({
           type="button"
           onClick={handleSubmit}
           disabled={saving || (mode === "edit" && !isDirty)}
-          className="w-full font-bold md:w-auto md:self-end md:px-11"
+          className="max-md:flex-1 min-w-0 font-bold md:w-auto md:self-end md:px-11"
         >
           {saving
             ? mode === "edit" ? "Salvando..." : "Criando..."

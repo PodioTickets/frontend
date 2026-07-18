@@ -280,6 +280,15 @@ export function TopicModal() {
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
   const [isCodeMode, setIsCodeMode] = useState(false);
+  /* "Sujo" de CONTEÚDO: só vira true em edições REAIS do usuário (digitação,
+   * paste, resize de imagem, edição no modo código). Cargas programáticas do
+   * Quill usam source "silent" e NÃO marcam sujo — assim o botão "Salvar
+   * alteração" só habilita quando de fato houve mudança. Comparar innerHTML não
+   * serve: encode/decode de embeds + estilização de mídia mutam o HTML no load. */
+  const [hasContentChanges, setHasContentChanges] = useState(false);
+  // Valor do textarea ao ENTRAR no modo código — comparado na saída para saber
+  // se o usuário editou o HTML cru (o retorno ao WYSIWYG usa "silent").
+  const codeEntryValueRef = useRef<string>("");
   const quillRef = useRef<HTMLDivElement>(null);
   const quillInstanceRef = useRef<QuillInstance | null>(null);
   const quillLoadedRef = useRef(false);
@@ -699,6 +708,8 @@ export function TopicModal() {
 
             event.preventDefault();
             event.stopPropagation();
+            // Colar um embed é edição real do usuário (não passa por text-change "user").
+            setHasContentChanges(true);
 
             const { html: renderable, scriptSrcs } =
               decodeStoredEmbedsToRenderable(pastedHtml);
@@ -808,9 +819,12 @@ export function TopicModal() {
 
 
           // Listen for content changes
-          quill.on('text-change', () => {
+          quill.on('text-change', (_delta, _oldDelta, source) => {
             const html = quill.root.innerHTML;
             setContent(html);
+            // Só edição do usuário conta como "alteração" (source "user"); cargas
+            // programáticas ("silent"/"api") e reflow de estilos não sujam o form.
+            if (source === "user") setHasContentChanges(true);
             // Update image alignment after content changes
             setTimeout(() => {
               styleMedia();
@@ -1049,6 +1063,8 @@ export function TopicModal() {
   useEffect(() => {
     if (isOpen) {
       setTitle(initialTitle || "");
+      // Baseline limpo a cada abertura/troca de tópico: nada editado ainda.
+      setHasContentChanges(false);
 
       // Update Quill content if it's already initialized
       if (quillInstanceRef.current && initialContent !== undefined) {
@@ -1083,6 +1099,7 @@ export function TopicModal() {
       setTitle("");
       setContent("");
       setIsCodeMode(false);
+      setHasContentChanges(false);
       embedScriptSrcsRef.current = [];
       if (quillInstanceRef.current) {
         // Clear content
@@ -1131,6 +1148,8 @@ export function TopicModal() {
       );
       embedScriptSrcsRef.current = mergedScripts;
       const sourceHtml = buildSourceViewHtml(decoded.html, mergedScripts);
+      // Baseline pra detectar edição no textarea (a volta ao WYSIWYG é "silent").
+      codeEntryValueRef.current = sourceHtml;
       setContent(sourceHtml);
       setIsCodeMode(true);
     } else {
@@ -1139,6 +1158,8 @@ export function TopicModal() {
       // preservam os data-* da div quando passado via `dangerouslyPasteHTML`.
       // Usar `quill.root.innerHTML =` direto strippa os data-*.
       const raw = codeTextareaRef.current?.value ?? "";
+      // Editou o HTML cru no modo código → conteúdo sujo.
+      if (raw !== codeEntryValueRef.current) setHasContentChanges(true);
       const { html: renderable, scriptSrcs } =
         decodeStoredEmbedsToRenderable(raw);
       embedScriptSrcsRef.current = scriptSrcs;
@@ -1267,6 +1288,15 @@ export function TopicModal() {
     }
   };
 
+
+  /* Habilitação do botão salvar:
+   *  - Criar: basta ter título (regra histórica).
+   *  - Editar: exige título E alguma alteração real (título ≠ inicial OU conteúdo
+   *    editado pelo usuário). Evita "Salvar alteração" ativo sem nenhuma mudança.
+   * `trim()` nos dois lados do título ignora diferença só de espaços. */
+  const titleChanged = title.trim() !== initialTitle.trim();
+  const canSave =
+    title.trim().length > 0 && (!isEditing || titleChanged || hasContentChanges);
 
   const handleConfirmDeleteTopic = async () => {
     if (!onModalDelete) {
@@ -1440,7 +1470,7 @@ export function TopicModal() {
                   </Button>
                   <Button
                     onClick={handleSave}
-                    disabled={!title.trim()}
+                    disabled={!canSave}
                     className="h-11 w-full disabled:cursor-not-allowed disabled:bg-gray-6 md:h-auto md:w-auto md:px-6 md:py-2"
                   >
                     {isEditing ? "Salvar alteração" : "Criar"}
