@@ -25,6 +25,7 @@ import { queryKeys } from "@/services/cache/QueryClient";
 import { useDeleteParticipantModal } from "@/stores/modalStore";
 import { useCheckoutTimer } from "@/contexts/CheckoutTimerContext";
 import { buildParticipantsPatchPayload } from "@/lib/checkoutParticipants";
+import { questionAppliesToTicket } from "@/utils/questionAnswer";
 import { useCheckoutReservation } from "@/hooks/useCheckoutReservation";
 import { UserAutocomplete } from "../UserAutocomplete";
 import { MobileSummaryBar } from "./MobileSummaryBar";
@@ -1155,8 +1156,8 @@ export function InformationStep({
 
     if (!basicFieldsComplete) return false;
 
-    // Verificar se todas as perguntas obrigatórias foram respondidas
-    const requiredQuestions = sortedQuestions.filter((q) => q.isRequired);
+    // Verificar se todas as perguntas obrigatórias DO INGRESSO foram respondidas
+    const requiredQuestions = getRequiredQuestionsForParticipant(index);
     const allRequiredQuestionsAnswered = requiredQuestions.every((question) => {
       const answer = getQuestionAnswer(index, question.id);
       if (Array.isArray(answer)) {
@@ -1287,8 +1288,8 @@ export function InformationStep({
       }
     }
 
-    // Perguntas obrigatórias
-    const requiredQuestions = sortedQuestions.filter((q) => q.isRequired);
+    // Perguntas obrigatórias DO INGRESSO deste participante
+    const requiredQuestions = getRequiredQuestionsForParticipant(index);
     requiredQuestions.forEach((question) => {
       const answer = getQuestionAnswer(index, question.id);
       const isEmpty = Array.isArray(answer)
@@ -1495,6 +1496,43 @@ export function InformationStep({
       (a, b) => (a.order || 0) - (b.order || 0),
     );
   }, [questionsSource]);
+
+  /* Perguntas aplicáveis por INGRESSO. Cada pergunta tem `appliesTo` ("all" ou
+   * uma lista de ticketIds); o participante só deve ver/responder as perguntas
+   * vinculadas ao ingresso dele. Pré-computa uma vez por ticketId presente na
+   * reserva (poucas perguntas → filtro barato) e cai numa lista vazia para
+   * ingressos sem pergunta específica. */
+  const questionsByTicketId = useMemo(() => {
+    const map = new Map<string, Question[]>();
+    if (sortedQuestions.length === 0) return map;
+    for (const { ticketId } of participantsWithRaces) {
+      if (map.has(ticketId)) continue;
+      map.set(
+        ticketId,
+        sortedQuestions.filter((q) => questionAppliesToTicket(q, ticketId)),
+      );
+    }
+    return map;
+  }, [sortedQuestions, participantsWithRaces]);
+
+  /* Índice do participante → ticketId (id da DEFINIÇÃO do ingresso, o mesmo que
+   * `appliesTo` referencia). Usado pela completude/validação para resolver as
+   * perguntas do ingresso a partir só do `participantIndex`. */
+  const ticketIdByParticipantIndex = useMemo(() => {
+    const map: Record<number, string> = {};
+    for (const { participantIndex, ticketId } of participantsWithRaces) {
+      map[participantIndex] = ticketId;
+    }
+    return map;
+  }, [participantsWithRaces]);
+
+  /* Perguntas obrigatórias do ingresso de um participante. Fonte única para
+   * completude e validação — nunca mais devolve pergunta de outro ingresso. */
+  const getRequiredQuestionsForParticipant = (index: number): Question[] => {
+    const ticketId = ticketIdByParticipantIndex[index];
+    const list = ticketId ? questionsByTicketId.get(ticketId) : undefined;
+    return (list ?? []).filter((q) => q.isRequired);
+  };
 
 
   const updateQuestionAnswer = (
@@ -2448,7 +2486,7 @@ export function InformationStep({
                             </div>
                           ) : null}
                         </div>
-                        {sortedQuestions.length > 0 && (
+                        {(questionsByTicketId.get(ticketId)?.length ?? 0) > 0 && (
                           <>
                             <div className="w-full h-px bg-gray-6 my-6" />
                             <div className="flex flex-col gap-6">
@@ -2456,7 +2494,7 @@ export function InformationStep({
                                 Perguntas do Organizador
                               </h2>
                               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-                                {sortedQuestions.map((question) => (
+                                {(questionsByTicketId.get(ticketId) ?? []).map((question) => (
                                   <div
                                     key={question.id}
                                     className="min-w-[313px]"

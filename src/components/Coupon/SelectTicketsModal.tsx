@@ -149,7 +149,7 @@ export function SelectTicketsModal({
                   ? "Ingressos vinculados a este voucher (somente leitura)"
                   : isQuestion
                     ? "Selecione os ingressos aos quais esta pergunta será direcionada"
-                    : singleSelect
+                    : context === "voucher"
                       ? "Selecione o ingresso que deseja vincular a este voucher"
                       : "Selecione os ingressos que deseja vincular a este cupom"}
               </p>
@@ -235,7 +235,11 @@ export function SelectTicketsModal({
               disabled={selectedIds.length === 0}
               className="w-full md:w-auto disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {isQuestion ? "Confirmar seleção" : "Adicionar ao cupom"}
+              {isQuestion
+                ? "Confirmar seleção"
+                : context === "voucher"
+                  ? "Adicionar ao voucher"
+                  : "Adicionar ao cupom"}
             </Button>
           )}
         </div>
@@ -264,9 +268,12 @@ function TicketCard({
 }: TicketCardProps) {
   // Card só é interativo quando não é somente-leitura e é elegível.
   const interactive = !readOnly && !ineligible;
+  // Esmaece (aparência "desabilitada") os cards inelegíveis e, em somente-leitura,
+  // os NÃO vinculados — assim só o ingresso selecionado permanece em destaque (verde).
+  const dimmed = ineligible || (readOnly && !isSelected);
   return (
     <div
-      className={`bg-gray-2 border rounded-xl p-4 flex flex-col transition-colors ${interactive ? "cursor-pointer" : "cursor-default"} ${ineligible ? "opacity-60" : ""} ${isSelected
+      className={`bg-gray-2 border rounded-xl p-4 flex flex-col transition-colors ${interactive ? "cursor-pointer" : "cursor-default"} ${dimmed ? "opacity-60" : ""} ${isSelected
         ? "border-primary-8 bg-primary-4"
         : interactive
           ? "border-gray-6 hover:bg-gray-3"
