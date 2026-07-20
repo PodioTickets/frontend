@@ -6,6 +6,7 @@ import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import { useOrganizerAppSurface } from "@/contexts/OrganizerAppSurfaceContext";
 import { organizerExternalHref } from "@/lib/organizerPathPresentation";
 import { EventTabLabel } from "@/components/Icons/EventTabLabel";
+import { ArrowButton } from "@/components/ArrowButton";
 import { useRef, useState, useLayoutEffect, useCallback } from "react";
 
 export interface EventTabItem {
@@ -333,6 +334,7 @@ export function EventMobileTabs({
                         className={menuTriggerClass(isDiscountActive || descontoOpen)}
                       >
                         <EventTabLabel label={tab.label} />
+                        <ArrowButton isOpen={descontoOpen} className="ml-1 shrink-0" />
                       </button>
                     </DropdownMenu.Trigger>
                     {renderMenuContent(discountOptions, "w-40")}
@@ -357,6 +359,7 @@ export function EventMobileTabs({
                       className={menuTriggerClass(isEditActive || editarOpen)}
                     >
                       <EventTabLabel label={tab.label} />
+                      <ArrowButton isOpen={editarOpen} className="ml-1 shrink-0" />
                     </button>
                   </DropdownMenu.Trigger>
                   {renderMenuContent(editStepOptions, "min-w-44")}

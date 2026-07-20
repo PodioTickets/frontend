@@ -96,7 +96,7 @@ export function CategoryKitHorizontalCarousel({
   const single = n === 1;
 
   const navButtonClass =
-    "flex size-10 shrink-0 items-center justify-center text-gray-12 transition-all active:scale-95 disabled:pointer-events-none disabled:opacity-35 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-8 focus-visible:ring-offset-2";
+    "flex size-8 md:size-10 shrink-0 items-center justify-center text-gray-12 transition-all active:scale-95 disabled:pointer-events-none disabled:opacity-35 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-8 focus-visible:ring-offset-2";
 
   return (
     <>
@@ -135,9 +135,11 @@ export function CategoryKitHorizontalCarousel({
                     className={cn(
                       "relative shrink-0 overflow-hidden rounded-lg border bg-gray-2 transition-all duration-300 ease-out",
                       "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-8",
-                      // Mobile: 60×60 pra caber 5 itens visíveis (343-32 gaps = 311 ÷ 5 ≈ 62).
-                      // Desktop: 112×112 original.
-                      "size-[100px] md:size-[112px]",
+                      // Mobile: 72×72 pra os 3 tiles caberem INTEIROS na menor tela
+                      // comum. Numa viewport de 360px: 328 (−px-4) −64 (setas size-8×2)
+                      // −16 (gaps) = 248 úteis; 3×72 + 2×8 = 232 ≤ 248. Com 100px as
+                      // laterais estouravam e ficavam cortadas. Desktop: 112×112 original.
+                      "size-[72px] md:size-[112px]",
                       isCenter
                         ? "z-10 border-primary-8 scale-110"
                         : "border-gray-5 scale-90 hover:border-gray-7"
@@ -150,7 +152,7 @@ export function CategoryKitHorizontalCarousel({
                       alt={item.name}
                       name={item.name}
                       fill
-                      sizes="(max-width: 768px) 60px, 112px"
+                      sizes="(max-width: 768px) 72px, 112px"
                       className="object-cover size-full border-0 rounded-lg"
                     />
                   </button>

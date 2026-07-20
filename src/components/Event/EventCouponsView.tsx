@@ -439,6 +439,9 @@ export function EventCouponsView({
                               <p className="font-family-dm-sans font-normal text-sm leading-[1.3] text-gray-11">
                                 Validade: {coupon.expiryDate ? formatDate(coupon.expiryDate) : "Sem data de expiração"}
                               </p>
+                              <p className="font-family-dm-sans font-normal text-sm leading-[1.3] text-gray-11">
+                                Usos do cupom: {coupon.usageCount}{coupon.maxUsage ? `/${coupon.maxUsage}` : ""}
+                              </p>
                             </div>
                             <span
                               className={`shrink-0 px-3 py-2 rounded text-xs font-family-dm-sans font-normal leading-[1.3] ${statusBadge.className}`}
