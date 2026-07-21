@@ -72,6 +72,13 @@ function permissionsToArray(p: Record<string, boolean>): string[] {
   return PERMISSION_ROWS.map((r) => r.id).filter((id) => p[id]);
 }
 
+/** Todas as permissões no mesmo valor — usado por Proprietário e pelos atalhos. */
+function allPermissions(value: boolean): Record<string, boolean> {
+  const next: Record<string, boolean> = {};
+  for (const row of PERMISSION_ROWS) next[row.id] = value;
+  return next;
+}
+
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
 function PermissionCheckbox({ checked }: { checked: boolean }) {
@@ -176,6 +183,38 @@ export function AdminCollaboratorDrawer({
   }, [open, mode, member, orgId, resetForm]);
 
   const handleClose = () => { if (!saving && !removing) onOpenChange(false); };
+
+  /**
+   * Proprietário = acesso total. Marcar liga TODAS as permissões; desmarcar não
+   * mexe nelas (o admin acabou de definir esse conjunto — quem decide o que tirar
+   * é ele, não o toggle).
+   */
+  const handleOwnerToggle = useCallback(() => {
+    const next = !isOwner;
+    setIsOwner(next);
+    if (next) setPermissions(allPermissions(true));
+  }, [isOwner]);
+
+  /**
+   * Desmarcar QUALQUER permissão quebra o "acesso total" → o membro deixa de ser
+   * Proprietário. Marcar de volta não repromove: Proprietário é um papel, não a
+   * soma dos checkboxes.
+   */
+  const handlePermissionToggle = useCallback((id: string) => {
+    const willBeChecked = !permissions[id];
+    setPermissions((prev) => ({ ...prev, [id]: !prev[id] }));
+    if (!willBeChecked) setIsOwner(false);
+  }, [permissions]);
+
+  const handleSelectAllPermissions = useCallback(() => {
+    setPermissions(allPermissions(true));
+  }, []);
+
+  /** Limpar tudo remove o acesso total — logo, também deixa de ser Proprietário. */
+  const handleClearAllPermissions = useCallback(() => {
+    setPermissions(allPermissions(false));
+    setIsOwner(false);
+  }, []);
 
   const handleCreate = async () => {
     const { firstName, lastName } = splitFullName(fullName);
@@ -382,7 +421,7 @@ export function AdminCollaboratorDrawer({
                         </div>
                         {fieldErrors.confirmPassword && <p className="text-sm text-red-11 font-family-dm-sans">{fieldErrors.confirmPassword}</p>}
                       </FieldShell>
-                      <button type="button" onClick={() => setIsOwner((v) => !v)} disabled={saving} className="flex w-full gap-3 rounded-lg border border-gray-6 px-3 py-4 text-left transition-colors hover:bg-gray-2/50 disabled:opacity-50">
+                      <button type="button" role="checkbox" aria-checked={isOwner} onClick={handleOwnerToggle} disabled={saving} className="flex w-full gap-3 rounded-lg border border-gray-6 px-3 py-4 text-left transition-colors hover:bg-gray-2/50 disabled:opacity-50">
                         <PermissionCheckbox checked={isOwner} />
                         <div className="flex min-w-0 flex-1 flex-col gap-2">
                           <p className="text-base font-semibold text-gray-12 font-family-dm-sans">Proprietário</p>
@@ -399,7 +438,7 @@ export function AdminCollaboratorDrawer({
                       <FieldShell label="E-mail do membro">
                         <input type="email" className={cn(inputClass, "bg-gray-2 text-gray-11 cursor-not-allowed")} value={email} readOnly />
                       </FieldShell>
-                      <button type="button" onClick={() => setIsOwner((v) => !v)} disabled={saving || detailLoading} className="flex w-full gap-3 rounded-lg border border-gray-6 px-3 py-4 text-left transition-colors hover:bg-gray-2/50 disabled:opacity-50">
+                      <button type="button" role="checkbox" aria-checked={isOwner} onClick={handleOwnerToggle} disabled={saving || detailLoading} className="flex w-full gap-3 rounded-lg border border-gray-6 px-3 py-4 text-left transition-colors hover:bg-gray-2/50 disabled:opacity-50">
                         <PermissionCheckbox checked={isOwner} />
                         <div className="flex min-w-0 flex-1 flex-col gap-2">
                           <p className="text-base font-semibold text-gray-12 font-family-dm-sans">Proprietário</p>
@@ -416,13 +455,13 @@ export function AdminCollaboratorDrawer({
                 <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                   <h3 className="text-base font-bold text-gray-12 font-manrope leading-[1.1] md:text-lg">Permissões</h3>
                   <div className="grid grid-cols-2 gap-2 md:flex md:gap-2">
-                    <button type="button" onClick={() => { const n: Record<string, boolean> = {}; for (const r of PERMISSION_ROWS) n[r.id] = true; setPermissions(n); }} disabled={saving || removing} className="h-11 rounded-lg border border-gray-6 bg-gray-1 px-3 text-sm font-bold text-gray-12 font-family-dm-sans hover:bg-gray-2 transition-colors disabled:opacity-50 md:h-10 md:px-5">Selecionar tudo</button>
-                    <button type="button" onClick={() => { const n: Record<string, boolean> = {}; for (const r of PERMISSION_ROWS) n[r.id] = false; setPermissions(n); }} disabled={saving || removing} className="h-11 rounded-lg border border-gray-6 bg-gray-1 px-3 text-sm font-bold text-gray-12 font-family-dm-sans hover:bg-gray-2 transition-colors disabled:opacity-50 md:h-10 md:px-5">Limpar tudo</button>
+                    <button type="button" onClick={handleSelectAllPermissions} disabled={saving || removing} className="h-11 rounded-lg border border-gray-6 bg-gray-1 px-3 text-sm font-bold text-gray-12 font-family-dm-sans hover:bg-gray-2 transition-colors disabled:opacity-50 md:h-10 md:px-5">Selecionar tudo</button>
+                    <button type="button" onClick={handleClearAllPermissions} disabled={saving || removing} className="h-11 rounded-lg border border-gray-6 bg-gray-1 px-3 text-sm font-bold text-gray-12 font-family-dm-sans hover:bg-gray-2 transition-colors disabled:opacity-50 md:h-10 md:px-5">Limpar tudo</button>
                   </div>
                 </div>
                 <div className="flex flex-col gap-3">
                   {PERMISSION_ROWS.map((row) => (
-                    <button key={row.id} type="button" onClick={() => setPermissions((p) => ({ ...p, [row.id]: !p[row.id] }))} disabled={saving || removing} className="flex w-full gap-3 rounded-lg border border-gray-6 px-3 py-4 text-left transition-colors hover:bg-gray-2/50 disabled:opacity-50">
+                    <button key={row.id} type="button" role="checkbox" aria-checked={!!permissions[row.id]} onClick={() => handlePermissionToggle(row.id)} disabled={saving || removing} className="flex w-full gap-3 rounded-lg border border-gray-6 px-3 py-4 text-left transition-colors hover:bg-gray-2/50 disabled:opacity-50">
                       <PermissionCheckbox checked={!!permissions[row.id]} />
                       <div className="flex min-w-0 flex-1 flex-col gap-2">
                         <p className="text-base font-semibold text-gray-12 font-family-dm-sans">{row.title}</p>
