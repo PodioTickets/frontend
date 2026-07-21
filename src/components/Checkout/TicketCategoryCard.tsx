@@ -394,44 +394,44 @@ const TicketItemMobile = memo(({
                 </span>
               ) : null}
             </div>
-            <div className="flex flex-wrap items-center justify-between gap-2 w-full">
-              {/* Modalidade + distância — espelha o desktop: o ícone vem da
-                  modality (fallback p/ placeholder cinza) e o texto exibe a
-                  distância. Sem `DistanceIcon` separado nem nome da modality. */}
-              <div className="flex items-center gap-8 flex-wrap min-w-0">
-                {modalityInfo && (
-                  <div className="flex items-center gap-2">
-                    {modalityInfo.icon ? (
-                      <div className="size-6 shrink-0 relative rounded overflow-hidden flex items-center justify-center">
-                        <ImageWithInitialFallback
-                          src={modalityInfo.icon}
-                          alt={modalityInfo.name}
-                          name={modalityInfo.name}
-                          width={24}
-                          height={24}
-                          className="size-6 bg-transparent border-0"
-                          imgClassName="object-contain bg-transparent border-0"
-                          letterClassName="text-[10px]"
-                          nativeImg
-                        />
-                      </div>
-                    ) : (
-                      <div className="size-6 shrink-0 rounded bg-gray-4" aria-hidden />
-                    )}
-                    <p className="text-lg font-medium text-gray-12 font-family-dm-sans leading-[1.3]">
-                      {distanceKm} {distanceUnit}
-                    </p>
-                  </div>
-                )}
-              </div>
-              {showAgeLimit ? (
-                <div className="bg-yellow-3 rounded-full px-4 py-2 shrink-0 max-w-full">
-                  <p className="text-sm font-medium text-yellow-12 font-family-dm-sans">
-                    Limite de idade: {ageLimitText}
+            {/* Modalidade + distância — espelha o desktop: o ícone vem da
+                modality (fallback p/ placeholder cinza) e o texto exibe a
+                distância. Sem `DistanceIcon` separado nem nome da modality. */}
+            <div className="flex items-center gap-8 flex-wrap min-w-0 w-full">
+              {modalityInfo && (
+                <div className="flex items-center gap-2">
+                  {modalityInfo.icon ? (
+                    <div className="size-6 shrink-0 relative rounded overflow-hidden flex items-center justify-center">
+                      <ImageWithInitialFallback
+                        src={modalityInfo.icon}
+                        alt={modalityInfo.name}
+                        name={modalityInfo.name}
+                        width={24}
+                        height={24}
+                        className="size-6 bg-transparent border-0"
+                        imgClassName="object-contain bg-transparent border-0"
+                        letterClassName="text-[10px]"
+                        nativeImg
+                      />
+                    </div>
+                  ) : (
+                    <div className="size-6 shrink-0 rounded bg-gray-4" aria-hidden />
+                  )}
+                  <p className="text-lg font-medium text-gray-12 font-family-dm-sans leading-[1.3]">
+                    {distanceKm} {distanceUnit}
                   </p>
                 </div>
-              ) : null}
+              )}
             </div>
+            {/* Limite de idade em linha própria, alinhado à esquerda (fluxo
+                normal, sem `absolute`) — espelha o layout single-image. */}
+            {showAgeLimit ? (
+              <div className="bg-yellow-3 rounded-full px-4 py-2 self-start max-w-full max-md:mb-6">
+                <p className="text-sm font-medium text-yellow-12 font-family-dm-sans">
+                  Limite de idade: {ageLimitText}
+                </p>
+              </div>
+            ) : null}
           </div>
         </>
       )}
@@ -716,17 +716,13 @@ const TicketItemDesktop = memo(({
           </div>
         </div>
       )}
-      {/* `flex` no wrapper + `h-full` no card: a célula é esticada pela linha do
-          grid, e assim o card acompanha essa altura em vez de flutuar centralizado. */}
-      <div className={cn("min-w-0 flex", productItems.length > 0 ? "row-start-1 col-start-2" : "w-full")}>
-        <div className="relative bg-gray-2 border border-gray-6 rounded-xl p-5 flex flex-col gap-2 w-full h-full justify-center">
-          {showAgeLimit ? (
-            <div className="absolute top-5 right-5 bg-yellow-3 text-yellow-12 rounded-full px-3 py-1">
-              <p className="text-xs font-medium font-family-dm-sans whitespace-nowrap">
-                Limite de idade: {ageLimitText}
-              </p>
-            </div>
-          ) : null}
+      {/* `items-center` no wrapper + card com altura-de-conteúdo (sem `h-full`):
+          com >4 imagens a coluna de miniaturas (~180px) estica a linha do grid.
+          Se o card seguisse essa altura (`h-full` + `justify-center`), o conteúdo
+          (~130px) ficava centralizado sobrando folga em cima/embaixo. Agora o card
+          huga o conteúdo e é centralizado verticalmente ao lado das imagens. */}
+      <div className={cn("min-w-0 flex items-center", productItems.length > 0 ? "row-start-1 col-start-2" : "w-full")}>
+        <div className="bg-gray-2 border border-gray-6 rounded-xl p-5 flex flex-col gap-2 w-full">
           <div className="flex flex-col justify-center gap-1">
             <h2 className="text-xl font-bold font-manrope leading-[1.1] text-gray-12">
               {ticket.name}
@@ -759,6 +755,16 @@ const TicketItemDesktop = memo(({
               )}
             </div>
           </div>
+
+          {/* Limite de idade em fluxo normal, alinhado à esquerda (sem
+              `absolute` — que fazia o badge flutuar no canto e parecer padding). */}
+          {showAgeLimit ? (
+            <div className="bg-yellow-3 text-yellow-12 rounded-full px-3 py-1 self-start max-w-full">
+              <p className="text-xs font-medium font-family-dm-sans whitespace-nowrap">
+                Limite de idade: {ageLimitText}
+              </p>
+            </div>
+          ) : null}
 
           <div className="flex items-end justify-between">
             <div className="flex items-baseline gap-2">
