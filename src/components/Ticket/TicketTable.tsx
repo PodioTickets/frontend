@@ -119,8 +119,10 @@ function TicketProductThumbnails({
     .slice(0, MAX_VISIBLE_PRODUCTS);
   const remainingCount = Math.max(0, ticket.products.length - MAX_VISIBLE_PRODUCTS);
 
+  // Sem produtos vinculados no mobile → não renderiza nada (o dash "—" só faz
+  // sentido na tabela desktop, onde a coluna precisa ocupar espaço).
   if (ticketProducts.length === 0 && remainingCount === 0) {
-    return <span className="font-family-dm-sans text-sm text-gray-11">—</span>;
+    return null;
   }
 
   return (
