@@ -34,6 +34,7 @@ import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import { SuspendEventModal } from "@/components/Event/SuspendEventModal";
 import { ResumeEventModal } from "@/components/Event/ResumeEventModal";
 import { formatEventListCurrency, formatEventListDate } from "@/lib/eventListFormatters";
+import { Pagination } from "@/components/Pagination";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -531,7 +532,7 @@ export default function AdminEventsPage() {
           )}
 
           {!loading && (
-            <PaginationBar totalPages={pagination.totalPages} page={pagination.page} onPageChange={setPage} variant="mobile" />
+            <Pagination totalPages={pagination.totalPages} currentPage={pagination.page} onPageChange={setPage} />
           )}
         </div>
 
