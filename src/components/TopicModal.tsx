@@ -27,6 +27,10 @@ import {
   isEmbedHtml,
   wrapWithTopicDefaultTextColor,
 } from "@/lib/topicHtmlSourceMode";
+import {
+  DEV_MODE_ACTIVE_CLASS,
+  syncDevModeButtonState,
+} from "@/lib/topicCodeModeChrome";
 import { X } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import toast from "react-hot-toast";
@@ -936,7 +940,13 @@ export function TopicModal() {
               });
 
               btn.addEventListener('mouseleave', () => {
-                if (!btn.classList.contains('ql-active')) {
+                // `DEV_MODE_ACTIVE_CLASS` também conta: o Quill tira o `ql-active`
+                // do botão de modo dev a cada editor-change, e só com ele o hover
+                // apagaria o fundo do botão com o modo dev ainda ligado.
+                if (
+                  !btn.classList.contains('ql-active') &&
+                  !btn.classList.contains(DEV_MODE_ACTIVE_CLASS)
+                ) {
                   btn.style.backgroundColor = '#f9f9f9';
                 }
               });
@@ -1184,38 +1194,17 @@ export function TopicModal() {
   });
 
   /**
-   * Em modo código, oculta o Quill inteiro (toolbar + conteúdo) — o usuário
-   * vê apenas o textarea com seu próprio header de "voltar". Quando volta ao
-   * WYSIWYG, restauramos `display: flex` (valor que o Quill aplica no init).
-   * O conteúdo Quill permanece no modelo interno, só não é renderizado.
+   * Em modo código, oculta a área de edição do Quill (`quillRef` É o
+   * `.ql-container`) — a toolbar é irmã dele e continua visível, com o botão de
+   * modo dev destacado. Quando volta ao WYSIWYG, restauramos `display: flex`
+   * (valor que o init aplica). O conteúdo Quill permanece no modelo interno.
+   * `useLayoutEffect` para sair no mesmo frame da troca de modo (sem piscar).
    */
   useLayoutEffect(() => {
     const root = quillRef.current;
     if (!root) return;
     root.style.display = isCodeMode ? "none" : "flex";
-  }, [isCodeMode]);
-
-  /**
-   * Mantém o botão `code-block` da toolbar em estado ativo enquanto o modo
-   * código está ligado. O handler foi sobrescrito para toggle de modo (em vez
-   * de aplicar o formato `code-block`), então o `ql-active` que o Quill
-   * gerencia por seleção nunca dispara aqui — sincronizamos manualmente.
-   * O background inline duplica a cor aplicada à regra `.ql-active` no init
-   * (#e8e8e8) porque os outros estilos da toolbar também são inline e
-   * sobrescreveriam um `:hover`/classe via CSS.
-   */
-  useEffect(() => {
-    const button = quillRef.current?.querySelector(
-      ".ql-toolbar .ql-code-block",
-    ) as HTMLElement | null;
-    if (!button) return;
-    if (isCodeMode) {
-      button.classList.add("ql-active");
-      button.style.backgroundColor = "#e8e8e8";
-    } else {
-      button.classList.remove("ql-active");
-      button.style.backgroundColor = "#f9f9f9";
-    }
+    syncDevModeButtonState(root, isCodeMode);
   }, [isCodeMode]);
 
   const handleSave = async () => {
