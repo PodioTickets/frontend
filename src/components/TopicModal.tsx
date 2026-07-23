@@ -1413,6 +1413,21 @@ export function TopicModal() {
                         <textarea
                           ref={codeTextareaRef}
                           defaultValue={content}
+                          // Modo dev é textarea NÃO-controlado (`defaultValue`) e
+                          // ficava fora do fluxo de "dirty" do Quill: editar aqui e
+                          // salvar direto (sem voltar ao editor) deixava o botão
+                          // Salvar desabilitado. Marca a alteração na hora, comparando
+                          // com o baseline capturado ao entrar no modo código — mesma
+                          // regra do toggle-back. Guard `!hasContentChanges` evita
+                          // setState repetido a cada tecla.
+                          onInput={(e) => {
+                            if (
+                              !hasContentChanges &&
+                              e.currentTarget.value !== codeEntryValueRef.current
+                            ) {
+                              setHasContentChanges(true);
+                            }
+                          }}
                           spellCheck={false}
                           style={{
                             fontFamily:

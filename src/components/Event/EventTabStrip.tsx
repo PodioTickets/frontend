@@ -96,6 +96,14 @@ export function EventTabStrip({
   const isEditActive = activeHref.includes("/edit");
   const isPageHeader = variant === "pageHeader";
 
+  // Enquanto um menu (Editar/Desconto) está aberto, o destaque verde migra para o
+  // gatilho aberto — a aba da rota atual perde o realce até o menu fechar. Assim o
+  // usuário vê claramente qual submenu está explorando; ao fechar, volta para a sua
+  // aba (nenhum estado de rota é alterado, só a apresentação do realce).
+  const anyMenuOpen = descontoOpen || editarOpen;
+  const discountTabActive = descontoOpen || (!editarOpen && isDiscountActive);
+  const editTabActive = editarOpen || (!descontoOpen && isEditActive);
+
   const setTabLinkRef = useCallback((href: string, el: HTMLElement | null) => {
     if (el) tabLinkRefs.current.set(href, el);
     else tabLinkRefs.current.delete(href);
@@ -306,7 +314,7 @@ export function EventTabStrip({
                       setEditarOpen(false);
                       setDescontoOpen((o) => !o);
                     }}
-                    className={menuTriggerCls(isDiscountActive || descontoOpen)}
+                    className={menuTriggerCls(discountTabActive)}
                   >
                     <EventTabLabel label={tab.label} />
                     <ArrowButton isOpen={descontoOpen} className="ml-1 shrink-0" />
@@ -323,7 +331,7 @@ export function EventTabStrip({
                     setDescontoOpen(false);
                     setEditarOpen((o) => !o);
                   }}
-                  className={menuTriggerCls(isEditActive || editarOpen)}
+                  className={menuTriggerCls(editTabActive)}
                 >
                   <EventTabLabel label={tab.label} />
                   <ArrowButton isOpen={editarOpen} className="ml-1 shrink-0" />
@@ -336,7 +344,7 @@ export function EventTabStrip({
                     <Link
                       ref={editarLinkRef}
                       href={navHref(tab.href)}
-                      className={`${linkTabCls(isEditActive)} hidden md:block`}
+                      className={`${linkTabCls(editTabActive)} hidden md:block`}
                     >
                       <EventTabLabel label={tab.label} />
                     </Link>
@@ -359,7 +367,7 @@ export function EventTabStrip({
                 ref={(node) => setTabLinkRef(tab.href, node)}
                 href={navHref(tab.href)}
                 onClick={onLinkClick}
-                className={linkTabCls(isLinkTabActive(tab))}
+                className={linkTabCls(isLinkTabActive(tab) && !anyMenuOpen)}
               >
                 <EventTabLabel label={tab.label} />
               </Link>
