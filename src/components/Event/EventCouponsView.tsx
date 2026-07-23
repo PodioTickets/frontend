@@ -219,8 +219,29 @@ export function EventCouponsView({
       ACTIVE: { label: "Ativo", className: "bg-[#21835D] text-[#FBFEFB]" },
       INACTIVE: { label: "Inativo", className: "bg-gray-5 text-gray-12" },
       EXPIRED: { label: "Expirado", className: "bg-red-10/20 text-red-11" },
+      // Esgotado = atingiu o limite de uso. Cinza como o "Inativo" (estado
+      // terminal, não é mais utilizável), porém rótulo próprio.
+      SOLD_OUT: { label: "Esgotado", className: "bg-gray-5 text-gray-12" },
     };
     return statusMap[status] || statusMap.INACTIVE;
+  };
+
+  /**
+   * Status EFETIVO exibido no badge. O backend mantém `ACTIVE` mesmo depois de o
+   * cupom bater o `maxUsage`, então derivamos "Esgotado" aqui: se ainda está
+   * ativo mas já consumiu todos os usos, o badge vira cinza/"Esgotado". Estados
+   * explícitos (INACTIVE/EXPIRED) não são sobrescritos — só o caso ativo+esgotado.
+   */
+  const getEffectiveCouponStatus = (coupon: {
+    status: string;
+    usageCount: number;
+    maxUsage?: number;
+  }): string => {
+    const isExhausted =
+      typeof coupon.maxUsage === "number" &&
+      coupon.maxUsage > 0 &&
+      coupon.usageCount >= coupon.maxUsage;
+    return coupon.status === "ACTIVE" && isExhausted ? "SOLD_OUT" : coupon.status;
   };
 
   const getTypeLabel = (type: string) => {
@@ -341,7 +362,7 @@ export function EventCouponsView({
                       </thead>
                       <tbody className="divide-y divide-gray-6">
                         {coupons.map((coupon) => {
-                          const statusBadge = getStatusBadge(coupon.status);
+                          const statusBadge = getStatusBadge(getEffectiveCouponStatus(coupon));
                           return (
                             <tr
                               key={coupon.id}
@@ -413,7 +434,7 @@ export function EventCouponsView({
                 {/* Mobile: Coupon cards (Figma) */}
                 <div className="md:hidden flex flex-col gap-3">
                   {coupons.map((coupon) => {
-                    const statusBadge = getStatusBadge(coupon.status);
+                    const statusBadge = getStatusBadge(getEffectiveCouponStatus(coupon));
                     return (
                       <div
                         key={coupon.id}

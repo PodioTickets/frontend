@@ -6,6 +6,15 @@ import { X, ArrowLeft, Check, Eye, EyeOff } from "lucide-react";
 import { Button } from "@/components/Button";
 import { Drawer, DrawerContent, DrawerTitle } from "@/components/ui/drawer";
 import { getApiClient } from "@/services/base/ApiClient";
+import {
+  PERMISSION_ROWS,
+  allPermissions,
+  defaultNewMemberPermissions,
+  permissionsFromApi,
+  permissionsToArray,
+  togglePermission as applyPermissionToggle,
+  type PermissionsState,
+} from "@/lib/organizerMemberPermissions";
 import { cn } from "@/utils/cn";
 import toast from "react-hot-toast";
 
@@ -27,28 +36,6 @@ export interface AdminMember {
   };
 }
 
-// ─── Constants ────────────────────────────────────────────────────────────────
-
-const PERMISSION_ROWS: { id: string; title: string; description: string }[] = [
-  { id: "financial", title: "Financeiro", description: "Gerencie repasses, saldos e valores em processamento, com histórico e outras informações financeiras." },
-  { id: "edit_event", title: "Editar Evento", description: "Atualize as informações do evento, como data, ingressos, kits, perguntas e outras configurações." },
-  { id: "view_event", title: "Visualizar Evento", description: "Permite visualizar o painel de edição do evento e acessar a aba de inscrições, sem permissão para editar." },
-  { id: "coupons", title: "Cupons", description: "Acesso à criação e gerenciamento de cupons de desconto e benefícios do evento." },
-  { id: "pixel", title: "Pixel", description: "Permite configurar pixels de rastreamento (como Meta/Facebook e Google) para acompanhar conversões e campanhas." },
-  { id: "notify", title: "Notificar Inscritos", description: "Permite enviar notificações ou comunicados para todos os inscritos do evento." },
-  { id: "create_event", title: "Criar Evento", description: "Permite criar novos eventos na organização." },
-];
-
-const DEFAULT_PERMISSIONS: Record<string, boolean> = {
-  financial: false,
-  edit_event: false,
-  view_event: true,
-  coupons: false,
-  pixel: false,
-  notify: false,
-  create_event: false,
-};
-
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function splitFullName(full: string) {
@@ -57,26 +44,6 @@ function splitFullName(full: string) {
   const i = t.indexOf(" ");
   if (i === -1) return { firstName: t, lastName: "" };
   return { firstName: t.slice(0, i).trim(), lastName: t.slice(i + 1).trim() };
-}
-
-function permissionsFromArray(keys: string[] | undefined | null): Record<string, boolean> {
-  const base: Record<string, boolean> = {};
-  for (const row of PERMISSION_ROWS) base[row.id] = false;
-  if (!keys?.length) return base;
-  const set = new Set(keys.map((k) => k.toLowerCase()));
-  for (const k of set) { if (k in base) base[k] = true; }
-  return base;
-}
-
-function permissionsToArray(p: Record<string, boolean>): string[] {
-  return PERMISSION_ROWS.map((r) => r.id).filter((id) => p[id]);
-}
-
-/** Todas as permissões no mesmo valor — usado por Proprietário e pelos atalhos. */
-function allPermissions(value: boolean): Record<string, boolean> {
-  const next: Record<string, boolean> = {};
-  for (const row of PERMISSION_ROWS) next[row.id] = value;
-  return next;
 }
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
@@ -127,7 +94,9 @@ export function AdminCollaboratorDrawer({
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [permissions, setPermissions] = useState<Record<string, boolean>>({ ...DEFAULT_PERMISSIONS });
+  const [permissions, setPermissions] = useState<PermissionsState>(
+    defaultNewMemberPermissions(),
+  );
   const [isOwner, setIsOwner] = useState(false);
 
   const inputClass = "h-12 w-full rounded-lg border border-gray-6 bg-gray-1 px-3 text-base text-gray-12 placeholder:text-gray-11 font-family-dm-sans outline-none focus-visible:border-gray-4 focus-visible:ring-[3px] focus-visible:ring-gray-4/50";
@@ -138,7 +107,7 @@ export function AdminCollaboratorDrawer({
     setEmail("");
     setPassword("");
     setConfirmPassword("");
-    setPermissions({ ...DEFAULT_PERMISSIONS });
+    setPermissions(defaultNewMemberPermissions());
     setIsOwner(false);
     setFieldErrors({});
   }, []);
@@ -152,27 +121,24 @@ export function AdminCollaboratorDrawer({
     setFullName(`${member.user.firstName ?? ""} ${member.user.lastName ?? ""}`.trim());
     setEmail(member.user.email ?? "");
     setIsOwner(member.role === "OWNER");
-    setPermissions(permissionsFromArray(member.permissions));
+    setPermissions(permissionsFromApi(member.permissions, member.role));
     setFieldErrors({});
     (async () => {
       try {
         const api = getApiClient();
         const res = await api.get<any>(`/api/v1/admin/organizations/${orgId}/members/${member.userId}`);
         if (cancelled) return;
-        const m = res.data?.member ?? res.data?.data?.member ?? res.data?.data ?? res.data;
+        const payload = res.data?.data ?? res.data;
+        const m = payload?.member ?? payload;
         setFullName(`${m?.user?.firstName ?? ""} ${m?.user?.lastName ?? ""}`.trim());
         setEmail(m?.user?.email ?? member.user.email ?? "");
-        setIsOwner((m?.role ?? member.role) === "OWNER");
-        const rawPerms = m?.permissions;
-        if (rawPerms && typeof rawPerms === "object" && !Array.isArray(rawPerms)) {
-          const base = { ...DEFAULT_PERMISSIONS };
-          for (const key of Object.keys(base)) {
-            if (key in rawPerms) base[key] = !!rawPerms[key];
-          }
-          setPermissions(base);
-        } else {
-          setPermissions(permissionsFromArray(Array.isArray(rawPerms) ? rawPerms : []));
-        }
+        const role = m?.role ?? member.role;
+        setIsOwner(role === "OWNER");
+        // Mesma interpretação do drawer do organizador: chaves concedidas pelo
+        // servidor, nunca um merge sobre defaults locais (ver
+        // `permissionsFromApi`). `payload.permissions` é o campo canônico; o
+        // do membro fica como fallback para backend ainda não atualizado.
+        setPermissions(permissionsFromApi(payload?.permissions ?? m?.permissions, role));
       } catch {
         // fallback already set above from member prop
       } finally {
@@ -202,7 +168,7 @@ export function AdminCollaboratorDrawer({
    */
   const handlePermissionToggle = useCallback((id: string) => {
     const willBeChecked = !permissions[id];
-    setPermissions((prev) => ({ ...prev, [id]: !prev[id] }));
+    setPermissions((prev) => applyPermissionToggle(prev, id));
     if (!willBeChecked) setIsOwner(false);
   }, [permissions]);
 

@@ -25,6 +25,13 @@ import type {
 import type { Event } from "@/interfaces/event";
 import { cn } from "@/utils/cn";
 import { organizerMemberSettingsClientPage } from "@/lib/organizerAudit";
+import {
+  PERMISSION_ROWS,
+  defaultNewMemberPermissions,
+  permissionsFromApi,
+  permissionsToArray,
+  togglePermission as applyPermissionToggle,
+} from "@/lib/organizerMemberPermissions";
 
 const EVENTS_PER_PAGE = 5;
 
@@ -33,85 +40,12 @@ function eventListImageUrl(ev: Event): string | null {
   return u || null;
 }
 
-const PERMISSION_ROWS: { id: string; title: string; description: string }[] = [
-  {
-    id: "financial",
-    title: "Financeiro",
-    description:
-      "Gerencie repasses, saldos e valores em processamento, com histórico e outras informações financeiras.",
-  },
-  {
-    id: "edit_event",
-    title: "Editar Evento",
-    description:
-      "Atualize as informações do evento, como data, ingressos, kits, perguntas e outras configurações.",
-  },
-  {
-    id: "view_event",
-    title: "Visualizar Evento",
-    description:
-      "Permite visualizar o painel de edição do evento e acessar a aba de inscrições, sem permissão para editar.",
-  },
-  {
-    id: "coupons",
-    title: "Cupons",
-    description:
-      "Acesso à criação e gerenciamento de cupons de desconto e benefícios do evento.",
-  },
-  {
-    id: "pixel",
-    title: "Pixel",
-    description:
-      "Permite configurar pixels de rastreamento (como Meta/Facebook e Google) para acompanhar conversões e campanhas.",
-  },
-  {
-    id: "notify",
-    title: "Notificar Inscritos",
-    description:
-      "Permite enviar notificações ou comunicados para todos os inscritos do evento.",
-  },
-  {
-    id: "create_event",
-    title: "Criar Evento",
-    description:
-      "Permite criar novos eventos na organização.",
-  },
-];
-
-const DEFAULT_PERMISSIONS: Record<string, boolean> = {
-  financial: false,
-  edit_event: false,
-  view_event: true,
-  coupons: false,
-  pixel: false,
-  notify: false,
-};
-
 function splitFullName(full: string) {
   const t = full.trim();
   if (!t) return { firstName: "", lastName: "" };
   const i = t.indexOf(" ");
   if (i === -1) return { firstName: t, lastName: "" };
   return { firstName: t.slice(0, i).trim(), lastName: t.slice(i + 1).trim() };
-}
-
-function permissionsFromArray(
-  keys: string[] | undefined | null
-): Record<string, boolean> {
-  const base: Record<string, boolean> = {};
-  for (const row of PERMISSION_ROWS) base[row.id] = false;
-  if (!keys?.length) return base;
-
-  const set = new Set(keys.map((k) => k.toLowerCase()));
-
-  for (const k of set) {
-    if (k in base) base[k] = true;
-  }
-  return base;
-}
-
-function permissionsToArray(p: Record<string, boolean>): string[] {
-  return PERMISSION_ROWS.map((r) => r.id).filter((id) => p[id]);
 }
 
 function buildEventIdsForCreate(
@@ -247,9 +181,9 @@ export function CollaboratorDrawer({
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [permissions, setPermissions] = useState<Record<string, boolean>>(() => ({
-    ...DEFAULT_PERMISSIONS,
-  }));
+  const [permissions, setPermissions] = useState<Record<string, boolean>>(
+    defaultNewMemberPermissions,
+  );
   const [eventSelection, setEventSelection] = useState<Record<string, boolean>>(
     {}
   );
@@ -265,7 +199,7 @@ export function CollaboratorDrawer({
     setEmail("");
     setPassword("");
     setConfirmPassword("");
-    setPermissions({ ...DEFAULT_PERMISSIONS });
+    setPermissions(defaultNewMemberPermissions());
     setEventSelection({});
     setWhitelistFromApi(null);
     setEventSearch("");
@@ -315,7 +249,9 @@ export function CollaboratorDrawer({
         setEmail(detail.member.user.email || "");
         setPassword("");
         setConfirmPassword("");
-        setPermissions(permissionsFromArray(detail.permissions));
+        setPermissions(
+          permissionsFromApi(detail.permissions, detail.member.role),
+        );
         setWhitelistFromApi(detail.eventIds);
       } catch (err: any) {
         if (cancelled) return;
@@ -328,7 +264,7 @@ export function CollaboratorDrawer({
           `${member.user.firstName} ${member.user.lastName}`.trim()
         );
         setEmail(member.user.email || "");
-        setPermissions(permissionsFromArray(member.permissions));
+        setPermissions(permissionsFromApi(member.permissions, member.role));
         setWhitelistFromApi(member.eventIds ?? null);
       } finally {
         if (!cancelled) setDetailLoading(false);
@@ -433,7 +369,7 @@ export function CollaboratorDrawer({
   };
 
   const togglePermission = (id: string) => {
-    setPermissions((p) => ({ ...p, [id]: !p[id] }));
+    setPermissions((p) => applyPermissionToggle(p, id));
   };
 
   const toggleEvent = (id: string) => {
