@@ -16,7 +16,9 @@ const EVENT_TABS_DEF = (eventId: string): { label: string; href: string; permiss
   { label: "Inscrições", href: `/organizer/events/${eventId}/registrations`, permission: "dashboard" },
   { label: "Financeiro", href: `/organizer/events/${eventId}/financial`, permission: "financial" },
   { label: "Editar", href: `/organizer/events/${eventId}/edit`, permission: ["edit_event", "view_event"] },
-  { label: "Desconto", href: `/organizer/events/${eventId}/discount/cupom`, permission: "coupons" },
+  // Quem pode visualizar o evento vê os descontos (só leitura); criar/editar
+  // exige `coupons` — gate feito nos botões da view, não na aba.
+  { label: "Desconto", href: `/organizer/events/${eventId}/discount/cupom`, permission: ["coupons", "view_event"] },
   { label: "Ads", href: `/organizer/events/${eventId}/ads`, permission: "pixel" },
   { label: "Notificação", href: `/organizer/events/${eventId}/notifications`, permission: "notify" },
 ];

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, ArrowLeft, Check, Eye, EyeOff } from "lucide-react";
 import { Button } from "@/components/Button";
@@ -44,6 +44,18 @@ function splitFullName(full: string) {
   const i = t.indexOf(" ");
   if (i === -1) return { firstName: t, lastName: "" };
   return { firstName: t.slice(0, i).trim(), lastName: t.slice(i + 1).trim() };
+}
+
+/** Igualdade de mapas de flags booleanas: chave ausente == `false`. */
+function boolRecordEqual(
+  a: Record<string, boolean>,
+  b: Record<string, boolean>
+): boolean {
+  const keys = new Set([...Object.keys(a), ...Object.keys(b)]);
+  for (const k of keys) {
+    if (!!a[k] !== !!b[k]) return false;
+  }
+  return true;
 }
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
@@ -98,6 +110,12 @@ export function AdminCollaboratorDrawer({
     defaultNewMemberPermissions(),
   );
   const [isOwner, setIsOwner] = useState(false);
+  // Baseline (modo edição) pra habilitar "Salvar" só quando há alteração.
+  const [initialFullName, setInitialFullName] = useState("");
+  const [initialIsOwner, setInitialIsOwner] = useState(false);
+  const [initialPermissions, setInitialPermissions] = useState<PermissionsState>(
+    {},
+  );
 
   const inputClass = "h-12 w-full rounded-lg border border-gray-6 bg-gray-1 px-3 text-base text-gray-12 placeholder:text-gray-11 font-family-dm-sans outline-none focus-visible:border-gray-4 focus-visible:ring-[3px] focus-visible:ring-gray-4/50";
   const inputError = (field: string) => fieldErrors[field] ? "border-red-8 focus-visible:ring-red-8/50 focus-visible:border-red-8" : "";
@@ -118,10 +136,16 @@ export function AdminCollaboratorDrawer({
     if (!member) return;
     let cancelled = false;
     setDetailLoading(true);
-    setFullName(`${member.user.firstName ?? ""} ${member.user.lastName ?? ""}`.trim());
+    const propName = `${member.user.firstName ?? ""} ${member.user.lastName ?? ""}`.trim();
+    const propIsOwner = member.role === "OWNER";
+    const propPerms = permissionsFromApi(member.permissions, member.role);
+    setFullName(propName);
+    setInitialFullName(propName);
     setEmail(member.user.email ?? "");
-    setIsOwner(member.role === "OWNER");
-    setPermissions(permissionsFromApi(member.permissions, member.role));
+    setIsOwner(propIsOwner);
+    setInitialIsOwner(propIsOwner);
+    setPermissions(propPerms);
+    setInitialPermissions(propPerms);
     setFieldErrors({});
     (async () => {
       try {
@@ -130,15 +154,24 @@ export function AdminCollaboratorDrawer({
         if (cancelled) return;
         const payload = res.data?.data ?? res.data;
         const m = payload?.member ?? payload;
-        setFullName(`${m?.user?.firstName ?? ""} ${m?.user?.lastName ?? ""}`.trim());
-        setEmail(m?.user?.email ?? member.user.email ?? "");
+        const loadedName = `${m?.user?.firstName ?? ""} ${m?.user?.lastName ?? ""}`.trim();
         const role = m?.role ?? member.role;
-        setIsOwner(role === "OWNER");
+        const loadedIsOwner = role === "OWNER";
         // Mesma interpretação do drawer do organizador: chaves concedidas pelo
         // servidor, nunca um merge sobre defaults locais (ver
         // `permissionsFromApi`). `payload.permissions` é o campo canônico; o
         // do membro fica como fallback para backend ainda não atualizado.
-        setPermissions(permissionsFromApi(payload?.permissions ?? m?.permissions, role));
+        const loadedPerms = permissionsFromApi(
+          payload?.permissions ?? m?.permissions,
+          role,
+        );
+        setFullName(loadedName);
+        setInitialFullName(loadedName);
+        setEmail(m?.user?.email ?? member.user.email ?? "");
+        setIsOwner(loadedIsOwner);
+        setInitialIsOwner(loadedIsOwner);
+        setPermissions(loadedPerms);
+        setInitialPermissions(loadedPerms);
       } catch {
         // fallback already set above from member prop
       } finally {
@@ -281,6 +314,24 @@ export function AdminCollaboratorDrawer({
       setRemoving(false);
     }
   };
+
+  // Modo edição: só habilita "Salvar" com alteração real de nome, papel
+  // (Proprietário) ou permissões. Criação nunca gateia (validação no submit).
+  const isDirty = useMemo(() => {
+    if (mode !== "edit") return true;
+    if (fullName.trim() !== initialFullName.trim()) return true;
+    if (isOwner !== initialIsOwner) return true;
+    if (!boolRecordEqual(permissions, initialPermissions)) return true;
+    return false;
+  }, [
+    mode,
+    fullName,
+    isOwner,
+    permissions,
+    initialFullName,
+    initialIsOwner,
+    initialPermissions,
+  ]);
 
   const titleText = mode === "create" ? "Adicionar colaborador" : "Editar colaborador";
   const primaryCta = mode === "create" ? "Criar colaborador" : "Salvar alterações";
@@ -451,7 +502,7 @@ export function AdminCollaboratorDrawer({
               )}
               <div className={cn("flex items-center gap-2 w-full pb-2 md:pb-0", mode === "edit" ? "md:w-max" : "md:w-full md:justify-between")}>
                 <Button type="button" variant="outline" onClick={handleClose} disabled={saving || removing} className="h-11 min-h-[44px] min-w-0 flex-1 border-gray-6 px-3 font-manrope font-bold text-base text-gray-12 md:min-w-[110px] md:flex-initial md:px-5">Cancelar</Button>
-                <Button type="button" onClick={mode === "create" ? handleCreate : handleEditSave} disabled={saving || removing || (mode === "edit" && detailLoading)} className="h-11 min-h-[44px] min-w-0 flex-1 px-3 font-manrope font-bold text-base bg-[#59E373] text-gray-12 shadow-xs hover:bg-[#59E373]/90 md:min-w-[176px] md:flex-initial md:px-5">
+                <Button type="button" onClick={mode === "create" ? handleCreate : handleEditSave} disabled={saving || removing || (mode === "edit" && (detailLoading || !isDirty))} className="h-11 min-h-[44px] min-w-0 flex-1 px-3 font-manrope font-bold text-base bg-[#59E373] text-gray-12 shadow-xs hover:bg-[#59E373]/90 md:min-w-[176px] md:flex-initial md:px-5">
                   {saving ? "Salvando…" : primaryCta}
                 </Button>
               </div>

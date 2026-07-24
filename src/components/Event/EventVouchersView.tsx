@@ -31,6 +31,10 @@ interface VoucherGroup {
  * Página de Vouchers, compartilhada entre admin e organizer. Antes duplicada
  * byte a byte. Header via `renderHeader(event)`; redirect de não-autenticado via
  * `onUnauthenticated`. A permissão (`vouchers`) é checada na página do organizer.
+ *
+ * `canManage` (default `true`) controla criar/editar/excluir: quem só tem
+ * `view_event` enxerga a lista (e "Visualizar voucher"), mas as ações ficam
+ * desabilitadas até ter `coupons`. O admin não passa a prop → tudo habilitado.
  */
 function getPageNumbers(currentPage: number, totalPages: number): (number | '...')[] {
   const delta = 2;
@@ -56,10 +60,12 @@ export function EventVouchersView({
   eventId,
   onUnauthenticated,
   renderHeader,
+  canManage = true,
 }: {
   eventId: string;
   onUnauthenticated: () => void;
   renderHeader: (event: any) => ReactNode;
+  canManage?: boolean;
 }) {
   const { openCreateVoucherModal, setOnModalSave } = useCreateVoucherModal();
   const { openDeleteVoucherModal } = useDeleteVoucherModal();
@@ -149,12 +155,14 @@ export function EventVouchersView({
   }, [setOnModalSave, eventId]);
 
   const handleCreateVoucher = () => {
+    if (!canManage) return;
     openCreateVoucherModal({
       eventId: eventId,
     });
   };
 
   const handleEditVoucher = (group: VoucherGroup) => {
+    if (!canManage) return;
     openCreateVoucherModal({
       eventId: eventId,
       voucherId: group.id || group.name,
@@ -163,6 +171,7 @@ export function EventVouchersView({
   };
 
   const handleDeleteVoucher = (groupId: string, groupName: string) => {
+    if (!canManage) return;
     openDeleteVoucherModal({
       voucherId: groupId,
       voucherCode: groupName,
@@ -216,13 +225,15 @@ export function EventVouchersView({
             <p className="font-family-dm-sans font-normal text-base leading-[1.3] text-gray-11">
               Gere vouchers individuais para liberar desconto ou cortesia na inscrição
             </p>
-            <Button
-              onClick={handleCreateVoucher}
-              className="w-full h-11 rounded-lg font-manrope font-bold text-base flex items-center justify-center gap-1"
-            >
-              <Plus className="size-5" />
-              Criar voucher
-            </Button>
+            {canManage && (
+              <Button
+                onClick={handleCreateVoucher}
+                className="w-full h-11 rounded-lg font-manrope font-bold text-base flex items-center justify-center gap-1"
+              >
+                <Plus className="size-5" />
+                Criar voucher
+              </Button>
+            )}
           </div>
 
           {/* Vouchers List Section */}
@@ -231,14 +242,16 @@ export function EventVouchersView({
               <h2 className="text-gray-12 text-xl font-bold font-manrope leading-[1.1]">
                 Lista de vouchers
               </h2>
-              <Button
-                onClick={handleCreateVoucher}
-                variant="default"
-                className="text-base font-bold font-manrope leading-[1.1]"
-              >
-                <Plus className="size-5" />
-                Criar voucher
-              </Button>
+              {canManage && (
+                <Button
+                  onClick={handleCreateVoucher}
+                  variant="default"
+                  className="text-base font-bold font-manrope leading-[1.1]"
+                >
+                  <Plus className="size-5" />
+                  Criar voucher
+                </Button>
+              )}
             </div>
             <h2 className="md:hidden font-manrope font-bold text-lg leading-[1.1] text-gray-12">
               Lista de vouchers
@@ -293,20 +306,24 @@ export function EventVouchersView({
                                   >
                                     Visualizar voucher
                                   </Button>
-                                  <button
-                                    onClick={() => handleEditVoucher(group)}
-                                    className="size-8 rounded-lg bg-gray-2 border border-gray-6 hover:bg-gray-4 flex items-center justify-center transition-colors cursor-pointer"
-                                    title="Editar"
-                                  >
-                                    <PencilIcon className="size-4 text-gray-11" />
-                                  </button>
-                                  <button
-                                    onClick={() => handleDeleteVoucher(groupId, group.name)}
-                                    className="size-8 rounded-lg bg-red-2 border border-red-6 hover:bg-red-3 flex items-center justify-center transition-colors cursor-pointer"
-                                    title="Deletar"
-                                  >
-                                    <TrashIcon className="size-4 text-red-12" />
-                                  </button>
+                                  {canManage && (
+                                    <>
+                                      <button
+                                        onClick={() => handleEditVoucher(group)}
+                                        className="size-8 rounded-lg bg-gray-2 border border-gray-6 hover:bg-gray-4 flex items-center justify-center transition-colors cursor-pointer"
+                                        title="Editar"
+                                      >
+                                        <PencilIcon className="size-4 text-gray-11" />
+                                      </button>
+                                      <button
+                                        onClick={() => handleDeleteVoucher(groupId, group.name)}
+                                        className="size-8 rounded-lg bg-red-2 border border-red-6 hover:bg-red-3 flex items-center justify-center transition-colors cursor-pointer"
+                                        title="Deletar"
+                                      >
+                                        <TrashIcon className="size-4 text-red-12" />
+                                      </button>
+                                    </>
+                                  )}
                                 </div>
                               </td>
                             </tr>
@@ -333,13 +350,15 @@ export function EventVouchersView({
                         </div>
                         <div className="h-px bg-gray-6 w-full" />
                         <div className="flex gap-2 w-full">
-                          <Button
-                            variant="outline"
-                            onClick={() => handleEditVoucher(group)}
-                            className="flex-1 h-11 rounded-lg border-gray-6 text-gray-12 font-manrope font-bold text-base hover:bg-gray-3"
-                          >
-                            Editar
-                          </Button>
+                          {canManage && (
+                            <Button
+                              variant="outline"
+                              onClick={() => handleEditVoucher(group)}
+                              className="flex-1 h-11 rounded-lg border-gray-6 text-gray-12 font-manrope font-bold text-base hover:bg-gray-3"
+                            >
+                              Editar
+                            </Button>
+                          )}
                           <Button
                             variant="outline"
                             onClick={() => openViewVoucherModal({

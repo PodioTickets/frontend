@@ -76,9 +76,26 @@ export type PermissionsState = Record<string, boolean>;
  * a valer por si (o membro fica só com editar/visualizar) e quem decide tirá-las
  * é o operador, não o toggle.
  */
-const PERMISSION_IMPLICATIONS: Record<string, readonly string[]> = {
+export const PERMISSION_IMPLICATIONS: Record<string, readonly string[]> = {
   create_event: ["edit_event", "view_event"],
 };
+
+/**
+ * Runtime: o membro tem acesso a `key` se a permissão for concedida diretamente
+ * OU implicada por outra concedida (ex.: `create_event` ⇒ `edit_event`/`view_event`).
+ * NÃO expande para acesso total — `create_event` deixou de ser super-permissão
+ * (ver decisão 2026-07-23). Espelha o `effectivePermissionsForMember` do backend.
+ */
+export function permissionSatisfied(
+  granted: readonly string[],
+  key: string,
+): boolean {
+  if (granted.includes(key)) return true;
+  for (const source of granted) {
+    if (PERMISSION_IMPLICATIONS[source]?.includes(key)) return true;
+  }
+  return false;
+}
 
 /**
  * Alterna uma permissão respeitando as dependências acima. Fonte única usada

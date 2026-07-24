@@ -35,6 +35,10 @@ interface Coupon {
  * duplicada byte a byte. Header via `renderHeader(event)`; redirect de
  * não-autenticado via `onUnauthenticated`. A permissão (`coupons`) é checada na
  * página do organizer.
+ *
+ * `canManage` (default `true`) controla criar/editar/excluir: quem só tem
+ * `view_event` enxerga a lista, mas os botões de ação ficam desabilitados até
+ * ter a permissão de `coupons`. O admin não passa a prop → tudo habilitado.
  */
 function getPageNumbers(currentPage: number, totalPages: number): (number | '...')[] {
   const delta = 2;
@@ -60,10 +64,12 @@ export function EventCouponsView({
   eventId,
   onUnauthenticated,
   renderHeader,
+  canManage = true,
 }: {
   eventId: string;
   onUnauthenticated: () => void;
   renderHeader: (event: any) => ReactNode;
+  canManage?: boolean;
 }) {
   const { copyToClipboard } = useClipboard();
   const { openCreateCouponModal, setOnModalSave } = useCreateCouponModal();
@@ -153,12 +159,14 @@ export function EventCouponsView({
   }, [setOnModalSave, eventId]);
 
   const handleCreateCoupon = () => {
+    if (!canManage) return;
     openCreateCouponModal({
       eventId: eventId,
     });
   };
 
   const handleEditCoupon = (coupon: Coupon) => {
+    if (!canManage) return;
     openCreateCouponModal({
       eventId: eventId,
       couponId: coupon.id,
@@ -167,6 +175,7 @@ export function EventCouponsView({
   };
 
   const handleDeleteCoupon = (couponId: string, couponCode: string) => {
+    if (!canManage) return;
     openDeleteCouponModal({
       couponId,
       couponCode,
@@ -294,13 +303,15 @@ export function EventCouponsView({
             <p className="font-family-dm-sans font-normal text-base leading-[1.3] text-gray-11">
               Crie e gerencie cupons para aplicar desconto nas inscrições
             </p>
-            <Button
-              onClick={handleCreateCoupon}
-              className="w-full h-11 rounded-lg font-manrope font-bold text-base flex items-center justify-center gap-1"
-            >
-              <Plus className="size-5" />
-              Criar cupom
-            </Button>
+            {canManage && (
+              <Button
+                onClick={handleCreateCoupon}
+                className="w-full h-11 rounded-lg font-manrope font-bold text-base flex items-center justify-center gap-1"
+              >
+                <Plus className="size-5" />
+                Criar cupom
+              </Button>
+            )}
           </div>
 
           {/* Coupons List Section */}
@@ -309,14 +320,16 @@ export function EventCouponsView({
               <h2 className="text-gray-12 text-xl font-bold font-manrope leading-[1.1]">
                 Lista de cupons
               </h2>
-              <Button
-                onClick={handleCreateCoupon}
-                variant="default"
-                className="text-base font-bold font-manrope leading-[1.1]"
-              >
-                <Plus className="size-5" />
-                Criar cupom
-              </Button>
+              {canManage && (
+                <Button
+                  onClick={handleCreateCoupon}
+                  variant="default"
+                  className="text-base font-bold font-manrope leading-[1.1]"
+                >
+                  <Plus className="size-5" />
+                  Criar cupom
+                </Button>
+              )}
             </div>
             <h2 className="md:hidden font-manrope font-bold text-lg leading-[1.1] text-gray-12">
               Lista de cupons
@@ -355,9 +368,11 @@ export function EventCouponsView({
                           <th className="text-center py-4 px-5 text-gray-12 text-sm font-semibold font-family-dm-sans">
                             Status
                           </th>
-                          <th className="text-end py-4 px-5 text-gray-12 text-sm font-semibold font-family-dm-sans">
-                            Ações
-                          </th>
+                          {canManage && (
+                            <th className="text-end py-4 px-5 text-gray-12 text-sm font-semibold font-family-dm-sans">
+                              Ações
+                            </th>
+                          )}
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-gray-6">
@@ -405,24 +420,26 @@ export function EventCouponsView({
                                   {statusBadge.label}
                                 </span>
                               </td>
-                              <td className="py-4 px-5">
-                                <div className="flex items-center gap-2 justify-end">
-                                  <button
-                                    onClick={() => handleEditCoupon(coupon)}
-                                    className="size-8 rounded-lg bg-gray-2 border border-gray-6 hover:bg-gray-4 flex items-center justify-center transition-colors"
-                                    title="Editar"
-                                  >
-                                    <PencilIcon className="size-4 text-gray-11" />
-                                  </button>
-                                  <button
-                                    onClick={() => handleDeleteCoupon(coupon.id, coupon.code)}
-                                    className="size-8 rounded-lg bg-red-2 border border-red-6 hover:bg-red-3 flex items-center justify-center transition-colors"
-                                    title="Deletar"
-                                  >
-                                    <TrashIcon className="size-4 text-red-12" />
-                                  </button>
-                                </div>
-                              </td>
+                              {canManage && (
+                                <td className="py-4 px-5">
+                                  <div className="flex items-center gap-2 justify-end">
+                                    <button
+                                      onClick={() => handleEditCoupon(coupon)}
+                                      className="size-8 rounded-lg bg-gray-2 border border-gray-6 hover:bg-gray-4 flex items-center justify-center transition-colors"
+                                      title="Editar"
+                                    >
+                                      <PencilIcon className="size-4 text-gray-11" />
+                                    </button>
+                                    <button
+                                      onClick={() => handleDeleteCoupon(coupon.id, coupon.code)}
+                                      className="size-8 rounded-lg bg-red-2 border border-red-6 hover:bg-red-3 flex items-center justify-center transition-colors"
+                                      title="Deletar"
+                                    >
+                                      <TrashIcon className="size-4 text-red-12" />
+                                    </button>
+                                  </div>
+                                </td>
+                              )}
                             </tr>
                           );
                         })}
@@ -476,14 +493,18 @@ export function EventCouponsView({
                             </p>
                           </div>
                         </div>
-                        <div className="h-px bg-gray-6 w-full" />
-                        <Button
-                          variant="outline"
-                          onClick={() => handleEditCoupon(coupon)}
-                          className="w-full h-11 rounded-lg border-gray-6 text-gray-12 font-manrope font-bold text-base hover:bg-gray-3"
-                        >
-                          Editar
-                        </Button>
+                        {canManage && (
+                          <>
+                            <div className="h-px bg-gray-6 w-full" />
+                            <Button
+                              variant="outline"
+                              onClick={() => handleEditCoupon(coupon)}
+                              className="w-full h-11 rounded-lg border-gray-6 text-gray-12 font-manrope font-bold text-base hover:bg-gray-3"
+                            >
+                              Editar
+                            </Button>
+                          </>
+                        )}
                       </div>
                     );
                   })}
