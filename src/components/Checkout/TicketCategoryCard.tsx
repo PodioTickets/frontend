@@ -241,6 +241,9 @@ const TicketItemMobile = memo(({
   const isSingleImageLayout = productItems.length === 1;
 
   return (
+    // Wrapper: card + descrição empilhados. A descrição fica FORA do card,
+    // logo abaixo dele (respiro do `gap-2`), em vez de dentro junto ao título.
+    <div className="flex flex-col gap-2">
     <div className="bg-gray-2 border border-gray-6 rounded-xl p-4 flex flex-col gap-2 md:gap-6">
       {isSingleImageLayout ? (
         <div className="flex gap-3 items-start w-full">
@@ -270,11 +273,6 @@ const TicketItemMobile = memo(({
             <h2 className="text-base font-bold text-gray-12 font-manrope leading-[1.1] break-words">
               {ticket.name}
             </h2>
-            {ticket.description?.trim() ? (
-              <span className="text-sm text-gray-11 font-family-dm-sans leading-[1.3]">
-                {ticket.description.trim()}
-              </span>
-            ) : null}
             {modalityInfo && (
               <div className="flex items-center gap-2">
                 {modalityInfo.icon ? (
@@ -388,50 +386,45 @@ const TicketItemMobile = memo(({
               <h2 className="text-lg font-bold text-gray-12 font-manrope leading-[1.1]">
                 {ticket.name}
               </h2>
-              {ticket.description?.trim() ? (
-                <span className="text-sm text-gray-11 font-family-dm-sans leading-[1.3]">
-                  {ticket.description.trim()}
-                </span>
-              ) : null}
             </div>
-            <div className="flex flex-wrap items-center justify-between gap-2 w-full">
-              {/* Modalidade + distância — espelha o desktop: o ícone vem da
-                  modality (fallback p/ placeholder cinza) e o texto exibe a
-                  distância. Sem `DistanceIcon` separado nem nome da modality. */}
-              <div className="flex items-center gap-8 flex-wrap min-w-0">
-                {modalityInfo && (
-                  <div className="flex items-center gap-2">
-                    {modalityInfo.icon ? (
-                      <div className="size-6 shrink-0 relative rounded overflow-hidden flex items-center justify-center">
-                        <ImageWithInitialFallback
-                          src={modalityInfo.icon}
-                          alt={modalityInfo.name}
-                          name={modalityInfo.name}
-                          width={24}
-                          height={24}
-                          className="size-6 bg-transparent border-0"
-                          imgClassName="object-contain bg-transparent border-0"
-                          letterClassName="text-[10px]"
-                          nativeImg
-                        />
-                      </div>
-                    ) : (
-                      <div className="size-6 shrink-0 rounded bg-gray-4" aria-hidden />
-                    )}
-                    <p className="text-lg font-medium text-gray-12 font-family-dm-sans leading-[1.3]">
-                      {distanceKm} {distanceUnit}
-                    </p>
-                  </div>
-                )}
-              </div>
-              {showAgeLimit ? (
-                <div className="bg-yellow-3 rounded-full px-4 py-2 shrink-0 max-w-full">
-                  <p className="text-sm font-medium text-yellow-12 font-family-dm-sans">
-                    Limite de idade: {ageLimitText}
+            {/* Modalidade + distância — espelha o desktop: o ícone vem da
+                modality (fallback p/ placeholder cinza) e o texto exibe a
+                distância. Sem `DistanceIcon` separado nem nome da modality. */}
+            <div className="flex items-center gap-8 flex-wrap min-w-0 w-full">
+              {modalityInfo && (
+                <div className="flex items-center gap-2">
+                  {modalityInfo.icon ? (
+                    <div className="size-6 shrink-0 relative rounded overflow-hidden flex items-center justify-center">
+                      <ImageWithInitialFallback
+                        src={modalityInfo.icon}
+                        alt={modalityInfo.name}
+                        name={modalityInfo.name}
+                        width={24}
+                        height={24}
+                        className="size-6 bg-transparent border-0"
+                        imgClassName="object-contain bg-transparent border-0"
+                        letterClassName="text-[10px]"
+                        nativeImg
+                      />
+                    </div>
+                  ) : (
+                    <div className="size-6 shrink-0 rounded bg-gray-4" aria-hidden />
+                  )}
+                  <p className="text-lg font-medium text-gray-12 font-family-dm-sans leading-[1.3]">
+                    {distanceKm} {distanceUnit}
                   </p>
                 </div>
-              ) : null}
+              )}
             </div>
+            {/* Limite de idade em linha própria, alinhado à esquerda (fluxo
+                normal, sem `absolute`) — espelha o layout single-image. */}
+            {showAgeLimit ? (
+              <div className="bg-yellow-3 rounded-full px-4 py-2 self-start max-w-full max-md:mb-6">
+                <p className="text-sm font-medium text-yellow-12 font-family-dm-sans">
+                  Limite de idade: {ageLimitText}
+                </p>
+              </div>
+            ) : null}
           </div>
         </>
       )}
@@ -456,41 +449,47 @@ const TicketItemMobile = memo(({
             </p>
           )}
         </div>
-        <div className="relative">
-          <div className="absolute bottom-full right-0 pb-1 pointer-events-none">
-            {isBatchSoldOut ? (
-              <p className="text-xs font-medium text-red-11 whitespace-nowrap">Lote esgotado</p>
-            ) : showLowStock ? (
-              <p className="text-xs font-medium text-red-11 whitespace-nowrap">
-                Restam apenas {ticket.availableQuantity}{" "}
-                {ticket.availableQuantity === 1 ? "vaga" : "vagas"}!
-              </p>
-            ) : null}
+        {isBatchSoldOut ? (
+          // Lote esgotado: badge cinza no lugar do stepper (não dá pra adicionar).
+          // `h-11` = mesma altura do stepper (mobile) pra o card não encolher.
+          <span className="shrink-0 inline-flex items-center h-11 rounded-full bg-gray-4 px-4 text-sm font-semibold text-gray-11 font-manrope leading-[1.1] whitespace-nowrap">
+            Lote esgotado
+          </span>
+        ) : (
+          <div className="relative">
+            <div className="absolute bottom-full right-0 pb-1 pointer-events-none">
+              {showLowStock ? (
+                <p className="text-xs font-medium text-red-11 whitespace-nowrap">
+                  Restam apenas {ticket.availableQuantity}{" "}
+                  {ticket.availableQuantity === 1 ? "vaga" : "vagas"}!
+                </p>
+              ) : null}
+            </div>
+            <div className="flex items-center bg-primary-3 rounded-full px-2 py-2 h-11">
+              <button
+                type="button"
+                onClick={() => onDecrease(ticket.id)}
+                disabled={quantity === 0}
+                className="size-6 cursor-pointer rounded-full flex items-center justify-center bg-gray-12 hover:bg-gray-11 text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed shrink-0 p-1"
+                aria-label="Diminuir quantidade"
+              >
+                <Minus className="size-4" />
+              </button>
+              <span className="min-w-[24px] text-center text-lg font-semibold text-gray-12 px-6 font-manrope leading-[1.1]">
+                {quantity}
+              </span>
+              <button
+                type="button"
+                onClick={() => onIncrease(ticket.id)}
+                disabled={isAtMax}
+                className="size-6 cursor-pointer rounded-full flex items-center justify-center bg-gray-12 hover:bg-gray-11 text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed shrink-0 p-1"
+                aria-label="Aumentar quantidade"
+              >
+                <Plus className="size-4" />
+              </button>
+            </div>
           </div>
-          <div className="flex items-center bg-primary-3 rounded-full px-2 py-2 h-11">
-            <button
-              type="button"
-              onClick={() => onDecrease(ticket.id)}
-              disabled={quantity === 0}
-              className="size-6 cursor-pointer rounded-full flex items-center justify-center bg-gray-12 hover:bg-gray-11 text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed shrink-0 p-1"
-              aria-label="Diminuir quantidade"
-            >
-              <Minus className="size-4" />
-            </button>
-            <span className="min-w-[24px] text-center text-lg font-semibold text-gray-12 px-6 font-manrope leading-[1.1]">
-              {quantity}
-            </span>
-            <button
-              type="button"
-              onClick={() => onIncrease(ticket.id)}
-              disabled={isAtMax}
-              className="size-6 cursor-pointer rounded-full flex items-center justify-center bg-gray-12 hover:bg-gray-11 text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed shrink-0 p-1"
-              aria-label="Aumentar quantidade"
-            >
-              <Plus className="size-4" />
-            </button>
-          </div>
-        </div>
+        )}
       </div>
 
       {productItems.length > 0 && (
@@ -503,6 +502,12 @@ const TicketItemMobile = memo(({
           preferredProductId={kitSelectionDisplay.primaryKitProductByTicketId[ticket.id]}
         />
       )}
+    </div>
+    {ticket.description?.trim() ? (
+      <span className="px-1 text-sm text-gray-11 font-family-dm-sans leading-[1.3]">
+        {ticket.description.trim()}
+      </span>
+    ) : null}
     </div>
   );
 });
@@ -632,25 +637,21 @@ const TicketItemDesktop = memo(({
       className={cn(
         "w-full",
         productItems.length > 0
-          /* Linha 1 = imagem + card; linha 2 = descrição. `gap-x-4` só na
-           * horizontal: sem row-gap, a descrição encosta no card.
+          /* Imagens à esquerda + coluna [card, descrição] à direita, ambas
+           * centralizadas verticalmente entre si (`items-center`) — o card fica
+           * alinhado ao centro das imagens. A descrição vive na MESMA coluna do
+           * card (não numa 2ª linha de grid), então cola logo abaixo dele.
            *
-           * SEM `items-center` de propósito. Com ele, um card mais baixo que a
-           * imagem (136px) ficava centralizado na linha e sobrava folga embaixo —
-           * a descrição, que vem só depois da LINHA, aparecia solta longe do card
-           * (visível sobretudo no ingresso avulso, que sempre recebe imagem por
-           * não ter categoria pra hospedar o carrossel). No stretch padrão o card
-           * preenche a linha, então a descrição encosta nele em todo caso e a
-           * imagem (`self-center`) fica centralizada com o card. */
-          ? "grid grid-cols-[auto_1fr] gap-x-4"
-          // Sem `gap-2`: aqui os únicos filhos são o card e a descrição, e o gap
-          // afastava a descrição 8px — deixando este layout diferente do de cima.
-          // O respiro vem do `p-5` do card, igual nos dois casos.
+           * Antes era um grid de 2 linhas com a descrição na linha de baixo:
+           * quando a coluna de miniaturas ficava mais alta que o card (3+ imagens),
+           * a descrição caía abaixo de TODA a faixa das imagens e abria um vão
+           * grande entre o card e o texto. */
+          ? "flex gap-4 items-center"
           : "flex flex-col",
       )}
     >
       {productItems.length > 0 && (
-        <div className="row-start-1 self-center shrink-0">
+        <div className="shrink-0">
           <div className="flex items-center gap-2">
             {currentProduct ? (
               <button
@@ -710,17 +711,27 @@ const TicketItemDesktop = memo(({
           </div>
         </div>
       )}
-      {/* `flex` no wrapper + `h-full` no card: a célula é esticada pela linha do
-          grid, e assim o card acompanha essa altura em vez de flutuar centralizado. */}
-      <div className={cn("min-w-0 flex", productItems.length > 0 ? "row-start-1 col-start-2" : "w-full")}>
-        <div className="relative bg-gray-2 border border-gray-6 rounded-xl p-5 flex flex-col gap-2 w-full h-full justify-center">
-          {showAgeLimit ? (
-            <div className="absolute top-5 right-5 bg-yellow-3 text-yellow-12 rounded-full px-3 py-1">
-              <p className="text-xs font-medium font-family-dm-sans whitespace-nowrap">
-                Limite de idade: {ageLimitText}
-              </p>
-            </div>
-          ) : null}
+      {/* Coluna direita: card + descrição empilhados. Com produto, `flex-1`
+          ocupa o resto da largura e `gap-2` dá o respiro "um pouco abaixo" entre
+          o card e a descrição; sem produto, `w-full` e sem gap (o respiro vem do
+          `p-5` do card, mantendo o layout do ingresso avulso como antes). */}
+      <div className={cn("min-w-0 flex flex-col", productItems.length > 0 ? "flex-1 gap-2" : "w-full")}>
+        {/* Espaçador invisível com a MESMA altura da descrição, ACIMA do card.
+            Deixa o card simétrico na coluna (espaçador em cima + descrição
+            embaixo), então o `items-center` do wrapper externo centraliza o CARD
+            — e não o bloco card+descrição — na vertical, alinhado ao centro das
+            imagens. Só no caso com imagens: sem elas a coluna já tem a altura do
+            card. `invisible` preserva o espaço (≠ `hidden`); mesmas classes da
+            descrição real garantem quebra de linha e altura idênticas. */}
+        {productItems.length > 0 && ticket.description?.trim() ? (
+          <span
+            aria-hidden
+            className="pl-3 text-sm text-gray-11 font-family-dm-sans invisible select-none"
+          >
+            {ticket.description.trim()}
+          </span>
+        ) : null}
+        <div className="bg-gray-2 border border-gray-6 rounded-xl p-5 flex flex-col gap-2 w-full">
           <div className="flex flex-col justify-center gap-1">
             <h2 className="text-xl font-bold font-manrope leading-[1.1] text-gray-12">
               {ticket.name}
@@ -754,6 +765,16 @@ const TicketItemDesktop = memo(({
             </div>
           </div>
 
+          {/* Limite de idade em fluxo normal, alinhado à esquerda (sem
+              `absolute` — que fazia o badge flutuar no canto e parecer padding). */}
+          {showAgeLimit ? (
+            <div className="bg-yellow-3 text-yellow-12 rounded-full px-3 py-1 self-start max-w-full">
+              <p className="text-xs font-medium font-family-dm-sans whitespace-nowrap">
+                Limite de idade: {ageLimitText}
+              </p>
+            </div>
+          ) : null}
+
           <div className="flex items-end justify-between">
             <div className="flex items-baseline gap-2">
               <p className="text-xl font-bold text-gray-12">{formatDisplayPrice(priceBreakdown)}</p>
@@ -763,64 +784,58 @@ const TicketItemDesktop = memo(({
                 </p>
               )}
             </div>
-            <div className="flex flex-col items-center gap-2 relative">
-              <div className="absolute bottom-full right-0 pb-1">
-                {isBatchSoldOut ? (
-                  <p className="text-xs font-medium text-red-11 whitespace-nowrap">Lote esgotado</p>
-                ) : showLowStock ? (
-                  <p className="text-xs font-medium text-red-11 whitespace-nowrap">
-                    Restam apenas {ticket.availableQuantity}{" "}
-                    {ticket.availableQuantity === 1 ? "vaga" : "vagas"}!
-                  </p>
-                ) : null}
+            {isBatchSoldOut ? (
+              // Lote esgotado: badge cinza no lugar do stepper (não dá pra adicionar).
+              // `h-10` = mesma altura do stepper (size-6 + py-2) pra o card não encolher.
+              <span className="shrink-0 inline-flex items-center h-10 rounded-full bg-gray-4 px-4 text-sm font-semibold text-gray-11 font-manrope leading-[1.1] whitespace-nowrap">
+                Lote esgotado
+              </span>
+            ) : (
+              <div className="flex flex-col items-center gap-2 relative">
+                <div className="absolute bottom-full right-0 pb-1">
+                  {showLowStock ? (
+                    <p className="text-xs font-medium text-red-11 whitespace-nowrap">
+                      Restam apenas {ticket.availableQuantity}{" "}
+                      {ticket.availableQuantity === 1 ? "vaga" : "vagas"}!
+                    </p>
+                  ) : null}
+                </div>
+                <div className="flex items-center justify-center w-max gap-2 bg-primary-4 rounded-full px-2 py-2">
+                  <button
+                    type="button"
+                    onClick={() => onDecrease(ticket.id)}
+                    disabled={quantity === 0}
+                    className="size-6 cursor-pointer rounded-full flex items-center justify-center bg-gray-12 hover:bg-gray-11 text-gray-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
+                    aria-label="Diminuir quantidade"
+                  >
+                    <Minus className="size-4" />
+                  </button>
+                  <span className="text-center text-lg font-semibold px-4 text-gray-12">
+                    {quantity}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => onIncrease(ticket.id)}
+                    disabled={isAtMax}
+                    className="size-6 cursor-pointer rounded-full flex items-center justify-center bg-gray-12 hover:bg-gray-11 text-gray-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
+                    aria-label="Aumentar quantidade"
+                  >
+                    <Plus className="size-4" />
+                  </button>
+                </div>
               </div>
-              <div className="flex items-center justify-center w-max gap-2 bg-primary-4 rounded-full px-2 py-2">
-                <button
-                  type="button"
-                  onClick={() => onDecrease(ticket.id)}
-                  disabled={quantity === 0}
-                  className="size-6 cursor-pointer rounded-full flex items-center justify-center bg-gray-12 hover:bg-gray-11 text-gray-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
-                  aria-label="Diminuir quantidade"
-                >
-                  <Minus className="size-4" />
-                </button>
-                <span className={`text-center text-lg font-semibold px-4 ${isBatchSoldOut ? "text-gray-11" : "text-gray-12"}`}>
-                  {quantity}
-                </span>
-                <button
-                  type="button"
-                  onClick={() => onIncrease(ticket.id)}
-                  disabled={isAtMax}
-                  className="size-6 cursor-pointer rounded-full flex items-center justify-center bg-gray-12 hover:bg-gray-11 text-gray-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
-                  aria-label="Aumentar quantidade"
-                >
-                  <Plus className="size-4" />
-                </button>
-              </div>
-            </div>
+            )}
           </div>
         </div>
+        {/* Descrição real, logo abaixo do card (respiro do `gap-2` do wrapper
+         * quando há produto). Junto ao espaçador invisível acima, mantém o card
+         * centralizado com as imagens sem abrir vão. */}
+        {ticket.description?.trim() ? (
+          <span className="pl-3 text-sm text-gray-11 font-family-dm-sans">
+            {ticket.description.trim()}
+          </span>
+        ) : null}
       </div>
-      {/* Descrição: 2ª linha do grid, FORA da célula do card de propósito — a
-       * imagem (`row-start-1 self-center`) se alinha ao centro do CARD, e só dele.
-       * Pôr a descrição dentro da mesma célula faria a imagem centralizar contra
-       * card + descrição.
-       *
-       * Sem margem negativa: antes havia um `-mt-3` que puxava o texto 12px pra
-       * cima e o card (`position: relative`) pintava por cima, escondendo-o. Isso
-       * só passava despercebido enquanto o card era mais baixo que a coluna de
-       * imagens (136px) e o `items-center` deixava folga embaixo — bastava a linha
-       * da modalidade (ícone + distância) crescer o card pra folga sumir. */}
-      {ticket.description?.trim() ? (
-        <span
-          className={cn(
-            "pl-3 text-sm text-gray-11 font-family-dm-sans",
-            productItems.length > 0 ? "col-start-2" : "",
-          )}
-        >
-          {ticket.description.trim()}
-        </span>
-      ) : null}
       {productItems.length > 0 && (
         <ImageCarouselModal
           items={productItems}

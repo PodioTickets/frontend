@@ -320,29 +320,45 @@ function SearchContent() {
       return fa - fb;
     };
 
+    // Concluído = status já carimbado pelo backend (regra única de fim de dia BRT
+    // em `withPastEventsAsCompleted`) — não recalcular a data aqui.
+    const isCompleted = (e: (typeof filtered)[number]) => e.status === "COMPLETED";
+    const time = (iso?: string | null) => (iso ? new Date(iso).getTime() : 0);
+
+    /**
+     * Ordem PADRÃO: o que ainda vai acontecer primeiro, do mais próximo ao mais
+     * distante; concluídos sempre no fim (entre eles, o mais recente antes).
+     * Espelha a ordem do backend (que é quem pagina) — este sort só reordena a
+     * página já recebida.
+     */
+    const byDefaultOrder = (
+      a: (typeof filtered)[number],
+      b: (typeof filtered)[number],
+    ) => {
+      const ca = isCompleted(a);
+      const cb = isCompleted(b);
+      if (ca !== cb) return ca ? 1 : -1;
+      if (ca) return time(b.eventDate) - time(a.eventDate);
+      const f = byFeatured(a, b);
+      if (f !== 0) return f;
+      if (!a.eventDate || !b.eventDate) return 0;
+      return time(a.eventDate) - time(b.eventDate);
+    };
+
     // Ordenar
     return [...filtered].sort((a, b) => {
       switch (orderBy) {
-        case "date-asc": {
-          const f = byFeatured(a, b);
-          if (f !== 0) return f;
-          if (!a.eventDate || !b.eventDate) return 0;
-          return new Date(a.eventDate).getTime() - new Date(b.eventDate).getTime();
-        }
+        case "date-asc":
+          return byDefaultOrder(a, b);
         case "date-desc":
           if (!a.eventDate || !b.eventDate) return 0;
-          return new Date(b.eventDate).getTime() - new Date(a.eventDate).getTime();
+          return time(b.eventDate) - time(a.eventDate);
         case "name-asc":
           return a.name.localeCompare(b.name, "pt-BR");
         case "name-desc":
           return b.name.localeCompare(a.name, "pt-BR");
-        default: {
-          // Ordem padrão = data crescente com destaque no topo.
-          const f = byFeatured(a, b);
-          if (f !== 0) return f;
-          if (!a.eventDate || !b.eventDate) return 0;
-          return new Date(a.eventDate).getTime() - new Date(b.eventDate).getTime();
-        }
+        default:
+          return byDefaultOrder(a, b);
       }
     });
   }, [events, priceMin, priceMax, statusFilter, orderBy]);

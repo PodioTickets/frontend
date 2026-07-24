@@ -813,7 +813,7 @@ export function CreateCouponModal() {
                               <div className="flex flex-col gap-2.5 md:w-[596px]">
                                 <div className="flex flex-col gap-2">
                                   <label className="text-gray-11 text-base font-family-dm-sans leading-[1.3]">
-                                    Quantidade mínima de ingressos
+                                    Ao atingir essa quantidade no carrinho, o cupom é aplicado automaticamente
                                   </label>
                                   <Input
                                     type="text"
@@ -823,9 +823,6 @@ export function CreateCouponModal() {
                                     className="h-12"
                                   />
                                 </div>
-                                <p className="text-gray-11 text-base font-family-dm-sans leading-[1.3]">
-                                  Ao atingir essa quantidade no carrinho, o cupom é aplicado automaticamente
-                                </p>
                               </div>
                             )}
 

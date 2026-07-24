@@ -6,6 +6,15 @@ import { X, ArrowLeft, Check, Eye, EyeOff } from "lucide-react";
 import { Button } from "@/components/Button";
 import { Drawer, DrawerContent, DrawerTitle } from "@/components/ui/drawer";
 import { getApiClient } from "@/services/base/ApiClient";
+import {
+  PERMISSION_ROWS,
+  allPermissions,
+  defaultNewMemberPermissions,
+  permissionsFromApi,
+  permissionsToArray,
+  togglePermission as applyPermissionToggle,
+  type PermissionsState,
+} from "@/lib/organizerMemberPermissions";
 import { cn } from "@/utils/cn";
 import toast from "react-hot-toast";
 
@@ -27,28 +36,6 @@ export interface AdminMember {
   };
 }
 
-// ─── Constants ────────────────────────────────────────────────────────────────
-
-const PERMISSION_ROWS: { id: string; title: string; description: string }[] = [
-  { id: "financial", title: "Financeiro", description: "Gerencie repasses, saldos e valores em processamento, com histórico e outras informações financeiras." },
-  { id: "edit_event", title: "Editar Evento", description: "Atualize as informações do evento, como data, ingressos, kits, perguntas e outras configurações." },
-  { id: "view_event", title: "Visualizar Evento", description: "Permite visualizar o painel de edição do evento e acessar a aba de inscrições, sem permissão para editar." },
-  { id: "coupons", title: "Cupons", description: "Acesso à criação e gerenciamento de cupons de desconto e benefícios do evento." },
-  { id: "pixel", title: "Pixel", description: "Permite configurar pixels de rastreamento (como Meta/Facebook e Google) para acompanhar conversões e campanhas." },
-  { id: "notify", title: "Notificar Inscritos", description: "Permite enviar notificações ou comunicados para todos os inscritos do evento." },
-  { id: "create_event", title: "Criar Evento", description: "Permite criar novos eventos na organização." },
-];
-
-const DEFAULT_PERMISSIONS: Record<string, boolean> = {
-  financial: false,
-  edit_event: false,
-  view_event: true,
-  coupons: false,
-  pixel: false,
-  notify: false,
-  create_event: false,
-};
-
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function splitFullName(full: string) {
@@ -57,19 +44,6 @@ function splitFullName(full: string) {
   const i = t.indexOf(" ");
   if (i === -1) return { firstName: t, lastName: "" };
   return { firstName: t.slice(0, i).trim(), lastName: t.slice(i + 1).trim() };
-}
-
-function permissionsFromArray(keys: string[] | undefined | null): Record<string, boolean> {
-  const base: Record<string, boolean> = {};
-  for (const row of PERMISSION_ROWS) base[row.id] = false;
-  if (!keys?.length) return base;
-  const set = new Set(keys.map((k) => k.toLowerCase()));
-  for (const k of set) { if (k in base) base[k] = true; }
-  return base;
-}
-
-function permissionsToArray(p: Record<string, boolean>): string[] {
-  return PERMISSION_ROWS.map((r) => r.id).filter((id) => p[id]);
 }
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
@@ -120,7 +94,9 @@ export function AdminCollaboratorDrawer({
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [permissions, setPermissions] = useState<Record<string, boolean>>({ ...DEFAULT_PERMISSIONS });
+  const [permissions, setPermissions] = useState<PermissionsState>(
+    defaultNewMemberPermissions(),
+  );
   const [isOwner, setIsOwner] = useState(false);
 
   const inputClass = "h-12 w-full rounded-lg border border-gray-6 bg-gray-1 px-3 text-base text-gray-12 placeholder:text-gray-11 font-family-dm-sans outline-none focus-visible:border-gray-4 focus-visible:ring-[3px] focus-visible:ring-gray-4/50";
@@ -131,7 +107,7 @@ export function AdminCollaboratorDrawer({
     setEmail("");
     setPassword("");
     setConfirmPassword("");
-    setPermissions({ ...DEFAULT_PERMISSIONS });
+    setPermissions(defaultNewMemberPermissions());
     setIsOwner(false);
     setFieldErrors({});
   }, []);
@@ -145,27 +121,24 @@ export function AdminCollaboratorDrawer({
     setFullName(`${member.user.firstName ?? ""} ${member.user.lastName ?? ""}`.trim());
     setEmail(member.user.email ?? "");
     setIsOwner(member.role === "OWNER");
-    setPermissions(permissionsFromArray(member.permissions));
+    setPermissions(permissionsFromApi(member.permissions, member.role));
     setFieldErrors({});
     (async () => {
       try {
         const api = getApiClient();
         const res = await api.get<any>(`/api/v1/admin/organizations/${orgId}/members/${member.userId}`);
         if (cancelled) return;
-        const m = res.data?.member ?? res.data?.data?.member ?? res.data?.data ?? res.data;
+        const payload = res.data?.data ?? res.data;
+        const m = payload?.member ?? payload;
         setFullName(`${m?.user?.firstName ?? ""} ${m?.user?.lastName ?? ""}`.trim());
         setEmail(m?.user?.email ?? member.user.email ?? "");
-        setIsOwner((m?.role ?? member.role) === "OWNER");
-        const rawPerms = m?.permissions;
-        if (rawPerms && typeof rawPerms === "object" && !Array.isArray(rawPerms)) {
-          const base = { ...DEFAULT_PERMISSIONS };
-          for (const key of Object.keys(base)) {
-            if (key in rawPerms) base[key] = !!rawPerms[key];
-          }
-          setPermissions(base);
-        } else {
-          setPermissions(permissionsFromArray(Array.isArray(rawPerms) ? rawPerms : []));
-        }
+        const role = m?.role ?? member.role;
+        setIsOwner(role === "OWNER");
+        // Mesma interpretação do drawer do organizador: chaves concedidas pelo
+        // servidor, nunca um merge sobre defaults locais (ver
+        // `permissionsFromApi`). `payload.permissions` é o campo canônico; o
+        // do membro fica como fallback para backend ainda não atualizado.
+        setPermissions(permissionsFromApi(payload?.permissions ?? m?.permissions, role));
       } catch {
         // fallback already set above from member prop
       } finally {
@@ -176,6 +149,38 @@ export function AdminCollaboratorDrawer({
   }, [open, mode, member, orgId, resetForm]);
 
   const handleClose = () => { if (!saving && !removing) onOpenChange(false); };
+
+  /**
+   * Proprietário = acesso total. Marcar liga TODAS as permissões; desmarcar não
+   * mexe nelas (o admin acabou de definir esse conjunto — quem decide o que tirar
+   * é ele, não o toggle).
+   */
+  const handleOwnerToggle = useCallback(() => {
+    const next = !isOwner;
+    setIsOwner(next);
+    if (next) setPermissions(allPermissions(true));
+  }, [isOwner]);
+
+  /**
+   * Desmarcar QUALQUER permissão quebra o "acesso total" → o membro deixa de ser
+   * Proprietário. Marcar de volta não repromove: Proprietário é um papel, não a
+   * soma dos checkboxes.
+   */
+  const handlePermissionToggle = useCallback((id: string) => {
+    const willBeChecked = !permissions[id];
+    setPermissions((prev) => applyPermissionToggle(prev, id));
+    if (!willBeChecked) setIsOwner(false);
+  }, [permissions]);
+
+  const handleSelectAllPermissions = useCallback(() => {
+    setPermissions(allPermissions(true));
+  }, []);
+
+  /** Limpar tudo remove o acesso total — logo, também deixa de ser Proprietário. */
+  const handleClearAllPermissions = useCallback(() => {
+    setPermissions(allPermissions(false));
+    setIsOwner(false);
+  }, []);
 
   const handleCreate = async () => {
     const { firstName, lastName } = splitFullName(fullName);
@@ -382,7 +387,7 @@ export function AdminCollaboratorDrawer({
                         </div>
                         {fieldErrors.confirmPassword && <p className="text-sm text-red-11 font-family-dm-sans">{fieldErrors.confirmPassword}</p>}
                       </FieldShell>
-                      <button type="button" onClick={() => setIsOwner((v) => !v)} disabled={saving} className="flex w-full gap-3 rounded-lg border border-gray-6 px-3 py-4 text-left transition-colors hover:bg-gray-2/50 disabled:opacity-50">
+                      <button type="button" role="checkbox" aria-checked={isOwner} onClick={handleOwnerToggle} disabled={saving} className="flex w-full gap-3 rounded-lg border border-gray-6 px-3 py-4 text-left transition-colors hover:bg-gray-2/50 disabled:opacity-50">
                         <PermissionCheckbox checked={isOwner} />
                         <div className="flex min-w-0 flex-1 flex-col gap-2">
                           <p className="text-base font-semibold text-gray-12 font-family-dm-sans">Proprietário</p>
@@ -399,7 +404,7 @@ export function AdminCollaboratorDrawer({
                       <FieldShell label="E-mail do membro">
                         <input type="email" className={cn(inputClass, "bg-gray-2 text-gray-11 cursor-not-allowed")} value={email} readOnly />
                       </FieldShell>
-                      <button type="button" onClick={() => setIsOwner((v) => !v)} disabled={saving || detailLoading} className="flex w-full gap-3 rounded-lg border border-gray-6 px-3 py-4 text-left transition-colors hover:bg-gray-2/50 disabled:opacity-50">
+                      <button type="button" role="checkbox" aria-checked={isOwner} onClick={handleOwnerToggle} disabled={saving || detailLoading} className="flex w-full gap-3 rounded-lg border border-gray-6 px-3 py-4 text-left transition-colors hover:bg-gray-2/50 disabled:opacity-50">
                         <PermissionCheckbox checked={isOwner} />
                         <div className="flex min-w-0 flex-1 flex-col gap-2">
                           <p className="text-base font-semibold text-gray-12 font-family-dm-sans">Proprietário</p>
@@ -416,13 +421,13 @@ export function AdminCollaboratorDrawer({
                 <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                   <h3 className="text-base font-bold text-gray-12 font-manrope leading-[1.1] md:text-lg">Permissões</h3>
                   <div className="grid grid-cols-2 gap-2 md:flex md:gap-2">
-                    <button type="button" onClick={() => { const n: Record<string, boolean> = {}; for (const r of PERMISSION_ROWS) n[r.id] = true; setPermissions(n); }} disabled={saving || removing} className="h-11 rounded-lg border border-gray-6 bg-gray-1 px-3 text-sm font-bold text-gray-12 font-family-dm-sans hover:bg-gray-2 transition-colors disabled:opacity-50 md:h-10 md:px-5">Selecionar tudo</button>
-                    <button type="button" onClick={() => { const n: Record<string, boolean> = {}; for (const r of PERMISSION_ROWS) n[r.id] = false; setPermissions(n); }} disabled={saving || removing} className="h-11 rounded-lg border border-gray-6 bg-gray-1 px-3 text-sm font-bold text-gray-12 font-family-dm-sans hover:bg-gray-2 transition-colors disabled:opacity-50 md:h-10 md:px-5">Limpar tudo</button>
+                    <button type="button" onClick={handleSelectAllPermissions} disabled={saving || removing} className="h-11 rounded-lg border border-gray-6 bg-gray-1 px-3 text-sm font-bold text-gray-12 font-family-dm-sans hover:bg-gray-2 transition-colors disabled:opacity-50 md:h-10 md:px-5">Selecionar tudo</button>
+                    <button type="button" onClick={handleClearAllPermissions} disabled={saving || removing} className="h-11 rounded-lg border border-gray-6 bg-gray-1 px-3 text-sm font-bold text-gray-12 font-family-dm-sans hover:bg-gray-2 transition-colors disabled:opacity-50 md:h-10 md:px-5">Limpar tudo</button>
                   </div>
                 </div>
                 <div className="flex flex-col gap-3">
                   {PERMISSION_ROWS.map((row) => (
-                    <button key={row.id} type="button" onClick={() => setPermissions((p) => ({ ...p, [row.id]: !p[row.id] }))} disabled={saving || removing} className="flex w-full gap-3 rounded-lg border border-gray-6 px-3 py-4 text-left transition-colors hover:bg-gray-2/50 disabled:opacity-50">
+                    <button key={row.id} type="button" role="checkbox" aria-checked={!!permissions[row.id]} onClick={() => handlePermissionToggle(row.id)} disabled={saving || removing} className="flex w-full gap-3 rounded-lg border border-gray-6 px-3 py-4 text-left transition-colors hover:bg-gray-2/50 disabled:opacity-50">
                       <PermissionCheckbox checked={!!permissions[row.id]} />
                       <div className="flex min-w-0 flex-1 flex-col gap-2">
                         <p className="text-base font-semibold text-gray-12 font-family-dm-sans">{row.title}</p>

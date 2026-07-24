@@ -112,6 +112,12 @@ export interface Question {
   isRequired: boolean;
   description?: string;
   order: number;
+  /**
+   * Ingressos a que a pergunta se aplica. `"all"`/ausente = todos; uma lista de
+   * ids (ou objetos `{ id }`, ou string JSON legada) restringe a pergunta a
+   * ingressos específicos. Normalizado por `questionAppliesToTicket`.
+   */
+  appliesTo?: "all" | Array<string | { id: string }> | string | null;
   createdAt: string;
   updatedAt: string;
 }

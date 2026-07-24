@@ -27,6 +27,10 @@ import {
   isEmbedHtml,
   wrapWithTopicDefaultTextColor,
 } from "@/lib/topicHtmlSourceMode";
+import {
+  DEV_MODE_ACTIVE_CLASS,
+  syncDevModeButtonState,
+} from "@/lib/topicCodeModeChrome";
 import { X } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import toast from "react-hot-toast";
@@ -280,6 +284,15 @@ export function TopicModal() {
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
   const [isCodeMode, setIsCodeMode] = useState(false);
+  /* "Sujo" de CONTEÚDO: só vira true em edições REAIS do usuário (digitação,
+   * paste, resize de imagem, edição no modo código). Cargas programáticas do
+   * Quill usam source "silent" e NÃO marcam sujo — assim o botão "Salvar
+   * alteração" só habilita quando de fato houve mudança. Comparar innerHTML não
+   * serve: encode/decode de embeds + estilização de mídia mutam o HTML no load. */
+  const [hasContentChanges, setHasContentChanges] = useState(false);
+  // Valor do textarea ao ENTRAR no modo código — comparado na saída para saber
+  // se o usuário editou o HTML cru (o retorno ao WYSIWYG usa "silent").
+  const codeEntryValueRef = useRef<string>("");
   const quillRef = useRef<HTMLDivElement>(null);
   const quillInstanceRef = useRef<QuillInstance | null>(null);
   const quillLoadedRef = useRef(false);
@@ -699,6 +712,8 @@ export function TopicModal() {
 
             event.preventDefault();
             event.stopPropagation();
+            // Colar um embed é edição real do usuário (não passa por text-change "user").
+            setHasContentChanges(true);
 
             const { html: renderable, scriptSrcs } =
               decodeStoredEmbedsToRenderable(pastedHtml);
@@ -808,9 +823,12 @@ export function TopicModal() {
 
 
           // Listen for content changes
-          quill.on('text-change', () => {
+          quill.on('text-change', (_delta, _oldDelta, source) => {
             const html = quill.root.innerHTML;
             setContent(html);
+            // Só edição do usuário conta como "alteração" (source "user"); cargas
+            // programáticas ("silent"/"api") e reflow de estilos não sujam o form.
+            if (source === "user") setHasContentChanges(true);
             // Update image alignment after content changes
             setTimeout(() => {
               styleMedia();
@@ -922,7 +940,13 @@ export function TopicModal() {
               });
 
               btn.addEventListener('mouseleave', () => {
-                if (!btn.classList.contains('ql-active')) {
+                // `DEV_MODE_ACTIVE_CLASS` também conta: o Quill tira o `ql-active`
+                // do botão de modo dev a cada editor-change, e só com ele o hover
+                // apagaria o fundo do botão com o modo dev ainda ligado.
+                if (
+                  !btn.classList.contains('ql-active') &&
+                  !btn.classList.contains(DEV_MODE_ACTIVE_CLASS)
+                ) {
                   btn.style.backgroundColor = '#f9f9f9';
                 }
               });
@@ -1049,6 +1073,8 @@ export function TopicModal() {
   useEffect(() => {
     if (isOpen) {
       setTitle(initialTitle || "");
+      // Baseline limpo a cada abertura/troca de tópico: nada editado ainda.
+      setHasContentChanges(false);
 
       // Update Quill content if it's already initialized
       if (quillInstanceRef.current && initialContent !== undefined) {
@@ -1083,6 +1109,7 @@ export function TopicModal() {
       setTitle("");
       setContent("");
       setIsCodeMode(false);
+      setHasContentChanges(false);
       embedScriptSrcsRef.current = [];
       if (quillInstanceRef.current) {
         // Clear content
@@ -1131,6 +1158,8 @@ export function TopicModal() {
       );
       embedScriptSrcsRef.current = mergedScripts;
       const sourceHtml = buildSourceViewHtml(decoded.html, mergedScripts);
+      // Baseline pra detectar edição no textarea (a volta ao WYSIWYG é "silent").
+      codeEntryValueRef.current = sourceHtml;
       setContent(sourceHtml);
       setIsCodeMode(true);
     } else {
@@ -1139,6 +1168,8 @@ export function TopicModal() {
       // preservam os data-* da div quando passado via `dangerouslyPasteHTML`.
       // Usar `quill.root.innerHTML =` direto strippa os data-*.
       const raw = codeTextareaRef.current?.value ?? "";
+      // Editou o HTML cru no modo código → conteúdo sujo.
+      if (raw !== codeEntryValueRef.current) setHasContentChanges(true);
       const { html: renderable, scriptSrcs } =
         decodeStoredEmbedsToRenderable(raw);
       embedScriptSrcsRef.current = scriptSrcs;
@@ -1163,38 +1194,17 @@ export function TopicModal() {
   });
 
   /**
-   * Em modo código, oculta o Quill inteiro (toolbar + conteúdo) — o usuário
-   * vê apenas o textarea com seu próprio header de "voltar". Quando volta ao
-   * WYSIWYG, restauramos `display: flex` (valor que o Quill aplica no init).
-   * O conteúdo Quill permanece no modelo interno, só não é renderizado.
+   * Em modo código, oculta a área de edição do Quill (`quillRef` É o
+   * `.ql-container`) — a toolbar é irmã dele e continua visível, com o botão de
+   * modo dev destacado. Quando volta ao WYSIWYG, restauramos `display: flex`
+   * (valor que o init aplica). O conteúdo Quill permanece no modelo interno.
+   * `useLayoutEffect` para sair no mesmo frame da troca de modo (sem piscar).
    */
   useLayoutEffect(() => {
     const root = quillRef.current;
     if (!root) return;
     root.style.display = isCodeMode ? "none" : "flex";
-  }, [isCodeMode]);
-
-  /**
-   * Mantém o botão `code-block` da toolbar em estado ativo enquanto o modo
-   * código está ligado. O handler foi sobrescrito para toggle de modo (em vez
-   * de aplicar o formato `code-block`), então o `ql-active` que o Quill
-   * gerencia por seleção nunca dispara aqui — sincronizamos manualmente.
-   * O background inline duplica a cor aplicada à regra `.ql-active` no init
-   * (#e8e8e8) porque os outros estilos da toolbar também são inline e
-   * sobrescreveriam um `:hover`/classe via CSS.
-   */
-  useEffect(() => {
-    const button = quillRef.current?.querySelector(
-      ".ql-toolbar .ql-code-block",
-    ) as HTMLElement | null;
-    if (!button) return;
-    if (isCodeMode) {
-      button.classList.add("ql-active");
-      button.style.backgroundColor = "#e8e8e8";
-    } else {
-      button.classList.remove("ql-active");
-      button.style.backgroundColor = "#f9f9f9";
-    }
+    syncDevModeButtonState(root, isCodeMode);
   }, [isCodeMode]);
 
   const handleSave = async () => {
@@ -1267,6 +1277,15 @@ export function TopicModal() {
     }
   };
 
+
+  /* Habilitação do botão salvar:
+   *  - Criar: basta ter título (regra histórica).
+   *  - Editar: exige título E alguma alteração real (título ≠ inicial OU conteúdo
+   *    editado pelo usuário). Evita "Salvar alteração" ativo sem nenhuma mudança.
+   * `trim()` nos dois lados do título ignora diferença só de espaços. */
+  const titleChanged = title.trim() !== initialTitle.trim();
+  const canSave =
+    title.trim().length > 0 && (!isEditing || titleChanged || hasContentChanges);
 
   const handleConfirmDeleteTopic = async () => {
     if (!onModalDelete) {
@@ -1394,6 +1413,21 @@ export function TopicModal() {
                         <textarea
                           ref={codeTextareaRef}
                           defaultValue={content}
+                          // Modo dev é textarea NÃO-controlado (`defaultValue`) e
+                          // ficava fora do fluxo de "dirty" do Quill: editar aqui e
+                          // salvar direto (sem voltar ao editor) deixava o botão
+                          // Salvar desabilitado. Marca a alteração na hora, comparando
+                          // com o baseline capturado ao entrar no modo código — mesma
+                          // regra do toggle-back. Guard `!hasContentChanges` evita
+                          // setState repetido a cada tecla.
+                          onInput={(e) => {
+                            if (
+                              !hasContentChanges &&
+                              e.currentTarget.value !== codeEntryValueRef.current
+                            ) {
+                              setHasContentChanges(true);
+                            }
+                          }}
                           spellCheck={false}
                           style={{
                             fontFamily:
@@ -1440,7 +1474,7 @@ export function TopicModal() {
                   </Button>
                   <Button
                     onClick={handleSave}
-                    disabled={!title.trim()}
+                    disabled={!canSave}
                     className="h-11 w-full disabled:cursor-not-allowed disabled:bg-gray-6 md:h-auto md:w-auto md:px-6 md:py-2"
                   >
                     {isEditing ? "Salvar alteração" : "Criar"}

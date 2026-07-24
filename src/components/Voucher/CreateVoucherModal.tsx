@@ -921,6 +921,7 @@ export function CreateVoucherModal() {
         selectedTicketIds={appliesTo === "specific" ? selectedTicketIds : []}
         singleSelect
         readOnly={isEditing}
+        context="voucher"
       />
     </>
   );

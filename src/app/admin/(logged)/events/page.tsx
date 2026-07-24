@@ -34,6 +34,7 @@ import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import { SuspendEventModal } from "@/components/Event/SuspendEventModal";
 import { ResumeEventModal } from "@/components/Event/ResumeEventModal";
 import { formatEventListCurrency, formatEventListDate } from "@/lib/eventListFormatters";
+import { Pagination } from "@/components/Pagination";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -289,7 +290,7 @@ export default function AdminEventsPage() {
   const renderMobileActions = (ev: AdminEvent) => {
     if (ev.status === "DRAFT") {
       return (
-        <Link href={`/organizer/events/new?resume=${ev.id}`} className="block">
+        <Link href={`/admin/events/${ev.id}/review/information`} className="block">
           <Button variant="outline" className="h-10 w-full border-gray-6 text-gray-12 font-semibold font-family-dm-sans">
             Continuar criação
           </Button>
@@ -531,7 +532,7 @@ export default function AdminEventsPage() {
           )}
 
           {!loading && (
-            <PaginationBar totalPages={pagination.totalPages} page={pagination.page} onPageChange={setPage} variant="mobile" />
+            <Pagination totalPages={pagination.totalPages} currentPage={pagination.page} onPageChange={setPage} />
           )}
         </div>
 
@@ -632,7 +633,7 @@ export default function AdminEventsPage() {
                         <td className="py-4 px-5 text-center max-w-[200px]">
                           {isCreationDraft ? (
                             <Link
-                              href={`/events/new?resume=${event.id}`}
+                              href={`/admin/events/${event.id}/review/information`}
                             >
                               <Button variant="outline" size="default" className="border-gray-6 text-gray-12 font-semibold font-family-dm-sans h-10 w-full"> Continuar criação</Button>
                             </Link>

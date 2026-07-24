@@ -31,6 +31,9 @@ export interface Ticket {
   gender?: string;
   activeBatch?: { id: string; price: number; label?: string; status?: string };
   activeBatchStatus?: string;
+  /** Ingresso possui kit (produtos vinculados). Quando `false`, o checkout NÃO deve
+   * exibir produtos — mesmo que vínculos órfãos ainda existam no payload (dados legados). */
+  hasKit?: boolean;
   products: string[];
   productImages: Array<{ id: string; name: string; images: string[]; primaryImageIndex?: number }>;
   batches: Array<{
@@ -55,6 +58,14 @@ const EMPTY_TICKETS: Ticket[] = [];
  * transformação usada pelo `queryFn`, garantindo cache consistente.
  */
 export function formatRawTicket(ticket: any): Ticket {
+  // Ingresso sem kit não expõe produtos: gate defensivo que corrige a exibição de
+  // vínculos órfãos (hasKit=false + productIds residuais) já gravados, sem depender de
+  // re-save/migração. Só bloqueia quando hasKit é explicitamente `false` — `undefined`
+  // (payloads que não trazem o campo) preserva o comportamento atual.
+  const hasKit: boolean | undefined =
+    typeof ticket.hasKit === "boolean" ? ticket.hasKit : undefined;
+  const kitDisabled = hasKit === false;
+
   return {
     id: ticket.id,
     name: ticket.name,
@@ -87,13 +98,17 @@ export function formatRawTicket(ticket: any): Ticket {
     // POST/PATCH /tickets retorna apenas `products: [{productId, product}]`
     // (o join). Cobrir os dois formatos pra que tickets recém-criados/editados
     // não fiquem com lista de produtos vazia no card.
-    products:
-      ticket.productIds && Array.isArray(ticket.productIds)
+    hasKit,
+    products: kitDisabled
+      ? []
+      : ticket.productIds && Array.isArray(ticket.productIds)
         ? ticket.productIds
         : (ticket.products || [])
             .map((tp: any) => tp?.productId)
             .filter((id: unknown): id is string => typeof id === "string"),
-    productImages: (ticket.products || []).map((tp: any) => ({
+    productImages: kitDisabled
+      ? []
+      : (ticket.products || []).map((tp: any) => ({
       id: tp.productId,
       name: tp.product?.name ?? "Produto",
       images:

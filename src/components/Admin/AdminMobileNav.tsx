@@ -13,6 +13,7 @@ import { LogOutIcon } from "@/components/Icons/LogOutIcon";
 import { useAdminAppSurface } from "@/contexts/AdminAppSurfaceContext";
 import { adminExternalHref } from "@/lib/adminPathPresentation";
 import { useAdminPathname } from "@/hooks/useAdminPathname";
+import Image from "next/image";
 
 const NAV_ITEMS = [
   { label: "Eventos", href: "/admin/events", icon: TicketIcon },
@@ -44,15 +45,12 @@ export function AdminMobileNav() {
     <>
       <header className="md:hidden fixed top-0 left-0 right-0 z-50 h-16 flex items-center justify-between px-4 bg-linear-to-b from-[#191919] to-[#222222] shadow-[0px_4px_12px_0px_rgba(17,17,17,0.15)]">
         <Link href={navHref("/admin")} className="flex items-center shrink-0 h-6 w-[120px] relative">
-          <ImageWithInitialFallback
-            src="/images/logo_horizontal.png"
+          <Image
+            src="/images/logo_admin.png"
             alt="PódioTicket"
-            name="Pódio"
-            fill
-            sizes="120px"
-            className="size-full"
-            imgClassName="object-contain object-left"
-            letterClassName="text-xs font-bold text-white"
+            width={120}
+            height={120}
+            className="size-full object-contain object-left"
           />
         </Link>
         <Drawer open={open} onOpenChange={setOpen} direction="right">
