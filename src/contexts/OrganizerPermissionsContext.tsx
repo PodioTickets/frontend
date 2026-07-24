@@ -3,6 +3,7 @@
 import { createContext, useContext, useEffect, useState, useCallback } from "react";
 import { organizerService } from "@/services";
 import type { Organization, OrganizationMeResponse } from "@/services/organizer/OrganizerService";
+import { permissionSatisfied } from "@/lib/organizerMemberPermissions";
 
 interface OrganizerPermissionsValue {
   organization: Organization | null;
@@ -49,11 +50,12 @@ export function OrganizerPermissionsProvider({ children }: { children: React.Rea
   const hasPermission = useCallback(
     (key: string) => {
       if (isOwner) return true;
-      // create_event implica acesso total
-      if (permissions.includes("create_event")) return true;
       // Dashboard é derivado — qualquer permissão real dá acesso
       if (key === "dashboard") return permissions.length > 0;
-      return permissions.includes(key);
+      // Concedida diretamente ou implicada (create_event ⇒ editar+visualizar).
+      // NÃO concede acesso total: financeiro/cupons/pixel/notificar exigem a
+      // própria chave (espelha o backend, decisão 2026-07-23).
+      return permissionSatisfied(permissions, key);
     },
     [isOwner, permissions],
   );
