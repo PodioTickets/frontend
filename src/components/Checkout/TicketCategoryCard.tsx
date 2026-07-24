@@ -240,10 +240,14 @@ const TicketItemMobile = memo(({
   // imagens segue o layout atual (1 principal + thumbs 2×2 + título embaixo).
   const isSingleImageLayout = productItems.length === 1;
 
+  const hasDescription = !!ticket.description?.trim();
+
   return (
     // Wrapper: card + descrição empilhados. A descrição fica FORA do card,
     // logo abaixo dele (respiro do `gap-2`), em vez de dentro junto ao título.
-    <div className="flex flex-col gap-2">
+    // Com descrição, um respiro extra embaixo (`mb-2`) separa melhor do próximo
+    // ticket — sem ele, a descrição encostaria no card seguinte (lista `gap-3`).
+    <div className={cn("flex flex-col gap-2", hasDescription && "mb-2")}>
     <div className="bg-gray-2 border border-gray-6 rounded-xl p-4 flex flex-col gap-2 md:gap-6">
       {isSingleImageLayout ? (
         <div className="flex gap-3 items-start w-full">
@@ -632,24 +636,21 @@ const TicketItemDesktop = memo(({
     handleImageClick(index);
   };
 
+  // Largura da faixa de imagens (px) — usada pra alinhar a descrição sob o card.
+  // 1 imagem: só a principal (136). 2+: principal(136) + gap-2(8) + nav(w-8=32).
+  const imagesColWidthPx = productItems.length > 1 ? 176 : 136;
+
+  const hasDescription = !!ticket.description?.trim();
+
   return (
-    <div
-      className={cn(
-        "w-full",
-        productItems.length > 0
-          /* Imagens à esquerda + coluna [card, descrição] à direita, ambas
-           * centralizadas verticalmente entre si (`items-center`) — o card fica
-           * alinhado ao centro das imagens. A descrição vive na MESMA coluna do
-           * card (não numa 2ª linha de grid), então cola logo abaixo dele.
-           *
-           * Antes era um grid de 2 linhas com a descrição na linha de baixo:
-           * quando a coluna de miniaturas ficava mais alta que o card (3+ imagens),
-           * a descrição caía abaixo de TODA a faixa das imagens e abria um vão
-           * grande entre o card e o texto. */
-          ? "flex gap-4 items-center"
-          : "flex flex-col",
-      )}
-    >
+    // Coluna [linha (imagens + card), descrição]. A linha centraliza o card
+    // menor contra a faixa de imagens mais alta (3+ imagens) via `items-center`,
+    // e a descrição fica FORA da linha (abaixo) — assim o card centraliza com as
+    // fotos sem o antigo espaçador invisível, que abria vão grande entre os cards.
+    // Com descrição, um respiro extra embaixo (`mb-2`) separa melhor do próximo
+    // ticket — sem ele, a descrição encostaria no card seguinte (lista `gap-3`).
+    <div className={cn("w-full flex flex-col", hasDescription && "mb-2")}>
+      <div className={cn(productItems.length > 0 ? "flex gap-4 items-center" : "flex flex-col")}>
       {productItems.length > 0 && (
         <div className="shrink-0">
           <div className="flex items-center gap-2">
@@ -674,7 +675,7 @@ const TicketItemDesktop = memo(({
               <div className="flex flex-col items-center justify-between self-stretch">
                 <button
                   onClick={handlePreviousImage}
-                  className="w-[18px] h-8 flex items-center justify-center shrink-0 cursor-pointer hover:opacity-70 transition-opacity"
+                  className="w-[18px] h-4 flex items-center justify-center shrink-0 cursor-pointer hover:opacity-70 transition-opacity"
                   aria-label="Imagem anterior"
                 >
                   <ArrowButton isOpen={false} className="-rotate-90" />
@@ -684,7 +685,7 @@ const TicketItemDesktop = memo(({
                     <button
                       key={item.id}
                       onClick={() => handleThumbnailClick(originalIndex)}
-                      className={`w-9 h-9 relative rounded border overflow-hidden shrink-0 cursor-pointer hover:opacity-90 transition-opacity ${originalIndex === currentMainImageIndex ? "border-primary-11" : "border-gray-6"}`}
+                      className={`w-8 h-8 relative rounded border overflow-hidden shrink-0 cursor-pointer hover:opacity-90 transition-opacity ${originalIndex === currentMainImageIndex ? "border-primary-11" : "border-gray-6"}`}
                     >
                       <ImageWithInitialFallback
                         src={item.src}
@@ -701,7 +702,7 @@ const TicketItemDesktop = memo(({
                 </div>
                 <button
                   onClick={handleNextImage}
-                  className="w-[18px] h-8 flex items-center justify-center shrink-0 cursor-pointer hover:opacity-70 transition-opacity"
+                  className="w-[18px] h-4 flex items-center justify-center shrink-0 cursor-pointer hover:opacity-70 transition-opacity"
                   aria-label="Próxima imagem"
                 >
                   <ArrowButton isOpen={true} />
@@ -711,26 +712,9 @@ const TicketItemDesktop = memo(({
           </div>
         </div>
       )}
-      {/* Coluna direita: card + descrição empilhados. Com produto, `flex-1`
-          ocupa o resto da largura e `gap-2` dá o respiro "um pouco abaixo" entre
-          o card e a descrição; sem produto, `w-full` e sem gap (o respiro vem do
-          `p-5` do card, mantendo o layout do ingresso avulso como antes). */}
-      <div className={cn("min-w-0 flex flex-col", productItems.length > 0 ? "flex-1 gap-2" : "w-full")}>
-        {/* Espaçador invisível com a MESMA altura da descrição, ACIMA do card.
-            Deixa o card simétrico na coluna (espaçador em cima + descrição
-            embaixo), então o `items-center` do wrapper externo centraliza o CARD
-            — e não o bloco card+descrição — na vertical, alinhado ao centro das
-            imagens. Só no caso com imagens: sem elas a coluna já tem a altura do
-            card. `invisible` preserva o espaço (≠ `hidden`); mesmas classes da
-            descrição real garantem quebra de linha e altura idênticas. */}
-        {productItems.length > 0 && ticket.description?.trim() ? (
-          <span
-            aria-hidden
-            className="pl-3 text-sm text-gray-11 font-family-dm-sans invisible select-none"
-          >
-            {ticket.description.trim()}
-          </span>
-        ) : null}
+      {/* Card: `flex-1` ocupa o resto da largura ao lado das imagens; sem
+          imagens, `w-full`. */}
+      <div className={cn("min-w-0 flex flex-col", productItems.length > 0 ? "flex-1" : "w-full")}>
         <div className="bg-gray-2 border border-gray-6 rounded-xl p-5 flex flex-col gap-2 w-full">
           <div className="flex flex-col justify-center gap-1">
             <h2 className="text-xl font-bold font-manrope leading-[1.1] text-gray-12">
@@ -827,15 +811,20 @@ const TicketItemDesktop = memo(({
             )}
           </div>
         </div>
-        {/* Descrição real, logo abaixo do card (respiro do `gap-2` do wrapper
-         * quando há produto). Junto ao espaçador invisível acima, mantém o card
-         * centralizado com as imagens sem abrir vão. */}
-        {ticket.description?.trim() ? (
-          <span className="pl-3 text-sm text-gray-11 font-family-dm-sans">
-            {ticket.description.trim()}
-          </span>
-        ) : null}
       </div>
+      </div>
+      {/* Descrição FORA da linha imagens+card, logo abaixo. Indentada (padding =
+          largura das imagens + gap-4) pra alinhar sob o card; sem imagens, `pl-3`.
+          Fica fora do `items-center` da linha → não interfere na centralização
+          do card com as fotos e não abre vão entre os cards. */}
+      {ticket.description?.trim() ? (
+        <span
+          className="text-sm text-gray-11 font-family-dm-sans"
+          style={productItems.length > 0 ? { paddingLeft: imagesColWidthPx + 16 } : { paddingLeft: 12 }}
+        >
+          {ticket.description.trim()}
+        </span>
+      ) : null}
       {productItems.length > 0 && (
         <ImageCarouselModal
           items={productItems}
