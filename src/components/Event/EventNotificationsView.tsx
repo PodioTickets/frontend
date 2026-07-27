@@ -14,15 +14,21 @@ import { Loading } from "@/components/Loading";
  * organizer. Antes duplicada byte a byte. Header via `renderHeader(event)`;
  * redirect de não-autenticado via `onUnauthenticated`. A permissão é checada na
  * página do organizer.
+ *
+ * `canManage` (default `true`) controla o envio de mensagens: quem só tem
+ * `view_event` enxerga a lista (só leitura), mas o botão de criar fica oculto
+ * até ter a permissão `notify`. O admin não passa a prop → tudo habilitado.
  */
 export function EventNotificationsView({
   eventId,
   onUnauthenticated,
   renderHeader,
+  canManage = true,
 }: {
   eventId: string;
   onUnauthenticated: () => void;
   renderHeader: (event: { name?: string; slug?: string } | null) => ReactNode;
+  canManage?: boolean;
 }) {
   const [authChecked, setAuthChecked] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -85,14 +91,16 @@ export function EventNotificationsView({
               no celular.
             </p>
           </div>
-          <Button
-            type="button"
-            className="shrink-0 h-11 px-4 font-bold w-full md:w-auto font-family-dm-sans"
-            onClick={() => setCreateOpen(true)}
-          >
-            <Plus className="size-4 shrink-0" />
-            Nova notificação
-          </Button>
+          {canManage && (
+            <Button
+              type="button"
+              className="shrink-0 h-11 px-4 font-bold w-full md:w-auto font-family-dm-sans"
+              onClick={() => setCreateOpen(true)}
+            >
+              <Plus className="size-4 shrink-0" />
+              Nova notificação
+            </Button>
+          )}
         </div>
 
         <EventNotificationsPanel

@@ -27,4 +27,19 @@ describe("EventNotificationsView", () => {
     expect(screen.getByText("Nova notificação")).toBeInTheDocument();
     expect(screen.getByTestId("panel")).toBeInTheDocument();
   });
+
+  it("oculta o botão de criar quando canManage é false (só leitura)", async () => {
+    render(
+      <EventNotificationsView
+        eventId="e1"
+        canManage={false}
+        onUnauthenticated={vi.fn()}
+        renderHeader={() => <div data-testid="hdr" />}
+      />,
+    );
+    // A lista (só leitura) segue visível; apenas o envio de mensagens some.
+    expect(await screen.findByText("Central de Comunicação")).toBeInTheDocument();
+    expect(screen.getByTestId("panel")).toBeInTheDocument();
+    expect(screen.queryByText("Nova notificação")).not.toBeInTheDocument();
+  });
 });
