@@ -20,6 +20,7 @@ import { EVENT_IMAGE_SPECS } from "@/lib/eventImageSpecs";
 import type { AdminAuditOrganization } from "@/services/admin/AdminService";
 import { cn } from "@/utils/cn";
 import toast from "react-hot-toast";
+import { FormField } from "@/components/FormField";
 import { FinanceIcon } from "../Icons/Organizer/FinanceIcon";
 import { lookupCepDigits } from "@/utils/lookupCep";
 import { formatDateBRT } from "@/utils/datetimeBR";
@@ -242,51 +243,8 @@ function SectionTitle({ icon, label }: { icon: React.ReactNode; label: string })
   );
 }
 
-function FieldInput({
-  label,
-  value,
-  onChange,
-  placeholder,
-  readOnly,
-  type = "text",
-  className,
-  error,
-}: {
-  label: string;
-  value: string;
-  onChange?: (v: string) => void;
-  placeholder?: string;
-  readOnly?: boolean;
-  type?: string;
-  className?: string;
-  error?: string;
-}) {
-  return (
-    <div className={cn("flex flex-col gap-2 flex-1", className)}>
-      <label className="text-base font-normal font-family-dm-sans text-gray-12 leading-[1.3]">
-        {label}
-      </label>
-      <input
-        type={type}
-        value={value}
-        onChange={onChange ? (e) => onChange(e.target.value) : undefined}
-        placeholder={placeholder}
-        readOnly={readOnly}
-        className={cn(
-          "h-12 w-full rounded-lg border px-3 text-base font-normal font-family-dm-sans leading-[1.3] outline-none transition-colors",
-          readOnly
-            ? "bg-gray-3 border-gray-4 text-gray-12 cursor-default"
-            : "bg-gray-1 text-gray-12 placeholder:text-gray-11 focus:border-gray-8",
-          error && !readOnly && "border-red-8 focus:border-red-8",
-          !error && "border-gray-6",
-        )}
-      />
-      {error ? (
-        <p className="text-sm text-red-11 font-family-dm-sans leading-[1.3]">{error}</p>
-      ) : null}
-    </div>
-  );
-}
+// FieldInput foi extraído para o componente compartilhado `@/components/FormField`
+// (usado também pelo wizard de auto-cadastro de organizador).
 
 const PIX_KEY_LABELS: Record<string, string> = {
   CPF: "CPF",
@@ -335,11 +293,11 @@ function PixKeyCard({
       {expanded && (
         <div className="px-5 pb-5 flex flex-col gap-6">
           <div className="flex flex-wrap gap-x-4 gap-y-6">
-            <FieldInput label="Tipo de Chave" value={typeLabel} readOnly className="min-w-[290px]" />
-            <FieldInput label="Chave cadastrada" value={keyDisplay} readOnly className="min-w-[290px]" />
-            <FieldInput label="Nome do titular" value={pixKey.accountHolderName ?? ""} readOnly className="min-w-[290px]" />
-            <FieldInput label="CPF/CNPJ do titular" value={formatCPFOrCNPJ(pixKey.accountHolderDocument)} readOnly className="min-w-[290px]" />
-            <FieldInput label="Banco" value={pixKey.bankName ?? ""} readOnly className="min-w-[290px]" />
+            <FormField label="Tipo de Chave" value={typeLabel} readOnly className="min-w-[290px]" />
+            <FormField label="Chave cadastrada" value={keyDisplay} readOnly className="min-w-[290px]" />
+            <FormField label="Nome do titular" value={pixKey.accountHolderName ?? ""} readOnly className="min-w-[290px]" />
+            <FormField label="CPF/CNPJ do titular" value={formatCPFOrCNPJ(pixKey.accountHolderDocument)} readOnly className="min-w-[290px]" />
+            <FormField label="Banco" value={pixKey.bankName ?? ""} readOnly className="min-w-[290px]" />
           </div>
           <button
             type="button"
@@ -932,7 +890,7 @@ export function OrganizerEditDrawer({ isOpen, onClose, org, onUpdated, mode = "e
                       internamente no `document`/`name` ao salvar. */}
                   {personType === "PJ" && (
                     <>
-                      <FieldInput
+                      <FormField
                         label="CNPJ"
                         value={cnpjValue}
                         onChange={(v) => {
@@ -943,7 +901,7 @@ export function OrganizerEditDrawer({ isOpen, onClose, org, onUpdated, mode = "e
                         className="min-w-[284px]"
                         error={cnpjError}
                       />
-                      <FieldInput
+                      <FormField
                         label="Razão social"
                         value={name}
                         onChange={setName}
@@ -952,9 +910,9 @@ export function OrganizerEditDrawer({ isOpen, onClose, org, onUpdated, mode = "e
                       />
                     </>
                   )}
-                  <FieldInput label="Nome fantasia" value={tradeName} onChange={setTradeName} placeholder="Nome fantasia" className="min-w-[284px]" />
-                  <FieldInput label="Nome do responsável" value={ownerName} onChange={(v) => { setOwnerName(v); if (ownerDocError) setOwnerDocError(""); }} placeholder="Nome completo" className="min-w-[284px]" />
-                  <FieldInput
+                  <FormField label="Nome fantasia" value={tradeName} onChange={setTradeName} placeholder="Nome fantasia" className="min-w-[284px]" />
+                  <FormField label="Nome do responsável" value={ownerName} onChange={(v) => { setOwnerName(v); if (ownerDocError) setOwnerDocError(""); }} placeholder="Nome completo" className="min-w-[284px]" />
+                  <FormField
                     label="CPF do responsável"
                     value={ownerDocument}
                     onChange={(v) => { setOwnerDocument(formatCPF(v)); if (ownerDocError) setOwnerDocError(""); }}
@@ -962,7 +920,7 @@ export function OrganizerEditDrawer({ isOpen, onClose, org, onUpdated, mode = "e
                     className="min-w-[284px]"
                     error={personType === "PF" ? ownerDocError : undefined}
                   />
-                  <FieldInput label="E-mail fiscal" value={fiscalEmail} onChange={setFiscalEmail} placeholder="fiscal@org.com" type="email" className="min-w-[284px]" />
+                  <FormField label="E-mail fiscal" value={fiscalEmail} onChange={setFiscalEmail} placeholder="fiscal@org.com" type="email" className="min-w-[284px]" />
                 </div>
               </div>
 
@@ -972,7 +930,7 @@ export function OrganizerEditDrawer({ isOpen, onClose, org, onUpdated, mode = "e
               <div className="flex flex-col gap-6">
                 <SectionTitle icon={<MapPin className="size-5" />} label="Endereço" />
                 <div className="flex flex-wrap gap-x-4 gap-y-6">
-                  <FieldInput
+                  <FormField
                     label="CEP"
                     value={zipCode}
                     onChange={(v) => {
@@ -1008,11 +966,11 @@ export function OrganizerEditDrawer({ isOpen, onClose, org, onUpdated, mode = "e
                     placeholder={loadingCep ? "Buscando endereço..." : "00000-000"}
                     className="min-w-[264px]"
                   />
-                  <FieldInput label="Estado" value={state} onChange={setState} placeholder="Selecione o estado" className="min-w-[183px]" />
-                  <FieldInput label="Rua" value={street} onChange={setStreet} placeholder="Digite o nome da sua rua" className="min-w-[340px]" />
-                  <FieldInput label="Número" value={streetNumber} onChange={setStreetNumber} placeholder="Ex: 123" className="min-w-[189px] max-w-[189px]" />
-                  <FieldInput label="Bairro" value={neighborhood} onChange={setNeighborhood} placeholder="Digite o nome do seu bairro" className="min-w-[183px]" />
-                  <FieldInput label="Cidade" value={city} onChange={setCity} placeholder="Nome da cidade" className="min-w-[208px]" />
+                  <FormField label="Estado" value={state} onChange={setState} placeholder="Selecione o estado" className="min-w-[183px]" />
+                  <FormField label="Rua" value={street} onChange={setStreet} placeholder="Digite o nome da sua rua" className="min-w-[340px]" />
+                  <FormField label="Número" value={streetNumber} onChange={setStreetNumber} placeholder="Ex: 123" className="min-w-[189px] max-w-[189px]" />
+                  <FormField label="Bairro" value={neighborhood} onChange={setNeighborhood} placeholder="Digite o nome do seu bairro" className="min-w-[183px]" />
+                  <FormField label="Cidade" value={city} onChange={setCity} placeholder="Nome da cidade" className="min-w-[208px]" />
                 </div>
               </div>
 
@@ -1022,7 +980,7 @@ export function OrganizerEditDrawer({ isOpen, onClose, org, onUpdated, mode = "e
               <div className="flex flex-col gap-6">
                 <SectionTitle icon={<Phone className="size-5" />} label="Contatos da organização" />
                 <div className="grid grid-cols-2 gap-4">
-                  <FieldInput
+                  <FormField
                     label="E-mail"
                     value={email}
                     onChange={(v) => {
@@ -1034,8 +992,8 @@ export function OrganizerEditDrawer({ isOpen, onClose, org, onUpdated, mode = "e
                     className="min-w-[290px]"
                     error={emailError}
                   />
-                  <FieldInput label="WhatsApp" value={whatsapp} onChange={(v) => setWhatsapp(withPhoneMask(v))} placeholder="(00) 00000-0000" className="min-w-[290px]" />
-                  <FieldInput label="Telefone" value={phone} onChange={(v) => setPhone(withPhoneMask(v))} placeholder="(00) 00000-0000" className="min-w-[290px]" />
+                  <FormField label="WhatsApp" value={whatsapp} onChange={(v) => setWhatsapp(withPhoneMask(v))} placeholder="(00) 00000-0000" className="min-w-[290px]" />
+                  <FormField label="Telefone" value={phone} onChange={(v) => setPhone(withPhoneMask(v))} placeholder="(00) 00000-0000" className="min-w-[290px]" />
                 </div>
               </div>
 
@@ -1100,7 +1058,7 @@ export function OrganizerEditDrawer({ isOpen, onClose, org, onUpdated, mode = "e
                         />
                       </div>
 
-                      <FieldInput
+                      <FormField
                         label="Chave PIX"
                         value={newPix.key}
                         onChange={(v) => {
@@ -1111,21 +1069,21 @@ export function OrganizerEditDrawer({ isOpen, onClose, org, onUpdated, mode = "e
                         error={pixKeyError ?? undefined}
                         className="min-w-[200px]"
                       />
-                      <FieldInput
+                      <FormField
                         label="Nome do titular"
                         value={newPix.accountHolderName}
                         onChange={(v) => setNewPix((p) => ({ ...p, accountHolderName: v }))}
                         placeholder="Nome completo do titular"
                         className="min-w-[200px]"
                       />
-                      <FieldInput
+                      <FormField
                         label="CPF/CNPJ do titular"
                         value={newPix.accountHolderDocument}
                         onChange={(v) => setNewPix((p) => ({ ...p, accountHolderDocument: formatCPFOrCNPJ(v) }))}
                         placeholder="000.000.000-00"
                         className="min-w-[200px]"
                       />
-                      <FieldInput
+                      <FormField
                         label="Banco"
                         value={newPix.bankName}
                         onChange={(v) => setNewPix((p) => ({ ...p, bankName: v }))}

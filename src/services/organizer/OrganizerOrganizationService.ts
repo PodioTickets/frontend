@@ -10,6 +10,8 @@ import type {
   CreateOrganizerRequest,
   Organizer,
   CreateOrganizationRequest,
+  OrganizerSignupRequest,
+  OrganizerSignupUser,
   OrganizerPermissionKey,
   OrganizationMember,
   Organization,
@@ -156,6 +158,32 @@ export class OrganizerOrganizationService extends OrganizerCatalogService {
       createdAt: org.createdAt,
       updatedAt: org.updatedAt,
     };
+  }
+
+  /**
+   * Auto-cadastro público de organizador. Cria conta ORGANIZER + organização
+   * ativa + membro OWNER e o backend AUTOLOGA na superfície organizer (cookies
+   * httpOnly na resposta). Retorna o `user` (mesmo shape do login) para o
+   * `useAuth` popular o contexto sem novo GET. Rota pública (só Turnstile).
+   */
+  async signupOrganizer(
+    payload: OrganizerSignupRequest,
+  ): Promise<OrganizerSignupUser> {
+    try {
+      const { data: response } = await this.apiClient.post<{
+        data: { user: OrganizerSignupUser };
+      }>("/api/v1/auth/register/organizer", payload);
+      return response.data.user;
+    } catch (error: any) {
+      // Normaliza a mensagem do backend (ex.: 409 "Já existe uma conta...")
+      // para o wizard exibir texto útil em vez de "Request failed".
+      const backendMsg =
+        error?.response?.data?.message ?? error?.response?.data?.error;
+      const message = Array.isArray(backendMsg)
+        ? backendMsg[0]
+        : backendMsg || error?.message || "Erro ao criar conta de organizador.";
+      throw new Error(message);
+    }
   }
 
   // Novos métodos de Organization
