@@ -7,8 +7,9 @@ import React, {
   ReactNode,
   useEffect,
 } from "react";
-import { adminService, userService } from "@/services";
+import { adminService, userService, organizerService } from "@/services";
 import { userCacheKey, LEGACY_USER_CACHE_KEY } from "@/lib/authSurface";
+import type { OrganizerSignupRequest } from "@/services/organizer/OrganizerService.types";
 
 interface User {
   id: string;
@@ -38,6 +39,7 @@ interface AuthContextType {
   error: any;
   login: (data: { emailOrCpf: string; password: string; accountType?: "USER" | "ORGANIZER" | "ADMIN_PODIO_STAFF"; turnstileToken?: string }) => Promise<{ mfaRequired: true; mfaToken: string } | void>;
   finishLoginMfa: (mfaToken: string, code: string, accountType?: "USER" | "ORGANIZER") => Promise<void>;
+  signupOrganizer: (payload: OrganizerSignupRequest) => Promise<void>;
   register: (data: RegisterData) => Promise<{ id: string; email: string }>;
   logout: () => Promise<void>;
   clearError: () => void;
@@ -281,6 +283,30 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     }
   };
 
+  /**
+   * Auto-cadastro de organizador (wizard /organizer/create). O backend cria a
+   * conta ORGANIZER + organização ativa + membro OWNER e JÁ autologa (Set-Cookie
+   * da superfície organizer). Aqui só populamos o contexto — mesmo tratamento do
+   * login ORGANIZER (não chama refetchUser, que é do participante e daria
+   * 401/403 com JWT de organizador).
+   */
+  const signupOrganizer = async (payload: OrganizerSignupRequest): Promise<void> => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const createdUser = await organizerService.signupOrganizer(payload);
+      const userWithCache = { ...createdUser, _cachedAt: Date.now() };
+      localStorage.setItem(userCacheKey(), JSON.stringify(userWithCache));
+      setUser(createdUser as unknown as User);
+    } catch (err: any) {
+      const errorMessage = err?.message || "Erro ao criar conta de organizador.";
+      setError(errorMessage);
+      throw new Error(errorMessage);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const register = async (data: RegisterData): Promise<{ id: string; email: string }> => {
     setIsLoading(true);
     setError(null);
@@ -399,6 +425,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     error,
     login,
     finishLoginMfa,
+    signupOrganizer,
     register,
     logout,
     clearError,
