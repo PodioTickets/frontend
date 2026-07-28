@@ -102,7 +102,7 @@ export function EventCardContent({
             </p>
           ) : null}
           {dateLabel ? (
-            <p className="[text-box-trim:trim-both] font-family-dm-sans text-sm font-medium text-[#646464]">
+            <p className="[text-box-trim:trim-both] font-family-dm-sans text-sm font-medium text-primary-11">
               {dateLabel}
             </p>
           ) : null}
