@@ -14,7 +14,7 @@ import { TopicsIcon } from "@/components/Icons/TopicsIcon";
 import { BannerIcon } from "@/components/Icons/Organizer/BannerIcon";
 import { FinancialStepIcon } from "@/components/Icons/Organizer/FinancialStepIcon";
 import { ArrowButton } from "@/components/ArrowButton";
-import { isTicketsCheckoutPreviewPath } from "@/lib/ticketsCheckoutPreviewRoute";
+import { isEventFullscreenPreviewPath } from "@/lib/ticketsCheckoutPreviewRoute";
 
 const STEPS = [
   { step: 1, label: "Informações", segment: "information", icon: OrganizerInfoIcon },
@@ -86,15 +86,15 @@ function ReviewLayoutContent({ children }: { children: ReactNode }) {
   const isSubPage = STEPS.every((s) => !pathname.endsWith(`/review/${s.segment}`)) &&
     STEPS.some((s) => pathname.includes(`/review/${s.segment}/`));
 
-  /* A prévia reproduz a tela do participante: sem a barra de auditoria — só o
-   * conteúdo (a página traz o próprio header de voltar). O stepper já cai no
-   * `isSubPage`. */
-  const isTicketsCheckoutPreview = isTicketsCheckoutPreviewPath(pathname);
+  /* As prévias (ingressos/tópicos) reproduzem a tela do participante: sem a barra
+   * de auditoria — só o conteúdo (a página traz o próprio header de voltar). O
+   * stepper já cai no `isSubPage`. */
+  const isFullscreenPreview = isEventFullscreenPreviewPath(pathname);
 
   return (
     <div className="min-h-screen bg-gray-2">
       {/* Back bar */}
-      {!isTicketsCheckoutPreview && (
+      {!isFullscreenPreview && (
         <div className="">
           <div className="flex h-[52px] items-center gap-2 px-4 md:px-6 max-w-7xl mx-auto">
             <button

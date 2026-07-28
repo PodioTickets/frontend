@@ -17,7 +17,7 @@ import { FinancialStepIcon } from "@/components/Icons/Organizer/FinancialStepIco
 import { useEventPermissionGuard } from "@/hooks/useEventPermissionGuard";
 import { useOrganizerPermissions } from "@/contexts/OrganizerPermissionsContext";
 import { EventMobileHeader } from "@/components/Organizer/EventMobileHeader";
-import { isTicketsCheckoutPreviewPath } from "@/lib/ticketsCheckoutPreviewRoute";
+import { isEventFullscreenPreviewPath } from "@/lib/ticketsCheckoutPreviewRoute";
 
 function EditProgressBar() {
   const pathname = usePathname();
@@ -173,10 +173,10 @@ function EditLayoutContent({ children }: { children: ReactNode }) {
   )?.[1];
   const isTicketFormScreen = !!ticketFormSegment && ticketFormSegment !== "preview";
 
-  /* A prévia reproduz a tela do participante: sem header do evento (desktop e
-   * mobile) e sem stepper de etapas — só o conteúdo. A própria página traz o
-   * header de voltar. */
-  const isTicketsCheckoutPreview = isTicketsCheckoutPreviewPath(pathname);
+  /* As prévias (ingressos/tópicos) reproduzem a tela do participante: sem header
+   * do evento (desktop e mobile) e sem stepper de etapas — só o conteúdo. A
+   * própria página traz o header de voltar. */
+  const isFullscreenPreview = isEventFullscreenPreviewPath(pathname);
 
   if (loading) {
     return (
@@ -188,12 +188,12 @@ function EditLayoutContent({ children }: { children: ReactNode }) {
 
   return (
     <div className="min-h-screen bg-gray-2">
-      {!isTicketsCheckoutPreview && (
+      {!isFullscreenPreview && (
         <div className="hidden md:block">
           <EventPageHeader eventName={event?.name} eventSlug={event?.slug} />
         </div>
       )}
-      {!isTicketFormScreen && !isTicketsCheckoutPreview && (
+      {!isTicketFormScreen && !isFullscreenPreview && (
         <EventMobileHeader
           eventId={eventId}
           eventName={event?.name}
@@ -202,7 +202,7 @@ function EditLayoutContent({ children }: { children: ReactNode }) {
         />
       )}
       <div className="max-w-7xl mx-auto px-4 lg:px-6 2xl:px-0">
-        {!isTicketsCheckoutPreview && (
+        {!isFullscreenPreview && (
           <div className={cn(hideEditStepperOnMobile && "hidden md:block")}>
             <EditProgressBar />
           </div>

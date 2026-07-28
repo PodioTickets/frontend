@@ -245,9 +245,15 @@ export function EventTabStrip({
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [descontoOpen, editarOpen, descontoMenuId, editarMenuId]);
 
+  // `overflow-y-hidden` é obrigatório junto do `overflow-x-auto`: pela spec, um
+  // eixo `auto` força o outro (`visible`) a virar `auto`, transformando o eixo Y
+  // num scroll container. O `-mb-px` das abas ativas gera 1px de overflow
+  // vertical — inócuo no Chrome/Android, mas no iOS Safari o eixo Y reserva
+  // espaço rolável e desenha uma "margem" fantasma abaixo da faixa. Fixar Y em
+  // hidden mantém a rolagem horizontal e elimina o gap só-do-iOS.
   const scrollClass = isPageHeader
-    ? "w-full min-w-0 overflow-x-auto px-6 [&::-webkit-scrollbar]:hidden"
-    : "w-full min-w-0 overflow-x-auto border-b border-gray-6 [&::-webkit-scrollbar]:hidden";
+    ? "w-full min-w-0 overflow-x-auto overflow-y-hidden px-6 [&::-webkit-scrollbar]:hidden"
+    : "w-full min-w-0 overflow-x-auto overflow-y-hidden border-b border-gray-6 [&::-webkit-scrollbar]:hidden";
 
   const rowClass = isPageHeader
     ? "flex min-w-max flex-nowrap items-center gap-6"
@@ -256,12 +262,12 @@ export function EventTabStrip({
   const linkTabCls = (active: boolean) =>
     isPageHeader
       ? `shrink-0 border-b-2 pb-3 px-1 text-sm transition-colors ${active ? "border-primary-10 font-manrope font-bold text-primary-10" : "border-transparent font-family-dm-sans font-normal text-gray-11 hover:text-gray-12"}`
-      : `-mb-px shrink-0 border-b-2 px-4 py-3 text-base transition-colors ${active ? "border-primary-11 font-manrope font-bold text-primary-11" : "border-transparent font-family-dm-sans font-normal text-gray-11"}`;
+      : `shrink-0 border-b-2 px-4 py-3 text-base transition-colors ${active ? "border-primary-11 font-manrope font-bold text-primary-11" : "border-transparent font-family-dm-sans font-normal text-gray-11"}`;
 
   const menuTriggerCls = (active: boolean) =>
     isPageHeader
       ? `flex cursor-pointer items-center gap-1 border-b-2 pb-3 px-1 text-sm transition-colors ${active ? "border-primary-10 font-manrope font-bold text-primary-10" : "border-transparent font-family-dm-sans font-normal text-gray-11 hover:text-gray-12"}`
-      : `-mb-px flex w-full shrink-0 cursor-pointer items-center gap-1 border-b-2 px-4 py-3 text-base transition-colors ${active ? "border-primary-11 font-manrope font-bold text-primary-11" : "border-transparent font-family-dm-sans font-normal text-gray-11"}`;
+      : `flex w-full shrink-0 cursor-pointer items-center gap-1 border-b-2 px-4 py-3 text-base transition-colors ${active ? "border-primary-11 font-manrope font-bold text-primary-11" : "border-transparent font-family-dm-sans font-normal text-gray-11"}`;
 
   const renderMenu = (
     id: string,

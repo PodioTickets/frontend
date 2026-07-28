@@ -105,6 +105,75 @@ function resolvePrimaryImageUrl(
   return allEntries[0]?.url;
 }
 
+/**
+ * Aplica a regra "principal precisa estar VISÍVEL e existir" a um mapa de
+ * principais (mesma lógica dos effects de normalização). Mantém a seleção
+ * manual quando válida; senão migra p/ a 1ª visível. Puro → usado p/ montar o
+ * baseline do dirty-check idêntico ao estado que os effects deixam.
+ */
+export function normalizePrimaryMap(
+  primary: Record<string, string>,
+  hidden: Record<string, string[]>,
+  urlsById: Record<string, string[]>,
+): Record<string, string> {
+  const next: Record<string, string> = { ...primary };
+  for (const [id, urls] of Object.entries(urlsById)) {
+    const hiddenSet = new Set(hidden[id] ?? []);
+    const cur = next[id];
+    if (cur && urls.includes(cur) && !hiddenSet.has(cur)) continue;
+    const firstVisible = urls.find((u) => !hiddenSet.has(u));
+    if (firstVisible) next[id] = firstVisible;
+    else delete next[id];
+  }
+  return next;
+}
+
+/** Igualdade de `Record<string,string>` (chaves + valores). */
+function primaryMapsEqual(
+  a: Record<string, string>,
+  b: Record<string, string>,
+): boolean {
+  const keys = Object.keys(a);
+  if (keys.length !== Object.keys(b).length) return false;
+  return keys.every((k) => a[k] === b[k]);
+}
+
+/** Igualdade de `Record<string,string[]>` tratando cada lista como CONJUNTO
+ *  (ordem de ocultar/desocultar não deve marcar alteração). */
+function hiddenMapsEqual(
+  a: Record<string, string[]>,
+  b: Record<string, string[]>,
+): boolean {
+  const keys = Object.keys(a);
+  if (keys.length !== Object.keys(b).length) return false;
+  return keys.every((k) => {
+    const bv = b[k];
+    if (!bv || a[k].length !== bv.length) return false;
+    const setB = new Set(bv);
+    return a[k].every((u) => setB.has(u));
+  });
+}
+
+/** Compara dois payloads do drawer (para habilitar "Salvar" só com mudança). */
+export function kitPayloadsEqual(
+  a: KitImagePositionPayload,
+  b: KitImagePositionPayload,
+): boolean {
+  return (
+    a.layout === b.layout &&
+    primaryMapsEqual(a.primaryImageUrlByTicketId, b.primaryImageUrlByTicketId) &&
+    primaryMapsEqual(
+      a.primaryImageUrlByCategoryId,
+      b.primaryImageUrlByCategoryId,
+    ) &&
+    hiddenMapsEqual(a.hiddenImageUrlsByTicketId, b.hiddenImageUrlsByTicketId) &&
+    hiddenMapsEqual(
+      a.hiddenImageUrlsByCategoryId,
+      b.hiddenImageUrlsByCategoryId,
+    )
+  );
+}
+
 function hasKitProductImageUrl(url: string | null | undefined): boolean {
   return typeof url === "string" && url.trim().length > 0;
 }
@@ -866,6 +935,9 @@ export function KitImagePositionDrawer({
     Record<string, string[]>
   >({});
   const [saving, setSaving] = useState(false);
+  // Snapshot da config no momento da abertura (já normalizada, igual ao estado
+  // que os effects deixam) — baseline do dirty-check do botão "Salvar".
+  const baselineRef = useRef<KitImagePositionPayload | null>(null);
 
   const filteredSections = useMemo(
     () =>
@@ -929,7 +1001,6 @@ export function KitImagePositionDrawer({
       );
       if (pid) nextTicket[t.id] = pid;
     }
-    setPrimaryByTicket(nextTicket);
 
     // Ocultas: só mantém URLs que ainda existem no ingresso/categoria (dropa órfãs).
     const initHidden = (
@@ -944,12 +1015,16 @@ export function KitImagePositionDrawer({
       }
       return out;
     };
-    setHiddenByTicket(
-      initHidden(initialKitSelection?.hiddenByTicket, ticketImageUrls),
+    const nextHiddenTicket = initHidden(
+      initialKitSelection?.hiddenByTicket,
+      ticketImageUrls,
     );
-    setHiddenByCategory(
-      initHidden(initialKitSelection?.hiddenByCategory, categoryImageUrls),
+    const nextHiddenCategory = initHidden(
+      initialKitSelection?.hiddenByCategory,
+      categoryImageUrls,
     );
+    setHiddenByTicket(nextHiddenTicket);
+    setHiddenByCategory(nextHiddenCategory);
 
     const nextCat: Record<string, string> = {};
     for (const s of filteredSections) {
@@ -968,9 +1043,33 @@ export function KitImagePositionDrawer({
       );
       if (pid) nextCat[UNCATEGORIZED_CATEGORY_KEY] = pid;
     }
-    setPrimaryByCategory(nextCat);
 
-    setLayout(initialKitSelection?.layout ?? "on_tickets");
+    // Normaliza os principais contra as ocultas ANTES de setar o estado, para
+    // que o baseline seja idêntico ao que os effects de normalização deixam
+    // (senão o botão nasceria "sujo" quando a principal salva estivesse oculta).
+    const normTicket = normalizePrimaryMap(
+      nextTicket,
+      nextHiddenTicket,
+      ticketImageUrls,
+    );
+    const normCat = normalizePrimaryMap(
+      nextCat,
+      nextHiddenCategory,
+      categoryImageUrls,
+    );
+    setPrimaryByTicket(normTicket);
+    setPrimaryByCategory(normCat);
+
+    const nextLayout = initialKitSelection?.layout ?? "on_tickets";
+    setLayout(nextLayout);
+
+    baselineRef.current = {
+      layout: nextLayout,
+      primaryImageUrlByTicketId: normTicket,
+      primaryImageUrlByCategoryId: normCat,
+      hiddenImageUrlsByTicketId: pruneEmptyUrlLists(nextHiddenTicket),
+      hiddenImageUrlsByCategoryId: pruneEmptyUrlLists(nextHiddenCategory),
+    };
   }, [
     isOpen,
     allTicketRows,
@@ -1071,6 +1170,14 @@ export function KitImagePositionDrawer({
     }),
     [layout, primaryByTicket, primaryByCategory, hiddenByTicket, hiddenByCategory],
   );
+
+  // Só há alteração se o payload atual divergir do baseline capturado na abertura.
+  // Antes do baseline existir (drawer fechado), considera "sem mudança".
+  const isDirty = useMemo(() => {
+    const baseline = baselineRef.current;
+    if (!baseline) return false;
+    return !kitPayloadsEqual(buildSelectionPayload(), baseline);
+  }, [buildSelectionPayload]);
 
   const handleSave = useCallback(async () => {
     if (saving) return;
@@ -1315,8 +1422,8 @@ export function KitImagePositionDrawer({
           <Button
             type="button"
             onClick={handleSave}
-            disabled={saving}
-            className="h-11 px-5 font-bold text-base font-manrope"
+            disabled={saving || !isDirty}
+            className="h-11 px-5 font-bold text-base font-manrope disabled:cursor-not-allowed disabled:opacity-50"
           >
             {saving ? "Salvando..." : "Salvar configuração"}
           </Button>

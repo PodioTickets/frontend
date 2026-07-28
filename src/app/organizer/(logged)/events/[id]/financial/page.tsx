@@ -12,8 +12,11 @@ export default function EventFinancialPage() {
   const orgNav = useOrganizerNavigate();
   const params = useParams();
   const eventId = params.id as string;
-  const { isChecking } = useEventPermissionGuard("financial");
-  if (isChecking) return <div className="min-h-screen bg-gray-2 flex items-center justify-center"><Loading /></div>;
+  const { isChecking, hasPermission } = useEventPermissionGuard("financial");
+  // Enquanto verifica OU sem permissão (o guard já dispara o redirect): não
+  // renderiza a view nem os fetches financeiros. Evita o flash de conteúdo.
+  if (isChecking || !hasPermission)
+    return <div className="min-h-screen bg-gray-2 flex items-center justify-center"><Loading /></div>;
 
   return (
     <EventFinancialView

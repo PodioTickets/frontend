@@ -15,7 +15,7 @@ import { TopicsIcon } from "@/components/Icons/TopicsIcon";
 import { BannerIcon } from "@/components/Icons/Organizer/BannerIcon";
 import { FinancialStepIcon } from "@/components/Icons/Organizer/FinancialStepIcon";
 import { saveLastCreateEventWizardPath } from "@/lib/createEventWizardPersistence";
-import { isTicketsCheckoutPreviewPath } from "@/lib/ticketsCheckoutPreviewRoute";
+import { isEventFullscreenPreviewPath } from "@/lib/ticketsCheckoutPreviewRoute";
 
 export const dynamic = 'force-dynamic';
 
@@ -23,9 +23,9 @@ function ConditionalProgressBar() {
   const pathname = useOrganizerPathname();
   const hideOnMobile = pathname.startsWith("/organizer/events/new")
 
-  /* A prévia reproduz a tela do participante: sem stepper de etapas — só o
-   * conteúdo (a página traz o próprio header de voltar). */
-  if (isTicketsCheckoutPreviewPath(pathname)) return null;
+  /* As prévias (ingressos/tópicos) reproduzem a tela do participante: sem
+   * stepper de etapas — só o conteúdo (a página traz o próprio header de voltar). */
+  if (isEventFullscreenPreviewPath(pathname)) return null;
 
   return (
     <div className={hideOnMobile ? "hidden md:block" : ""}>

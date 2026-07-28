@@ -67,6 +67,19 @@ function buildEventIdsForSettings(
   return selected;
 }
 
+/** Compara dois mapas de flags booleanas (permissões/seleção de eventos) ignorando
+ * chaves ausentes vs. `false` — ambas contam como "não marcado". */
+function boolRecordEqual(
+  a: Record<string, boolean>,
+  b: Record<string, boolean>
+): boolean {
+  const keys = new Set([...Object.keys(a), ...Object.keys(b)]);
+  for (const k of keys) {
+    if (!!a[k] !== !!b[k]) return false;
+  }
+  return true;
+}
+
 function PermissionCheckbox({ checked }: { checked: boolean }) {
   return (
     <span
@@ -187,6 +200,16 @@ export function CollaboratorDrawer({
   const [eventSelection, setEventSelection] = useState<Record<string, boolean>>(
     {}
   );
+  // Baseline (modo edição): snapshot do estado carregado do backend, usado só
+  // pra habilitar o "Salvar" quando houver alteração real. Nome/permissões são
+  // setados na carga do detalhe; a seleção de eventos, na derivação da whitelist.
+  const [initialFullName, setInitialFullName] = useState("");
+  const [initialPermissions, setInitialPermissions] = useState<
+    Record<string, boolean>
+  >({});
+  const [initialEventSelection, setInitialEventSelection] = useState<
+    Record<string, boolean>
+  >({});
   const [detailLoading, setDetailLoading] = useState(false);
   const [whitelistFromApi, setWhitelistFromApi] = useState<string[] | null>(null);
   const [eventSearch, setEventSearch] = useState("");
@@ -243,15 +266,19 @@ export function CollaboratorDrawer({
           member.userId
         );
         if (cancelled) return;
-        setFullName(
-          `${detail.member.user.firstName} ${detail.member.user.lastName}`.trim()
+        const loadedName =
+          `${detail.member.user.firstName} ${detail.member.user.lastName}`.trim();
+        const loadedPerms = permissionsFromApi(
+          detail.permissions,
+          detail.member.role,
         );
+        setFullName(loadedName);
+        setInitialFullName(loadedName);
         setEmail(detail.member.user.email || "");
         setPassword("");
         setConfirmPassword("");
-        setPermissions(
-          permissionsFromApi(detail.permissions, detail.member.role),
-        );
+        setPermissions(loadedPerms);
+        setInitialPermissions(loadedPerms);
         setWhitelistFromApi(detail.eventIds);
       } catch (err: any) {
         if (cancelled) return;
@@ -260,11 +287,17 @@ export function CollaboratorDrawer({
           err?.message ||
           "Erro ao carregar colaborador."
         );
-        setFullName(
-          `${member.user.firstName} ${member.user.lastName}`.trim()
+        const fallbackName =
+          `${member.user.firstName} ${member.user.lastName}`.trim();
+        const fallbackPerms = permissionsFromApi(
+          member.permissions,
+          member.role,
         );
+        setFullName(fallbackName);
+        setInitialFullName(fallbackName);
         setEmail(member.user.email || "");
-        setPermissions(permissionsFromApi(member.permissions, member.role));
+        setPermissions(fallbackPerms);
+        setInitialPermissions(fallbackPerms);
         setWhitelistFromApi(member.eventIds ?? null);
       } finally {
         if (!cancelled) setDetailLoading(false);
@@ -279,6 +312,7 @@ export function CollaboratorDrawer({
     if (!open || mode !== "edit" || detailLoading) return;
     if (events.length === 0) {
       setEventSelection({});
+      setInitialEventSelection({});
       return;
     }
     // null = sem restrição (todos marcados); [] = nenhum; [ids] = só esses
@@ -289,6 +323,7 @@ export function CollaboratorDrawer({
       sel[ev.id] = !restrict || whitelist!.includes(ev.id);
     }
     setEventSelection(sel);
+    setInitialEventSelection(sel);
   }, [open, mode, events, whitelistFromApi, detailLoading]);
 
   useEffect(() => {
@@ -343,6 +378,25 @@ export function CollaboratorDrawer({
     () => PERMISSION_ROWS.map((r) => r.id),
     []
   );
+
+  // Modo edição: só há alteração a salvar se nome, permissões ou seleção de
+  // eventos divergirem do baseline carregado. No modo criação nunca gateamos
+  // (a validação obrigatória acontece no submit). OWNER não é editável.
+  const isDirty = useMemo(() => {
+    if (mode !== "edit") return true;
+    if (fullName.trim() !== initialFullName.trim()) return true;
+    if (!boolRecordEqual(permissions, initialPermissions)) return true;
+    if (!boolRecordEqual(eventSelection, initialEventSelection)) return true;
+    return false;
+  }, [
+    mode,
+    fullName,
+    permissions,
+    eventSelection,
+    initialFullName,
+    initialPermissions,
+    initialEventSelection,
+  ]);
 
   const selectAllPermissions = () => {
     const next: Record<string, boolean> = {};
@@ -994,7 +1048,8 @@ export function CollaboratorDrawer({
                   disabled={
                     saving ||
                     removing ||
-                    (mode === "edit" && (detailLoading || isOwnerMember))
+                    (mode === "edit" &&
+                      (detailLoading || isOwnerMember || !isDirty))
                   }
                   className={cn(
                     "h-11 min-h-[44px] min-w-0 flex-1 rounded-lg px-3 font-manrope font-bold text-base md:min-w-[176px] md:flex-initial md:px-5",
