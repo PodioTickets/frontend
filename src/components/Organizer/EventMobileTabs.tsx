@@ -20,7 +20,9 @@ const EVENT_TABS_DEF = (eventId: string): { label: string; href: string; permiss
   // exige `coupons` — gate feito nos botões da view, não na aba.
   { label: "Desconto", href: `/organizer/events/${eventId}/discount/cupom`, permission: ["coupons", "view_event"] },
   { label: "Ads", href: `/organizer/events/${eventId}/ads`, permission: "pixel" },
-  { label: "Notificação", href: `/organizer/events/${eventId}/notifications`, permission: "notify" },
+  // Quem pode visualizar o evento vê as notificações (só leitura); criar
+  // mensagens exige `notify` — gate feito no botão da view, não na aba.
+  { label: "Notificação", href: `/organizer/events/${eventId}/notifications`, permission: ["notify", "view_event"] },
 ];
 
 export function getEventTabs(

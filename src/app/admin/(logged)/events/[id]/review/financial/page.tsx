@@ -138,7 +138,9 @@ export default function ReviewFinancialPage() {
           variant="default"
           className={cn("h-[52px] px-11 font-manrope text-lg font-bold text-gray-12 disabled:cursor-not-allowed disabled:opacity-50", "max-md:h-12 max-md:w-full max-md:px-4")}
         >
-          {saving ? "Salvando..." : "Salvar alterações"}
+          {/* Última etapa da revisão: este save de fato publica o evento
+              (saveFinancialSettings + publishEvent), então o rótulo reflete isso. */}
+          {saving ? "Publicando..." : "Publicar evento"}
         </Button>
       }
     >
