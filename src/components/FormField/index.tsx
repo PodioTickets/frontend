@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { Info } from "lucide-react";
+import { Info, Eye, EyeOff } from "lucide-react";
 import { cn } from "@/utils/cn";
 import { Input } from "@/components/Input";
 
@@ -65,6 +65,11 @@ export function FormField({
       }
     : undefined;
 
+  // Campos de senha ganham o botão "olho" (mostrar/ocultar), igual aos logins.
+  const [showPassword, setShowPassword] = React.useState(false);
+  const isPassword = type === "password";
+  const effectiveType = isPassword && showPassword ? "text" : type;
+
   return (
     <div className={cn("flex flex-1 flex-col gap-2 min-w-0", className)}>
       <label
@@ -82,7 +87,7 @@ export function FormField({
       </label>
       <div className="relative">
         <Input
-          type={type}
+          type={effectiveType}
           value={value}
           onChange={handleChange}
           onKeyDown={onKeyDown}
@@ -102,13 +107,27 @@ export function FormField({
               "border-red-8 focus-visible:border-red-8 aria-invalid:border-red-8",
             !error && "border-gray-6",
             "aria-invalid:ring-0",
-            rightSlot ? "pr-[110px]" : "",
+            rightSlot ? "pr-[110px]" : isPassword ? "pr-11" : "",
           )}
         />
         {rightSlot ? (
           <div className="absolute right-2 top-1/2 -translate-y-1/2">
             {rightSlot}
           </div>
+        ) : isPassword ? (
+          <button
+            type="button"
+            onClick={() => setShowPassword((p) => !p)}
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-11 hover:text-gray-12 transition-colors"
+            aria-label={showPassword ? "Ocultar senha" : "Mostrar senha"}
+            tabIndex={-1}
+          >
+            {showPassword ? (
+              <EyeOff className="size-5" />
+            ) : (
+              <Eye className="size-5" />
+            )}
+          </button>
         ) : null}
       </div>
       {error ? (

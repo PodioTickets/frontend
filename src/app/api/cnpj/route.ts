@@ -1,37 +1,167 @@
 import { NextRequest, NextResponse } from "next/server";
 
 /**
- * Consulta CNPJ na BrasilAPI (dados públicos da Receita) — usada pelo botão
- * "Consultar" do auto-cadastro de organizador para autopreencher razão social /
- * nome fantasia. Mesmo padrão de proxy interno do `/api/cep`.
+ * Consulta CNPJ (dados públicos da Receita) para autopreencher o auto-cadastro
+ * de organizador — razão social, nome fantasia, endereço e contatos.
+ *
+ * Provedor primário: cnpj.ws público (`https://publica.cnpj.ws`). Como o proxy é
+ * server-side (todos os usuários compartilham o IP) e o endpoint público tem
+ * rate-limit agressivo (~3 req/min), há FALLBACK automático para a BrasilAPI em
+ * caso de erro/limite — disponibilidade é prioridade. A resposta é NORMALIZADA
+ * para um shape estável, isolando o cliente do formato de cada provedor.
  */
-export async function GET(request: NextRequest) {
-  const searchParams = request.nextUrl.searchParams;
-  const cnpj = (searchParams.get("cnpj") ?? "").replace(/\D/g, "");
 
+const digitsOnly = (v: string) => v.replace(/\D/g, "");
+
+/** Shape estável consumido pelo front (independente do provedor). */
+export interface CnpjLookupData {
+  legalName: string;
+  tradeName: string;
+  responsibleName: string; // nome do responsável (1º sócio/administrador)
+  zipCode: string; // só dígitos
+  street: string;
+  number: string;
+  neighborhood: string;
+  city: string;
+  state: string; // UF
+  email: string;
+  phone: string; // só dígitos (DDD + número)
+}
+
+const empty: CnpjLookupData = {
+  legalName: "",
+  tradeName: "",
+  responsibleName: "",
+  zipCode: "",
+  street: "",
+  number: "",
+  neighborhood: "",
+  city: "",
+  state: "",
+  email: "",
+  phone: "",
+};
+
+/**
+ * Extrai o nome do responsável do quadro societário. Preferimos o
+ * administrador; se não houver qualificação clara, o primeiro sócio.
+ */
+function pickResponsible(
+  socios: any[],
+  nameKey: string,
+  qualKey?: (s: any) => string,
+): string {
+  if (!Array.isArray(socios) || socios.length === 0) return "";
+  const admin = qualKey
+    ? socios.find((s) => /administrador/i.test(qualKey(s) ?? ""))
+    : undefined;
+  const chosen = admin ?? socios[0];
+  return String(chosen?.[nameKey] ?? "").trim();
+}
+
+/** Normaliza a resposta do cnpj.ws público (estabelecimento aninhado). */
+function fromCnpjWs(raw: any): CnpjLookupData {
+  const est = raw?.estabelecimento ?? {};
+  const street = [est.tipo_logradouro, est.logradouro]
+    .filter(Boolean)
+    .join(" ")
+    .trim();
+  const phone = `${digitsOnly(String(est.ddd1 ?? ""))}${digitsOnly(
+    String(est.telefone1 ?? ""),
+  )}`;
+  return {
+    ...empty,
+    legalName: (raw?.razao_social ?? "").trim(),
+    tradeName: (est.nome_fantasia ?? "").trim(),
+    responsibleName: pickResponsible(
+      raw?.socios,
+      "nome",
+      (s) => s?.qualificacao_socio?.descricao ?? "",
+    ),
+    zipCode: digitsOnly(String(est.cep ?? "")),
+    street,
+    number: (est.numero ?? "").trim(),
+    neighborhood: (est.bairro ?? "").trim(),
+    city: (est.cidade?.nome ?? "").trim(),
+    state: (est.estado?.sigla ?? "").trim(),
+    email: (est.email ?? "").trim().toLowerCase(),
+    phone,
+  };
+}
+
+/** Normaliza a resposta da BrasilAPI (shape plano). */
+function fromBrasilApi(raw: any): CnpjLookupData {
+  return {
+    ...empty,
+    legalName: (raw?.razao_social ?? "").trim(),
+    tradeName: (raw?.nome_fantasia ?? "").trim(),
+    responsibleName: pickResponsible(
+      raw?.qsa,
+      "nome_socio",
+      (s) => s?.qualificacao_socio ?? "",
+    ),
+    zipCode: digitsOnly(String(raw?.cep ?? "")),
+    street: (raw?.logradouro ?? "").trim(),
+    number: (raw?.numero ?? "").trim(),
+    neighborhood: (raw?.bairro ?? "").trim(),
+    city: (raw?.municipio ?? "").trim(),
+    state: (raw?.uf ?? "").trim(),
+    email: (raw?.email ?? "").trim().toLowerCase(),
+    phone: digitsOnly(String(raw?.ddd_telefone_1 ?? "")),
+  };
+}
+
+/** Marca 404 (não encontrado) para diferenciar de falha do provedor. */
+class NotFoundError extends Error {}
+
+async function fetchCnpjWs(cnpj: string): Promise<CnpjLookupData> {
+  const res = await fetch(`https://publica.cnpj.ws/cnpj/${cnpj}`, {
+    headers: { Accept: "application/json" },
+  });
+  if (res.status === 404) throw new NotFoundError();
+  if (!res.ok) throw new Error(`cnpj.ws ${res.status}`);
+  return fromCnpjWs(await res.json());
+}
+
+async function fetchBrasilApi(cnpj: string): Promise<CnpjLookupData> {
+  const res = await fetch(`https://brasilapi.com.br/api/cnpj/v1/${cnpj}`, {
+    headers: { Accept: "application/json" },
+  });
+  if (res.status === 404) throw new NotFoundError();
+  if (!res.ok) throw new Error(`brasilapi ${res.status}`);
+  return fromBrasilApi(await res.json());
+}
+
+export async function GET(request: NextRequest) {
+  const cnpj = digitsOnly(request.nextUrl.searchParams.get("cnpj") ?? "");
   if (cnpj.length !== 14) {
     return NextResponse.json({ error: "CNPJ inválido" }, { status: 400 });
   }
 
   try {
-    const response = await fetch(
-      `https://brasilapi.com.br/api/cnpj/v1/${cnpj}`,
-      { method: "GET", headers: { Accept: "application/json" } },
-    );
-
-    if (!response.ok) {
-      // 404 = CNPJ não encontrado na base; demais = erro do provedor.
-      const status = response.status === 404 ? 404 : 502;
+    // Primário: cnpj.ws público.
+    const data = await fetchCnpjWs(cnpj);
+    return NextResponse.json(data);
+  } catch (primaryError) {
+    if (primaryError instanceof NotFoundError) {
+      return NextResponse.json({ error: "CNPJ não encontrado" }, { status: 404 });
+    }
+    // Falha/limite do primário → tenta BrasilAPI.
+    try {
+      const data = await fetchBrasilApi(cnpj);
+      return NextResponse.json(data);
+    } catch (fallbackError) {
+      if (fallbackError instanceof NotFoundError) {
+        return NextResponse.json(
+          { error: "CNPJ não encontrado" },
+          { status: 404 },
+        );
+      }
+      console.error("Error fetching CNPJ:", primaryError, fallbackError);
       return NextResponse.json(
-        { error: status === 404 ? "CNPJ não encontrado" : "Erro ao consultar CNPJ" },
-        { status },
+        { error: "Erro ao consultar CNPJ" },
+        { status: 502 },
       );
     }
-
-    const data = await response.json();
-    return NextResponse.json(data);
-  } catch (error) {
-    console.error("Error fetching CNPJ:", error);
-    return NextResponse.json({ error: "Erro ao consultar CNPJ" }, { status: 500 });
   }
 }
