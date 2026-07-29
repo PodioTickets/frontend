@@ -203,9 +203,12 @@ export default function TicketDetailsPage() {
   // de loading só retorna DEPOIS destes hooks). Por isso os memos abaixo tratam null —
   // acessar `event.location`/`event.eventDate` direto (inclusive nas deps) estourava
   // no 1º render.
+  // "Local, Cidade, Estado" — MESMO formato do card da home (`EventCard`):
+  // usa `locationName` (rótulo do local escolhido no mapa), NÃO o `location`
+  // (endereço completo). Cai pra "Cidade, Estado" quando o local não tem nome.
   const addressLabel = useMemo(() => {
     if (!event) return "";
-    return [event.location, event.city, event.state]
+    return [event.locationName, event.city, event.state]
       .map((part: string | null | undefined) => (part ?? "").trim())
       .filter(Boolean)
       .join(", ");

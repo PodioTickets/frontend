@@ -1,9 +1,10 @@
 "use client";
 
+import { AnimatePresence, motion } from "framer-motion";
 import { ChevronRight } from "lucide-react";
 import { Dropdown } from "@/components/Dropdown";
 import { BRAZIL_STATES } from "@/constants/brazilStates";
-import { formatCEP } from "@/utils/masks";
+import { formatCEP, onlyDigits } from "@/utils/masks";
 import { cn } from "@/utils/cn";
 import { SignupField } from "../SignupField";
 import type { OrganizerSignupFlow } from "../useOrganizerSignupFlow";
@@ -55,51 +56,72 @@ function StateSelect({
 /** Etapa 4 — Endereço (CEP autopreenche rua/bairro/cidade/estado). */
 export function StepAddress({ flow }: { flow: OrganizerSignupFlow }) {
   const { formData, errors, setField, handleZipChange, loadingCep } = flow;
+
+  // Revela os demais campos só quando o CEP está completo (8 dígitos). O reveal
+  // não depende do sucesso do lookup — se a busca falhar, o usuário preenche à mão.
+  const showRest = onlyDigits(formData.zipCode).length === 8;
+
   return (
-    <div className="grid grid-cols-1 gap-x-4 gap-y-5 md:grid-cols-2">
-      <SignupField
-        label="CEP"
-        value={formData.zipCode}
-        onChange={(v) => handleZipChange(formatCEP(v))}
-        placeholder={loadingCep ? "Buscando endereço..." : "00000-000"}
-        error={errors.zipCode}
-        inputMode="numeric"
-        maxLength={9}
-      />
-      <SignupField
-        label="Rua"
-        value={formData.street}
-        onChange={(v) => setField("street", v)}
-        placeholder="Digite o nome da sua rua"
-        error={errors.street}
-      />
-      <SignupField
-        label="Número"
-        value={formData.number}
-        onChange={(v) => setField("number", v)}
-        placeholder="Ex: 123"
-        error={errors.number}
-        inputMode="numeric"
-      />
-      <SignupField
-        label="Bairro"
-        value={formData.neighborhood}
-        onChange={(v) => setField("neighborhood", v)}
-        placeholder="Digite o nome do seu bairro"
-        error={errors.neighborhood}
-      />
-      <SignupField
-        label="Cidade"
-        value={formData.city}
-        onChange={(v) => setField("city", v)}
-        placeholder="Nome da cidade"
-        error={errors.city}
-      />
-      <StateSelect
-        value={formData.state}
-        onChange={(v) => setField("state", v)}
-        error={errors.state}
-      />
+    <div className="flex flex-col gap-5">
+      <div className="grid grid-cols-1 gap-x-4 gap-y-5 md:grid-cols-2">
+        <SignupField
+          label="CEP"
+          value={formData.zipCode}
+          onChange={(v) => handleZipChange(formatCEP(v))}
+          placeholder={loadingCep ? "Buscando endereço..." : "00000-000"}
+          error={errors.zipCode}
+          inputMode="numeric"
+          maxLength={9}
+        />
+      </div>
+
+      <AnimatePresence initial={false}>
+        {showRest ? (
+          <motion.div
+            key="address-fields"
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 8 }}
+            transition={{ duration: 0.25, ease: "easeOut" }}
+            className="grid grid-cols-1 gap-x-4 gap-y-5 md:grid-cols-2"
+          >
+            <SignupField
+              label="Rua"
+              value={formData.street}
+              onChange={(v) => setField("street", v)}
+              placeholder="Digite o nome da sua rua"
+              error={errors.street}
+            />
+            <SignupField
+              label="Número"
+              value={formData.number}
+              onChange={(v) => setField("number", v)}
+              placeholder="Ex: 123"
+              error={errors.number}
+              inputMode="numeric"
+            />
+            <SignupField
+              label="Bairro"
+              value={formData.neighborhood}
+              onChange={(v) => setField("neighborhood", v)}
+              placeholder="Digite o nome do seu bairro"
+              error={errors.neighborhood}
+            />
+            <SignupField
+              label="Cidade"
+              value={formData.city}
+              onChange={(v) => setField("city", v)}
+              placeholder="Nome da cidade"
+              error={errors.city}
+            />
+            <StateSelect
+              value={formData.state}
+              onChange={(v) => setField("state", v)}
+              error={errors.state}
+            />
+          </motion.div>
+        ) : null}
+      </AnimatePresence>
     </div>
   );
 }

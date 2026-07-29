@@ -18,6 +18,8 @@ export interface Ticket {
     name: string;
     imageUrl?: string;
     eventDate: string;
+    /** Nome do local escolhido no mapa (mesmo campo do card da home). */
+    locationName?: string | null;
     location: {
       city: string;
       state: string;
@@ -97,7 +99,13 @@ export function TicketCard({ ticket, className }: TicketCardProps) {
 
   const goToTicket = () => router.push(`/user/tickets/${ticket.id}`);
 
-  const addressLabel = [ticket.event.location.city, ticket.event.location.state]
+  // "Local, Cidade, Estado" — MESMO formato do card da home (usa `locationName`;
+  // cai pra "Cidade, Estado" quando o local não tem nome).
+  const addressLabel = [
+    ticket.event.locationName,
+    ticket.event.location.city,
+    ticket.event.location.state,
+  ]
     .map((part) => (part ?? "").trim())
     .filter(Boolean)
     .join(", ");

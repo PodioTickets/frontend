@@ -13,21 +13,34 @@ describe("lookupCnpjDigits", () => {
     expect(fetchSpy).not.toHaveBeenCalled();
   });
 
-  it("retorna dados no sucesso", async () => {
+  it("retorna dados normalizados no sucesso", async () => {
+    // A rota `/api/cnpj` já normaliza o provedor (cnpj.ws/BrasilAPI) para o
+    // shape estável `CnpjLookupData`; o cliente apenas repassa.
     vi.spyOn(global, "fetch").mockResolvedValue({
       ok: true,
       json: async () => ({
-        cnpj: "11222333000181",
-        razao_social: "EMPRESA LTDA",
-        nome_fantasia: "Meu Evento",
+        legalName: "EMPRESA LTDA",
+        tradeName: "Meu Evento",
+        responsibleName: "Fulano de Tal",
+        zipCode: "01001000",
+        street: "RUA TESTE",
+        number: "100",
+        neighborhood: "Centro",
+        city: "São Paulo",
+        state: "SP",
+        email: "contato@empresa.com",
+        phone: "11987654321",
       }),
     } as Response);
 
     const r = await lookupCnpjDigits("11.222.333/0001-81");
     expect(r.ok).toBe(true);
     if (r.ok) {
-      expect(r.data.razao_social).toBe("EMPRESA LTDA");
-      expect(r.data.nome_fantasia).toBe("Meu Evento");
+      expect(r.data.legalName).toBe("EMPRESA LTDA");
+      expect(r.data.tradeName).toBe("Meu Evento");
+      expect(r.data.responsibleName).toBe("Fulano de Tal");
+      expect(r.data.city).toBe("São Paulo");
+      expect(r.data.phone).toBe("11987654321");
     }
   });
 

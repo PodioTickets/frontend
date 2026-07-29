@@ -1,19 +1,29 @@
 /**
- * Consulta CNPJ via rota interna `/api/cnpj` (BrasilAPI). Espelha `lookupCep.ts`.
- * Usada pelo botão "Consultar" do auto-cadastro de organizador para autopreencher
- * razão social e nome fantasia.
+ * Consulta CNPJ via rota interna `/api/cnpj` (cnpj.ws público + fallback
+ * BrasilAPI). Espelha `lookupCep.ts`. Usada no auto-cadastro de organizador para
+ * autopreencher organização + endereço + contatos ao completar o CNPJ.
+ *
+ * A rota já NORMALIZA a resposta para `CnpjLookupData` (shape estável),
+ * independente do provedor.
  */
-export interface BrasilApiCnpjResponse {
-  cnpj: string;
-  razao_social: string;
-  nome_fantasia: string | null;
-  // A BrasilAPI retorna muitos outros campos (endereço, sócios, etc.); só
-  // tipamos os que consumimos.
-  [key: string]: unknown;
+
+/** Shape estável retornado por `/api/cnpj`. */
+export interface CnpjLookupData {
+  legalName: string;
+  tradeName: string;
+  responsibleName: string; // nome do responsável (1º sócio/administrador)
+  zipCode: string; // só dígitos
+  street: string;
+  number: string;
+  neighborhood: string;
+  city: string;
+  state: string; // UF
+  email: string;
+  phone: string; // só dígitos (DDD + número)
 }
 
 export type LookupCnpjResult =
-  | { ok: true; data: BrasilApiCnpjResponse }
+  | { ok: true; data: CnpjLookupData }
   | { ok: false; message: string };
 
 export async function lookupCnpjDigits(
@@ -39,6 +49,6 @@ export async function lookupCnpjDigits(
     return { ok: false, message };
   }
 
-  const data = (await response.json()) as BrasilApiCnpjResponse;
+  const data = (await response.json()) as CnpjLookupData;
   return { ok: true, data };
 }

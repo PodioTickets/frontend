@@ -156,6 +156,7 @@ export function useMyTickets(
             name: order.event?.name || "Evento sem nome",
             imageUrl: order.event?.bannerUrl || order.event?.imageUrl || "",
             eventDate: order.event?.startDate || order.event?.eventDate || "",
+            locationName: order.event?.locationName ?? null,
             location: {
               city: order.event?.city || order.event?.location?.city || "Cidade não informada",
               state: order.event?.state || order.event?.location?.state || "Estado não informado",

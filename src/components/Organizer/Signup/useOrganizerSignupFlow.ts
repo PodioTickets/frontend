@@ -8,7 +8,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useOrganizerNavigate } from "@/hooks/useOrganizerNavigate";
 import { lookupCepDigits } from "@/utils/lookupCep";
 import { lookupCnpjDigits } from "@/utils/lookupCnpj";
-import { onlyDigits } from "@/utils/masks";
+import { onlyDigits, formatCEP, formatPhone } from "@/utils/masks";
 import { ORGANIZER_CONTRACT_IDS } from "@/data/organizerContracts";
 import {
   accessStepSchema,
@@ -105,6 +105,7 @@ export function useOrganizerSignupFlow() {
     () => new Set(),
   );
   const lastFetchedCepRef = useRef<string>("");
+  const lastFetchedCnpjRef = useRef<string>("");
 
   const allContractsAccepted =
     ORGANIZER_CONTRACT_IDS.length > 0 &&
@@ -254,31 +255,63 @@ export function useOrganizerSignupFlow() {
     [setField],
   );
 
-  /** Consulta CNPJ (botão "Consultar") → autopreenche razão social + fantasia. */
-  const consultarCnpj = useCallback(async () => {
-    const digits = onlyDigits(formData.document);
-    if (digits.length !== 14) {
-      toast.error("Informe um CNPJ com 14 dígitos");
-      return;
+  /**
+   * CNPJ com máscara já aplicada; ao completar 14 dígitos consulta a Receita
+   * (cnpj.ws + fallback BrasilAPI) e autopreenche organização + endereço +
+   * contatos — assim as próximas etapas já chegam preenchidas. Espelha
+   * `handleZipChange`; a API sempre vence quando traz o campo (`valor || prev`).
+   */
+  const handleCnpjChange = useCallback((masked: string) => {
+    setField("document", masked);
+    const digits = onlyDigits(masked);
+    if (digits.length === 14 && digits !== lastFetchedCnpjRef.current) {
+      lastFetchedCnpjRef.current = digits;
+      void (async () => {
+        setLoadingCnpj(true);
+        try {
+          const result = await lookupCnpjDigits(digits);
+          if (!result.ok) {
+            toast.error(result.message);
+            return;
+          }
+          const { data } = result;
+          const phoneDigits = onlyDigits(data.phone);
+          setFormData((prev) => ({
+            ...prev,
+            // Organização
+            legalName: data.legalName || prev.legalName,
+            tradeName: data.tradeName || prev.tradeName,
+            ownerName: data.responsibleName || prev.ownerName,
+            // Endereço (próxima etapa) — pré-preenchido
+            zipCode: data.zipCode ? formatCEP(data.zipCode) : prev.zipCode,
+            street: data.street || prev.street,
+            number: data.number || prev.number,
+            neighborhood: data.neighborhood || prev.neighborhood,
+            city: data.city || prev.city,
+            state: data.state || prev.state,
+            // Contatos (próxima etapa) — pré-preenchidos
+            orgEmail: data.email || prev.orgEmail,
+            // 11 dígitos = celular → WhatsApp; 10 = fixo → Telefone.
+            whatsapp:
+              phoneDigits.length === 11
+                ? formatPhone(phoneDigits)
+                : prev.whatsapp,
+            phone:
+              phoneDigits.length > 0 && phoneDigits.length < 11
+                ? formatPhone(phoneDigits)
+                : prev.phone,
+          }));
+          // O CEP já veio preenchido; evita refetch redundante ao abrir o endereço.
+          if (data.zipCode) lastFetchedCepRef.current = onlyDigits(data.zipCode);
+          toast.success("Dados do CNPJ preenchidos!");
+        } finally {
+          setLoadingCnpj(false);
+        }
+      })();
+    } else if (digits.length < 14) {
+      lastFetchedCnpjRef.current = "";
     }
-    setLoadingCnpj(true);
-    try {
-      const result = await lookupCnpjDigits(digits);
-      if (!result.ok) {
-        toast.error(result.message);
-        return;
-      }
-      const { data } = result;
-      setFormData((prev) => ({
-        ...prev,
-        legalName: data.razao_social || prev.legalName,
-        tradeName: data.nome_fantasia || prev.tradeName,
-      }));
-      toast.success("Dados do CNPJ preenchidos!");
-    } finally {
-      setLoadingCnpj(false);
-    }
-  }, [formData.document]);
+  }, [setField]);
 
   /** CEP com máscara já aplicada; autopreenche endereço ao completar 8 dígitos. */
   const handleZipChange = useCallback((masked: string) => {
@@ -334,7 +367,7 @@ export function useOrganizerSignupFlow() {
     allContractsAccepted,
     setField,
     selectPersonType,
-    consultarCnpj,
+    handleCnpjChange,
     handleZipChange,
     handleNext,
     handleBack,
