@@ -158,11 +158,12 @@ export function TicketCard({ ticket, className }: TicketCardProps) {
           fallbackId={ticket.event.id}
           addressLabel={addressLabel}
           dateLabel={dateLabel}
+          dateClassName="text-gray-11"
           bannerRounded="none"
-          // "Meus ingressos" mantém o visual próprio: banner compacto (metade) +
-          // divisor em primary. Home/busca (EventCard) usam os defaults (w-full/gray-6).
+          // "Meus ingressos" mantém o visual próprio: banner compacto (metade).
+          // Data e divisor em CINZA (data verde/divisor primary ficam só na home/busca).
           bannerWidthClassName="w-1/2"
-          dividerFromClassName="from-primary-7"
+          dividerFromClassName="from-gray-7"
           bannerOverlay={invitedByOverlay}
         >
           {peopleLabel ? (

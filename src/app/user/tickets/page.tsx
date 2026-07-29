@@ -36,7 +36,7 @@ export default function UserTicketsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#F9F9F9]">
+    <div className="min-h-dvh bg-[#F9F9F9]">
       <div className="mx-auto max-w-[1440px] pt-6 pb-16 px-5 md:pt-[52px] md:pb-[248px] md:px-20">
         <div className="flex flex-col gap-8">
           {/* Header — mesma estrutura mobile/desktop, só os tamanhos variam.

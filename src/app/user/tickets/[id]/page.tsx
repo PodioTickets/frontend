@@ -250,7 +250,7 @@ export default function TicketDetailsPage() {
 
   if (!orderData) {
     return (
-      <div className="min-h-screen bg-gray-2">
+      <div className="min-h-dvh bg-gray-2">
         <div className="mx-auto max-w-[1280px] px-4 pt-13 pb-20">
           <div className="mb-6 flex items-center gap-3">
             <button
@@ -288,7 +288,7 @@ export default function TicketDetailsPage() {
   const isFreeOrder = (pricing.total ?? 0) <= 0;
 
   return (
-    <div className="min-h-screen bg-gray-2">
+    <div className="min-h-dvh bg-gray-2">
       {/* Mobile header — fixo no padrão do Figma: back à esquerda, título centralizado, border-bottom */}
       <div className="md:hidden bg-gray-2 border-b border-gray-6 px-4 py-2">
         <div className="flex items-center justify-between">
@@ -343,6 +343,7 @@ export default function TicketDetailsPage() {
             fallbackId={event.id}
             addressLabel={addressLabel}
             dateLabel={dateLabel}
+            dateClassName="text-gray-11"
             bannerRounded="none"
             // "Meus ingressos" mantém o visual próprio: banner compacto (metade) +
             // divisor em primary. Home/busca (EventCard) usam os defaults (w-full/gray-6).
