@@ -15,6 +15,11 @@ interface EventCardContentProps {
   addressLabel?: string;
   /** "Acontece no sábado, 25 de julho". */
   dateLabel?: string;
+  /**
+   * Cor (Tailwind) da linha de data. Default `"text-primary-11"` (verde,
+   * home/busca). A tela de detalhes do ingresso passa `"text-gray-12"`.
+   */
+  dateClassName?: string;
   /** `<img>` nativo p/ data: URLs (prévia de upload em andamento). */
   nativeImg?: boolean;
   /**
@@ -52,6 +57,7 @@ export function EventCardContent({
   fallbackId,
   addressLabel,
   dateLabel,
+  dateClassName = "text-primary-11",
   nativeImg,
   bannerRounded = "all",
   bannerWidthClassName = "w-full",
@@ -102,7 +108,7 @@ export function EventCardContent({
             </p>
           ) : null}
           {dateLabel ? (
-            <p className="[text-box-trim:trim-both] font-family-dm-sans text-sm font-bold text-primary-11">
+            <p className={cn("[text-box-trim:trim-both] font-family-dm-sans text-sm font-bold", dateClassName)}>
               {dateLabel}
             </p>
           ) : null}
