@@ -27,6 +27,7 @@ export interface FormFieldProps {
   /** Classe do label (default `text-base`; o wizard usa `text-sm`). */
   labelClassName?: string;
   onKeyDown?: React.KeyboardEventHandler<HTMLInputElement>;
+  onBlur?: React.FocusEventHandler<HTMLInputElement>;
 }
 
 /**
@@ -58,6 +59,7 @@ export function FormField({
   className,
   labelClassName,
   onKeyDown,
+  onBlur,
 }: FormFieldProps) {
   const handleChange = onChange
     ? (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -91,6 +93,7 @@ export function FormField({
           value={value}
           onChange={handleChange}
           onKeyDown={onKeyDown}
+          onBlur={onBlur}
           placeholder={placeholder}
           inputMode={inputMode}
           autoComplete={autoComplete}

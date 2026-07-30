@@ -89,7 +89,14 @@ export default function OrganizerCreatePage() {
       onBack={flow.handleBack}
       onSubmit={flow.handleNext}
       actions={
-        <Button type="submit" className="min-w-[120px]">
+        <Button
+          type="submit"
+          className="min-w-[120px]"
+          isLoading={
+            (stepKey === "access" && flow.isCheckingEmail) ||
+            (stepKey === "contacts" && flow.isCheckingOrgEmail)
+          }
+        >
           Continuar
         </Button>
       }

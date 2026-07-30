@@ -5,7 +5,7 @@ import type { OrganizerSignupFlow } from "../useOrganizerSignupFlow";
 
 /** Etapa 1 — Dados de acesso (nome, e-mail, senha, confirmar). */
 export function StepAccess({ flow }: { flow: OrganizerSignupFlow }) {
-  const { formData, errors, setField } = flow;
+  const { formData, errors, setField, handleEmailBlur } = flow;
   return (
     <div className="grid grid-cols-1 gap-x-4 gap-y-5 md:grid-cols-2">
       <SignupField
@@ -22,6 +22,7 @@ export function StepAccess({ flow }: { flow: OrganizerSignupFlow }) {
         inputMode="email"
         value={formData.email}
         onChange={(v) => setField("email", v)}
+        onBlur={handleEmailBlur}
         placeholder="seu@email.com"
         error={errors.email}
         autoComplete="email"

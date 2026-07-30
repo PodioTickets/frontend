@@ -210,6 +210,54 @@ export class OrganizerOrganizationService extends OrganizerCatalogService {
     }
   }
 
+  /**
+   * Disponibilidade do E-MAIL de login na conta ORGANIZER no auto-cadastro
+   * público. Escopo por `accountType=ORGANIZER` — uma conta USER homônima NÃO
+   * bloqueia (coexistem via `@@unique([email, accountType])`). Rota pública;
+   * retorna só `{ available }`. Em falha de rede assume `true` (não trava o
+   * preenchimento; o submit ainda revalida no backend).
+   */
+  async checkOrganizerEmailAvailability(email: string): Promise<boolean> {
+    const normalized = email.trim().toLowerCase();
+    if (!normalized.includes("@")) return true;
+    try {
+      const { data } = await this.apiClient.get<{
+        data?: { available?: boolean };
+        available?: boolean;
+      }>("/api/v1/auth/email/availability", {
+        params: { email: normalized, accountType: "ORGANIZER" },
+      });
+      const available = data?.data?.available ?? data?.available;
+      return available !== false;
+    } catch {
+      return true;
+    }
+  }
+
+  /**
+   * Disponibilidade do E-MAIL DE CONTATO da ORGANIZAÇÃO no auto-cadastro público.
+   * Valida contra `Organization.email` (campo de contato, distinto do e-mail de
+   * login) — se já existe org com este e-mail de contato, bloqueia. Comparação
+   * case-insensitive no backend. Rota pública; `{ available }`. Falha de rede →
+   * `true` (não trava; o submit revalida no backend).
+   */
+  async checkOrganizationEmailAvailability(email: string): Promise<boolean> {
+    const normalized = email.trim().toLowerCase();
+    if (!normalized.includes("@")) return true;
+    try {
+      const { data } = await this.apiClient.get<{
+        data?: { available?: boolean };
+        available?: boolean;
+      }>("/api/v1/organizations/email-availability", {
+        params: { email: normalized },
+      });
+      const available = data?.data?.available ?? data?.available;
+      return available !== false;
+    } catch {
+      return true;
+    }
+  }
+
   // Novos métodos de Organization
   async getMyOrganizations(): Promise<UserOrganization[]> {
     const { data: response } = await this.apiClient.get<{

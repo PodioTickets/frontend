@@ -6,7 +6,7 @@ import type { OrganizerSignupFlow } from "../useOrganizerSignupFlow";
 
 /** Etapa 5 — Contatos da organização (e-mail, WhatsApp). */
 export function StepContacts({ flow }: { flow: OrganizerSignupFlow }) {
-  const { formData, errors, setField } = flow;
+  const { formData, errors, setField, handleOrgEmailBlur } = flow;
   return (
     <div className="grid grid-cols-1 gap-x-4 gap-y-5 md:grid-cols-2">
       <SignupField
@@ -15,6 +15,7 @@ export function StepContacts({ flow }: { flow: OrganizerSignupFlow }) {
         inputMode="email"
         value={formData.orgEmail}
         onChange={(v) => setField("orgEmail", v)}
+        onBlur={handleOrgEmailBlur}
         placeholder="contato@meuevento.com.br"
         error={errors.orgEmail}
       />
