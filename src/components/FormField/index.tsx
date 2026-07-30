@@ -1,9 +1,10 @@
 "use client";
 
 import * as React from "react";
-import { Info, Eye, EyeOff } from "lucide-react";
+import { Eye, EyeOff } from "lucide-react";
 import { cn } from "@/utils/cn";
 import { Input } from "@/components/Input";
+import { FieldHelpTooltip } from "@/components/Organizer/FieldHelpTooltip";
 
 export interface FormFieldProps {
   label: string;
@@ -79,11 +80,7 @@ export function FormField({
         )}
       >
         {label}
-        {tooltip ? (
-          <span title={tooltip} className="inline-flex text-gray-11 cursor-help">
-            <Info className="size-4" aria-label={tooltip} />
-          </span>
-        ) : null}
+        {tooltip ? <FieldHelpTooltip label={label} text={tooltip} /> : null}
       </label>
       <div className="relative">
         <Input

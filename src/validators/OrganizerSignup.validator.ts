@@ -118,10 +118,13 @@ const orgDataCommon = {
   ownerDocument: cpfSchema,
 };
 
+// PJ: o CNPJ é o GATE da etapa (os demais campos só são revelados após ele), então
+// vem PRIMEIRO no schema — assim, sem CNPJ, a 1ª issue do Zod (usada no toast) é a
+// do CNPJ, e não a de um campo ainda oculto (ex.: CPF do responsável).
 export const orgDataPjSchema = z.object({
-  ...orgDataCommon,
   document: cnpjSchema,
   legalName: z.string().min(1, "Razão social é obrigatória"),
+  ...orgDataCommon,
 });
 
 export const orgDataPfSchema = z.object(orgDataCommon);

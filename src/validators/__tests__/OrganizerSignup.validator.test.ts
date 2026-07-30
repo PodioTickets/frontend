@@ -77,6 +77,18 @@ describe("orgDataStepSchema", () => {
     expect(orgDataStepSchema("PJ").safeParse(makeForm({ document: "11.111.111/1111-11" })).success).toBe(false);
     expect(orgDataStepSchema("PJ").safeParse(makeForm({ legalName: "" })).success).toBe(false);
   });
+  it("PJ sem CNPJ: a 1ª issue é do CNPJ (não de campo oculto como CPF)", () => {
+    // O CNPJ é o gate da etapa; o toast usa issues[0]. Sem CNPJ, o erro tem que
+    // cair no próprio CNPJ — não no CPF/nome fantasia que só aparecem depois.
+    const r = orgDataStepSchema("PJ").safeParse(
+      makeForm({ document: "", legalName: "", tradeName: "", ownerName: "", ownerDocument: "" }),
+    );
+    expect(r.success).toBe(false);
+    if (!r.success) {
+      expect(r.error.issues[0].path[0]).toBe("document");
+      expect(r.error.issues[0].message).toMatch(/CNPJ/i);
+    }
+  });
   it("PF não exige CNPJ/razão social, mas exige CPF válido do responsável", () => {
     const pf = makeForm({ personType: "PF", document: "", legalName: "" });
     expect(orgDataStepSchema("PF").safeParse(pf).success).toBe(true);
