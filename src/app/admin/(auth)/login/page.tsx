@@ -242,7 +242,7 @@ export default function AdminLoginPage() {
                 (scale ~0.85 com wrapper de altura fixa); no desktop fica em
                 tamanho cheio, igual ao login desktop. */}
             {TURNSTILE_SITE_KEY && (
-              <div className="flex h-14 w-full items-center justify-center">
+              <div className="flex w-full items-center justify-center empty:hidden">
                 <div className="w-full scale-[0.85] lg:scale-100">
                   <Turnstile
                     ref={turnstileRef}
@@ -250,7 +250,7 @@ export default function AdminLoginPage() {
                     onSuccess={setTurnstileToken}
                     onError={() => setTurnstileToken(null)}
                     onExpire={() => setTurnstileToken(null)}
-                    options={{ theme: "light", size: "flexible" }}
+                    options={{ theme: "light", size: "flexible", appearance: "interaction-only" }}
                   />
                 </div>
               </div>

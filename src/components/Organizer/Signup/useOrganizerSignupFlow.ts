@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { ZodError } from "zod";
 import toast from "react-hot-toast";
 import { useAuth } from "@/hooks/useAuth";
+import { organizerService } from "@/services";
 import { useOrganizerNavigate } from "@/hooks/useOrganizerNavigate";
 import { lookupCepDigits } from "@/utils/lookupCep";
 import { lookupCnpjDigits } from "@/utils/lookupCnpj";
@@ -106,6 +107,40 @@ export function useOrganizerSignupFlow() {
   );
   const lastFetchedCepRef = useRef<string>("");
   const lastFetchedCnpjRef = useRef<string>("");
+  // Documentos (só dígitos) já confirmados como PERTENCENTES a uma organização.
+  // Fonte de verdade do gate de "documento já cadastrado" (keyed por dígitos, então
+  // trocar o documento não deixa flag velha travando). Ref: não precisa re-render.
+  const takenOrgDocumentsRef = useRef<Set<string>>(new Set());
+  const checkingOrgDocumentRef = useRef(false);
+  const lastCheckedOwnerDocRef = useRef<string>("");
+
+  /**
+   * Checa AO VIVO se o documento (CPF de PF / CNPJ de PJ) já é de uma ORGANIZAÇÃO
+   * (tabela Organization, não User). Atualiza o set de "tomados" e marca o erro
+   * inline no campo. Idempotente por documento; falha de rede não trava (o submit
+   * revalida no backend).
+   */
+  const checkOrgDocumentAvailability = useCallback(
+    async (digits: string, field: "document" | "ownerDocument") => {
+      checkingOrgDocumentRef.current = true;
+      try {
+        const available =
+          await organizerService.checkOrganizationDocumentAvailability(digits);
+        if (available) {
+          takenOrgDocumentsRef.current.delete(digits);
+        } else {
+          takenOrgDocumentsRef.current.add(digits);
+          setErrors((prev) => ({
+            ...prev,
+            [field]: "Já existe uma organização com este documento (CPF/CNPJ).",
+          }));
+        }
+      } finally {
+        checkingOrgDocumentRef.current = false;
+      }
+    },
+    [],
+  );
 
   const allContractsAccepted =
     ORGANIZER_CONTRACT_IDS.length > 0 &&
@@ -173,6 +208,12 @@ export function useOrganizerSignupFlow() {
         toast.error("Leia e aceite os quatro contratos para continuar.");
         return false;
       }
+      // Captcha (se configurado) — bloqueia submit via Enter sem token.
+      const siteKey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY ?? "";
+      if (siteKey && !turnstileToken) {
+        toast.error("Confirme o captcha para continuar.");
+        return false;
+      }
       return true;
     }
     if (currentMeta.key === "done") return true;
@@ -195,13 +236,33 @@ export function useOrganizerSignupFlow() {
           contactsStepSchema.parse(formData);
           break;
       }
-      setErrors({});
-      return true;
     } catch (err) {
       if (err instanceof ZodError) applyZodErrors(err);
       return false;
     }
-  }, [currentMeta.key, formData, allContractsAccepted, applyZodErrors]);
+
+    // Gate extra (pós-Zod) na etapa da organização: documento (CPF PF / CNPJ PJ)
+    // já pertencente a uma organização. Checado ao vivo; o set é a verdade.
+    if (currentMeta.key === "orgData") {
+      const isPJ = formData.personType === "PJ";
+      const orgDocDigits = onlyDigits(isPJ ? formData.document : formData.ownerDocument);
+      if (takenOrgDocumentsRef.current.has(orgDocDigits)) {
+        const field = isPJ ? "document" : "ownerDocument";
+        const msg = "Já existe uma organização com este documento (CPF/CNPJ).";
+        setErrors({ [field]: msg });
+        toast.error(msg);
+        return false;
+      }
+      // Verificação ainda em andamento: evita avançar antes da resposta.
+      if (checkingOrgDocumentRef.current) {
+        toast.error("Aguarde a verificação do documento.");
+        return false;
+      }
+    }
+
+    setErrors({});
+    return true;
+  }, [currentMeta.key, formData, allContractsAccepted, turnstileToken, applyZodErrors]);
 
   /**
    * Cria a conta (na etapa de contratos). O backend autologa (cookies
@@ -266,6 +327,8 @@ export function useOrganizerSignupFlow() {
     const digits = onlyDigits(masked);
     if (digits.length === 14 && digits !== lastFetchedCnpjRef.current) {
       lastFetchedCnpjRef.current = digits;
+      // Valida ao vivo se o CNPJ já é de uma organização (paralelo ao lookup).
+      void checkOrgDocumentAvailability(digits, "document");
       void (async () => {
         setLoadingCnpj(true);
         try {
@@ -289,17 +352,11 @@ export function useOrganizerSignupFlow() {
             neighborhood: data.neighborhood || prev.neighborhood,
             city: data.city || prev.city,
             state: data.state || prev.state,
-            // Contatos (próxima etapa) — pré-preenchidos
+            // Contatos (próxima etapa) — pré-preenchidos. O telefone do CNPJ
+            // preenche o WhatsApp (não há mais campo de telefone separado).
             orgEmail: data.email || prev.orgEmail,
-            // 11 dígitos = celular → WhatsApp; 10 = fixo → Telefone.
             whatsapp:
-              phoneDigits.length === 11
-                ? formatPhone(phoneDigits)
-                : prev.whatsapp,
-            phone:
-              phoneDigits.length > 0 && phoneDigits.length < 11
-                ? formatPhone(phoneDigits)
-                : prev.phone,
+              phoneDigits.length > 0 ? formatPhone(phoneDigits) : prev.whatsapp,
           }));
           // O CEP já veio preenchido; evita refetch redundante ao abrir o endereço.
           if (data.zipCode) lastFetchedCepRef.current = onlyDigits(data.zipCode);
@@ -311,7 +368,27 @@ export function useOrganizerSignupFlow() {
     } else if (digits.length < 14) {
       lastFetchedCnpjRef.current = "";
     }
-  }, [setField]);
+  }, [setField, checkOrgDocumentAvailability]);
+
+  /**
+   * CPF do responsável (PF) com máscara já aplicada. Em PF, o CPF É o documento da
+   * ORGANIZAÇÃO, então ao completar 11 dígitos valida ao vivo se já existe org com
+   * ele. Em PJ o documento da org é o CNPJ — este handler não checa nada lá.
+   */
+  const handleOwnerDocumentChange = useCallback(
+    (masked: string) => {
+      setField("ownerDocument", masked);
+      if (formData.personType !== "PF") return;
+      const digits = onlyDigits(masked);
+      if (digits.length === 11 && digits !== lastCheckedOwnerDocRef.current) {
+        lastCheckedOwnerDocRef.current = digits;
+        void checkOrgDocumentAvailability(digits, "ownerDocument");
+      } else if (digits.length < 11) {
+        lastCheckedOwnerDocRef.current = "";
+      }
+    },
+    [setField, formData.personType, checkOrgDocumentAvailability],
+  );
 
   /** CEP com máscara já aplicada; autopreenche endereço ao completar 8 dígitos. */
   const handleZipChange = useCallback((masked: string) => {
@@ -368,6 +445,7 @@ export function useOrganizerSignupFlow() {
     setField,
     selectPersonType,
     handleCnpjChange,
+    handleOwnerDocumentChange,
     handleZipChange,
     handleNext,
     handleBack,

@@ -63,6 +63,8 @@ export function StepAddress({ flow }: { flow: OrganizerSignupFlow }) {
 
   return (
     <div className="flex flex-col gap-5">
+      {/* CEP sempre visível; ao puxar as informações a Rua entra AO LADO (mesma
+          linha do grid), com fade. */}
       <div className="grid grid-cols-1 gap-x-4 gap-y-5 md:grid-cols-2">
         <SignupField
           label="CEP"
@@ -73,6 +75,26 @@ export function StepAddress({ flow }: { flow: OrganizerSignupFlow }) {
           inputMode="numeric"
           maxLength={9}
         />
+        <AnimatePresence initial={false}>
+          {showRest ? (
+            <motion.div
+              key="street-field"
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 8 }}
+              transition={{ duration: 0.25, ease: "easeOut" }}
+              className="min-w-0"
+            >
+              <SignupField
+                label="Rua"
+                value={formData.street}
+                onChange={(v) => setField("street", v)}
+                placeholder="Digite o nome da sua rua"
+                error={errors.street}
+              />
+            </motion.div>
+          ) : null}
+        </AnimatePresence>
       </div>
 
       <AnimatePresence initial={false}>
@@ -85,13 +107,6 @@ export function StepAddress({ flow }: { flow: OrganizerSignupFlow }) {
             transition={{ duration: 0.25, ease: "easeOut" }}
             className="grid grid-cols-1 gap-x-4 gap-y-5 md:grid-cols-2"
           >
-            <SignupField
-              label="Rua"
-              value={formData.street}
-              onChange={(v) => setField("street", v)}
-              placeholder="Digite o nome da sua rua"
-              error={errors.street}
-            />
             <SignupField
               label="Número"
               value={formData.number}
