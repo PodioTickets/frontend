@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { BookOpen } from "lucide-react";
+import { Turnstile, type TurnstileInstance } from "@marsidev/react-turnstile";
 import { Button } from "@/components/Button";
 import { Checkbox } from "@/components/CheckBox";
 import {
@@ -10,6 +11,8 @@ import {
 } from "@/data/organizerContracts";
 import { ContractReaderModal } from "../ContractReaderModal";
 import type { OrganizerSignupFlow } from "../useOrganizerSignupFlow";
+
+const TURNSTILE_SITE_KEY = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY ?? "";
 
 /**
  * Etapa 6 — revisão e aceite dos contratos. Cada linha abre o leitor
@@ -23,10 +26,17 @@ export function StepContractsReview({ flow }: { flow: OrganizerSignupFlow }) {
     setAllContractsAccepted,
     allContractsAccepted,
     isSubmitting,
+    turnstileToken,
+    setTurnstileToken,
   } = flow;
   const [openContract, setOpenContract] = useState<OrganizerContract | null>(
     null,
   );
+  const turnstileRef = useRef<TurnstileInstance>(null);
+
+  // Só habilita o submit com os 4 contratos aceitos E (se houver captcha) o token.
+  const canSubmit =
+    allContractsAccepted && (!TURNSTILE_SITE_KEY || !!turnstileToken);
 
   return (
     <div className="flex flex-col gap-3">
@@ -60,6 +70,24 @@ export function StepContractsReview({ flow }: { flow: OrganizerSignupFlow }) {
         );
       })}
 
+      {/* Captcha Turnstile — mesmo estilo dos logins/modais: interaction-only
+          (invisível quando valida sozinho; só aparece se precisar interagir/erro)
+          e wrapper sem altura fixa (não reserva espaço quando invisível). */}
+      {TURNSTILE_SITE_KEY && (
+        <div className="mt-1 flex w-full items-center justify-center empty:hidden">
+          <div className="w-full scale-[0.85] lg:scale-100">
+            <Turnstile
+              ref={turnstileRef}
+              siteKey={TURNSTILE_SITE_KEY}
+              onSuccess={setTurnstileToken}
+              onError={() => setTurnstileToken(null)}
+              onExpire={() => setTurnstileToken(null)}
+              options={{ theme: "light", size: "flexible", appearance: "interaction-only" }}
+            />
+          </div>
+        </div>
+      )}
+
       <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <label className="flex cursor-pointer items-center gap-2 font-family-dm-sans text-sm text-gray-12">
           <Checkbox
@@ -71,7 +99,7 @@ export function StepContractsReview({ flow }: { flow: OrganizerSignupFlow }) {
         <Button
           type="submit"
           isLoading={isSubmitting}
-          disabled={!allContractsAccepted}
+          disabled={!canSubmit}
           className="min-w-[180px]"
         >
           Aceitar e continuar

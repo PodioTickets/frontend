@@ -75,7 +75,10 @@ export function FormField({
     <div className={cn("flex flex-1 flex-col gap-2 min-w-0", className)}>
       <label
         className={cn(
-          "flex items-center gap-1.5 font-normal font-family-dm-sans text-gray-12 leading-[1.3]",
+          // `min-h-6` (24px) cobre a altura do botão do tooltip (ícone size-5 20px
+          // + padding p-0.5), mantendo o label com a MESMA altura com ou sem
+          // tooltip → campos lado a lado no grid alinham.
+          "flex min-h-6 items-center gap-1.5 font-normal font-family-dm-sans text-gray-12 leading-[1.3]",
           labelClassName ?? "text-base",
         )}
       >

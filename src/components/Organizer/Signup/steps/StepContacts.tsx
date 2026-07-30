@@ -4,7 +4,7 @@ import { formatPhone } from "@/utils/masks";
 import { SignupField } from "../SignupField";
 import type { OrganizerSignupFlow } from "../useOrganizerSignupFlow";
 
-/** Etapa 5 — Contatos da organização (e-mail, WhatsApp, telefone). */
+/** Etapa 5 — Contatos da organização (e-mail, WhatsApp). */
 export function StepContacts({ flow }: { flow: OrganizerSignupFlow }) {
   const { formData, errors, setField } = flow;
   return (
@@ -25,15 +25,6 @@ export function StepContacts({ flow }: { flow: OrganizerSignupFlow }) {
         onChange={(v) => setField("whatsapp", formatPhone(v))}
         placeholder="(42) 99999-0000"
         error={errors.whatsapp}
-        maxLength={16}
-      />
-      <SignupField
-        label="Telefone"
-        inputMode="tel"
-        value={formData.phone}
-        onChange={(v) => setField("phone", formatPhone(v))}
-        placeholder="(42) 3222-0000"
-        error={errors.phone}
         maxLength={16}
       />
     </div>

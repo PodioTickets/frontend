@@ -10,7 +10,14 @@ const TRADE_NAME_TOOLTIP =
 
 /** Etapa 3 — Dados da organização (ramifica por PF/PJ). */
 export function StepOrgData({ flow }: { flow: OrganizerSignupFlow }) {
-  const { formData, errors, setField, handleCnpjChange, loadingCnpj } = flow;
+  const {
+    formData,
+    errors,
+    setField,
+    handleCnpjChange,
+    handleOwnerDocumentChange,
+    loadingCnpj,
+  } = flow;
   const isPJ = formData.personType === "PJ";
 
   // PJ: revela os demais campos só quando o CNPJ está completo (14 dígitos),
@@ -99,10 +106,11 @@ export function StepOrgData({ flow }: { flow: OrganizerSignupFlow }) {
             error={errors.ownerName}
           />
 
+          {/* PF: o CPF é o documento da ORGANIZAÇÃO → valida disponibilidade ao vivo. */}
           <SignupField
             label="CPF do responsável"
             value={formData.ownerDocument}
-            onChange={(v) => setField("ownerDocument", formatCPF(v))}
+            onChange={(v) => handleOwnerDocumentChange(formatCPF(v))}
             placeholder="000.000.000-00"
             error={errors.ownerDocument}
             inputMode="numeric"

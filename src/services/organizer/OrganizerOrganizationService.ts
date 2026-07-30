@@ -186,6 +186,30 @@ export class OrganizerOrganizationService extends OrganizerCatalogService {
     }
   }
 
+  /**
+   * Disponibilidade do DOCUMENTO da ORGANIZAÇÃO (CPF de PF / CNPJ de PJ) no
+   * auto-cadastro público. Valida contra a tabela `Organization` (não `User`) —
+   * usado pelo wizard para checar AO VIVO se já existe organização com aquele
+   * documento. Rota pública; retorna só `{ available }`. Em falha de rede,
+   * assume `true` (não trava o preenchimento; o submit ainda revalida).
+   */
+  async checkOrganizationDocumentAvailability(
+    document: string,
+  ): Promise<boolean> {
+    try {
+      const { data } = await this.apiClient.get<{
+        data?: { available?: boolean };
+        available?: boolean;
+      }>("/api/v1/organizations/document-availability", {
+        params: { document },
+      });
+      const available = data?.data?.available ?? data?.available;
+      return available !== false;
+    } catch {
+      return true;
+    }
+  }
+
   // Novos métodos de Organization
   async getMyOrganizations(): Promise<UserOrganization[]> {
     const { data: response } = await this.apiClient.get<{

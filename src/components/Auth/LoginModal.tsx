@@ -403,7 +403,7 @@ export function LoginModal() {
                           fino nativo no widget. Wrapper com altura fixa
                           absorve o espaço extra do scale. */}
                       {TURNSTILE_SITE_KEY && (
-                        <div className="flex h-14 w-full items-center justify-center">
+                        <div className="flex w-full items-center justify-center empty:hidden">
                           <div className="w-full scale-[0.85]">
                             <Turnstile
                               ref={mobileTurnstileRef}
@@ -411,7 +411,7 @@ export function LoginModal() {
                               onSuccess={setTurnstileToken}
                               onError={() => setTurnstileToken(null)}
                               onExpire={() => setTurnstileToken(null)}
-                              options={{ theme: "light", size: "flexible" }}
+                              options={{ theme: "light", size: "flexible", appearance: "interaction-only" }}
                             />
                           </div>
                         </div>
@@ -643,7 +643,7 @@ export function LoginModal() {
                           fino nativo no widget. Wrapper com altura fixa
                           absorve o espaço extra do scale. */}
                       {TURNSTILE_SITE_KEY && (
-                        <div className="flex h-14 w-full items-center justify-center">
+                        <div className="flex w-full items-center justify-center empty:hidden">
                           <div className="scale-100 w-full">
                             <Turnstile
                               ref={desktopTurnstileRef}
@@ -651,7 +651,7 @@ export function LoginModal() {
                               onSuccess={setTurnstileToken}
                               onError={() => setTurnstileToken(null)}
                               onExpire={() => setTurnstileToken(null)}
-                              options={{ theme: "light", size: "flexible" }}
+                              options={{ theme: "light", size: "flexible", appearance: "interaction-only" }}
                             />
                           </div>
                         </div>
