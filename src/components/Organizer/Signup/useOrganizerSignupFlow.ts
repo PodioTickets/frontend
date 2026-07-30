@@ -82,6 +82,10 @@ const STEP_META: StepMeta[] = [
 const CONTRACTS_STEP_INDEX = STEP_META.findIndex((s) => s.key === "contracts");
 const DONE_STEP_INDEX = STEP_META.findIndex((s) => s.key === "done");
 
+const EMAIL_TAKEN_MSG = "Já existe uma conta de organizador com este e-mail.";
+const ORG_EMAIL_TAKEN_MSG =
+  "Já existe uma organização cadastrada com este e-mail de contato.";
+
 /**
  * Máquina de passos do auto-cadastro de organizador (single-page). Estado só em
  * memória — nada de senha/PII em storage; recarregar reinicia o fluxo. Espelha
@@ -105,8 +109,26 @@ export function useOrganizerSignupFlow() {
   const [acceptedContracts, setAcceptedContracts] = useState<Set<string>>(
     () => new Set(),
   );
+  const [isCheckingEmail, setIsCheckingEmail] = useState(false);
+  const [isCheckingOrgEmail, setIsCheckingOrgEmail] = useState(false);
+  // `true` só quando o "Nome do responsável" veio da Receita (PJ) — nesse caso o
+  // campo é read-only (fonte autoritativa). Quando cai no fallback do nome completo
+  // (etapa 1), o campo segue editável para o organizador poder corrigir.
+  const [ownerNameFromReceita, setOwnerNameFromReceita] = useState(false);
   const lastFetchedCepRef = useRef<string>("");
   const lastFetchedCnpjRef = useRef<string>("");
+  // E-mails (normalizados) já confirmados como PERTENCENTES a uma conta ORGANIZER.
+  // Fonte de verdade do gate "e-mail já cadastrado". Keyed por e-mail normalizado.
+  const takenOrgEmailsRef = useRef<Set<string>>(new Set());
+  const lastCheckedEmailRef = useRef<string>("");
+  // Single-flight do avanço da etapa "access": impede que dois cliques
+  // concorrentes façam dois `setStepIndex(i+1)` e pulem uma etapa.
+  const advancingAccessRef = useRef(false);
+  // E-mails de CONTATO (normalizados) já confirmados como pertencentes a uma
+  // organização. Gate "e-mail de contato já cadastrado" (etapa de contatos).
+  const takenOrgContactEmailsRef = useRef<Set<string>>(new Set());
+  const lastCheckedOrgEmailRef = useRef<string>("");
+  const advancingContactsRef = useRef(false);
   // Documentos (só dígitos) já confirmados como PERTENCENTES a uma organização.
   // Fonte de verdade do gate de "documento já cadastrado" (keyed por dígitos, então
   // trocar o documento não deixa flag velha travando). Ref: não precisa re-render.
@@ -141,6 +163,76 @@ export function useOrganizerSignupFlow() {
     },
     [],
   );
+
+  /**
+   * Checa se o e-mail de login já é de uma conta ORGANIZER. Escopo por
+   * `accountType=ORGANIZER` (conta USER homônima NÃO bloqueia). Idempotente por
+   * e-mail; falha de rede não trava (o submit revalida no backend). Retorna
+   * `true` se disponível. Marca o erro inline e no set de "tomados" quando não.
+   */
+  const ensureOrganizerEmailAvailable = useCallback(
+    async (rawEmail: string): Promise<boolean> => {
+      const email = rawEmail.trim().toLowerCase();
+      if (!email.includes("@")) return true;
+      // Decisão já conhecida — evita round-trip redundante.
+      if (takenOrgEmailsRef.current.has(email)) {
+        setErrors((prev) => ({ ...prev, email: EMAIL_TAKEN_MSG }));
+        return false;
+      }
+      const available =
+        await organizerService.checkOrganizerEmailAvailability(email);
+      lastCheckedEmailRef.current = email;
+      if (available) {
+        takenOrgEmailsRef.current.delete(email);
+        return true;
+      }
+      takenOrgEmailsRef.current.add(email);
+      setErrors((prev) => ({ ...prev, email: EMAIL_TAKEN_MSG }));
+      return false;
+    },
+    [],
+  );
+
+  /** Dispara a checagem ao vivo do e-mail ao sair do campo (feedback antecipado). */
+  const handleEmailBlur = useCallback(() => {
+    const email = formData.email.trim().toLowerCase();
+    if (!email.includes("@") || email === lastCheckedEmailRef.current) return;
+    void ensureOrganizerEmailAvailable(email);
+  }, [formData.email, ensureOrganizerEmailAvailable]);
+
+  /**
+   * Checa se o e-mail de CONTATO já pertence a alguma organização (campo
+   * `Organization.email`, distinto do e-mail de login). Idempotente por e-mail;
+   * falha de rede não trava (o submit revalida). Marca erro inline em `orgEmail`.
+   */
+  const ensureOrganizationContactEmailAvailable = useCallback(
+    async (rawEmail: string): Promise<boolean> => {
+      const email = rawEmail.trim().toLowerCase();
+      if (!email.includes("@")) return true;
+      if (takenOrgContactEmailsRef.current.has(email)) {
+        setErrors((prev) => ({ ...prev, orgEmail: ORG_EMAIL_TAKEN_MSG }));
+        return false;
+      }
+      const available =
+        await organizerService.checkOrganizationEmailAvailability(email);
+      lastCheckedOrgEmailRef.current = email;
+      if (available) {
+        takenOrgContactEmailsRef.current.delete(email);
+        return true;
+      }
+      takenOrgContactEmailsRef.current.add(email);
+      setErrors((prev) => ({ ...prev, orgEmail: ORG_EMAIL_TAKEN_MSG }));
+      return false;
+    },
+    [],
+  );
+
+  /** Checagem ao vivo do e-mail de contato ao sair do campo (feedback antecipado). */
+  const handleOrgEmailBlur = useCallback(() => {
+    const email = formData.orgEmail.trim().toLowerCase();
+    if (!email.includes("@") || email === lastCheckedOrgEmailRef.current) return;
+    void ensureOrganizationContactEmailAvailable(email);
+  }, [formData.orgEmail, ensureOrganizationContactEmailAvailable]);
 
   const allContractsAccepted =
     ORGANIZER_CONTRACT_IDS.length > 0 &&
@@ -284,6 +376,50 @@ export function useOrganizerSignupFlow() {
     }
   }, [formData, turnstileToken, signupOrganizer]);
 
+  /**
+   * Avança a partir da etapa "access" só após confirmar (rede) que o e-mail não
+   * pertence a outra conta ORGANIZER. Zod já validou o formato antes daqui.
+   */
+  const advanceFromAccess = useCallback(async () => {
+    if (advancingAccessRef.current) return;
+    advancingAccessRef.current = true;
+    setIsCheckingEmail(true);
+    try {
+      const available = await ensureOrganizerEmailAvailable(formData.email);
+      if (!available) {
+        toast.error(EMAIL_TAKEN_MSG);
+        return;
+      }
+      setStepIndex((i) => Math.min(i + 1, CONTRACTS_STEP_INDEX));
+    } finally {
+      advancingAccessRef.current = false;
+      setIsCheckingEmail(false);
+    }
+  }, [formData.email, ensureOrganizerEmailAvailable]);
+
+  /**
+   * Avança a partir da etapa "contacts" só após confirmar (rede) que o e-mail de
+   * contato não pertence a outra organização. Zod já validou o formato antes.
+   */
+  const advanceFromContacts = useCallback(async () => {
+    if (advancingContactsRef.current) return;
+    advancingContactsRef.current = true;
+    setIsCheckingOrgEmail(true);
+    try {
+      const available = await ensureOrganizationContactEmailAvailable(
+        formData.orgEmail,
+      );
+      if (!available) {
+        toast.error(ORG_EMAIL_TAKEN_MSG);
+        return;
+      }
+      setStepIndex((i) => Math.min(i + 1, CONTRACTS_STEP_INDEX));
+    } finally {
+      advancingContactsRef.current = false;
+      setIsCheckingOrgEmail(false);
+    }
+  }, [formData.orgEmail, ensureOrganizationContactEmailAvailable]);
+
   const handleNext = useCallback(() => {
     if (!validateCurrentStep()) return;
     // A etapa de contratos é o ponto de submit (cria a conta → conclusão).
@@ -291,8 +427,29 @@ export function useOrganizerSignupFlow() {
       void submit();
       return;
     }
+    // A etapa de acesso valida o e-mail de login (rede) antes de avançar.
+    if (currentMeta.key === "access") {
+      void advanceFromAccess();
+      return;
+    }
+    // A etapa de contatos valida o e-mail de contato (rede) antes de avançar.
+    if (currentMeta.key === "contacts") {
+      void advanceFromContacts();
+      return;
+    }
+    // Ao sair da etapa de tipo, herda o "Nome do responsável" do nome completo
+    // (etapa 1) como baseline EDITÁVEL. No PJ, a consulta ao CNPJ ainda pode
+    // sobrescrever com o responsável da Receita (e aí vira read-only).
+    if (currentMeta.key === "type") {
+      setOwnerNameFromReceita(false);
+      setFormData((prev) =>
+        prev.ownerName.trim()
+          ? prev
+          : { ...prev, ownerName: prev.completeName.trim() },
+      );
+    }
     setStepIndex((i) => Math.min(i + 1, CONTRACTS_STEP_INDEX));
-  }, [validateCurrentStep, currentMeta.key, submit]);
+  }, [validateCurrentStep, currentMeta.key, submit, advanceFromAccess, advanceFromContacts]);
 
   const handleBack = useCallback(() => {
     if (currentMeta.key === "done") return; // sucesso não volta
@@ -344,7 +501,10 @@ export function useOrganizerSignupFlow() {
             // Organização
             legalName: data.legalName || prev.legalName,
             tradeName: data.tradeName || prev.tradeName,
-            ownerName: data.responsibleName || prev.ownerName,
+            // Responsável: Receita vence; senão mantém o baseline (nome completo
+            // herdado da etapa 1) e, em último caso, deriva dele diretamente.
+            ownerName:
+              data.responsibleName || prev.ownerName || prev.completeName.trim(),
             // Endereço (próxima etapa) — pré-preenchido
             zipCode: data.zipCode ? formatCEP(data.zipCode) : prev.zipCode,
             street: data.street || prev.street,
@@ -360,6 +520,9 @@ export function useOrganizerSignupFlow() {
           }));
           // O CEP já veio preenchido; evita refetch redundante ao abrir o endereço.
           if (data.zipCode) lastFetchedCepRef.current = onlyDigits(data.zipCode);
+          // Read-only só se a Receita trouxe o responsável; no fallback (nome
+          // completo) o campo continua editável.
+          setOwnerNameFromReceita(!!data.responsibleName);
           toast.success("Dados do CNPJ preenchidos!");
         } finally {
           setLoadingCnpj(false);
@@ -433,8 +596,11 @@ export function useOrganizerSignupFlow() {
     formData,
     errors,
     isSubmitting,
+    isCheckingEmail,
+    isCheckingOrgEmail,
     loadingCep,
     loadingCnpj,
+    ownerNameFromReceita,
     turnstileToken,
     setTurnstileToken,
     acceptedContracts,
@@ -443,6 +609,8 @@ export function useOrganizerSignupFlow() {
     setAllContractsAccepted,
     allContractsAccepted,
     setField,
+    handleEmailBlur,
+    handleOrgEmailBlur,
     selectPersonType,
     handleCnpjChange,
     handleOwnerDocumentChange,

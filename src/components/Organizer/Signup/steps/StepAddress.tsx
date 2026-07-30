@@ -21,8 +21,10 @@ function StateSelect({
 }) {
   const selected = BRAZIL_STATES.find((s) => s.id === value);
   return (
-    <div className="flex min-w-0 flex-col gap-2">
-      <label className="text-sm font-normal font-family-dm-sans text-gray-12 leading-[1.3]">
+    <div className="flex flex-1 min-w-0 flex-col gap-2">
+      {/* Mesma altura de label do FormField (`min-h-6` + flex items-center) para
+          alinhar a caixa do "Estado" com a de "Cidade" na mesma linha do grid. */}
+      <label className="flex min-h-6 items-center gap-1.5 text-sm font-normal font-family-dm-sans text-gray-12 leading-[1.3]">
         Estado
       </label>
       <Dropdown

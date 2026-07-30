@@ -17,6 +17,7 @@ export function StepOrgData({ flow }: { flow: OrganizerSignupFlow }) {
     handleCnpjChange,
     handleOwnerDocumentChange,
     loadingCnpj,
+    ownerNameFromReceita,
   } = flow;
   const isPJ = formData.personType === "PJ";
 
@@ -53,9 +54,9 @@ export function StepOrgData({ flow }: { flow: OrganizerSignupFlow }) {
               className="grid grid-cols-1 gap-x-4 gap-y-5 md:grid-cols-2"
             >
               {/* Ordem PJ: Razão social → Nome do responsável → CPF → Nome fantasia.
-                  Razão social e Nome do responsável vêm da Receita e ficam
-                  read-only quando preenchidos (se a API não trouxer, seguem
-                  editáveis para não travar o cadastro). */}
+                  Razão social vem da Receita e fica read-only quando preenchida.
+                  O Nome do responsável é read-only SÓ quando veio da Receita; no
+                  fallback (nome completo da etapa 1) segue editável para correção. */}
               <SignupField
                 label="Razão social"
                 value={formData.legalName}
@@ -71,7 +72,7 @@ export function StepOrgData({ flow }: { flow: OrganizerSignupFlow }) {
                 onChange={(v) => setField("ownerName", v)}
                 placeholder="Nome completo"
                 error={errors.ownerName}
-                readOnly={!!formData.ownerName}
+                readOnly={ownerNameFromReceita}
               />
 
               <SignupField
