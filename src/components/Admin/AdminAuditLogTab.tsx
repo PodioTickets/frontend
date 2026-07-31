@@ -300,7 +300,7 @@ export function AdminAuditLogTab() {
       : `${total} Registros encontrados`;
 
   const inputShell =
-    "h-12 w-full rounded-lg border border-gray-6 bg-gray-1 px-3 text-sm text-gray-12 placeholder:text-gray-11 font-family-dm-sans outline-none focus-visible:border-gray-4 focus-visible:ring-[3px] focus-visible:ring-gray-4/50 shadow-[0px_2px_6px_0px_rgba(17,17,17,0.08)]";
+    "h-12 w-full rounded-lg border border-gray-6 bg-gray-1 px-3 text-sm text-gray-12 placeholder:text-gray-11 font-family-dm-sans outline-none focus-visible:border-gray-4 focus-visible:ring-[3px] focus-visible:ring-gray-4/50 ";
 
   const orgLabel = (row: AdminAuditLogItem) =>
     row.organizationName?.trim() ||
@@ -331,7 +331,7 @@ export function AdminAuditLogTab() {
         item={selected}
       />
 
-      <div className="rounded-xl border border-gray-6 bg-gray-1 p-3 md:p-4 shadow-[0px_2px_6px_0px_rgba(17,17,17,0.08)] mb-4 md:mb-5">
+      <div className="rounded-xl border border-gray-6 bg-gray-1 p-3 md:p-4  mb-4 md:mb-5">
         <h2 className="text-base font-bold text-gray-12 font-manrope leading-[1.1] mb-3 md:hidden">
           Lista de registros
         </h2>
@@ -379,7 +379,7 @@ export function AdminAuditLogTab() {
               <button
                 type="button"
                 onClick={() => setDateRange(undefined)}
-                className="shrink-0 size-12 rounded-lg border border-gray-6 bg-gray-1 text-gray-11 hover:bg-gray-2 hover:text-gray-12 shadow-[0px_2px_6px_0px_rgba(17,17,17,0.08)] flex items-center justify-center transition-colors"
+                className="shrink-0 size-12 rounded-lg border border-gray-6 bg-gray-1 text-gray-11 hover:bg-gray-2 hover:text-gray-12  flex items-center justify-center transition-colors"
                 aria-label="Limpar filtro de data"
               >
                 <X className="size-4" />
@@ -563,7 +563,7 @@ export function AdminAuditLogTab() {
                   setSelectedOrganizationId(null);
                   setSelectedOrganizationLabel("");
                 }}
-                className="shrink-0 size-12 rounded-lg border border-gray-6 bg-gray-1 text-gray-11 hover:bg-gray-2 hover:text-gray-12 shadow-[0px_2px_6px_0px_rgba(17,17,17,0.08)] flex items-center justify-center transition-colors"
+                className="shrink-0 size-12 rounded-lg border border-gray-6 bg-gray-1 text-gray-11 hover:bg-gray-2 hover:text-gray-12  flex items-center justify-center transition-colors"
                 aria-label="Limpar filtro de organização"
               >
                 <X className="size-4" />
@@ -591,7 +591,7 @@ export function AdminAuditLogTab() {
               <button
                 type="button"
                 onClick={() => setUserFilter("")}
-                className="shrink-0 size-12 rounded-lg border border-gray-6 bg-gray-1 text-gray-11 hover:bg-gray-2 hover:text-gray-12 shadow-[0px_2px_6px_0px_rgba(17,17,17,0.08)] flex items-center justify-center transition-colors"
+                className="shrink-0 size-12 rounded-lg border border-gray-6 bg-gray-1 text-gray-11 hover:bg-gray-2 hover:text-gray-12  flex items-center justify-center transition-colors"
                 aria-label="Limpar filtro de usuário"
               >
                 <X className="size-4" />
@@ -607,11 +607,11 @@ export function AdminAuditLogTab() {
 
       <div className="md:hidden flex flex-col gap-3">
         {loading ? (
-          <div className="rounded-xl border border-gray-6 bg-gray-1 py-14 text-center text-sm text-gray-11 font-family-dm-sans shadow-[0px_2px_6px_0px_rgba(17,17,17,0.08)]">
+          <div className="rounded-xl border border-gray-6 bg-gray-1 py-14 text-center text-sm text-gray-11 font-family-dm-sans ">
             Carregando registros…
           </div>
         ) : items.length === 0 ? (
-          <div className="rounded-xl border border-gray-6 bg-gray-1 py-14 text-center text-sm text-gray-11 font-family-dm-sans shadow-[0px_2px_6px_0px_rgba(17,17,17,0.08)] px-4">
+          <div className="rounded-xl border border-gray-6 bg-gray-1 py-14 text-center text-sm text-gray-11 font-family-dm-sans  px-4">
             {filtersActiveForEmptyCopy
               ? "Nenhum registro encontrado com os filtros atuais."
               : "Nenhum registro disponível."}
@@ -623,7 +623,7 @@ export function AdminAuditLogTab() {
             return (
               <div
                 key={row.id}
-                className="rounded-xl border border-gray-6 bg-gray-1 p-4 shadow-[0px_2px_6px_0px_rgba(17,17,17,0.08)]"
+                className="rounded-xl border border-gray-6 bg-gray-1 p-4 "
               >
                 <p className="text-xs text-gray-11 font-family-dm-sans mb-2">
                   Organização:{" "}
@@ -712,7 +712,7 @@ export function AdminAuditLogTab() {
         )}
       </div>
 
-      <div className="hidden md:block rounded-xl border border-gray-6 bg-gray-1 overflow-hidden shadow-[0px_2px_6px_0px_rgba(17,17,17,0.08)]">
+      <div className="hidden md:block rounded-xl border border-gray-6 bg-gray-1 overflow-hidden ">
         <div className="overflow-x-auto">
           <table className="w-full min-w-[1100px]">
             <thead>

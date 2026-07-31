@@ -51,10 +51,10 @@ const REGISTRATION_LABEL: Record<RegistrationState, string> = {
 };
 
 const inputShell =
-  "h-12 w-full rounded-lg border border-gray-6 bg-gray-1 px-3 text-sm text-gray-12 placeholder:text-gray-11 font-family-dm-sans outline-none focus-visible:border-gray-8 shadow-[0px_2px_6px_0px_rgba(17,17,17,0.08)]";
+  "h-12 w-full rounded-lg border border-gray-6 bg-gray-1 px-3 text-sm text-gray-12 placeholder:text-gray-11 font-family-dm-sans outline-none focus-visible:border-gray-8 ";
 
 const cardShell =
-  "rounded-xl border border-gray-6 bg-gray-1 shadow-[0px_2px_6px_0px_rgba(17,17,17,0.08)]";
+  "rounded-xl border border-gray-6 bg-gray-1 ";
 
 const countPill =
   "inline-flex items-center rounded-full bg-primary-3 px-3 py-1.5 text-sm font-bold text-primary-11 font-family-dm-sans whitespace-nowrap";

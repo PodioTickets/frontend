@@ -158,7 +158,7 @@ function PaginationBar({
 const ITEMS_PER_PAGE = 20;
 
 const inputShell =
-  "h-12 w-full rounded-lg border border-gray-6 bg-gray-1 px-3 text-sm text-gray-12 placeholder:text-gray-11 font-family-dm-sans outline-none focus-visible:border-gray-8 shadow-[0px_2px_6px_0px_rgba(17,17,17,0.08)]";
+  "h-12 w-full rounded-lg border border-gray-6 bg-gray-1 px-3 text-sm text-gray-12 placeholder:text-gray-11 font-family-dm-sans outline-none focus-visible:border-gray-8 ";
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
@@ -244,7 +244,7 @@ export default function AuditoriaEventoPage() {
         </div>
 
         {/* Filters */}
-        <div className="rounded-xl border border-gray-6 bg-gray-1 p-3 md:p-4 shadow-[0px_2px_6px_0px_rgba(17,17,17,0.08)] mb-5">
+        <div className="rounded-xl border border-gray-6 bg-gray-1 p-3 md:p-4  mb-5">
           <div className="relative w-full">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-5 text-gray-11 pointer-events-none" />
             <input
@@ -260,14 +260,14 @@ export default function AuditoriaEventoPage() {
         {/* Mobile cards */}
         <div className="md:hidden flex flex-col gap-3">
           {loading || items.length === 0 ? (
-            <div className="rounded-xl border border-gray-6 bg-gray-1 py-14 text-center text-sm text-gray-11 font-family-dm-sans shadow-[0px_2px_6px_0px_rgba(17,17,17,0.08)] px-4">
+            <div className="rounded-xl border border-gray-6 bg-gray-1 py-14 text-center text-sm text-gray-11 font-family-dm-sans  px-4">
               {emptyMessage}
             </div>
           ) : (
             items.map((event) => {
               const { date, time } = formatDate(event.updatedAt ?? event.createdAt);
               return (
-                <div key={event.id} className="rounded-xl border border-gray-6 bg-gray-1 p-4 shadow-[0px_2px_6px_0px_rgba(17,17,17,0.08)] flex flex-col gap-3">
+                <div key={event.id} className="rounded-xl border border-gray-6 bg-gray-1 p-4  flex flex-col gap-3">
                   <div className="flex items-center gap-3">
                     <div className="relative size-10 shrink-0 overflow-hidden rounded-lg bg-gray-4">
                       <ImageWithInitialFallback
@@ -321,7 +321,7 @@ export default function AuditoriaEventoPage() {
         </div>
 
         {/* Desktop table */}
-        <div className="hidden md:block rounded-xl border border-gray-6 bg-gray-1 shadow-[0px_2px_6px_0px_rgba(17,17,17,0.08)] overflow-hidden">
+        <div className="hidden md:block rounded-xl border border-gray-6 bg-gray-1  overflow-hidden">
           {/* Table header */}
           <div className="grid grid-cols-[1fr_1fr_1fr_120px] bg-gray-3 border-b border-gray-6">
             {(["Evento", "Organizador", "Data de submissão", "Ações"] as const).map((col, i) => (
