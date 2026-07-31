@@ -65,6 +65,7 @@ interface RegisterData {
   receiveCalendarEvents?: boolean;
   receivePartnerPromos?: boolean;
   language?: string;
+  turnstileToken?: string;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -330,6 +331,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         receiveCalendarEvents: data.receiveCalendarEvents,
         receivePartnerPromos: data.receivePartnerPromos,
         language: data.language,
+        turnstileToken: data.turnstileToken,
       });
 
       if (!createdUser) {
