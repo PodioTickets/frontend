@@ -4,14 +4,18 @@ import { NextRequest, NextResponse } from "next/server";
  * Consulta CNPJ (dados públicos da Receita) para autopreencher o auto-cadastro
  * de organizador — razão social, nome fantasia, endereço e contatos.
  *
- * Provedor primário: cnpj.ws público (`https://publica.cnpj.ws`). Como o proxy é
- * server-side (todos os usuários compartilham o IP) e o endpoint público tem
- * rate-limit agressivo (~3 req/min), há FALLBACK automático para a BrasilAPI em
- * caso de erro/limite — disponibilidade é prioridade. A resposta é NORMALIZADA
- * para um shape estável, isolando o cliente do formato de cada provedor.
+ * Provedor primário: cnpj.ws. Com `CNPJ_WS_TOKEN` usa a API comercial autenticada
+ * (rate-limit alto); sem token cai no endpoint público (~3 req/min). Como o proxy
+ * é server-side (todos os usuários compartilham o IP), há FALLBACK automático para
+ * a BrasilAPI em caso de erro/limite — disponibilidade é prioridade. A resposta é
+ * NORMALIZADA para um shape estável, isolando o cliente do formato de cada provedor.
  */
 
 const digitsOnly = (v: string) => v.replace(/\D/g, "");
+
+// Token da API autenticada do cnpj.ws (server-only). Presente → usa o endpoint
+// comercial (rate-limit alto); ausente → cai no público (~3 req/min).
+const CNPJ_WS_TOKEN = process.env.CNPJ_WS_TOKEN?.trim();
 
 /** Shape estável consumido pelo front (independente do provedor). */
 export interface CnpjLookupData {
@@ -115,9 +119,15 @@ function fromBrasilApi(raw: any): CnpjLookupData {
 class NotFoundError extends Error {}
 
 async function fetchCnpjWs(cnpj: string): Promise<CnpjLookupData> {
-  const res = await fetch(`https://publica.cnpj.ws/cnpj/${cnpj}`, {
-    headers: { Accept: "application/json" },
-  });
+  // Com token → API comercial (autenticada, x_api_token). Sem token → pública.
+  // Mesmo shape de resposta nos dois, então `fromCnpjWs` serve para ambos.
+  const url = CNPJ_WS_TOKEN
+    ? `https://comercial.cnpj.ws/cnpj/${cnpj}`
+    : `https://publica.cnpj.ws/cnpj/${cnpj}`;
+  const headers: Record<string, string> = { Accept: "application/json" };
+  if (CNPJ_WS_TOKEN) headers.x_api_token = CNPJ_WS_TOKEN;
+
+  const res = await fetch(url, { headers });
   if (res.status === 404) throw new NotFoundError();
   if (!res.ok) throw new Error(`cnpj.ws ${res.status}`);
   return fromCnpjWs(await res.json());

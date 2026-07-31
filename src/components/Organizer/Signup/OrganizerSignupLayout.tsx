@@ -59,7 +59,7 @@ export function OrganizerSignupLayout({
         </button>
       ) : null}
 
-      <div className=" md:mt-2 flex justify-center">
+      <div className="md:mt-2 flex justify-center">
         <Image
           src="/images/org-login-dark.svg"
           alt="PódioTicket Organizadores"
