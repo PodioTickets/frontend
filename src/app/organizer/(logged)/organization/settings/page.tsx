@@ -59,6 +59,41 @@ const BRAZIL_STATES = [
   { id: "TO", label: "Tocantins" },
 ];
 
+/**
+ * Mapeia a organização para o formulário editável. Fonte única usada tanto para
+ * hidratar o formData quanto para o snapshot inicial do dirty-check.
+ */
+function orgToFormData(org: Organization) {
+  return {
+    // Detalhes da organização
+    document: org.document || "",
+    tradeName: org.tradeName || "",
+    ownerName: org.ownerName || "",
+    ownerDocument: org.ownerDocument || "",
+    // Endereço
+    zipCode: org.zipCode || "",
+    street: org.street || "",
+    number: org.number || "",
+    neighborhood: org.neighborhood || "",
+    city: org.city || "",
+    state: org.state || "",
+    // Contatos (org.email = e-mail de CONTATO)
+    email: org.email || "",
+    whatsapp: org.whatsapp || "",
+    phone: org.phone || "",
+    siteUrl: org.siteUrl || "",
+    instagram: org.instagram || "",
+  };
+}
+
+type OrgFormData = ReturnType<typeof orgToFormData>;
+
+/** Formulário vazio (antes de carregar) — evita divergência entre os campos. */
+const EMPTY_FORM: OrgFormData = orgToFormData({} as Organization);
+
+const CONTACT_EMAIL_TAKEN_MSG =
+  "Já existe uma organização cadastrada com este e-mail de contato.";
+
 /** Abas da tela (Figma): navegação por estado local, uma seção por vez. */
 type SettingsTab = "detalhes" | "endereco" | "contato" | "pix";
 
@@ -93,30 +128,21 @@ export default function OrganizationSettingsPage() {
   // não salva. [[usePendingImageUpload]]
   const pendingLogo = usePendingImageUpload(getAvatarUrl);
 
-  const [formData, setFormData] = useState({
-    // Detalhes da organização
-    document: "",
-    tradeName: "",
-    ownerName: "",
-    ownerDocument: "",
-    // Endereço
-    zipCode: "",
-    street: "",
-    number: "",
-    neighborhood: "",
-    city: "",
-    state: "",
-    // Contatos
-    email: "",
-    whatsapp: "",
-    phone: "",
-    siteUrl: "",
-    instagram: "",
-  });
+  const [formData, setFormData] = useState<OrgFormData>(EMPTY_FORM);
+  // Snapshot dos valores carregados/salvos — base do dirty-check para habilitar o
+  // "Salvar alteração" só quando há mudança real. [[project_dirty_check_pattern]]
+  const [initialFormData, setInitialFormData] = useState<OrgFormData>(EMPTY_FORM);
 
   const [pixKeys, setPixKeys] = useState<PixKey[]>([]);
   const [openPixId, setOpenPixId] = useState<string | null>(null);
   const [removingPixId, setRemovingPixId] = useState<string | null>(null);
+
+  // E-mail de contato: erro inline + checagem ao vivo de disponibilidade.
+  const [emailError, setEmailError] = useState("");
+  const [checkingEmail, setCheckingEmail] = useState(false);
+  // E-mails (normalizados) já confirmados como PERTENCENTES a outra organização.
+  const takenContactEmailsRef = useRef<Set<string>>(new Set());
+  const lastCheckedEmailRef = useRef<string>("");
 
   const loadOrganization = useCallback(async () => {
     const uid = user?.id;
@@ -132,24 +158,9 @@ export default function OrganizationSettingsPage() {
 
       setOrganizer(org);
       setPixKeys(org.pixKeys ?? []);
-      setFormData({
-        document: org.document || "",
-        tradeName: org.tradeName || "",
-        ownerName: org.ownerName || "",
-        ownerDocument: org.ownerDocument || "",
-        zipCode: org.zipCode || "",
-        street: org.street || "",
-        number: org.number || "",
-        neighborhood: org.neighborhood || "",
-        city: org.city || "",
-        state: org.state || "",
-        // E-mail de CONTATO (org.email).
-        email: org.email || "",
-        whatsapp: org.whatsapp || "",
-        phone: org.phone || "",
-        siteUrl: org.siteUrl || "",
-        instagram: org.instagram || "",
-      });
+      const fd = orgToFormData(org);
+      setFormData(fd);
+      setInitialFormData(fd);
     } catch (error: unknown) {
       const err = error as { response?: { status?: number; data?: unknown } };
       console.error("Error loading organization:", error);
@@ -172,6 +183,52 @@ export default function OrganizationSettingsPage() {
   const setField = useCallback((name: keyof typeof formData, value: string) => {
     setFormData((prev) => ({ ...prev, [name]: value }));
   }, []);
+
+  /**
+   * Checa se o e-mail de CONTATO já pertence a OUTRA organização. O e-mail atual
+   * da própria org NUNCA bloqueia (compara com o snapshot inicial). Idempotente;
+   * falha de rede não trava (o backend revalida no salvar). Marca erro inline.
+   */
+  const ensureContactEmailAvailable = useCallback(
+    async (rawEmail: string): Promise<boolean> => {
+      const email = rawEmail.trim().toLowerCase();
+      if (!email.includes("@")) return true;
+      // É o e-mail atual da própria organização → sempre disponível.
+      if (email === (initialFormData.email || "").trim().toLowerCase()) {
+        takenContactEmailsRef.current.delete(email);
+        setEmailError("");
+        return true;
+      }
+      if (takenContactEmailsRef.current.has(email)) {
+        setEmailError(CONTACT_EMAIL_TAKEN_MSG);
+        return false;
+      }
+      setCheckingEmail(true);
+      try {
+        const available =
+          await organizerService.checkOrganizationEmailAvailability(email);
+        lastCheckedEmailRef.current = email;
+        if (available) {
+          takenContactEmailsRef.current.delete(email);
+          setEmailError("");
+          return true;
+        }
+        takenContactEmailsRef.current.add(email);
+        setEmailError(CONTACT_EMAIL_TAKEN_MSG);
+        return false;
+      } finally {
+        setCheckingEmail(false);
+      }
+    },
+    [initialFormData.email],
+  );
+
+  /** Checagem ao vivo ao sair do campo de e-mail (feedback antecipado). */
+  const handleEmailBlur = useCallback(() => {
+    const email = formData.email.trim().toLowerCase();
+    if (!email.includes("@") || email === lastCheckedEmailRef.current) return;
+    void ensureContactEmailAvailable(email);
+  }, [formData.email, ensureContactEmailAvailable]);
 
   // Máscaras progressivas (aplicam durante a digitação)
   const maskCPF = (value: string) => {
@@ -223,6 +280,15 @@ export default function OrganizationSettingsPage() {
   };
 
   const handleSubmit = async () => {
+    // Bloqueia o salvamento se o e-mail de contato já for de outra organização.
+    // (Revalida na rede; o backend também rejeita como garantia final.)
+    const emailOk = await ensureContactEmailAvailable(formData.email);
+    if (!emailOk) {
+      setActiveTab("contato"); // garante que o campo com erro fique visível
+      toast.error(CONTACT_EMAIL_TAKEN_MSG);
+      return;
+    }
+
     setSaving(true);
     try {
       // Preparar dados removendo formatação de documentos e telefones
@@ -270,6 +336,8 @@ export default function OrganizationSettingsPage() {
       // que o usuário editou; só sincronizamos o `organizer`.
       setOrganizer(finalOrg);
       pendingLogo.reset();
+      // Novo baseline do dirty-check: os valores salvos passam a ser o "inicial".
+      setInitialFormData(formData);
     } catch (error: unknown) {
       const err = error as {
         response?: { data?: { message?: string } };
@@ -309,11 +377,20 @@ export default function OrganizationSettingsPage() {
   }));
   const selectedState = BRAZIL_STATES.find((s) => s.id === formData.state);
 
+  // Dirty-check: campos editados OU logo em staging (novo corte / remoção).
+  // Habilita o "Salvar alteração" só quando há alteração real a persistir.
+  const formChanged = (
+    Object.keys(formData) as (keyof OrgFormData)[]
+  ).some((key) => formData[key] !== initialFormData[key]);
+  const logoChanged = Boolean(pendingLogo.file) || pendingLogo.removed;
+  const isDirty = formChanged || logoChanged;
+
   // Botão "Salvar alteração" (rodapé das abas de formulário — não na aba PIX).
   const saveButton = (
     <div className="flex justify-end w-full pt-4">
       <Button
         onClick={handleSubmit}
+        disabled={!isDirty || !!emailError || checkingEmail}
         isLoading={saving || uploadingImage}
         className="w-full sm:w-auto h-12 px-6 font-manrope font-bold text-base"
       >
@@ -415,12 +492,15 @@ export default function OrganizationSettingsPage() {
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-x-4 gap-y-6 w-full">
-                    {/* CPF do responsável — read-only (dado gerido pelo admin). */}
+                    {/* CPF do responsável — read-only (dado gerido pelo admin);
+                        `inputClassName="bg-gray-1"` mantém o MESMO visual do campo
+                        editável (Figma: campos uniformes). */}
                     <FormField
                       label="CPF do responsável"
                       value={maskCPF(organizer.ownerDocument ?? "")}
                       placeholder="000.000.000-00"
                       readOnly
+                      inputClassName="bg-gray-1"
                     />
                     {/* Nome fantasia — único editável nesta seção. */}
                     <FormField
@@ -435,6 +515,7 @@ export default function OrganizationSettingsPage() {
                       value={organizer.name ?? ""}
                       placeholder="Razão social"
                       readOnly
+                      inputClassName="bg-gray-1"
                     />
                     {/* Nome do responsável — read-only. */}
                     <FormField
@@ -442,6 +523,7 @@ export default function OrganizationSettingsPage() {
                       value={organizer.ownerName ?? ""}
                       placeholder="Nome do responsável"
                       readOnly
+                      inputClassName="bg-gray-1"
                     />
                   </div>
                 </div>
@@ -547,7 +629,12 @@ export default function OrganizationSettingsPage() {
                     type="email"
                     inputMode="email"
                     value={formData.email}
-                    onChange={(v) => setField("email", v)}
+                    onChange={(v) => {
+                      setField("email", v);
+                      if (emailError) setEmailError("");
+                    }}
+                    onBlur={handleEmailBlur}
+                    error={emailError}
                     placeholder="contato@meuevento.com.br"
                   />
                   <FormField

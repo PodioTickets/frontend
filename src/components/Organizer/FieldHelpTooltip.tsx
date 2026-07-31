@@ -47,7 +47,7 @@ export function FieldHelpTooltip({ label, text }: FieldHelpTooltipProps) {
           position="topRight"
           contentClassName="w-[min(100vw-2rem,320px)] items-stretch gap-0"
           content={
-            <p className="text-sm font-normal font-family-dm-sans text-gray-12 leading-[1.3] text-left">
+            <p className="text-sm font-normal font-family-dm-sans text-gray-12 text-left">
               {text}
             </p>
           }
@@ -59,7 +59,7 @@ export function FieldHelpTooltip({ label, text }: FieldHelpTooltipProps) {
             aria-expanded={tooltipOpen}
             aria-haspopup="true"
           >
-            <InfoIcon className="size-5 shrink-0" />
+            <InfoIcon className="size-4 shrink-0" />
           </button>
         </Tooltip>
       </div>

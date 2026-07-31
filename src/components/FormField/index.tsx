@@ -26,6 +26,11 @@ export interface FormFieldProps {
   className?: string;
   /** Classe do label (default `text-base`; o wizard usa `text-sm`). */
   labelClassName?: string;
+  /**
+   * Override de classe do INPUT (aplicado por último via `twMerge`, então vence).
+   * Ex.: forçar `bg-gray-1` num campo `readOnly` p/ deixá-lo idêntico ao editável.
+   */
+  inputClassName?: string;
   onKeyDown?: React.KeyboardEventHandler<HTMLInputElement>;
   onBlur?: React.FocusEventHandler<HTMLInputElement>;
 }
@@ -58,6 +63,7 @@ export function FormField({
   rightSlot,
   className,
   labelClassName,
+  inputClassName,
   onKeyDown,
   onBlur,
 }: FormFieldProps) {
@@ -80,14 +86,17 @@ export function FormField({
           // `min-h-6` (24px) cobre a altura do botão do tooltip (ícone size-5 20px
           // + padding p-0.5), mantendo o label com a MESMA altura com ou sem
           // tooltip → campos lado a lado no grid alinham.
-          "flex min-h-6 items-center gap-1.5 font-normal font-family-dm-sans text-gray-12 leading-[1.3]",
+          "flex min-h-6 min-w-0 items-center gap-1.5 font-normal font-family-dm-sans text-gray-12",
           labelClassName ?? "text-base",
         )}
       >
         {label}
         {tooltip ? <FieldHelpTooltip label={label} text={tooltip} /> : null}
       </label>
-      <div className="relative">
+      {/* `w-full`: o input SEMPRE ocupa a largura da coluna. Sem isso, um label
+          mais alto (ex.: com tooltip) podia quebrar o stretch do flex e o input
+          caía p/ a largura intrínseca (~170px), ficando menor que os vizinhos. */}
+      <div className="relative w-full">
         <Input
           type={effectiveType}
           value={value}
@@ -111,6 +120,8 @@ export function FormField({
             !error && "border-gray-6",
             "aria-invalid:ring-0",
             rightSlot ? "pr-[110px]" : isPassword ? "pr-11" : "",
+            // Override final do chamador (vence via twMerge).
+            inputClassName,
           )}
         />
         {rightSlot ? (
