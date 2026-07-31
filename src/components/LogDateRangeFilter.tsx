@@ -62,7 +62,7 @@ export function LogDateRangeFilter({
       trigger={() => (
         <div
           className={cn(
-            "flex h-12 w-full items-center justify-between gap-2 rounded-lg border border-gray-6 bg-gray-1 px-3 text-sm text-gray-12 shadow-[0px_2px_6px_0px_rgba(17,17,17,0.08)] cursor-pointer hover:bg-gray-2 transition-colors",
+            "flex h-12 w-full items-center justify-between gap-2 rounded-lg border border-gray-6 bg-gray-1 px-3 text-sm text-gray-12 cursor-pointer hover:bg-gray-2 transition-colors",
             !value?.from && "text-gray-11",
             className,
           )}

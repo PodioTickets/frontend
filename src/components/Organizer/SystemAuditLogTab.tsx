@@ -241,7 +241,7 @@ function AuditLogPagination({
             className="size-1 flex items-center justify-center text-gray-11 text-sm font-medium select-none pointer-events-none shrink-0"
             aria-hidden
           >
-           -
+            -
           </span>
         ) : (
           <button
@@ -349,11 +349,11 @@ export function SystemAuditLogTab() {
       : `${total} Registros encontrados`;
 
   const inputShell =
-    "h-12 w-full rounded-lg border border-gray-6 bg-gray-1 px-3 text-sm text-gray-12 placeholder:text-gray-11 font-family-dm-sans outline-none focus-visible:border-gray-4 focus-visible:ring-[3px] focus-visible:ring-gray-4/50 shadow-[0px_2px_6px_0px_rgba(17,17,17,0.08)]";
+    "h-12 w-full rounded-lg border border-gray-6 bg-gray-1 px-3 text-sm text-gray-12 placeholder:text-gray-11 font-family-dm-sans outline-none focus-visible:border-gray-4 focus-visible:ring-[3px] focus-visible:ring-gray-4/50";
 
   if (forbidden) {
     return (
-      <div className="rounded-xl border border-gray-6 bg-gray-1 p-10 text-center shadow-[0px_2px_6px_0px_rgba(17,17,17,0.08)]">
+      <div className="rounded-xl border border-gray-6 bg-gray-1 p-10 text-center">
         <p className="text-gray-11 font-family-dm-sans text-sm max-w-md mx-auto leading-relaxed">
           Apenas o <strong className="text-gray-12">proprietário</strong> da
           organização pode visualizar o log de atividades do sistema.
@@ -371,15 +371,15 @@ export function SystemAuditLogTab() {
         {loading ? "Carregando…" : countLabel}
       </p>
 
-      <div className="flex flex-col gap-3 rounded-xl border border-gray-6 bg-gray-1 p-3 sm:flex-row sm:items-stretch sm:p-4 shadow-[0px_2px_6px_0px_rgba(17,17,17,0.08)] mb-5">
+      <div className="flex flex-col gap-3 rounded-xl border border-gray-6 bg-gray-1 p-3 sm:flex-row sm:items-stretch sm:p-4 mb-5">
         <div className="relative flex-1 min-w-0">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-5 text-gray-11 pointer-events-none" />
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 size-5 text-gray-11 pointer-events-none" />
           <input
             type="search"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Buscar por título..."
-            className={cn(inputShell, "pl-11 text-base md:text-sm")}
+            className="w-full h-12 pl-11 md:pl-12 pr-4 rounded-lg border border-gray-6 bg-gray-1 text-base md:text-sm text-gray-12 placeholder:text-gray-11 font-family-dm-sans outline-none focus-visible:border-gray-4 focus-visible:ring-[3px] focus-visible:ring-gray-4/50"
           />
         </div>
         <div className="flex w-full sm:w-[220px] shrink-0 gap-1.5 items-stretch">
@@ -392,7 +392,7 @@ export function SystemAuditLogTab() {
             <button
               type="button"
               onClick={() => setDateRange(undefined)}
-              className="shrink-0 size-12 rounded-lg border border-gray-6 bg-gray-1 text-gray-11 hover:bg-gray-2 hover:text-gray-12 shadow-[0px_2px_6px_0px_rgba(17,17,17,0.08)] flex items-center justify-center transition-colors"
+              className="shrink-0 size-12 rounded-lg border border-gray-6 bg-gray-1 text-gray-11 hover:bg-gray-2 hover:text-gray-12 flex items-center justify-center transition-colors"
               aria-label="Limpar filtro de data"
             >
               <X className="size-4" />
@@ -407,11 +407,11 @@ export function SystemAuditLogTab() {
 
       <div className="md:hidden flex flex-col gap-2.5">
         {loading ? (
-          <div className="rounded-xl border border-gray-6 bg-gray-1 py-14 text-center text-sm text-gray-11 font-family-dm-sans shadow-[0px_2px_6px_0px_rgba(17,17,17,0.08)]">
+          <div className="rounded-xl border border-gray-6 bg-gray-1 py-14 text-center text-sm text-gray-11 font-family-dm-sans">
             Carregando registros…
           </div>
         ) : items.length === 0 ? (
-          <div className="rounded-xl border border-gray-6 bg-gray-1 py-14 text-center text-sm text-gray-11 font-family-dm-sans shadow-[0px_2px_6px_0px_rgba(17,17,17,0.08)] px-4">
+          <div className="rounded-xl border border-gray-6 bg-gray-1 py-14 text-center text-sm text-gray-11 font-family-dm-sans px-4">
             {debouncedSearch || dateRange
               ? "Nenhum registro encontrado com os filtros atuais."
               : "Nenhum registro disponível."}
@@ -422,7 +422,7 @@ export function SystemAuditLogTab() {
             return (
               <div
                 key={row.id}
-                className="rounded-xl border border-gray-6 bg-gray-1 p-3.5 shadow-[0px_2px_6px_0px_rgba(17,17,17,0.08)]"
+                className="rounded-xl border border-gray-6 bg-gray-1 p-3.5"
               >
                 <p className="text-xs text-gray-11 font-family-dm-sans mb-2">
                   IP: {row.ip}
@@ -468,7 +468,7 @@ export function SystemAuditLogTab() {
         )}
       </div>
 
-      <div className="hidden md:block rounded-xl border border-gray-6 bg-gray-1 overflow-hidden shadow-[0px_2px_6px_0px_rgba(17,17,17,0.08)]">
+      <div className="hidden md:block rounded-xl border border-gray-6 bg-gray-1 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full min-w-[720px]">
             <thead>

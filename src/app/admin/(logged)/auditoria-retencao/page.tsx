@@ -123,7 +123,7 @@ function StatCard({
   value: string;
 }) {
   return (
-    <div className="flex-1 min-w-[200px] rounded-xl border border-gray-6 bg-gray-1 px-4 py-4 shadow-[0px_2px_6px_0px_rgba(17,17,17,0.08)] flex flex-row items-center justify-between">
+    <div className="flex-1 min-w-[200px] rounded-xl border border-gray-6 bg-gray-1 px-4 py-4  flex flex-row items-center justify-between">
       <div className="flex flex-col gap-1 min-w-0">
         <p className="text-xs font-normal text-gray-11 font-family-dm-sans leading-[1.3] truncate">
           {label}
@@ -221,7 +221,7 @@ const STATUS_OPTIONS = [
 ];
 
 const inputShell =
-  "h-12 w-full rounded-lg border border-gray-6 bg-gray-1 px-3 text-sm text-gray-12 placeholder:text-gray-11 font-family-dm-sans outline-none focus-visible:border-gray-4 focus-visible:ring-[3px] focus-visible:ring-gray-4/50 shadow-[0px_2px_6px_0px_rgba(17,17,17,0.08)]";
+  "h-12 w-full rounded-lg border border-gray-6 bg-gray-1 px-3 text-sm text-gray-12 placeholder:text-gray-11 font-family-dm-sans outline-none focus-visible:border-gray-4 focus-visible:ring-[3px] focus-visible:ring-gray-4/50 ";
 
 const ITEMS_PER_PAGE = 20;
 
@@ -374,7 +374,7 @@ export default function AdminAuditoriaRetencaoPage() {
         </div>
 
         {/* Filters */}
-        <div className="rounded-xl border border-gray-6 bg-gray-1 p-3 md:p-4 shadow-[0px_2px_6px_0px_rgba(17,17,17,0.08)] mb-5">
+        <div className="rounded-xl border border-gray-6 bg-gray-1 p-3 md:p-4  mb-5">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-stretch sm:flex-wrap">
             <div className="relative flex-1 min-w-0 sm:min-w-[240px]">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-5 text-gray-11 pointer-events-none" />
@@ -412,11 +412,11 @@ export default function AdminAuditoriaRetencaoPage() {
         {/* Mobile cards */}
         <div className="md:hidden flex flex-col gap-3">
           {loading ? (
-            <div className="rounded-xl border border-gray-6 bg-gray-1 py-14 text-center text-sm text-gray-11 font-family-dm-sans shadow-[0px_2px_6px_0px_rgba(17,17,17,0.08)]">
+            <div className="rounded-xl border border-gray-6 bg-gray-1 py-14 text-center text-sm text-gray-11 font-family-dm-sans ">
               Carregando…
             </div>
           ) : visibleItems.length === 0 ? (
-            <div className="rounded-xl border border-gray-6 bg-gray-1 py-14 text-center text-sm text-gray-11 font-family-dm-sans shadow-[0px_2px_6px_0px_rgba(17,17,17,0.08)] px-4">
+            <div className="rounded-xl border border-gray-6 bg-gray-1 py-14 text-center text-sm text-gray-11 font-family-dm-sans  px-4">
               {filtersActive
                 ? "Nenhum resultado com os filtros atuais."
                 : "Nenhuma retenção pendente."}
@@ -428,7 +428,7 @@ export default function AdminAuditoriaRetencaoPage() {
               return (
                 <div
                   key={row.id}
-                  className="rounded-xl border border-gray-6 bg-gray-1 p-4 shadow-[0px_2px_6px_0px_rgba(17,17,17,0.08)] flex flex-col gap-3"
+                  className="rounded-xl border border-gray-6 bg-gray-1 p-4  flex flex-col gap-3"
                 >
                   <div className="flex items-center gap-3">
                     <div className="size-10 rounded-lg border border-gray-6 overflow-hidden shrink-0 bg-gray-4 relative">
@@ -488,7 +488,7 @@ export default function AdminAuditoriaRetencaoPage() {
         </div>
 
         {/* Desktop table */}
-        <div className="hidden md:block rounded-xl border border-gray-6 bg-gray-1 overflow-hidden shadow-[0px_2px_6px_0px_rgba(17,17,17,0.08)]">
+        <div className="hidden md:block rounded-xl border border-gray-6 bg-gray-1 overflow-hidden ">
           <div className="overflow-x-auto">
             <table className="w-full min-w-[700px]">
               <thead>

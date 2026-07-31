@@ -37,7 +37,7 @@ export default function AdminUserActivityPage() {
         <div
           role="tablist"
           aria-label="Visualização de atividade"
-          className="inline-flex rounded-lg border border-gray-6 bg-gray-1 p-1 shadow-[0px_2px_6px_0px_rgba(17,17,17,0.08)] mb-4 md:mb-5"
+          className="inline-flex rounded-lg border border-gray-6 bg-gray-1 p-1  mb-4 md:mb-5"
         >
           {TABS.map((tab) => (
             <button
