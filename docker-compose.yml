@@ -23,3 +23,5 @@ services:
       ORGANIZER_APP_HOST: ${ORGANIZER_APP_HOST}
       ADMIN_APP_HOST: ${ADMIN_APP_HOST}
       ROOT_SITE_URL: ${ROOT_SITE_URL}
+      # Token da API comercial cnpj.ws (rota server-side /api/cnpj)
+      CNPJ_WS_TOKEN: ${CNPJ_WS_TOKEN}
