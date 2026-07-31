@@ -11,6 +11,7 @@ import { Dropdown, DropdownOption } from "@/components/Dropdown";
 import { ImageWithInitialFallback } from "@/components/ImageWithInitialFallback";
 import toast from "react-hot-toast";
 import { getAvatarUrl } from "@/utils/avatar";
+import { lookupCepDigits } from "@/utils/lookupCep";
 import { Briefcase, MapPin, Phone, XCircle } from "lucide-react";
 import type {
   Organization,
@@ -80,9 +81,6 @@ function orgToFormData(org: Organization) {
     // Contatos (org.email = e-mail de CONTATO)
     email: org.email || "",
     whatsapp: org.whatsapp || "",
-    phone: org.phone || "",
-    siteUrl: org.siteUrl || "",
-    instagram: org.instagram || "",
   };
 }
 
@@ -93,6 +91,10 @@ const EMPTY_FORM: OrgFormData = orgToFormData({} as Organization);
 
 const CONTACT_EMAIL_TAKEN_MSG =
   "Já existe uma organização cadastrada com este e-mail de contato.";
+
+/** Mesma explicação usada no wizard de cadastro, para consistência. */
+const TRADE_NAME_TOOLTIP =
+  "Este é o nome que será exibido para os participantes na página do evento, ingresso e demais comunicações.";
 
 /** Abas da tela (Figma): navegação por estado local, uma seção por vez. */
 type SettingsTab = "detalhes" | "endereco" | "contato" | "pix";
@@ -144,6 +146,11 @@ export default function OrganizationSettingsPage() {
   const takenContactEmailsRef = useRef<Set<string>>(new Set());
   const lastCheckedEmailRef = useRef<string>("");
 
+  // CEP: autopreenchimento do endereço (igual aos demais formulários). O ref
+  // deduplica a busca por CEP já consultado; `loadingCep` alimenta o placeholder.
+  const [loadingCep, setLoadingCep] = useState(false);
+  const lastFetchedCepRef = useRef<string>("");
+
   const loadOrganization = useCallback(async () => {
     const uid = user?.id;
     if (!uid) return;
@@ -183,6 +190,44 @@ export default function OrganizationSettingsPage() {
   const setField = useCallback((name: keyof typeof formData, value: string) => {
     setFormData((prev) => ({ ...prev, [name]: value }));
   }, []);
+
+  /**
+   * CEP (input mascarado); ao completar 8 dígitos consulta o ViaCEP e
+   * autopreenche rua/bairro/cidade/estado — mesmo comportamento do wizard de
+   * cadastro e das telas de evento. Dedupe por `lastFetchedCepRef` (não refaz a
+   * busca do mesmo CEP); falha não trava (o usuário completa à mão).
+   */
+  const handleZipChange = useCallback((masked: string) => {
+    const digits = masked.replace(/\D/g, "").slice(0, 8);
+    setField("zipCode", digits);
+    if (digits.length === 8 && digits !== lastFetchedCepRef.current) {
+      lastFetchedCepRef.current = digits;
+      void (async () => {
+        setLoadingCep(true);
+        try {
+          const result = await lookupCepDigits(digits);
+          if (!result.ok) {
+            toast.error(result.message);
+            return;
+          }
+          const { data } = result;
+          // A API vence quando traz o campo; senão mantém o valor atual.
+          setFormData((prev) => ({
+            ...prev,
+            state: data.uf || prev.state,
+            street: data.logradouro || prev.street,
+            neighborhood: data.bairro || prev.neighborhood,
+            city: data.localidade || prev.city,
+          }));
+          toast.success("Endereço encontrado!");
+        } finally {
+          setLoadingCep(false);
+        }
+      })();
+    } else if (digits.length < 8) {
+      lastFetchedCepRef.current = "";
+    }
+  }, [setField]);
 
   /**
    * Checa se o e-mail de CONTATO já pertence a OUTRA organização. O e-mail atual
@@ -260,17 +305,6 @@ export default function OrganizationSettingsPage() {
     return `${numbers.slice(0, 5)}-${numbers.slice(5, 8)}`;
   };
 
-  const maskPhone = (value: string) => {
-    const numbers = value.replace(/\D/g, "");
-    if (numbers.length <= 2) return numbers;
-    if (numbers.length <= 7)
-      return `(${numbers.slice(0, 2)}) ${numbers.slice(2)}`;
-    if (numbers.length <= 10) {
-      return `(${numbers.slice(0, 2)}) ${numbers.slice(2, 6)}-${numbers.slice(6, 10)}`;
-    }
-    return `(${numbers.slice(0, 2)}) ${numbers.slice(2, 7)}-${numbers.slice(7, 11)}`;
-  };
-
   const maskWhatsApp = (value: string) => {
     const numbers = value.replace(/\D/g, "");
     if (numbers.length <= 2) return numbers;
@@ -297,10 +331,7 @@ export default function OrganizationSettingsPage() {
         tradeName: formData.tradeName || undefined,
         document: formData.document.replace(/\D/g, "") || undefined,
         email: formData.email || undefined,
-        phone: formData.phone.replace(/\D/g, "") || undefined,
         whatsapp: formData.whatsapp.replace(/\D/g, "") || undefined,
-        siteUrl: formData.siteUrl || undefined,
-        instagram: formData.instagram || undefined,
         zipCode: formData.zipCode.replace(/\D/g, "") || undefined,
         street: formData.street || undefined,
         number: formData.number || undefined,
@@ -376,6 +407,10 @@ export default function OrganizationSettingsPage() {
     label: state.label,
   }));
   const selectedState = BRAZIL_STATES.find((s) => s.id === formData.state);
+
+  // Tipo da organização inferido pelo tamanho do documento (14 = CNPJ → PJ;
+  // 11 = CPF → PF). Só a PJ exibe o campo CNPJ. [[project_org_person_type]]
+  const isPjOrg = (organizer.document ?? "").replace(/\D/g, "").length === 14;
 
   // Dirty-check: campos editados OU logo em staging (novo corte / remoção).
   // Habilita o "Salvar alteração" só quando há alteração real a persistir.
@@ -491,16 +526,25 @@ export default function OrganizationSettingsPage() {
                     </p>
                   </div>
 
+                  {/* Campos read-only (geridos pelo admin) ficam CINZA — visual
+                      padrão do FormField `readOnly` (bg-gray-3) — para sinalizar
+                      que não são editáveis. Só "Nome fantasia" é editável. */}
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-x-4 gap-y-6 w-full">
-                    {/* CPF do responsável — read-only (dado gerido pelo admin);
-                        `inputClassName="bg-gray-1"` mantém o MESMO visual do campo
-                        editável (Figma: campos uniformes). */}
+                    {/* CNPJ — só para organização PJ (documento com 14 dígitos). */}
+                    {isPjOrg && (
+                      <FormField
+                        label="CNPJ"
+                        value={maskCPForCNPJ(organizer.document ?? "")}
+                        placeholder="00.000.000/0000-00"
+                        readOnly
+                      />
+                    )}
+                    {/* CPF do responsável — read-only (gerido pelo admin). */}
                     <FormField
                       label="CPF do responsável"
                       value={maskCPF(organizer.ownerDocument ?? "")}
                       placeholder="000.000.000-00"
                       readOnly
-                      inputClassName="bg-gray-1"
                     />
                     {/* Nome fantasia — único editável nesta seção. */}
                     <FormField
@@ -508,6 +552,7 @@ export default function OrganizationSettingsPage() {
                       value={formData.tradeName}
                       onChange={(v) => setField("tradeName", v)}
                       placeholder="Digite o nome fantasia"
+                      tooltip={TRADE_NAME_TOOLTIP}
                     />
                     {/* Razão social — read-only. */}
                     <FormField
@@ -515,7 +560,6 @@ export default function OrganizationSettingsPage() {
                       value={organizer.name ?? ""}
                       placeholder="Razão social"
                       readOnly
-                      inputClassName="bg-gray-1"
                     />
                     {/* Nome do responsável — read-only. */}
                     <FormField
@@ -523,7 +567,6 @@ export default function OrganizationSettingsPage() {
                       value={organizer.ownerName ?? ""}
                       placeholder="Nome do responsável"
                       readOnly
-                      inputClassName="bg-gray-1"
                     />
                   </div>
                 </div>
@@ -548,10 +591,8 @@ export default function OrganizationSettingsPage() {
                   <FormField
                     label="CEP"
                     value={maskCEP(formData.zipCode)}
-                    onChange={(v) =>
-                      setField("zipCode", v.replace(/\D/g, "").slice(0, 8))
-                    }
-                    placeholder="00000-000"
+                    onChange={handleZipChange}
+                    placeholder={loadingCep ? "Buscando endereço..." : "00000-000"}
                     inputMode="numeric"
                   />
                   <FormField
@@ -645,28 +686,6 @@ export default function OrganizationSettingsPage() {
                     }
                     placeholder="(00) 00000-0000"
                     inputMode="tel"
-                  />
-                  <FormField
-                    label="Telefone"
-                    value={maskPhone(formData.phone)}
-                    onChange={(v) =>
-                      setField("phone", v.replace(/\D/g, "").slice(0, 11))
-                    }
-                    placeholder="(00) 0000-0000"
-                    inputMode="tel"
-                  />
-                  <FormField
-                    label="Site Oficial"
-                    value={formData.siteUrl}
-                    onChange={(v) => setField("siteUrl", v)}
-                    placeholder="https://www.meuevento.com.br"
-                    inputMode="url"
-                  />
-                  <FormField
-                    label="Instagram Oficial"
-                    value={formData.instagram}
-                    onChange={(v) => setField("instagram", v)}
-                    placeholder="@meuevento"
                   />
                 </div>
 

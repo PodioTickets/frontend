@@ -13,6 +13,16 @@ import { NextRequest, NextResponse } from "next/server";
 
 const digitsOnly = (v: string) => v.replace(/\D/g, "");
 
+/**
+ * Telefone só é retornado quando plausível: DDD + número = 10 (fixo) ou 11
+ * (celular) dígitos. Sobras curtas/inválidas (ex.: DDD "00" sem número) viram
+ * "" para não gerar máscara quebrada ("(00") no autopreenchimento.
+ */
+const sanitizePhone = (v: string): string => {
+  const d = digitsOnly(v);
+  return d.length === 10 || d.length === 11 ? d : "";
+};
+
 // Token da API autenticada do cnpj.ws (server-only). Presente → usa o endpoint
 // comercial (rate-limit alto); ausente → cai no público (~3 req/min).
 const CNPJ_WS_TOKEN = process.env.CNPJ_WS_TOKEN?.trim();
@@ -70,9 +80,9 @@ function fromCnpjWs(raw: any): CnpjLookupData {
     .filter(Boolean)
     .join(" ")
     .trim();
-  const phone = `${digitsOnly(String(est.ddd1 ?? ""))}${digitsOnly(
-    String(est.telefone1 ?? ""),
-  )}`;
+  const phone = sanitizePhone(
+    `${digitsOnly(String(est.ddd1 ?? ""))}${digitsOnly(String(est.telefone1 ?? ""))}`,
+  );
   return {
     ...empty,
     legalName: (raw?.razao_social ?? "").trim(),
@@ -111,7 +121,7 @@ function fromBrasilApi(raw: any): CnpjLookupData {
     city: (raw?.municipio ?? "").trim(),
     state: (raw?.uf ?? "").trim(),
     email: (raw?.email ?? "").trim().toLowerCase(),
-    phone: digitsOnly(String(raw?.ddd_telefone_1 ?? "")),
+    phone: sanitizePhone(String(raw?.ddd_telefone_1 ?? "")),
   };
 }
 
