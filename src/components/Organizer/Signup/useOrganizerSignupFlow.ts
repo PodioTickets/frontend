@@ -117,10 +117,11 @@ export function useOrganizerSignupFlow() {
   const [ownerNameFromReceita, setOwnerNameFromReceita] = useState(false);
   const lastFetchedCepRef = useRef<string>("");
   const lastFetchedCnpjRef = useRef<string>("");
-  // CNPJs (só dígitos) CONFIRMADOS pela Receita (lookup ok = existe + válido).
-  // Gate da etapa PJ: não avança se o CNPJ for inválido ou a API não encontrar.
-  // Keyed por dígitos — trocar o CNPJ não deixa confirmação velha valendo.
-  const cnpjLookupOkRef = useRef<Set<string>>(new Set());
+  // Dígitos do CNPJ CONFIRMADO pela Receita (lookup ok = existe + válido). Estado
+  // (reativo) porque governa DUAS coisas: (1) o reveal dos demais campos da etapa
+  // PJ — só abrem com CNPJ válido e dados puxados; (2) o gate de avanço. Sempre é
+  // "" ou igual aos dígitos atuais do documento (limpo a cada mudança do CNPJ).
+  const [confirmedCnpjDigits, setConfirmedCnpjDigits] = useState("");
   // E-mails (normalizados) já confirmados como PERTENCENTES a uma conta ORGANIZER.
   // Fonte de verdade do gate "e-mail já cadastrado". Keyed por e-mail normalizado.
   const takenOrgEmailsRef = useRef<Set<string>>(new Set());
@@ -349,7 +350,7 @@ export function useOrganizerSignupFlow() {
           toast.error("Aguarde a verificação do CNPJ.");
           return false;
         }
-        if (!cnpjLookupOkRef.current.has(onlyDigits(formData.document))) {
+        if (confirmedCnpjDigits !== onlyDigits(formData.document)) {
           const msg = "Confirme um CNPJ válido e existente para continuar.";
           setErrors({ document: msg });
           toast.error(msg);
@@ -373,7 +374,7 @@ export function useOrganizerSignupFlow() {
 
     setErrors({});
     return true;
-  }, [currentMeta.key, formData, loadingCnpj, allContractsAccepted, turnstileToken, applyZodErrors]);
+  }, [currentMeta.key, formData, loadingCnpj, confirmedCnpjDigits, allContractsAccepted, turnstileToken, applyZodErrors]);
 
   /**
    * Cria a conta (na etapa de contratos). O backend autologa (cookies
@@ -503,6 +504,9 @@ export function useOrganizerSignupFlow() {
     const digits = onlyDigits(masked);
     if (digits.length === 14 && digits !== lastFetchedCnpjRef.current) {
       lastFetchedCnpjRef.current = digits;
+      // Novo CNPJ em consulta: fecha o reveal até a Receita confirmar (só reabre
+      // no sucesso do lookup). Evita mostrar o resto do form com CNPJ ainda incerto.
+      setConfirmedCnpjDigits("");
       // Valida ao vivo se o CNPJ já é de uma organização (paralelo ao lookup).
       void checkOrgDocumentAvailability(digits, "document");
       void (async () => {
@@ -510,16 +514,16 @@ export function useOrganizerSignupFlow() {
         try {
           const result = await lookupCnpjDigits(digits);
           if (!result.ok) {
-            // CNPJ inválido / não encontrado: desmarca a confirmação e sinaliza
+            // CNPJ inválido / não encontrado: mantém o reveal FECHADO e sinaliza
             // no campo. O gate da etapa (validateCurrentStep) barra o avanço.
-            cnpjLookupOkRef.current.delete(digits);
+            setConfirmedCnpjDigits("");
             setErrors((prev) => ({ ...prev, document: result.message }));
             toast.error(result.message);
             return;
           }
           const { data } = result;
-          // CNPJ confirmado pela Receita — libera o avanço da etapa.
-          cnpjLookupOkRef.current.add(digits);
+          // CNPJ confirmado pela Receita — abre o reveal e libera o avanço.
+          setConfirmedCnpjDigits(digits);
           const phoneDigits = onlyDigits(data.phone);
           setFormData((prev) => ({
             ...prev,
@@ -555,6 +559,8 @@ export function useOrganizerSignupFlow() {
       })();
     } else if (digits.length < 14) {
       lastFetchedCnpjRef.current = "";
+      // CNPJ incompleto → fecha o reveal (some o resto do formulário).
+      setConfirmedCnpjDigits("");
     }
   }, [setField, checkOrgDocumentAvailability]);
 
@@ -610,9 +616,17 @@ export function useOrganizerSignupFlow() {
     }
   }, [setField]);
 
+  // Reveal da etapa PJ: só abre com o CNPJ CONFIRMADO pela Receita (dígitos
+  // batem com o documento atual). Enquanto inválido/incompleto/em consulta fica
+  // fechado. `confirmedCnpjDigits` é sempre "" ou == aos dígitos atuais.
+  const cnpjConfirmed =
+    confirmedCnpjDigits.length === 14 &&
+    confirmedCnpjDigits === onlyDigits(formData.document);
+
   // Sem useMemo manual: o React Compiler (ativo no projeto) memoiza o retorno;
   // um useMemo com deps incompletas quebraria o lint.
   return {
+    cnpjConfirmed,
     stepIndex,
     currentMeta,
     totalSteps: STEP_META.length,
