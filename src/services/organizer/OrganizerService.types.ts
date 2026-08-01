@@ -53,6 +53,19 @@ export interface CreateOrganizationRequest {
   accountType?: "CORRENTE" | "POUPANCA"; // Tipo de conta
   accountHolderName?: string; // Nome do titular
   accountHolderDocument?: string; // CPF/CNPJ do titular
+  // Chaves PIX — substituição completa quando enviada (mesma semântica do admin).
+  // Permite o organizador gerir suas chaves pela tela de Configurações.
+  pixKeys?: PixKeyItemPayload[];
+}
+
+/** Item de chave PIX no payload de criação/atualização de organização. */
+export interface PixKeyItemPayload {
+  key: string;
+  keyType: string;
+  isDefault?: boolean;
+  bankName?: string;
+  accountHolderName?: string;
+  accountHolderDocument?: string;
 }
 
 /**

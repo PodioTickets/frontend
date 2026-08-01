@@ -12,12 +12,18 @@ import { ImageWithInitialFallback } from "@/components/ImageWithInitialFallback"
 import toast from "react-hot-toast";
 import { getAvatarUrl } from "@/utils/avatar";
 import { lookupCepDigits } from "@/utils/lookupCep";
-import { Briefcase, MapPin, Phone, XCircle } from "lucide-react";
+import {
+  PIX_KEY_LABELS,
+  PIX_KEY_TYPE_OPTIONS,
+  maskPixKey,
+  pixKeyPlaceholder,
+  getPixKeyValidationMessage,
+} from "@/utils/pixKey";
+import { Briefcase, MapPin, Phone, Plus, XCircle } from "lucide-react";
 import type {
   Organization,
-  PixKey,
+  CreateOrganizationRequest,
 } from "@/services/organizer/OrganizerService";
-import { ChatIcon } from "@/components/Icons/ChatIcon";
 import { PixIcon } from "@/components/Icons/PixIcon";
 import { ArrowButton } from "@/components/ArrowButton";
 import { Loading } from "@/components/Loading";
@@ -96,6 +102,59 @@ const CONTACT_EMAIL_TAKEN_MSG =
 const TRADE_NAME_TOOLTIP =
   "Este é o nome que será exibido para os participantes na página do evento, ingresso e demais comunicações.";
 
+/**
+ * Chave PIX no estado editável da tela (staging): tudo string, com `id` local
+ * (`loaded-*` para as vindas do backend, `new-*` para as recém-adicionadas). A
+ * persistência acontece só no "Salvar alteração" (substituição completa).
+ */
+type EditablePixKey = {
+  id: string;
+  key: string;
+  keyType: string;
+  bankName: string;
+  accountHolderName: string;
+  accountHolderDocument: string;
+};
+
+/** Buffer do formulário "Nova chave PIX" (mascarado enquanto digita). */
+const EMPTY_PIX = {
+  keyType: "",
+  key: "",
+  bankName: "",
+  accountHolderName: "",
+  accountHolderDocument: "",
+};
+
+/**
+ * Serializa a lista de chaves para o dirty-check (ordem importa — a 1ª é a
+ * padrão). Ignora o `id` local (irrelevante para o que será persistido).
+ */
+function serializePixKeys(keys: EditablePixKey[]): string {
+  return JSON.stringify(
+    keys.map((k) => [
+      k.keyType,
+      k.key,
+      k.bankName,
+      k.accountHolderName,
+      k.accountHolderDocument,
+    ]),
+  );
+}
+
+/** Mapeia as chaves vindas do backend para o shape editável da tela. */
+function toEditablePixKeys(
+  keys: Organization["pixKeys"],
+): EditablePixKey[] {
+  return (keys ?? []).map((k, i) => ({
+    id: k.id ?? `loaded-${i}`,
+    key: k.key ?? "",
+    keyType: k.keyType ?? "",
+    bankName: k.bankName ?? "",
+    accountHolderName: k.accountHolderName ?? "",
+    accountHolderDocument: k.accountHolderDocument ?? "",
+  }));
+}
+
 /** Abas da tela (Figma): navegação por estado local, uma seção por vez. */
 type SettingsTab = "detalhes" | "endereco" | "contato" | "pix";
 
@@ -135,9 +194,16 @@ export default function OrganizationSettingsPage() {
   // "Salvar alteração" só quando há mudança real. [[project_dirty_check_pattern]]
   const [initialFormData, setInitialFormData] = useState<OrgFormData>(EMPTY_FORM);
 
-  const [pixKeys, setPixKeys] = useState<PixKey[]>([]);
+  const [pixKeys, setPixKeys] = useState<EditablePixKey[]>([]);
+  // Snapshot das chaves carregadas/salvas — base do dirty-check das chaves PIX.
+  const [initialPixKeys, setInitialPixKeys] = useState<EditablePixKey[]>([]);
   const [openPixId, setOpenPixId] = useState<string | null>(null);
   const [removingPixId, setRemovingPixId] = useState<string | null>(null);
+  // Formulário "Nova chave PIX" (staging até o Salvar). O restante dos campos só
+  // aparece após selecionar o tipo de chave.
+  const [showAddPix, setShowAddPix] = useState(false);
+  const [newPix, setNewPix] = useState(EMPTY_PIX);
+  const [pixKeyError, setPixKeyError] = useState("");
 
   // E-mail de contato: erro inline + checagem ao vivo de disponibilidade.
   const [emailError, setEmailError] = useState("");
@@ -164,7 +230,9 @@ export default function OrganizationSettingsPage() {
       }
 
       setOrganizer(org);
-      setPixKeys(org.pixKeys ?? []);
+      const pk = toEditablePixKeys(org.pixKeys);
+      setPixKeys(pk);
+      setInitialPixKeys(pk);
       const fd = orgToFormData(org);
       setFormData(fd);
       setInitialFormData(fd);
@@ -313,6 +381,52 @@ export default function OrganizationSettingsPage() {
     return `(${numbers.slice(0, 2)}) ${numbers.slice(2, 7)}-${numbers.slice(7, 11)}`;
   };
 
+  /**
+   * Adiciona a chave PIX do formulário à lista em STAGING (persistida só no
+   * Salvar). Valida CPF/CNPJ da chave quando o tipo é documento (mesma validação
+   * do checkout). Chave de documento é normalizada para só dígitos (formato
+   * canônico); o CPF/CNPJ do titular também.
+   */
+  const handleAddPix = () => {
+    if (!newPix.keyType) {
+      setPixKeyError("Selecione o tipo de chave.");
+      return;
+    }
+    if (!newPix.key.trim()) {
+      setPixKeyError("Informe a chave PIX.");
+      return;
+    }
+    const keyError = getPixKeyValidationMessage(newPix.keyType, newPix.key);
+    if (keyError) {
+      setPixKeyError(keyError);
+      return;
+    }
+    const normalizedKey =
+      newPix.keyType === "CPF" || newPix.keyType === "CNPJ"
+        ? newPix.key.replace(/\D/g, "")
+        : newPix.key.trim();
+    setPixKeys((prev) => [
+      ...prev,
+      {
+        id: `new-${Date.now()}`,
+        key: normalizedKey,
+        keyType: newPix.keyType,
+        bankName: newPix.bankName.trim(),
+        accountHolderName: newPix.accountHolderName.trim(),
+        accountHolderDocument: newPix.accountHolderDocument.replace(/\D/g, ""),
+      },
+    ]);
+    setNewPix(EMPTY_PIX);
+    setPixKeyError("");
+    setShowAddPix(false);
+  };
+
+  /** Remove a chave PIX da lista em staging (efetiva no Salvar). */
+  const handleRemovePix = (id: string) => {
+    setPixKeys((prev) => prev.filter((k) => k.id !== id));
+    setRemovingPixId(null);
+  };
+
   const handleSubmit = async () => {
     // Bloqueia o salvamento se o e-mail de contato já for de outra organização.
     // (Revalida na rede; o backend também rejeita como garantia final.)
@@ -348,7 +462,25 @@ export default function OrganizationSettingsPage() {
         }
       });
 
-      let finalOrg = await organizerService.updateOrganization(updateData);
+      const payload = { ...updateData } as Partial<CreateOrganizationRequest>;
+      // Só envia `pixKeys` quando houve mudança — evita a substituição completa
+      // (delete+recria) no backend em saves que só tocaram outros campos. A 1ª
+      // chave da lista é marcada como padrão.
+      const pixChanged =
+        serializePixKeys(pixKeys) !== serializePixKeys(initialPixKeys);
+      if (pixChanged) {
+        payload.pixKeys = pixKeys.map((k, i) => ({
+          key: k.key,
+          keyType: k.keyType,
+          isDefault: i === 0,
+          bankName: k.bankName || undefined,
+          accountHolderName: k.accountHolderName || undefined,
+          accountHolderDocument:
+            k.accountHolderDocument.replace(/\D/g, "") || undefined,
+        }));
+      }
+
+      let finalOrg = await organizerService.updateOrganization(payload);
 
       // Persiste a logo em staging SÓ agora (no salvar). Novo arquivo → faz o
       // upload p/ obter a URL e aplica; remoção → aplica string vazia. A resposta
@@ -367,6 +499,11 @@ export default function OrganizationSettingsPage() {
       // que o usuário editou; só sincronizamos o `organizer`.
       setOrganizer(finalOrg);
       pendingLogo.reset();
+      // Sincroniza as chaves PIX com o que o backend persistiu (ids reais + ordem
+      // padrão) e refaz o baseline do dirty-check.
+      const savedPix = toEditablePixKeys(finalOrg.pixKeys);
+      setPixKeys(savedPix);
+      setInitialPixKeys(savedPix);
       // Novo baseline do dirty-check: os valores salvos passam a ser o "inicial".
       setInitialFormData(formData);
     } catch (error: unknown) {
@@ -384,10 +521,6 @@ export default function OrganizationSettingsPage() {
       setSaving(false);
       setUploadingImage(false);
     }
-  };
-
-  const handleRequestChange = () => {
-    toast("Funcionalidade em desenvolvimento", { icon: "ℹ️" });
   };
 
   if (authLoading || loading) {
@@ -418,7 +551,9 @@ export default function OrganizationSettingsPage() {
     Object.keys(formData) as (keyof OrgFormData)[]
   ).some((key) => formData[key] !== initialFormData[key]);
   const logoChanged = Boolean(pendingLogo.file) || pendingLogo.removed;
-  const isDirty = formChanged || logoChanged;
+  const pixChanged =
+    serializePixKeys(pixKeys) !== serializePixKeys(initialPixKeys);
+  const isDirty = formChanged || logoChanged || pixChanged;
 
   // Botão "Salvar alteração" (rodapé das abas de formulário — não na aba PIX).
   const saveButton = (
@@ -529,8 +664,11 @@ export default function OrganizationSettingsPage() {
                   {/* Campos read-only (geridos pelo admin) ficam CINZA — visual
                       padrão do FormField `readOnly` (bg-gray-3) — para sinalizar
                       que não são editáveis. Só "Nome fantasia" é editável. */}
+                  {/* Ordem: CNPJ → Razão social → Nome fantasia → Nome do
+                      responsável → CPF do responsável. CNPJ e Razão social são
+                      exclusivos de PJ (PF não tem razão social). */}
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-x-4 gap-y-6 w-full">
-                    {/* CNPJ — só para organização PJ (documento com 14 dígitos). */}
+                    {/* CNPJ — só PJ (documento com 14 dígitos). */}
                     {isPjOrg && (
                       <FormField
                         label="CNPJ"
@@ -539,13 +677,15 @@ export default function OrganizationSettingsPage() {
                         readOnly
                       />
                     )}
-                    {/* CPF do responsável — read-only (gerido pelo admin). */}
-                    <FormField
-                      label="CPF do responsável"
-                      value={maskCPF(organizer.ownerDocument ?? "")}
-                      placeholder="000.000.000-00"
-                      readOnly
-                    />
+                    {/* Razão social — read-only; só PJ. */}
+                    {isPjOrg && (
+                      <FormField
+                        label="Razão social"
+                        value={organizer.name ?? ""}
+                        placeholder="Razão social"
+                        readOnly
+                      />
+                    )}
                     {/* Nome fantasia — único editável nesta seção. */}
                     <FormField
                       label="Nome fantasia"
@@ -554,18 +694,18 @@ export default function OrganizationSettingsPage() {
                       placeholder="Digite o nome fantasia"
                       tooltip={TRADE_NAME_TOOLTIP}
                     />
-                    {/* Razão social — read-only. */}
-                    <FormField
-                      label="Razão social"
-                      value={organizer.name ?? ""}
-                      placeholder="Razão social"
-                      readOnly
-                    />
                     {/* Nome do responsável — read-only. */}
                     <FormField
                       label="Nome do responsável"
                       value={organizer.ownerName ?? ""}
                       placeholder="Nome do responsável"
+                      readOnly
+                    />
+                    {/* CPF do responsável — read-only (gerido pelo admin). */}
+                    <FormField
+                      label="CPF do responsável"
+                      value={maskCPF(organizer.ownerDocument ?? "")}
+                      placeholder="000.000.000-00"
                       readOnly
                     />
                   </div>
@@ -707,12 +847,19 @@ export default function OrganizationSettingsPage() {
                       repasses
                     </p>
                   </div>
-                  <Button
-                    onClick={handleRequestChange}
-                    className="w-full sm:w-auto h-11 px-6 font-manrope font-bold text-base shrink-0"
-                  >
-                    Adicionar chave
-                  </Button>
+                  {!showAddPix && (
+                    <Button
+                      onClick={() => {
+                        setShowAddPix(true);
+                        setNewPix(EMPTY_PIX);
+                        setPixKeyError("");
+                      }}
+                      className="w-full sm:w-auto h-11 px-6 font-manrope font-bold text-base shrink-0 flex items-center justify-center gap-1.5"
+                    >
+                      <Plus className="size-4" />
+                      Adicionar chave
+                    </Button>
+                  )}
                 </div>
 
                 {/* Lista de chaves PIX (accordion) */}
@@ -741,7 +888,7 @@ export default function OrganizationSettingsPage() {
                                   Chave pix:
                                 </span>
                                 <span className="font-family-dm-sans font-medium text-gray-12 truncate">
-                                  {pixKey.key || "—"}
+                                  {maskPixKey(pixKey.keyType, pixKey.key) || "—"}
                                 </span>
                               </div>
                             </div>
@@ -755,16 +902,22 @@ export default function OrganizationSettingsPage() {
                               <div className="grid grid-cols-1 md:grid-cols-3 gap-x-4 gap-y-6 mt-5">
                                 <FormField
                                   label="Tipo de Chave"
-                                  value={pixKey.keyType || "—"}
+                                  value={
+                                    PIX_KEY_LABELS[pixKey.keyType] ||
+                                    pixKey.keyType ||
+                                    "—"
+                                  }
                                   readOnly
                                 />
                                 <FormField
                                   label="Chave cadastrada"
-                                  value={pixKey.key || "—"}
+                                  value={
+                                    maskPixKey(pixKey.keyType, pixKey.key) || "—"
+                                  }
                                   readOnly
                                 />
                                 <FormField
-                                  label="Nome do titular"
+                                  label="Nome completo"
                                   value={pixKey.accountHolderName || "—"}
                                   readOnly
                                 />
@@ -803,22 +956,130 @@ export default function OrganizationSettingsPage() {
                     })}
                   </div>
                 ) : (
-                  <p className="font-family-dm-sans text-sm text-gray-11">
-                    Nenhuma chave PIX cadastrada.
-                  </p>
+                  !showAddPix && (
+                    <p className="font-family-dm-sans text-sm text-gray-11">
+                      Nenhuma chave PIX cadastrada.
+                    </p>
+                  )
                 )}
 
-                {/* Solicitar alteração */}
-                <div className="flex justify-start w-full">
-                  <Button
-                    onClick={handleRequestChange}
-                    variant="outline"
-                    className="flex items-center gap-2 h-12 px-6 border-gray-6 text-gray-12 font-manrope font-bold text-base"
-                  >
-                    <ChatIcon className="size-5" />
-                    Solicitar alteração
-                  </Button>
-                </div>
+                {/* Formulário "Nova chave PIX" — só o Tipo de chave aparece de
+                    início; o restante é revelado após selecionar o tipo. */}
+                {showAddPix && (
+                  <div className="rounded-lg border border-gray-6 p-5 flex flex-col gap-6">
+                    <p className="font-manrope font-bold text-base text-gray-12">
+                      Nova chave PIX
+                    </p>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-x-4 gap-y-6">
+                      {/* Tipo de chave — sempre visível */}
+                      <div className="flex flex-1 min-w-0 flex-col gap-2">
+                        <label className="flex min-h-6 items-center gap-1.5 font-normal font-family-dm-sans text-gray-12 leading-[1.3] text-base">
+                          Tipo de chave
+                        </label>
+                        <Dropdown
+                          options={PIX_KEY_TYPE_OPTIONS}
+                          width="w-full"
+                          maxHeight="max-h-[280px]"
+                          trigger={(isOpen) => (
+                            <div className="border border-gray-6 rounded-lg h-12 flex items-center justify-between px-3 w-full hover:bg-gray-3 transition-colors bg-gray-1">
+                              <span
+                                className={`text-base flex-1 text-left font-family-dm-sans ${newPix.keyType ? "text-gray-12" : "text-gray-11"
+                                  }`}
+                              >
+                                {PIX_KEY_LABELS[newPix.keyType] ||
+                                  "Selecione o tipo"}
+                              </span>
+                              <ArrowButton isOpen={isOpen} />
+                            </div>
+                          )}
+                          onSelect={(option) => {
+                            const keyType = option.id || "";
+                            // Reaplica a máscara da chave já digitada ao novo tipo.
+                            setNewPix((p) => ({
+                              ...p,
+                              keyType,
+                              key: maskPixKey(keyType, p.key),
+                            }));
+                            setPixKeyError("");
+                          }}
+                        />
+                      </div>
+
+                      {/* Restante do formulário — só após escolher o tipo */}
+                      {newPix.keyType && (
+                        <>
+                          <FormField
+                            label="Chave PIX"
+                            value={newPix.key}
+                            onChange={(v) => {
+                              setNewPix((p) => ({
+                                ...p,
+                                key: maskPixKey(p.keyType, v),
+                              }));
+                              if (pixKeyError) setPixKeyError("");
+                            }}
+                            placeholder={pixKeyPlaceholder(newPix.keyType)}
+                            error={pixKeyError || undefined}
+                          />
+                          <FormField
+                            label="Nome do titular"
+                            value={newPix.accountHolderName}
+                            onChange={(v) =>
+                              setNewPix((p) => ({
+                                ...p,
+                                accountHolderName: v,
+                              }))
+                            }
+                            placeholder="Nome completo do titular"
+                          />
+                          <FormField
+                            label="CPF/CNPJ do titular"
+                            value={newPix.accountHolderDocument}
+                            onChange={(v) =>
+                              setNewPix((p) => ({
+                                ...p,
+                                accountHolderDocument: maskCPForCNPJ(v),
+                              }))
+                            }
+                            placeholder="000.000.000-00"
+                            inputMode="numeric"
+                          />
+                          <FormField
+                            label="Banco"
+                            value={newPix.bankName}
+                            onChange={(v) =>
+                              setNewPix((p) => ({ ...p, bankName: v }))
+                            }
+                            placeholder="Nome do banco"
+                          />
+                        </>
+                      )}
+                    </div>
+
+                    <div className="flex items-center justify-end gap-2">
+                      <Button
+                        variant="outline"
+                        onClick={() => {
+                          setShowAddPix(false);
+                          setNewPix(EMPTY_PIX);
+                          setPixKeyError("");
+                        }}
+                        className="h-10 px-5 text-gray-12 border border-gray-6 font-manrope font-bold text-base"
+                      >
+                        Cancelar
+                      </Button>
+                      <Button
+                        onClick={handleAddPix}
+                        disabled={!newPix.keyType}
+                        className="h-10 px-5 font-manrope font-bold text-base"
+                      >
+                        Adicionar
+                      </Button>
+                    </div>
+                  </div>
+                )}
+
+                {saveButton}
               </div>
             )}
           </div>
@@ -882,10 +1143,9 @@ export default function OrganizationSettingsPage() {
                   </button>
                   <button
                     type="button"
-                    onClick={() => {
-                      handleRequestChange();
-                      setRemovingPixId(null);
-                    }}
+                    onClick={() =>
+                      removingPixId && handleRemovePix(removingPixId)
+                    }
                     className="flex-1 h-12 bg-red-11 rounded-lg font-manrope font-bold text-base text-red-2 hover:bg-red-10 transition-colors"
                   >
                     Sim, remover

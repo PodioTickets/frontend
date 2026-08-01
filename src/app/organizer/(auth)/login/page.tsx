@@ -123,19 +123,6 @@ export default function OrganizerLoginPage() {
     }
   };
 
-  const footer = (
-    <p className="text-xs lg:text-sm text-gray-11 font-family-dm-sans text-center max-w-[328px] leading-[1.3]">
-      Ao continuar você concorda com nossos{" "}
-      <Link href={publicSiteHref("/terms")} className="font-bold text-primary-10 underline hover:text-primary-11 transition-colors">
-        Termos de serviço
-      </Link>{" "}
-      e{" "}
-      <Link href={publicSiteHref("/privacy")} className="font-bold text-primary-10 underline hover:text-primary-11 transition-colors">
-        Política de privacidade
-      </Link>
-    </p>
-  );
-
   const fecharModal = () => {
     setMfaToken(null);
     setMfaCode("");
@@ -360,9 +347,6 @@ export default function OrganizerLoginPage() {
             </p>
           </form>
         </div>
-
-        {/* Footer */}
-        <div className="flex justify-center mt-2 lg:mt-6 lg:shrink-0">{footer}</div>
       </div>
 
       {/* ─── Desktop: right image ─── */}
