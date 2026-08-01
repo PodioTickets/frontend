@@ -1,7 +1,7 @@
 "use client";
 
 import { AnimatePresence, motion } from "framer-motion";
-import { formatCNPJ, formatCPF, onlyDigits } from "@/utils/masks";
+import { formatCNPJ, formatCPF } from "@/utils/masks";
 import { SignupField } from "../SignupField";
 import type { OrganizerSignupFlow } from "../useOrganizerSignupFlow";
 
@@ -18,13 +18,14 @@ export function StepOrgData({ flow }: { flow: OrganizerSignupFlow }) {
     handleOwnerDocumentChange,
     loadingCnpj,
     ownerNameFromReceita,
+    cnpjConfirmed,
   } = flow;
   const isPJ = formData.personType === "PJ";
 
-  // PJ: revela os demais campos só quando o CNPJ está completo (14 dígitos),
-  // após a consulta automática à Receita (cnpj.ws). O reveal não depende do
-  // sucesso do lookup — se falhar, o usuário preenche à mão.
-  const showCnpjRest = onlyDigits(formData.document).length === 14;
+  // PJ: revela os demais campos SÓ quando a Receita confirmou o CNPJ (válido e
+  // existente) e os dados foram puxados. CNPJ inválido/não encontrado/incompleto
+  // → o resto do formulário permanece oculto.
+  const showCnpjRest = cnpjConfirmed;
 
   return (
     <div className="flex flex-col gap-5">
