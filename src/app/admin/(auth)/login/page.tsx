@@ -243,7 +243,7 @@ export default function AdminLoginPage() {
                 tamanho cheio, igual ao login desktop. */}
             {TURNSTILE_SITE_KEY && (
               <div className="flex w-full items-center justify-center empty:hidden">
-                <div className="w-full scale-[0.85] lg:scale-100">
+                <div className="w-full">
                   <Turnstile
                     ref={turnstileRef}
                     siteKey={TURNSTILE_SITE_KEY}

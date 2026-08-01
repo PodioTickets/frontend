@@ -24,8 +24,13 @@ import { FormField } from "@/components/FormField";
 import { FinanceIcon } from "../Icons/Organizer/FinanceIcon";
 import { lookupCepDigits } from "@/utils/lookupCep";
 import { formatDateBRT } from "@/utils/datetimeBR";
-import { getCpfValidationMessage } from "@/utils/cpf";
-import { getCnpjValidationMessage } from "@/utils/cnpj";
+import {
+  PIX_KEY_LABELS,
+  PIX_KEY_TYPE_OPTIONS,
+  maskPixKey,
+  pixKeyPlaceholder,
+  getPixKeyValidationMessage,
+} from "@/utils/pixKey";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -102,34 +107,6 @@ function formatCPFOrCNPJ(v?: string | null): string {
   if (!v) return "";
   const d = digits(v);
   return d.length <= 11 ? formatCPF(d) : formatCNPJ(d);
-}
-
-/** Aplica máscara de CPF/CNPJ à chave PIX só quando o tipo é documento. */
-function maskPixKey(keyType: string, value: string): string {
-  if (keyType === "CPF") return formatCPF(value);
-  if (keyType === "CNPJ") return formatCNPJ(value);
-  return value;
-}
-
-/** Placeholder da chave PIX conforme o tipo selecionado. */
-function pixKeyPlaceholder(keyType: string): string {
-  if (keyType === "CPF") return "000.000.000-00";
-  if (keyType === "CNPJ") return "00.000.000/0000-00";
-  if (keyType === "EMAIL") return "email@exemplo.com";
-  if (keyType === "PHONE") return "(00) 00000-0000";
-  return "Digite a chave PIX";
-}
-
-/**
- * Valida a chave PIX quando o tipo é documento (CPF/CNPJ) — mesma validação do
- * checkout (`getCpfValidationMessage`/`getCnpjValidationMessage`). Demais tipos
- * (e-mail/telefone/aleatória) não passam por validação de documento aqui.
- * Retorna a mensagem de erro ou null.
- */
-function getPixKeyValidationMessage(keyType: string, key: string): string | null {
-  if (keyType === "CPF") return getCpfValidationMessage(key);
-  if (keyType === "CNPJ") return getCnpjValidationMessage(key);
-  return null;
 }
 
 function formatPhone(v?: string | null): string {
@@ -245,14 +222,6 @@ function SectionTitle({ icon, label }: { icon: React.ReactNode; label: string })
 
 // FieldInput foi extraído para o componente compartilhado `@/components/FormField`
 // (usado também pelo wizard de auto-cadastro de organizador).
-
-const PIX_KEY_LABELS: Record<string, string> = {
-  CPF: "CPF",
-  CNPJ: "CNPJ",
-  EMAIL: "E-mail",
-  PHONE: "Telefone",
-  EVP: "Chave aleatória",
-};
 
 function PixKeyCard({
   pixKey,
@@ -1048,13 +1017,7 @@ export function OrganizerEditDrawer({ isOpen, onClose, org, onUpdated, mode = "e
                             setPixKeyError(null);
                           }}
                           placeholder="Selecione o tipo"
-                          options={[
-                            { id: "CPF", label: "CPF" },
-                            { id: "CNPJ", label: "CNPJ" },
-                            { id: "EMAIL", label: "E-mail" },
-                            { id: "PHONE", label: "Telefone" },
-                            { id: "EVP", label: "Chave aleatória" },
-                          ]}
+                          options={PIX_KEY_TYPE_OPTIONS}
                         />
                       </div>
 
