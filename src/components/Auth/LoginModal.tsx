@@ -404,7 +404,7 @@ export function LoginModal() {
                           absorve o espaço extra do scale. */}
                       {TURNSTILE_SITE_KEY && (
                         <div className="flex w-full items-center justify-center empty:hidden">
-                          <div className="w-full scale-[0.85]">
+                          <div className="w-full">
                             <Turnstile
                               ref={mobileTurnstileRef}
                               siteKey={TURNSTILE_SITE_KEY}
@@ -644,7 +644,7 @@ export function LoginModal() {
                           absorve o espaço extra do scale. */}
                       {TURNSTILE_SITE_KEY && (
                         <div className="flex w-full items-center justify-center empty:hidden">
-                          <div className="scale-100 w-full">
+                          <div className="w-full">
                             <Turnstile
                               ref={desktopTurnstileRef}
                               siteKey={TURNSTILE_SITE_KEY}

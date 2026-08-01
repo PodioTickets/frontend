@@ -75,7 +75,7 @@ export function StepContractsReview({ flow }: { flow: OrganizerSignupFlow }) {
           e wrapper sem altura fixa (não reserva espaço quando invisível). */}
       {TURNSTILE_SITE_KEY && (
         <div className="mt-1 flex w-full items-center justify-center empty:hidden">
-          <div className="w-full scale-[0.85] lg:scale-100">
+          <div className="w-full">
             <Turnstile
               ref={turnstileRef}
               siteKey={TURNSTILE_SITE_KEY}

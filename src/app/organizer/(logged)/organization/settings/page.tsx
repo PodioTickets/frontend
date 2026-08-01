@@ -917,7 +917,7 @@ export default function OrganizationSettingsPage() {
                                   readOnly
                                 />
                                 <FormField
-                                  label="Nome completo"
+                                  label="Nome completo do titular"
                                   value={pixKey.accountHolderName || "—"}
                                   readOnly
                                 />
@@ -1022,7 +1022,7 @@ export default function OrganizationSettingsPage() {
                             error={pixKeyError || undefined}
                           />
                           <FormField
-                            label="Nome do titular"
+                            label="Nome completo do titular"
                             value={newPix.accountHolderName}
                             onChange={(v) =>
                               setNewPix((p) => ({
