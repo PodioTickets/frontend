@@ -117,6 +117,10 @@ export function useOrganizerSignupFlow() {
   const [ownerNameFromReceita, setOwnerNameFromReceita] = useState(false);
   const lastFetchedCepRef = useRef<string>("");
   const lastFetchedCnpjRef = useRef<string>("");
+  // CNPJs (só dígitos) CONFIRMADOS pela Receita (lookup ok = existe + válido).
+  // Gate da etapa PJ: não avança se o CNPJ for inválido ou a API não encontrar.
+  // Keyed por dígitos — trocar o CNPJ não deixa confirmação velha valendo.
+  const cnpjLookupOkRef = useRef<Set<string>>(new Set());
   // E-mails (normalizados) já confirmados como PERTENCENTES a uma conta ORGANIZER.
   // Fonte de verdade do gate "e-mail já cadastrado". Keyed por e-mail normalizado.
   const takenOrgEmailsRef = useRef<Set<string>>(new Set());
@@ -337,6 +341,21 @@ export function useOrganizerSignupFlow() {
     // já pertencente a uma organização. Checado ao vivo; o set é a verdade.
     if (currentMeta.key === "orgData") {
       const isPJ = formData.personType === "PJ";
+      // Gate do CNPJ (PJ): o Zod já garante o checksum; aqui exigimos que a
+      // Receita tenha CONFIRMADO o CNPJ (existe de fato). Bloqueia inválido/
+      // não encontrado e também enquanto a consulta ainda está em andamento.
+      if (isPJ) {
+        if (loadingCnpj) {
+          toast.error("Aguarde a verificação do CNPJ.");
+          return false;
+        }
+        if (!cnpjLookupOkRef.current.has(onlyDigits(formData.document))) {
+          const msg = "Confirme um CNPJ válido e existente para continuar.";
+          setErrors({ document: msg });
+          toast.error(msg);
+          return false;
+        }
+      }
       const orgDocDigits = onlyDigits(isPJ ? formData.document : formData.ownerDocument);
       if (takenOrgDocumentsRef.current.has(orgDocDigits)) {
         const field = isPJ ? "document" : "ownerDocument";
@@ -354,7 +373,7 @@ export function useOrganizerSignupFlow() {
 
     setErrors({});
     return true;
-  }, [currentMeta.key, formData, allContractsAccepted, turnstileToken, applyZodErrors]);
+  }, [currentMeta.key, formData, loadingCnpj, allContractsAccepted, turnstileToken, applyZodErrors]);
 
   /**
    * Cria a conta (na etapa de contratos). O backend autologa (cookies
@@ -491,10 +510,16 @@ export function useOrganizerSignupFlow() {
         try {
           const result = await lookupCnpjDigits(digits);
           if (!result.ok) {
+            // CNPJ inválido / não encontrado: desmarca a confirmação e sinaliza
+            // no campo. O gate da etapa (validateCurrentStep) barra o avanço.
+            cnpjLookupOkRef.current.delete(digits);
+            setErrors((prev) => ({ ...prev, document: result.message }));
             toast.error(result.message);
             return;
           }
           const { data } = result;
+          // CNPJ confirmado pela Receita — libera o avanço da etapa.
+          cnpjLookupOkRef.current.add(digits);
           const phoneDigits = onlyDigits(data.phone);
           setFormData((prev) => ({
             ...prev,

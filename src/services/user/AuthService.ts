@@ -287,6 +287,8 @@ export class AuthService extends UserServiceBase {
       if (data.state) registerData.state = data.state;
       if (data.city) registerData.city = data.city;
       if (data.sex) registerData.sex = data.sex;
+      // Anti-bot: só envia se houver token (o backend exige em produção via TurnstileGuard).
+      if (data.turnstileToken) registerData.turnstileToken = data.turnstileToken;
       if (data.receiveCalendarEvents !== undefined) registerData.receiveCalendarEvents = data.receiveCalendarEvents;
       if (data.receivePartnerPromos !== undefined) registerData.receivePartnerPromos = data.receivePartnerPromos;
       if (data.language) registerData.language = data.language;

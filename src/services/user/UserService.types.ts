@@ -49,6 +49,8 @@ export interface RegisterRequest {
   receiveCalendarEvents?: boolean;
   receivePartnerPromos?: boolean;
   language?: string;
+  /** Token do Cloudflare Turnstile — verificado pelo backend no /register. */
+  turnstileToken?: string;
 }
 
 export interface RegisterResponse {

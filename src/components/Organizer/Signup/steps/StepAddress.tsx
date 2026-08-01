@@ -65,18 +65,30 @@ export function StepAddress({ flow }: { flow: OrganizerSignupFlow }) {
 
   return (
     <div className="flex flex-col gap-5">
-      {/* CEP sempre visível; ao puxar as informações a Rua entra AO LADO (mesma
-          linha do grid), com fade. */}
-      <div className="grid grid-cols-1 gap-x-4 gap-y-5 md:grid-cols-2">
-        <SignupField
-          label="CEP"
-          value={formData.zipCode}
-          onChange={(v) => handleZipChange(formatCEP(v))}
-          placeholder={loadingCep ? "Buscando endereço..." : "00000-000"}
-          error={errors.zipCode}
-          inputMode="numeric"
-          maxLength={9}
-        />
+      {/* CEP sempre visível. Enquanto não preenchido (form ainda colapsado) o
+          campo fica estreito — só o suficiente para o placeholder. Ao completar
+          o CEP a Rua entra AO LADO e o campo volta à largura da coluna (metade).
+          O grid só vira 2 colunas com `showRest`, senão o CEP sozinho ocuparia
+          metade do container mesmo estreito. */}
+      <div
+        className={cn(
+          "grid grid-cols-1 gap-x-4 gap-y-5",
+          showRest && "md:grid-cols-2",
+        )}
+      >
+        {/* Wrapper controla a largura: colapsado = estreito (cabe o texto);
+            expandido = `w-full` (preenche a coluna do grid). */}
+        <div className={cn(!showRest && "max-w-[11rem]")}>
+          <SignupField
+            label="CEP"
+            value={formData.zipCode}
+            onChange={(v) => handleZipChange(formatCEP(v))}
+            placeholder={loadingCep ? "Buscando..." : "00000-000"}
+            error={errors.zipCode}
+            inputMode="numeric"
+            maxLength={9}
+          />
+        </div>
         <AnimatePresence initial={false}>
           {showRest ? (
             <motion.div

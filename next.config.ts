@@ -6,6 +6,17 @@ const securityHeaders = [
     key: "X-Content-Type-Options",
     value: "nosniff",
   },
+  // Anti-clickjacking: as PÁGINAS HTML do app (checkout, exclusão de conta,
+  // dashboard) não podiam ser enquadradas. `X-Frame-Options` cobre navegadores
+  // legados; `frame-ancestors 'none'` é o equivalente moderno via CSP.
+  {
+    key: "X-Frame-Options",
+    value: "DENY",
+  },
+  {
+    key: "Content-Security-Policy",
+    value: "frame-ancestors 'none'",
+  },
   {
     key: "Referrer-Policy",
     value: "strict-origin-when-cross-origin",
