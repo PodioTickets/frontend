@@ -33,6 +33,34 @@ export function maskPixKey(keyType: string, value: string): string {
   return value;
 }
 
+/** Documento do titular: sempre CPF ou CNPJ — nunca ambíguo. */
+export type HolderDocType = "CPF" | "CNPJ";
+
+/**
+ * Resolve o tipo de documento do TITULAR da chave PIX. Chaves CPF/CNPJ ditam o
+ * tipo diretamente; para E-mail/Telefone/Aleatória (chave não-documento) cai no
+ * tipo de pessoa da organização (PF → CPF, PJ → CNPJ). Assim o rótulo/máscara
+ * nunca fica "CPF/CNPJ".
+ */
+export function resolveHolderDocType(
+  keyType: string,
+  orgIsPj: boolean,
+): HolderDocType {
+  if (keyType === "CPF") return "CPF";
+  if (keyType === "CNPJ") return "CNPJ";
+  return orgIsPj ? "CNPJ" : "CPF";
+}
+
+/** Máscara do documento do titular conforme o tipo resolvido. */
+export function maskHolderDoc(docType: HolderDocType, value: string): string {
+  return docType === "CNPJ" ? formatCNPJ(value) : formatCPF(value);
+}
+
+/** Placeholder do documento do titular conforme o tipo resolvido. */
+export function holderDocPlaceholder(docType: HolderDocType): string {
+  return docType === "CNPJ" ? "00.000.000/0000-00" : "000.000.000-00";
+}
+
 /** Placeholder da chave PIX conforme o tipo selecionado. */
 export function pixKeyPlaceholder(keyType: string): string {
   if (keyType === "CPF") return "000.000.000-00";
