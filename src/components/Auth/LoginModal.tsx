@@ -411,6 +411,7 @@ export function LoginModal() {
                               onSuccess={setTurnstileToken}
                               onError={() => setTurnstileToken(null)}
                               onExpire={() => setTurnstileToken(null)}
+                              style={{ width: "100%" }}
                               options={{ theme: "light", size: "flexible", appearance: "interaction-only" }}
                             />
                           </div>
@@ -651,6 +652,7 @@ export function LoginModal() {
                               onSuccess={setTurnstileToken}
                               onError={() => setTurnstileToken(null)}
                               onExpire={() => setTurnstileToken(null)}
+                              style={{ width: "100%" }}
                               options={{ theme: "light", size: "flexible", appearance: "interaction-only" }}
                             />
                           </div>

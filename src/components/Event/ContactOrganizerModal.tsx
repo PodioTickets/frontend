@@ -465,6 +465,7 @@ export function ContactOrganizerModal({
                         onSuccess={setTurnstileToken}
                         onError={() => setTurnstileToken(null)}
                         onExpire={() => setTurnstileToken(null)}
+                        style={{ width: "100%" }}
                         options={{ theme: "light", size: "flexible", appearance: "interaction-only" }}
                       />
                     </div>
@@ -543,6 +544,7 @@ export function ContactOrganizerModal({
                     onSuccess={setTurnstileToken}
                     onError={() => setTurnstileToken(null)}
                     onExpire={() => setTurnstileToken(null)}
+                    style={{ width: "100%" }}
                     options={{ theme: "light", size: "flexible", appearance: "interaction-only" }}
                     className="w-full"
                   />

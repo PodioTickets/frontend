@@ -18,6 +18,9 @@ import {
   maskPixKey,
   pixKeyPlaceholder,
   getPixKeyValidationMessage,
+  resolveHolderDocType,
+  maskHolderDoc,
+  holderDocPlaceholder,
 } from "@/utils/pixKey";
 import { Briefcase, MapPin, Phone, Plus, XCircle } from "lucide-react";
 import type {
@@ -545,6 +548,10 @@ export default function OrganizationSettingsPage() {
   // 11 = CPF → PF). Só a PJ exibe o campo CNPJ. [[project_org_person_type]]
   const isPjOrg = (organizer.document ?? "").replace(/\D/g, "").length === 14;
 
+  // Documento do titular da NOVA chave PIX: a chave CPF/CNPJ dita o tipo; nas
+  // demais (e-mail/telefone/aleatória) cai no tipo da org. Nunca fica "CPF/CNPJ".
+  const newPixHolderDocType = resolveHolderDocType(newPix.keyType, isPjOrg);
+
   // Dirty-check: campos editados OU logo em staging (novo corte / remoção).
   // Habilita o "Salvar alteração" só quando há alteração real a persistir.
   const formChanged = (
@@ -922,7 +929,19 @@ export default function OrganizationSettingsPage() {
                                   readOnly
                                 />
                                 <FormField
-                                  label="CPF/CNPJ do titular"
+                                  label={`${
+                                    pixKey.accountHolderDocument
+                                      ? pixKey.accountHolderDocument.replace(
+                                          /\D/g,
+                                          "",
+                                        ).length > 11
+                                        ? "CNPJ"
+                                        : "CPF"
+                                      : resolveHolderDocType(
+                                          pixKey.keyType,
+                                          isPjOrg,
+                                        )
+                                  } do titular`}
                                   value={
                                     pixKey.accountHolderDocument
                                       ? maskCPForCNPJ(
@@ -994,11 +1013,16 @@ export default function OrganizationSettingsPage() {
                           )}
                           onSelect={(option) => {
                             const keyType = option.id || "";
-                            // Reaplica a máscara da chave já digitada ao novo tipo.
+                            // Reaplica a máscara da chave E do documento do titular
+                            // ao novo tipo (troca CPF↔CNPJ recapa os dígitos).
                             setNewPix((p) => ({
                               ...p,
                               keyType,
                               key: maskPixKey(keyType, p.key),
+                              accountHolderDocument: maskHolderDoc(
+                                resolveHolderDocType(keyType, isPjOrg),
+                                p.accountHolderDocument,
+                              ),
                             }));
                             setPixKeyError("");
                           }}
@@ -1033,15 +1057,20 @@ export default function OrganizationSettingsPage() {
                             placeholder="Nome completo do titular"
                           />
                           <FormField
-                            label="CPF/CNPJ do titular"
+                            label={`${newPixHolderDocType} do titular`}
                             value={newPix.accountHolderDocument}
                             onChange={(v) =>
                               setNewPix((p) => ({
                                 ...p,
-                                accountHolderDocument: maskCPForCNPJ(v),
+                                accountHolderDocument: maskHolderDoc(
+                                  resolveHolderDocType(p.keyType, isPjOrg),
+                                  v,
+                                ),
                               }))
                             }
-                            placeholder="000.000.000-00"
+                            placeholder={holderDocPlaceholder(
+                              newPixHolderDocType,
+                            )}
                             inputMode="numeric"
                           />
                           <FormField
