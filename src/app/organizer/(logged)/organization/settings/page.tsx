@@ -21,6 +21,7 @@ import {
   resolveHolderDocType,
   maskHolderDoc,
   holderDocPlaceholder,
+  getHolderDocValidationMessage,
 } from "@/utils/pixKey";
 import { Briefcase, MapPin, Phone, Plus, XCircle } from "lucide-react";
 import type {
@@ -207,6 +208,8 @@ export default function OrganizationSettingsPage() {
   const [showAddPix, setShowAddPix] = useState(false);
   const [newPix, setNewPix] = useState(EMPTY_PIX);
   const [pixKeyError, setPixKeyError] = useState("");
+  // Erro de validação do CPF/CNPJ do titular (campo separado da chave PIX).
+  const [holderDocError, setHolderDocError] = useState("");
 
   // E-mail de contato: erro inline + checagem ao vivo de disponibilidade.
   const [emailError, setEmailError] = useState("");
@@ -404,6 +407,20 @@ export default function OrganizationSettingsPage() {
       setPixKeyError(keyError);
       return;
     }
+    // Valida o CPF/CNPJ do TITULAR (conta de repasse — documento tem que ser
+    // válido). Tipo resolvido pela chave PIX; nas não-documento, pelo tipo da org.
+    const holderDocType = resolveHolderDocType(
+      newPix.keyType,
+      (organizer?.document ?? "").replace(/\D/g, "").length === 14,
+    );
+    const docError = getHolderDocValidationMessage(
+      holderDocType,
+      newPix.accountHolderDocument,
+    );
+    if (docError) {
+      setHolderDocError(docError);
+      return;
+    }
     const normalizedKey =
       newPix.keyType === "CPF" || newPix.keyType === "CNPJ"
         ? newPix.key.replace(/\D/g, "")
@@ -421,6 +438,7 @@ export default function OrganizationSettingsPage() {
     ]);
     setNewPix(EMPTY_PIX);
     setPixKeyError("");
+    setHolderDocError("");
     setShowAddPix(false);
   };
 
@@ -860,6 +878,7 @@ export default function OrganizationSettingsPage() {
                         setShowAddPix(true);
                         setNewPix(EMPTY_PIX);
                         setPixKeyError("");
+                        setHolderDocError("");
                       }}
                       className="w-full sm:w-auto h-11 px-6 font-manrope font-bold text-base shrink-0 flex items-center justify-center gap-1.5"
                     >
@@ -1059,19 +1078,21 @@ export default function OrganizationSettingsPage() {
                           <FormField
                             label={`${newPixHolderDocType} do titular`}
                             value={newPix.accountHolderDocument}
-                            onChange={(v) =>
+                            onChange={(v) => {
                               setNewPix((p) => ({
                                 ...p,
                                 accountHolderDocument: maskHolderDoc(
                                   resolveHolderDocType(p.keyType, isPjOrg),
                                   v,
                                 ),
-                              }))
-                            }
+                              }));
+                              if (holderDocError) setHolderDocError("");
+                            }}
                             placeholder={holderDocPlaceholder(
                               newPixHolderDocType,
                             )}
                             inputMode="numeric"
+                            error={holderDocError || undefined}
                           />
                           <FormField
                             label="Banco"
@@ -1092,6 +1113,7 @@ export default function OrganizationSettingsPage() {
                           setShowAddPix(false);
                           setNewPix(EMPTY_PIX);
                           setPixKeyError("");
+                          setHolderDocError("");
                         }}
                         className="h-10 px-5 text-gray-12 border border-gray-6 font-manrope font-bold text-base"
                       >
