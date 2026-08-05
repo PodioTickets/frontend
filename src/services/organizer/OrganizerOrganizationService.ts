@@ -211,6 +211,31 @@ export class OrganizerOrganizationService extends OrganizerCatalogService {
   }
 
   /**
+   * Disponibilidade do CPF do RESPONSÁVEL (`Organization.ownerDocument`) no
+   * auto-cadastro público — checa AO VIVO se já existe OUTRA organização cujo
+   * responsável tem este CPF. Distinto de `checkOrganizationDocumentAvailability`
+   * (que valida o DOCUMENTO da org: CPF de PF / CNPJ de PJ). Rota pública;
+   * retorna só `{ available }`. Em falha de rede assume `true` (não trava o
+   * preenchimento; o submit ainda revalida no backend).
+   */
+  async checkOrganizationOwnerDocumentAvailability(
+    document: string,
+  ): Promise<boolean> {
+    try {
+      const { data } = await this.apiClient.get<{
+        data?: { available?: boolean };
+        available?: boolean;
+      }>("/api/v1/organizations/owner-document-availability", {
+        params: { document },
+      });
+      const available = data?.data?.available ?? data?.available;
+      return available !== false;
+    } catch {
+      return true;
+    }
+  }
+
+  /**
    * Disponibilidade do E-MAIL de login na conta ORGANIZER no auto-cadastro
    * público. Escopo por `accountType=ORGANIZER` — uma conta USER homônima NÃO
    * bloqueia (coexistem via `@@unique([email, accountType])`). Rota pública;

@@ -1032,12 +1032,15 @@ export default function OrganizationSettingsPage() {
                           )}
                           onSelect={(option) => {
                             const keyType = option.id || "";
-                            // Reaplica a máscara da chave E do documento do titular
-                            // ao novo tipo (troca CPF↔CNPJ recapa os dígitos).
                             setNewPix((p) => ({
                               ...p,
                               keyType,
-                              key: maskPixKey(keyType, p.key),
+                              // Troca de tipo limpa o campo da chave: um valor de um
+                              // tipo (ex.: CPF) não vale em outro (ex.: e-mail/
+                              // telefone). Reescolher o MESMO tipo preserva o valor.
+                              key: keyType === p.keyType ? p.key : "",
+                              // Documento do titular só recapa a máscara (CPF↔CNPJ) —
+                              // é dado independente da chave, então não é limpo.
                               accountHolderDocument: maskHolderDoc(
                                 resolveHolderDocType(keyType, isPjOrg),
                                 p.accountHolderDocument,

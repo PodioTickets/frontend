@@ -1,4 +1,5 @@
 import type { Event } from "@/interfaces/event";
+import type { AnticipationQuote } from "@/utils/anticipation";
 import { OrganizerServiceBase } from "./OrganizerServiceBase";
 import type {
   CreateOrganizerRequest,
@@ -322,21 +323,41 @@ export class OrganizerReportingService extends OrganizerServiceBase {
   }
 
   /**
+   * Baixa o CSV do "aguardando liberação" — aba `avista` (pending) ou
+   * `parcelados` (parcelas a receber). Retorna o blob + o nome de arquivo
+   * sugerido no `Content-Disposition` (exige CORS exposedHeaders).
+   */
+  async exportFinancialPending(
+    eventId: string,
+    type: "avista" | "parcelados",
+    fields?: string[],
+  ): Promise<{ blob: Blob; filename: string }> {
+    const response = await this.apiClient.get<Blob>(
+      `/api/v1/events/${eventId}/financial/pending/export`,
+      {
+        params: {
+          type,
+          ...(fields && fields.length ? { fields: fields.join(",") } : {}),
+        },
+        responseType: "blob",
+      },
+    );
+    const contentDisposition =
+      (response.headers as Record<string, string>)["content-disposition"] ?? "";
+    const match = contentDisposition.match(/filename="?([^"]+)"?/);
+    const filename =
+      match?.[1] ?? `aguardando-liberacao-${type}-${eventId.slice(0, 8)}.csv`;
+    return { blob: response.data as unknown as Blob, filename };
+  }
+
+  /**
    * Cotação da antecipação de recebíveis: total disponível p/ antecipar, taxa
    * mensal e a lista de pedidos (oldest-first) p/ o front calcular a prévia local.
    */
-  async getAnticipationQuote(eventId: string): Promise<{
-    anticipatableTotal: number;
-    monthlyRate: number;
-    orders: { orderId: string; netAmount: number; daysUntilRelease: number }[];
-  }> {
-    const { data: response } = await this.apiClient.get<{
-      data: {
-        anticipatableTotal: number;
-        monthlyRate: number;
-        orders: { orderId: string; netAmount: number; daysUntilRelease: number }[];
-      };
-    }>(`/api/v1/events/${eventId}/repasse/anticipations/quote`);
+  async getAnticipationQuote(eventId: string): Promise<AnticipationQuote> {
+    const { data: response } = await this.apiClient.get<{ data: AnticipationQuote }>(
+      `/api/v1/events/${eventId}/repasse/anticipations/quote`,
+    );
     return response.data;
   }
 

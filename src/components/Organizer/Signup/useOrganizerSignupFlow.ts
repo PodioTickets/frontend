@@ -140,6 +140,11 @@ export function useOrganizerSignupFlow() {
   const takenOrgDocumentsRef = useRef<Set<string>>(new Set());
   const checkingOrgDocumentRef = useRef(false);
   const lastCheckedOwnerDocRef = useRef<string>("");
+  // CPFs (só dígitos) já confirmados como RESPONSÁVEIS de alguma organização
+  // (campo `Organization.ownerDocument`, distinto do documento da org). Fonte de
+  // verdade do gate "CPF do responsável já usado". Aplica-se a PF e PJ.
+  const takenOwnerDocumentsRef = useRef<Set<string>>(new Set());
+  const checkingOwnerDocumentRef = useRef(false);
 
   /**
    * Checa AO VIVO se o documento (CPF de PF / CNPJ de PJ) já é de uma ORGANIZAÇÃO
@@ -148,7 +153,10 @@ export function useOrganizerSignupFlow() {
    * revalida no backend).
    */
   const checkOrgDocumentAvailability = useCallback(
-    async (digits: string, field: "document" | "ownerDocument") => {
+    async (
+      digits: string,
+      field: "document" | "ownerDocument",
+    ): Promise<boolean> => {
       checkingOrgDocumentRef.current = true;
       try {
         const available =
@@ -162,12 +170,39 @@ export function useOrganizerSignupFlow() {
             [field]: "Já existe uma organização com este documento (CPF/CNPJ).",
           }));
         }
+        return available;
       } finally {
         checkingOrgDocumentRef.current = false;
       }
     },
     [],
   );
+
+  /**
+   * Checa AO VIVO se o CPF do RESPONSÁVEL já é responsável de OUTRA organização
+   * (campo `Organization.ownerDocument`). Vale para PF e PJ. Atualiza o set de
+   * "tomados" e marca o erro inline. Idempotente por CPF; falha de rede não trava
+   * (o submit revalida no backend).
+   */
+  const checkOwnerDocumentAvailability = useCallback(async (digits: string) => {
+    checkingOwnerDocumentRef.current = true;
+    try {
+      const available =
+        await organizerService.checkOrganizationOwnerDocumentAvailability(digits);
+      if (available) {
+        takenOwnerDocumentsRef.current.delete(digits);
+      } else {
+        takenOwnerDocumentsRef.current.add(digits);
+        setErrors((prev) => ({
+          ...prev,
+          ownerDocument:
+            "Já existe uma organização cadastrada com este CPF de responsável.",
+        }));
+      }
+    } finally {
+      checkingOwnerDocumentRef.current = false;
+    }
+  }, []);
 
   /**
    * Checa se o e-mail de login já é de uma conta ORGANIZER. Escopo por
@@ -370,6 +405,20 @@ export function useOrganizerSignupFlow() {
         toast.error("Aguarde a verificação do documento.");
         return false;
       }
+      // Gate do CPF do RESPONSÁVEL (PF e PJ): não pode já ser responsável de outra
+      // organização. Checado ao vivo; o set é a verdade.
+      const ownerDocDigits = onlyDigits(formData.ownerDocument);
+      if (takenOwnerDocumentsRef.current.has(ownerDocDigits)) {
+        const msg =
+          "Já existe uma organização cadastrada com este CPF de responsável.";
+        setErrors({ ownerDocument: msg });
+        toast.error(msg);
+        return false;
+      }
+      if (checkingOwnerDocumentRef.current) {
+        toast.error("Aguarde a verificação do CPF do responsável.");
+        return false;
+      }
     }
 
     setErrors({});
@@ -507,11 +556,16 @@ export function useOrganizerSignupFlow() {
       // Novo CNPJ em consulta: fecha o reveal até a Receita confirmar (só reabre
       // no sucesso do lookup). Evita mostrar o resto do form com CNPJ ainda incerto.
       setConfirmedCnpjDigits("");
-      // Valida ao vivo se o CNPJ já é de uma organização (paralelo ao lookup).
-      void checkOrgDocumentAvailability(digits, "document");
       void (async () => {
         setLoadingCnpj(true);
         try {
+          // 1º) Se o CNPJ já pertence a outra organização, NÃO consulta a Receita
+          // e NÃO abre o formulário — só marca o erro e mantém o reveal fechado.
+          // (Serializado de propósito: precisamos da resposta antes de decidir
+          // gastar o fetch da Receita. Falha de rede → assume disponível e segue.)
+          const available = await checkOrgDocumentAvailability(digits, "document");
+          if (!available) return;
+
           const result = await lookupCnpjDigits(digits);
           if (!result.ok) {
             // CNPJ inválido / não encontrado: mantém o reveal FECHADO e sinaliza
@@ -565,23 +619,34 @@ export function useOrganizerSignupFlow() {
   }, [setField, checkOrgDocumentAvailability]);
 
   /**
-   * CPF do responsável (PF) com máscara já aplicada. Em PF, o CPF É o documento da
-   * ORGANIZAÇÃO, então ao completar 11 dígitos valida ao vivo se já existe org com
-   * ele. Em PJ o documento da org é o CNPJ — este handler não checa nada lá.
+   * CPF do responsável com máscara já aplicada. Ao completar 11 dígitos valida AO
+   * VIVO (para PF e PJ) se o CPF já é responsável de OUTRA organização. Em PF o CPF
+   * é TAMBÉM o documento da própria organização (@unique), então dispara também a
+   * checagem do documento da org. Em PJ o documento da org é o CNPJ (checado à
+   * parte no `handleCnpjChange`), então aqui só a checagem de responsável roda.
    */
   const handleOwnerDocumentChange = useCallback(
     (masked: string) => {
       setField("ownerDocument", masked);
-      if (formData.personType !== "PF") return;
       const digits = onlyDigits(masked);
       if (digits.length === 11 && digits !== lastCheckedOwnerDocRef.current) {
         lastCheckedOwnerDocRef.current = digits;
-        void checkOrgDocumentAvailability(digits, "ownerDocument");
+        // Responsável já vinculado a outra org (PF e PJ).
+        void checkOwnerDocumentAvailability(digits);
+        // PF: o CPF é o documento da própria organização (@unique).
+        if (formData.personType === "PF") {
+          void checkOrgDocumentAvailability(digits, "ownerDocument");
+        }
       } else if (digits.length < 11) {
         lastCheckedOwnerDocRef.current = "";
       }
     },
-    [setField, formData.personType, checkOrgDocumentAvailability],
+    [
+      setField,
+      formData.personType,
+      checkOwnerDocumentAvailability,
+      checkOrgDocumentAvailability,
+    ],
   );
 
   /** CEP com máscara já aplicada; autopreenche endereço ao completar 8 dígitos. */

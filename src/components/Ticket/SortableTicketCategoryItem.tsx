@@ -12,6 +12,7 @@ import { TrashIcon } from "@/components/Icons/TrashIcon";
 import { DeleteTicketCategoryModal } from "./DeleteTicketCategoryModal";
 import { CategoryDeleteBlockedModal } from "./CategoryDeleteBlockedModal";
 import { cn } from "@/utils/cn";
+import { EditNameIcon } from "../Icons/EditNameIcon";
 
 export function SortableTicketCategoryItem({
   categoryId,
@@ -178,7 +179,7 @@ export function SortableTicketCategoryItem({
               {isEditing ? (
                 <TickIcon className="size-5 text-gray-11" />
               ) : (
-                <PencilIcon className="size-5 text-gray-11" />
+                <EditNameIcon className="size-5 text-gray-11" />
               )}
             </button>
           </div>
@@ -306,7 +307,7 @@ export function SortableTicketCategoryItem({
                   className="flex size-8 cursor-pointer items-center justify-center rounded-lg border border-gray-6 bg-gray-2 p-2 transition-colors hover:bg-gray-3"
                   aria-label="Editar nome da categoria"
                 >
-                  <PencilIcon className="size-5 text-gray-11" />
+                  <EditNameIcon className="size-5 text-gray-11" />
                 </button>
                 <button
                   type="button"
