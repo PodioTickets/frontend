@@ -203,6 +203,9 @@ export default function OrganizationSettingsPage() {
   const [initialPixKeys, setInitialPixKeys] = useState<EditablePixKey[]>([]);
   const [openPixId, setOpenPixId] = useState<string | null>(null);
   const [removingPixId, setRemovingPixId] = useState<string | null>(null);
+  // Persistência IMEDIATA das chaves PIX (add/remove salvam na hora — sem botão
+  // "Salvar alteração" na aba). Loading próprio p/ os botões de adicionar/remover.
+  const [savingPix, setSavingPix] = useState(false);
   // Formulário "Nova chave PIX" (staging até o Salvar). O restante dos campos só
   // aparece após selecionar o tipo de chave.
   const [showAddPix, setShowAddPix] = useState(false);
@@ -388,12 +391,53 @@ export default function OrganizationSettingsPage() {
   };
 
   /**
-   * Adiciona a chave PIX do formulário à lista em STAGING (persistida só no
-   * Salvar). Valida CPF/CNPJ da chave quando o tipo é documento (mesma validação
-   * do checkout). Chave de documento é normalizada para só dígitos (formato
-   * canônico); o CPF/CNPJ do titular também.
+   * Persiste a lista de chaves PIX IMEDIATAMENTE (PATCH /organizations/me só com
+   * `pixKeys` — o backend separa e faz a substituição completa). Ressincroniza o
+   * estado + baseline do dirty-check com a resposta (ids reais + ordem padrão).
+   * Retorna `true` no sucesso. Usado no adicionar/remover (sem "Salvar" na aba).
    */
-  const handleAddPix = () => {
+  const persistPixKeys = async (
+    nextKeys: EditablePixKey[],
+  ): Promise<boolean> => {
+    setSavingPix(true);
+    try {
+      const finalOrg = await organizerService.updateOrganization({
+        pixKeys: nextKeys.map((k, i) => ({
+          key: k.key,
+          keyType: k.keyType,
+          isDefault: i === 0,
+          bankName: k.bankName || undefined,
+          accountHolderName: k.accountHolderName || undefined,
+          accountHolderDocument:
+            k.accountHolderDocument.replace(/\D/g, "") || undefined,
+        })),
+      });
+      setOrganizer(finalOrg);
+      const savedPix = toEditablePixKeys(finalOrg.pixKeys);
+      setPixKeys(savedPix);
+      setInitialPixKeys(savedPix);
+      return true;
+    } catch (error: unknown) {
+      const err = error as {
+        response?: { data?: { message?: string } };
+        message?: string;
+      };
+      console.error("Error saving PIX keys:", error);
+      toast.error(
+        err.response?.data?.message || err.message || "Erro ao salvar chave PIX",
+      );
+      return false;
+    } finally {
+      setSavingPix(false);
+    }
+  };
+
+  /**
+   * Adiciona a chave PIX do formulário e SALVA na hora. Valida CPF/CNPJ da chave
+   * quando o tipo é documento (mesma validação do checkout). Chave de documento é
+   * normalizada para só dígitos (formato canônico); o CPF/CNPJ do titular também.
+   */
+  const handleAddPix = async () => {
     if (!newPix.keyType) {
       setPixKeyError("Selecione o tipo de chave.");
       return;
@@ -425,8 +469,9 @@ export default function OrganizationSettingsPage() {
       newPix.keyType === "CPF" || newPix.keyType === "CNPJ"
         ? newPix.key.replace(/\D/g, "")
         : newPix.key.trim();
-    setPixKeys((prev) => [
-      ...prev,
+    // Salva na hora com a nova chave anexada. Em falha, mantém o form aberto p/ retry.
+    const ok = await persistPixKeys([
+      ...pixKeys,
       {
         id: `new-${Date.now()}`,
         key: normalizedKey,
@@ -436,16 +481,20 @@ export default function OrganizationSettingsPage() {
         accountHolderDocument: newPix.accountHolderDocument.replace(/\D/g, ""),
       },
     ]);
+    if (!ok) return;
     setNewPix(EMPTY_PIX);
     setPixKeyError("");
     setHolderDocError("");
     setShowAddPix(false);
+    toast.success("Chave PIX adicionada.");
   };
 
-  /** Remove a chave PIX da lista em staging (efetiva no Salvar). */
-  const handleRemovePix = (id: string) => {
-    setPixKeys((prev) => prev.filter((k) => k.id !== id));
+  /** Remove a chave PIX e SALVA na hora (sem passar pelo "Salvar alteração"). */
+  const handleRemovePix = async (id: string) => {
+    const ok = await persistPixKeys(pixKeys.filter((k) => k.id !== id));
+    if (!ok) return;
     setRemovingPixId(null);
+    toast.success("Chave PIX removida.");
   };
 
   const handleSubmit = async () => {
@@ -1124,7 +1173,8 @@ export default function OrganizationSettingsPage() {
                       </Button>
                       <Button
                         onClick={handleAddPix}
-                        disabled={!newPix.keyType}
+                        disabled={!newPix.keyType || savingPix}
+                        isLoading={savingPix}
                         className="h-10 px-5 font-manrope font-bold text-base"
                       >
                         Adicionar
@@ -1132,8 +1182,8 @@ export default function OrganizationSettingsPage() {
                     </div>
                   </div>
                 )}
-
-                {saveButton}
+                {/* Sem "Salvar alteração" na aba PIX: adicionar/remover já salvam
+                    na hora (persistPixKeys). */}
               </div>
             )}
           </div>
@@ -1191,7 +1241,8 @@ export default function OrganizationSettingsPage() {
                   <button
                     type="button"
                     onClick={() => setRemovingPixId(null)}
-                    className="flex-1 h-12 border border-gray-6 rounded-lg font-manrope font-bold text-base text-gray-12 hover:bg-gray-2 transition-colors"
+                    disabled={savingPix}
+                    className="flex-1 h-12 border border-gray-6 rounded-lg font-manrope font-bold text-base text-gray-12 hover:bg-gray-2 transition-colors disabled:opacity-50"
                   >
                     Cancelar
                   </button>
@@ -1200,9 +1251,10 @@ export default function OrganizationSettingsPage() {
                     onClick={() =>
                       removingPixId && handleRemovePix(removingPixId)
                     }
-                    className="flex-1 h-12 bg-red-11 rounded-lg font-manrope font-bold text-base text-red-2 hover:bg-red-10 transition-colors"
+                    disabled={savingPix}
+                    className="flex-1 h-12 bg-red-11 rounded-lg font-manrope font-bold text-base text-red-2 hover:bg-red-10 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    Sim, remover
+                    {savingPix ? "Removendo..." : "Sim, remover"}
                   </button>
                 </div>
               </div>

@@ -167,7 +167,7 @@ export function useOrganizerSignupFlow() {
           takenOrgDocumentsRef.current.add(digits);
           setErrors((prev) => ({
             ...prev,
-            [field]: "Já existe uma organização com este documento (CPF/CNPJ).",
+            [field]: "Já existe uma organização com este documento.",
           }));
         }
         return available;
@@ -363,7 +363,7 @@ export function useOrganizerSignupFlow() {
         return false;
       }
       if (takenOrgDocumentsRef.current.has(digits)) {
-        const msg = "Já existe uma organização com este documento (CPF/CNPJ).";
+        const msg = "Já existe uma organização com este documento.";
         setErrors({ document: msg });
         toast.error(msg);
         return false;
@@ -410,7 +410,7 @@ export function useOrganizerSignupFlow() {
       if (!isPJ) {
         const orgDocDigits = onlyDigits(formData.ownerDocument);
         if (takenOrgDocumentsRef.current.has(orgDocDigits)) {
-          const msg = "Já existe uma organização com este documento (CPF/CNPJ).";
+          const msg = "Já existe uma organização com este documento.";
           setErrors({ ownerDocument: msg });
           toast.error(msg);
           return false;
