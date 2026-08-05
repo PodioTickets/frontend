@@ -82,7 +82,7 @@ pedido parcelado
 primeira parcela: 10 dias (30 reais)
 segunda parcela: 40 dias( 30 reais)
 terceira parcela: 70 dias(30 reais)
-
+  
 
 Qual os valor mais barato para o usuario? 
 
