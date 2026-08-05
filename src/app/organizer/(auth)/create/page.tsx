@@ -92,6 +92,10 @@ export default function OrganizerCreatePage() {
         <Button
           type="submit"
           className="min-w-[120px]"
+          // Desabilita enquanto houver QUALQUER erro de validação na etapa (Zod,
+          // e-mail/documento já cadastrado etc.). `errors` é limpo ao corrigir o
+          // campo (setField) e ao voltar, então o botão reabilita sozinho.
+          disabled={Object.keys(flow.errors).length > 0}
           isLoading={
             (stepKey === "access" && flow.isCheckingEmail) ||
             (stepKey === "contacts" && flow.isCheckingOrgEmail)

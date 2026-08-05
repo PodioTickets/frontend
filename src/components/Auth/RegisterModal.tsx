@@ -372,7 +372,7 @@ export function RegisterModal() {
                   onSuccess={setTurnstileToken}
                   onError={() => setTurnstileToken(null)}
                   onExpire={() => setTurnstileToken(null)}
-                  style={{ width: "100%" }}
+                  style={{ width: "100%", display: "block" }}
                   options={{ theme: "light", size: "flexible", appearance: "interaction-only" }}
                 />
               </div>
@@ -664,7 +664,7 @@ export function RegisterModal() {
               onSuccess={setTurnstileToken}
               onError={() => setTurnstileToken(null)}
               onExpire={() => setTurnstileToken(null)}
-              style={{ width: "100%" }}
+              style={{ width: "100%", display: "block" }}
               options={{ theme: "light", size: "flexible", appearance: "interaction-only" }}
               className="w-full"
             />
