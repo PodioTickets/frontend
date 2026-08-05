@@ -350,6 +350,34 @@ export function useOrganizerSignupFlow() {
     }
     if (currentMeta.key === "done") return true;
 
+    // Gate PRÉ-Zod da etapa da organização (PJ): enquanto o CNPJ não está
+    // CONFIRMADO pela Receita (form ainda oculto), em verificação, ou já pertence
+    // a outra organização, mostramos SÓ o erro do documento — sem rodar o Zod, que
+    // floodaria "campo obrigatório" em todos os campos ainda ocultos/vazios.
+    // Ordem: verificação em andamento → já usado → não confirmado (a msg de "já
+    // usado" tem prioridade sobre "confirme um CNPJ válido").
+    if (currentMeta.key === "orgData" && formData.personType === "PJ") {
+      const digits = onlyDigits(formData.document);
+      if (loadingCnpj || checkingOrgDocumentRef.current) {
+        toast.error("Aguarde a verificação do CNPJ.");
+        return false;
+      }
+      if (takenOrgDocumentsRef.current.has(digits)) {
+        const msg = "Já existe uma organização com este documento (CPF/CNPJ).";
+        setErrors({ document: msg });
+        toast.error(msg);
+        return false;
+      }
+      // Não confirmado (vazio, incompleto, inválido ou não encontrado): o form
+      // ainda está oculto → só o erro do documento (nunca a cascata do Zod).
+      if (confirmedCnpjDigits.length !== 14 || confirmedCnpjDigits !== digits) {
+        const msg = "Informe um CNPJ válido e existente para continuar.";
+        setErrors({ document: msg });
+        toast.error(msg);
+        return false;
+      }
+    }
+
     try {
       switch (currentMeta.key) {
         case "access":
@@ -373,37 +401,25 @@ export function useOrganizerSignupFlow() {
       return false;
     }
 
-    // Gate extra (pós-Zod) na etapa da organização: documento (CPF PF / CNPJ PJ)
-    // já pertencente a uma organização. Checado ao vivo; o set é a verdade.
+    // Gate extra (pós-Zod) na etapa da organização. O documento da ORG no PJ (CNPJ)
+    // já foi tratado no gate PRÉ-Zod acima; aqui cobrimos o PF (CPF = documento da
+    // org) e, para ambos, o CPF do responsável.
     if (currentMeta.key === "orgData") {
       const isPJ = formData.personType === "PJ";
-      // Gate do CNPJ (PJ): o Zod já garante o checksum; aqui exigimos que a
-      // Receita tenha CONFIRMADO o CNPJ (existe de fato). Bloqueia inválido/
-      // não encontrado e também enquanto a consulta ainda está em andamento.
-      if (isPJ) {
-        if (loadingCnpj) {
-          toast.error("Aguarde a verificação do CNPJ.");
-          return false;
-        }
-        if (confirmedCnpjDigits !== onlyDigits(formData.document)) {
-          const msg = "Confirme um CNPJ válido e existente para continuar.";
-          setErrors({ document: msg });
+      // PF: o CPF é o documento da própria organização (@unique).
+      if (!isPJ) {
+        const orgDocDigits = onlyDigits(formData.ownerDocument);
+        if (takenOrgDocumentsRef.current.has(orgDocDigits)) {
+          const msg = "Já existe uma organização com este documento (CPF/CNPJ).";
+          setErrors({ ownerDocument: msg });
           toast.error(msg);
           return false;
         }
-      }
-      const orgDocDigits = onlyDigits(isPJ ? formData.document : formData.ownerDocument);
-      if (takenOrgDocumentsRef.current.has(orgDocDigits)) {
-        const field = isPJ ? "document" : "ownerDocument";
-        const msg = "Já existe uma organização com este documento (CPF/CNPJ).";
-        setErrors({ [field]: msg });
-        toast.error(msg);
-        return false;
-      }
-      // Verificação ainda em andamento: evita avançar antes da resposta.
-      if (checkingOrgDocumentRef.current) {
-        toast.error("Aguarde a verificação do documento.");
-        return false;
+        // Verificação ainda em andamento: evita avançar antes da resposta.
+        if (checkingOrgDocumentRef.current) {
+          toast.error("Aguarde a verificação do documento.");
+          return false;
+        }
       }
       // Gate do CPF do RESPONSÁVEL (PF e PJ): não pode já ser responsável de outra
       // organização. Checado ao vivo; o set é a verdade.
