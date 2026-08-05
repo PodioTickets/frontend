@@ -54,10 +54,21 @@ export function StepOrgData({ flow }: { flow: OrganizerSignupFlow }) {
               transition={{ duration: 0.25, ease: "easeOut" }}
               className="grid grid-cols-1 gap-x-4 gap-y-5 md:grid-cols-2"
             >
-              {/* Ordem PJ: Razão social → Nome do responsável → CPF → Nome fantasia.
+              {/* Ordem PJ: Nome fantasia → Razão social → Nome do responsável → CPF.
                   Razão social vem da Receita e fica read-only quando preenchida.
                   O Nome do responsável é read-only SÓ quando veio da Receita; no
-                  fallback (nome completo da etapa 1) segue editável para correção. */}
+                  fallback (nome completo da etapa 1) segue editável para correção.
+                  O CPF do responsável valida ao vivo se já é responsável de outra
+                  organização (via `handleOwnerDocumentChange`). */}
+              <SignupField
+                label="Nome fantasia"
+                tooltip={TRADE_NAME_TOOLTIP}
+                value={formData.tradeName}
+                onChange={(v) => setField("tradeName", v)}
+                placeholder="Informe o nome fantasia da empresa"
+                error={errors.tradeName}
+              />
+
               <SignupField
                 label="Razão social"
                 value={formData.legalName}
@@ -79,20 +90,11 @@ export function StepOrgData({ flow }: { flow: OrganizerSignupFlow }) {
               <SignupField
                 label="CPF do responsável"
                 value={formData.ownerDocument}
-                onChange={(v) => setField("ownerDocument", formatCPF(v))}
+                onChange={(v) => handleOwnerDocumentChange(formatCPF(v))}
                 placeholder="000.000.000-00"
                 error={errors.ownerDocument}
                 inputMode="numeric"
                 maxLength={14}
-              />
-
-              <SignupField
-                label="Nome fantasia"
-                tooltip={TRADE_NAME_TOOLTIP}
-                value={formData.tradeName}
-                onChange={(v) => setField("tradeName", v)}
-                placeholder="Informe o nome fantasia da empresa"
-                error={errors.tradeName}
               />
             </motion.div>
           ) : null}

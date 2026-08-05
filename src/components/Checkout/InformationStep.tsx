@@ -1582,7 +1582,7 @@ export function InformationStep({
       case "text": {
         const questionError = fieldErrors[participantIndex]?.[`question_${question.id}`];
         return (
-          <div className="flex flex-col gap-2">
+          <div className="flex flex-1 flex-col gap-2">
             <label className="text-base font-normal text-gray-12 font-family-dm-sans">
               {question.question}
               {isRequired && <span className="text-red-9 ml-1">*</span>}
@@ -1599,7 +1599,7 @@ export function InformationStep({
                 clearParticipantFieldError(participantIndex, `question_${question.id}`);
                 updateQuestionAnswer(participantIndex, question.id, e.target.value);
               }}
-              className={`w-full h-12 px-3 rounded-lg border bg-transparent text-gray-12 focus:outline-none focus:bg-gray-3 transition-colors font-family-dm-sans text-base placeholder:text-gray-11 ${questionError ? "border-red-6 focus:border-red-10" : "border-gray-6 focus:border-primary-10"}`}
+              className={`mt-auto w-full h-12 px-3 rounded-lg border bg-transparent text-gray-12 focus:outline-none focus:bg-gray-3 transition-colors font-family-dm-sans text-base placeholder:text-gray-11 ${questionError ? "border-red-6 focus:border-red-10" : "border-gray-6 focus:border-primary-10"}`}
               placeholder="Digite sua resposta"
             />
             {questionError && <p className="text-sm text-red-11">{questionError}</p>}
@@ -1613,7 +1613,7 @@ export function InformationStep({
       case "select": {
         const questionError = fieldErrors[participantIndex]?.[`question_${question.id}`];
         return (
-          <div className="flex flex-col gap-2">
+          <div className="flex flex-1 flex-col gap-2">
             <label className="text-base font-normal text-gray-12 font-family-dm-sans">
               {question.question}
               {isRequired && <span className="text-red-9 ml-1">*</span>}
@@ -1623,7 +1623,7 @@ export function InformationStep({
                 {question.description ?? ""}
               </label>
             )}
-            <div className="flex flex-col gap-3">
+            <div className="mt-auto flex flex-col gap-3">
               {question.options?.map((option) => {
                 const isSelected =
                   typeof answer === "string" && answer === option;
@@ -1662,7 +1662,7 @@ export function InformationStep({
             ? [answer]
             : [];
         return (
-          <div className="flex flex-col gap-2">
+          <div className="flex flex-1 flex-col gap-2">
             <label className="text-base font-normal text-gray-12 font-family-dm-sans">
               {question.question}
               {isRequired && <span className="text-red-9 ml-1">*</span>}
@@ -1672,7 +1672,7 @@ export function InformationStep({
                 {question.description ?? ""}
               </label>
             )}
-            <div className="flex flex-col gap-3">
+            <div className="mt-auto flex flex-col gap-3">
               {question.options?.map((option) => {
                 const isSelected = selectedOptions.includes(option);
                 return (
@@ -1706,7 +1706,7 @@ export function InformationStep({
         const questionError = fieldErrors[participantIndex]?.[`question_${question.id}`];
         const trueFalseOptions = ["Verdadeiro", "Falso"];
         return (
-          <div className="flex flex-col gap-2">
+          <div className="flex flex-1 flex-col gap-2">
             <label className="text-base font-normal text-gray-12 font-family-dm-sans">
               {question.question}
               {isRequired && <span className="text-red-9 ml-1">*</span>}
@@ -1716,7 +1716,7 @@ export function InformationStep({
                 {question.description ?? ""}
               </label>
             )}
-            <div className="flex flex-col gap-3">
+            <div className="mt-auto flex flex-col gap-3">
               {trueFalseOptions.map((option) => {
                 const isSelected = typeof answer === "string" && answer === option;
                 return (
@@ -1746,7 +1746,7 @@ export function InformationStep({
       case "number": {
         const questionError = fieldErrors[participantIndex]?.[`question_${question.id}`];
         return (
-          <div className="flex flex-col gap-2">
+          <div className="flex flex-1 flex-col gap-2">
             <label className="text-base font-normal text-gray-12 font-family-dm-sans">
               {question.question}
               {isRequired && <span className="text-red-9 ml-1">*</span>}
@@ -1763,7 +1763,7 @@ export function InformationStep({
                 clearParticipantFieldError(participantIndex, `question_${question.id}`);
                 updateQuestionAnswer(participantIndex, question.id, e.target.value);
               }}
-              className={`w-full h-12 px-3 rounded-lg border bg-transparent text-gray-12 focus:outline-none focus:bg-gray-3 transition-colors font-family-dm-sans text-base placeholder:text-gray-11 ${questionError ? "border-red-6 focus:border-red-10" : "border-gray-6 focus:border-primary-10"}`}
+              className={`mt-auto w-full h-12 px-3 rounded-lg border bg-transparent text-gray-12 focus:outline-none focus:bg-gray-3 transition-colors font-family-dm-sans text-base placeholder:text-gray-11 ${questionError ? "border-red-6 focus:border-red-10" : "border-gray-6 focus:border-primary-10"}`}
               placeholder="Digite um número"
             />
             {questionError && <p className="text-sm text-red-11">{questionError}</p>}
@@ -2497,7 +2497,7 @@ export function InformationStep({
                                 {(questionsByTicketId.get(ticketId) ?? []).map((question) => (
                                   <div
                                     key={question.id}
-                                    className="min-w-[313px]"
+                                    className="flex flex-col min-w-[313px]"
                                   >
                                     {renderQuestionField(
                                       question,

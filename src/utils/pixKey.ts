@@ -61,6 +61,21 @@ export function holderDocPlaceholder(docType: HolderDocType): string {
   return docType === "CNPJ" ? "00.000.000/0000-00" : "000.000.000-00";
 }
 
+/**
+ * Valida o DOCUMENTO do titular conforme o tipo resolvido (CPF ou CNPJ) — mesma
+ * validação canônica do checkout (dígitos + verificadores). Retorna a mensagem de
+ * erro ou `null`. `optional` pula a exigência quando o campo está vazio.
+ */
+export function getHolderDocValidationMessage(
+  docType: HolderDocType,
+  value: string,
+  options?: { optional?: boolean },
+): string | null {
+  return docType === "CNPJ"
+    ? getCnpjValidationMessage(value, options)
+    : getCpfValidationMessage(value, options);
+}
+
 /** Placeholder da chave PIX conforme o tipo selecionado. */
 export function pixKeyPlaceholder(keyType: string): string {
   if (keyType === "CPF") return "000.000.000-00";

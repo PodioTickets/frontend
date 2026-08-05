@@ -58,6 +58,8 @@ interface OrgDetail extends AdminAuditOrganization {
   ownerName?: string;
   ownerDocument?: string;
   fiscalEmail?: string;
+  /** Taxa mensal de antecipação (fração: 0.1 = 10%). */
+  anticipationMonthlyRate?: number;
   pixKeys?: Array<{ key: string; keyType: string; isDefault: boolean }>;
   _count?: { events?: number; members?: number };
 }
@@ -414,6 +416,9 @@ export function OrganizerEditDrawer({ isOpen, onClose, org, onUpdated, mode = "e
   // Erro de documento no modo PF (conflito de CPF) — vai no campo "CPF do responsável".
   const [ownerDocError, setOwnerDocError] = useState("");
   const [fiscalEmail, setFiscalEmail] = useState("");
+  // Taxa MENSAL de antecipação, editada em PERCENT (ex.: "10" = 10%). Convertida
+  // para fração (0.10) no payload. Default 10% (schema).
+  const [anticipationRatePercent, setAnticipationRatePercent] = useState("10");
   const [loadingCep, setLoadingCep] = useState(false);
   // Guarda o último CEP buscado pra não disparar fetch duplicado em re-renders.
   const lastFetchedCepRef = useRef<string>("");
@@ -453,6 +458,7 @@ export function OrganizerEditDrawer({ isOpen, onClose, org, onUpdated, mode = "e
       setOwnerDocument("");
       setOwnerDocError("");
       setFiscalEmail("");
+      setAnticipationRatePercent("10");
       setShowAddPix(false);
       setNewPix(emptyPix);
       return;
@@ -498,6 +504,11 @@ export function OrganizerEditDrawer({ isOpen, onClose, org, onUpdated, mode = "e
         setOwnerName(d.ownerName ?? "");
         setOwnerDocument(formatCPF(d.ownerDocument));
         setFiscalEmail(d.fiscalEmail ?? "");
+        setAnticipationRatePercent(
+          d.anticipationMonthlyRate != null
+            ? String(+(d.anticipationMonthlyRate * 100).toFixed(2))
+            : "10",
+        );
         const loadedPix: PixKey[] = Array.isArray(d.pixKeys)
           ? d.pixKeys.map((k: any, i: number) => ({ id: `loaded-${i}`, key: k.key, keyType: k.keyType, isDefault: k.isDefault, bankName: k.bankName ?? "", accountHolderName: k.accountHolderName ?? "", accountHolderDocument: k.accountHolderDocument ? formatCPFOrCNPJ(k.accountHolderDocument) : "" }))
           : [];
@@ -606,6 +617,11 @@ export function OrganizerEditDrawer({ isOpen, onClose, org, onUpdated, mode = "e
         ownerName: ownerName.trim() || undefined,
         ownerDocument: digits(ownerDocument) || undefined,
         fiscalEmail: fiscalEmail.trim() || undefined,
+        // Percent → fração (0.10). Só envia quando válido (0–100%).
+        anticipationMonthlyRate: (() => {
+          const p = parseFloat(anticipationRatePercent.replace(",", "."));
+          return isNaN(p) || p < 0 || p > 100 ? undefined : p / 100;
+        })(),
         pixKeys: pixKeys.map(({ key, keyType, bankName, accountHolderName, accountHolderDocument }, i) => ({
           key,
           keyType,
@@ -890,6 +906,14 @@ export function OrganizerEditDrawer({ isOpen, onClose, org, onUpdated, mode = "e
                     error={personType === "PF" ? ownerDocError : undefined}
                   />
                   <FormField label="E-mail fiscal" value={fiscalEmail} onChange={setFiscalEmail} placeholder="fiscal@org.com" type="email" className="min-w-[284px]" />
+                  <FormField
+                    label="Taxa de antecipação (% ao mês)"
+                    value={anticipationRatePercent}
+                    onChange={(v) => setAnticipationRatePercent(v.replace(/[^\d.,]/g, ""))}
+                    placeholder="10"
+                    inputMode="decimal"
+                    className="min-w-[284px]"
+                  />
                 </div>
               </div>
 

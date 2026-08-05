@@ -20,6 +20,33 @@ interface OrganizerSignupLayoutProps {
 }
 
 /**
+ * Botão "voltar". Renderizado em dois contextos de posicionamento distintos
+ * (canto da página no mobile, dentro do card no desktop) via visibilidade
+ * responsiva — por isso vira componente, para não duplicar o markup.
+ */
+function BackButton({
+  onBack,
+  className,
+}: {
+  onBack: () => void;
+  className?: string;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onBack}
+      aria-label="Voltar"
+      className={cn(
+        "absolute flex size-9 items-center justify-center rounded-lg border border-gray-6 bg-gray-1 text-gray-12 shadow-xs transition-colors hover:bg-gray-3",
+        className,
+      )}
+    >
+      <ChevronLeft className="size-5" />
+    </button>
+  );
+}
+
+/**
  * Moldura das telas do auto-cadastro de organizador (card central), fiel ao
  * Figma: botão voltar no topo-esquerdo, logo "PódioTicket / Organizadores"
  * centralizado, card branco com título/subtítulo/divisor + conteúdo, e footer
@@ -48,25 +75,19 @@ export function OrganizerSignupLayout({
 
   return (
     <div className="relative flex min-h-dvh flex-col bg-gray-2 px-4 py-6">
+      {/* Mobile: botão no canto da página (fora do card), como era. */}
       {onBack ? (
-        <button
-          type="button"
-          onClick={onBack}
-          aria-label="Voltar"
-          className="absolute left-4 top-4 md:left-12 md:top-12 flex size-9 items-center justify-center rounded-lg border border-gray-6 bg-gray-1 text-gray-12 shadow-xs transition-colors hover:bg-gray-3"
-        >
-          <ChevronLeft className="size-5" />
-        </button>
+        <BackButton onBack={onBack} className="left-4 top-4 md:hidden" />
       ) : null}
 
-      <div className="md:mt-2 flex justify-center">
+      <div className="md:mt-8 flex justify-center">
         <Image
           src="/images/org-login-dark.svg"
           alt="PódioTicket Organizadores"
           width={196}
           height={52}
           priority
-          className="h-13 w-auto"
+          className="h-10 w-auto md:h-13"
         />
       </div>
 
@@ -76,13 +97,18 @@ export function OrganizerSignupLayout({
         <Card
           {...cardProps}
           className={cn(
-            "w-full max-w-[710px] rounded-2xl border border-gray-6 bg-gray-1 p-6 shadow-sm",
+            "relative w-full max-w-[710px] rounded-2xl border border-gray-6 bg-gray-1 p-6 shadow-sm",
             cardClassName,
           )}
         >
+          {/* Desktop: botão dentro do card. */}
+          {onBack ? (
+            <BackButton onBack={onBack} className="left-4 top-4 hidden md:flex" />
+          ) : null}
+
           {hasHeader ? (
             <>
-              <div className="flex flex-col items-center gap-1 text-center">
+              <div className="flex flex-col items-center gap-1 text-center md:px-12">
                 {title ? (
                   <h1 className="text-xl font-bold font-family-dm-sans text-gray-12 leading-[1.3]">
                     {title}
