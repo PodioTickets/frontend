@@ -187,6 +187,16 @@ export default function OrganizationSettingsPage() {
   const [uploadingImage, setUploadingImage] = useState(false);
   const [organizer, setOrganizer] = useState<Organization | null>(null);
   const [activeTab, setActiveTab] = useState<SettingsTab>("detalhes");
+
+  // Deep-link: abrir direto numa aba via `?tab=` (ex.: gate "Cadastre uma chave
+  // Pix" do repasse → `?tab=pix`). Roda só no cliente (window definido).
+  useEffect(() => {
+    const tab = new URLSearchParams(window.location.search).get("tab");
+    if (tab === "pix" || tab === "detalhes" || tab === "endereco" || tab === "contato") {
+      setActiveTab(tab);
+    }
+  }, []);
+
   const logoCropRef = useRef<ImageUploadWithCropRef>(null);
   // Logo em STAGING: o corte só fica em memória (preview local); a persistência
   // acontece no "Salvar alteração". Evita manter a foto nova quando o usuário

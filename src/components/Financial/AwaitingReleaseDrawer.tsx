@@ -612,8 +612,8 @@ export function AwaitingReleaseDrawer({
                   <div className="flex flex-1 h-full items-center justify-center min-h-px min-w-px p-4">
                     <p className="font-inter font-medium leading-[1.3] text-sm text-gray-12 text-center">Previsão liberação</p>
                   </div>
-                  <div className="flex flex-1 h-full items-center justify-end min-h-px min-w-px p-4">
-                    <p className="font-inter font-medium leading-[1.3] text-sm text-gray-12 text-right">Valor pendente</p>
+                  <div className="flex flex-1 h-full items-center justify-center min-h-px min-w-px p-4">
+                    <p className="font-inter font-medium leading-[1.3] text-sm text-gray-12 text-center">Valor pendente</p>
                   </div>
                   <div className="flex h-full items-center justify-center p-4 w-[64px]">
                     <p className="font-inter font-medium leading-[1.3] text-sm text-gray-12">Ações</p>
@@ -676,7 +676,7 @@ export function AwaitingReleaseDrawer({
                         </div>
 
                         {/* Valor pendente */}
-                        <div className="flex flex-1 h-full items-center justify-end min-h-px min-w-px p-4">
+                        <div className="flex flex-1 h-full items-center justify-center min-h-px min-w-px p-4">
                           <div className="flex flex-col items-center gap-0.5">
                             <span className="font-inter font-semibold leading-[1.3] text-sm text-gray-12">
                               R$ {(row.amount / 100).toFixed(2).replace(".", ",")}

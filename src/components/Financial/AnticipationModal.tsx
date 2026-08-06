@@ -11,6 +11,7 @@ import {
   computeAnticipation,
   type AnticipationQuote,
 } from "@/utils/anticipation";
+import { AnticipationLockedModal } from "./AnticipationLockedModal";
 
 // Montar/desmontar via render condicional no pai (mount = aberto) — sem prop
 // `isOpen` nem effect de seed síncrono.
@@ -33,6 +34,8 @@ export function AnticipationModal({ eventId, onClose, onSuccess }: AnticipationM
   const [quote, setQuote] = useState<AnticipationQuote | null>(null);
   const [rawAmount, setRawAmount] = useState(0);
   const [submitting, setSubmitting] = useState(false);
+  // Gate "Antecipe suas vendas" — evento sem antecipação habilitada (análise pendente).
+  const [showLocked, setShowLocked] = useState(false);
   const contentRef = useRef<HTMLDivElement>(null);
 
   // O modal é um portal em document.body, ABERTO por cima de um vaul Drawer (Radix
@@ -145,6 +148,13 @@ export function AnticipationModal({ eventId, onClose, onSuccess }: AnticipationM
 
   const handleConfirm = async () => {
     if (amountCents <= 0 || submitting) return;
+    // Sem permissão (evento ainda não passou pela análise de antecipação): abre o
+    // gate em vez de chamar o endpoint (que rejeitaria). A verdade autoritativa
+    // continua no backend (requestAnticipation).
+    if (quote?.enabled === false) {
+      setShowLocked(true);
+      return;
+    }
     setSubmitting(true);
     try {
       // Envia o líquido desejado; o backend recalcula de forma autoritativa.
@@ -154,7 +164,12 @@ export function AnticipationModal({ eventId, onClose, onSuccess }: AnticipationM
       onClose();
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : "Erro ao solicitar antecipação";
-      toast.error(msg);
+      // Defensivo: se o backend recusar por não-habilitada, mostra o gate.
+      if (/não está habilitada|not enabled/i.test(msg)) {
+        setShowLocked(true);
+      } else {
+        toast.error(msg);
+      }
     } finally {
       setSubmitting(false);
     }
@@ -162,13 +177,14 @@ export function AnticipationModal({ eventId, onClose, onSuccess }: AnticipationM
 
   if (typeof document === "undefined") return null;
 
-  // Antecipação desligada para a organização (admin controla por org). `enabled`
-  // ausente = backend legado → trata como habilitada. Tem precedência sobre o
-  // "sem recebíveis" para a mensagem ser específica.
-  const notEnabled = !loading && quote?.enabled === false;
-  const noReceivables = !loading && !notEnabled && maxReceivable <= 0;
+  // Sem recebíveis para antecipar (teto líquido zero). O bloqueio por FALTA de
+  // permissão (`enabled === false`) NÃO some o formulário — o organizador vê os
+  // valores e o gate "Antecipe suas vendas" só aparece ao clicar em "Confirmar".
+  const noReceivables = !loading && maxReceivable <= 0;
 
-  return createPortal(
+  return (
+   <>
+    {createPortal(
     <div
       className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-black/50"
       style={{ pointerEvents: "auto" }}
@@ -203,10 +219,6 @@ export function AnticipationModal({ eventId, onClose, onSuccess }: AnticipationM
             <div className="flex items-center justify-center py-10">
               <Loading />
             </div>
-          ) : notEnabled ? (
-            <p className="font-family-dm-sans text-base text-gray-11 text-center py-6">
-              A antecipação de recebíveis não está habilitada para esta organização.
-            </p>
           ) : noReceivables ? (
             <p className="font-family-dm-sans text-base text-gray-11 text-center py-6">
               Nenhum recebível disponível para antecipação no momento.
@@ -314,7 +326,7 @@ export function AnticipationModal({ eventId, onClose, onSuccess }: AnticipationM
             type="button"
             variant="default"
             onClick={handleConfirm}
-            disabled={loading || notEnabled || noReceivables || amountCents <= 0 || submitting}
+            disabled={loading || noReceivables || amountCents <= 0 || submitting}
             className="h-[44px] px-8 text-base font-bold font-manrope disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {submitting ? "Aguarde..." : "Confirmar"}
@@ -323,5 +335,13 @@ export function AnticipationModal({ eventId, onClose, onSuccess }: AnticipationM
       </div>
     </div>,
     document.body,
+    )}
+
+    {/* Gate "Antecipe suas vendas" — evento sem antecipação habilitada. Abre ao
+        clicar "Confirmar" sem permissão (portal próprio z-80). */}
+    {showLocked && (
+      <AnticipationLockedModal onClose={() => setShowLocked(false)} />
+    )}
+   </>
   );
 }

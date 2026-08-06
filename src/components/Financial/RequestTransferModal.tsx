@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/Button";
 import { X, Building2, Ticket } from "lucide-react";
 import { useRequestTransferModal } from "@/stores/modalStore";
+import { useOrganizerNavigate } from "@/hooks/useOrganizerNavigate";
 import Image from "next/image";
 import { ArrowButton } from "@/components/ArrowButton";
 import { Input } from "../Input";
@@ -12,6 +13,7 @@ import { FinanceIcon } from "../Icons/Organizer/FinanceIcon";
 import { getApiClient } from "@/services/base/ApiClient";
 import toast from "react-hot-toast";
 import { ChooseAccountModal, mapPixKeyToAccount, type PixAccount } from "./ChooseAccountModal";
+import { PixKeyRequiredModal } from "./PixKeyRequiredModal";
 import { organizerService } from "@/services";
 import { useModalSubmitState } from "@/hooks/useModalSubmitState";
 
@@ -51,6 +53,7 @@ function formatWithdrawalError(err: any): string {
 
 export function RequestTransferModal() {
   const { isOpen, closeRequestTransferModal, data } = useRequestTransferModal();
+  const orgNavigate = useOrganizerNavigate();
   const [amount, setAmount] = useState("");
   const [amountFocused, setAmountFocused] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
@@ -60,6 +63,8 @@ export function RequestTransferModal() {
   const [pixAccounts, setPixAccounts] = useState<PixAccount[]>([]);
   const [selectedAccount, setSelectedAccount] = useState<PixAccount | null>(null);
   const [loadingAccounts, setLoadingAccounts] = useState(false);
+  // Gate "Cadastre uma chave Pix" — organização sem chave cadastrada.
+  const [showPixGate, setShowPixGate] = useState(false);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -155,6 +160,13 @@ export function RequestTransferModal() {
   };
 
   const handleConfirm = async () => {
+    // Sem chave Pix cadastrada na organização → abre o gate (design Figma) em vez
+    // de prosseguir. Precede as demais validações (é o bloqueio principal).
+    if (!loadingAccounts && pixAccounts.length === 0) {
+      setShowPixGate(true);
+      return;
+    }
+
     const numericAmount = parseFloat(amount.replace(",", "."));
     if (!numericAmount) return;
     if (numericAmount > availableBalance) return;
@@ -192,6 +204,7 @@ export function RequestTransferModal() {
     setAmount("");
     setAmountFocused(false);
     setTransferAmount("");
+    setShowPixGate(false);
     closeRequestTransferModal();
   };
 
@@ -341,7 +354,7 @@ export function RequestTransferModal() {
                       <Button
                         type="button"
                         onClick={handleConfirm}
-                        disabled={isSubmitting || !selectedAccount}
+                        disabled={isSubmitting}
                         className="flex-1 h-11 disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         {isSubmitting ? "Aguarde..." : "Confirmar"}
@@ -460,7 +473,7 @@ export function RequestTransferModal() {
                       <Button variant="outline" onClick={handleClose} className="h-[44px] px-8 border-[1.5px] border-gray-6 text-gray-12 font-bold text-[16px] font-manrope hover:bg-gray-2">
                         Cancelar
                       </Button>
-                      <Button variant="default" onClick={handleConfirm} disabled={isSubmitting || !selectedAccount} className="h-[44px] px-8 text-[16px] font-bold font-manrope disabled:opacity-50 disabled:cursor-not-allowed">
+                      <Button variant="default" onClick={handleConfirm} disabled={isSubmitting} className="h-[44px] px-8 text-[16px] font-bold font-manrope disabled:opacity-50 disabled:cursor-not-allowed">
                         {isSubmitting ? "Aguarde..." : "Confirmar"}
                       </Button>
                     </div>
@@ -504,6 +517,19 @@ export function RequestTransferModal() {
         loading={loadingAccounts}
         initialSelectedId={selectedAccount?.id}
       />
+
+      {/* Gate "Cadastre uma chave Pix" — abre no Confirmar quando a organização não
+          tem chave Pix cadastrada (portal próprio z-80). "Cadastrar" fecha o modal de
+          repasse e leva direto à aba de chave Pix do perfil da organização. */}
+      {showPixGate && (
+        <PixKeyRequiredModal
+          onClose={() => setShowPixGate(false)}
+          onRegister={() => {
+            handleClose();
+            orgNavigate.push("/organizer/organization/settings?tab=pix");
+          }}
+        />
+      )}
     </>
   );
 }

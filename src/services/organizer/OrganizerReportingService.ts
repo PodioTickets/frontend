@@ -767,6 +767,68 @@ export class OrganizerReportingService extends OrganizerServiceBase {
     );
   }
 
+  /**
+   * Edição dos dados do participante de uma inscrição pelo ORGANIZADOR (painel de
+   * inscrições). PATCH parcial — só os campos enviados são atualizados. O backend
+   * grava no recibo imutável + colunas-espelho e reaplica o gate `edit_event`
+   * (verdade do servidor). Retorna a inscrição re-hidratada (mesmo shape do GET)
+   * para o front atualizar o estado sem refetch.
+   */
+  async updateRegistrationParticipant(
+    registrationId: string,
+    payload: {
+      name?: string;
+      email?: string;
+      documentType?: string;
+      documentNumber?: string;
+      phone?: string;
+      birthDate?: string;
+      gender?: string;
+      country?: string;
+      emergencyContactName?: string;
+      emergencyContactPhone?: string;
+    },
+  ): Promise<Registration> {
+    const { data: response } = await this.apiClient.patch<{
+      data: { registration: Registration };
+    }>(`/api/v1/registrations/${registrationId}/participant`, payload);
+    return response.data.registration;
+  }
+
+  /**
+   * Edição em lote das respostas das perguntas do organizador (ORGANIZADOR).
+   * Backend atualiza a tabela relacional + o recibo imutável e reaplica o gate
+   * `edit_event`. Retorna a inscrição re-hidratada (mesmo shape do GET).
+   */
+  async updateRegistrationAnswers(
+    registrationId: string,
+    answers: { questionId: string; answer: string }[],
+  ): Promise<Registration> {
+    const { data: response } = await this.apiClient.patch<{
+      data: { registration: Registration };
+    }>(`/api/v1/registrations/${registrationId}/answers`, { answers });
+    return response.data.registration;
+  }
+
+  /**
+   * Troca da variação de um produto incluso pelo ORGANIZADOR (sem os limites do
+   * comprador). Backend recalcula estoque e reaplica o gate `edit_event`. Retorna
+   * a inscrição re-hidratada (mesmo shape do GET).
+   */
+  async updateRegistrationProductVariationAsOrganizer(
+    registrationId: string,
+    productId: string,
+    variationId: string,
+  ): Promise<Registration> {
+    const { data: response } = await this.apiClient.patch<{
+      data: { registration: Registration };
+    }>(
+      `/api/v1/registrations/${registrationId}/products/${productId}/variation/organizer`,
+      { variationId },
+    );
+    return response.data.registration;
+  }
+
   async contactOrganizer(
     organizationId: string,
     data: {
