@@ -227,7 +227,7 @@ function FeaturesSection() {
           />
           <FeatureCard
             image={IMG.featureVouchers}
-            title="Ofereça descontos e cortesias com facilidade"
+            title="Ofereça descontos e cortesias"
             description=""
             className="min-h-[360px] lg:min-h-[557px]"
             imageClassName="object-top"
@@ -235,7 +235,7 @@ function FeaturesSection() {
           {/* Linha 2: card largura total (participantes) */}
           <FeatureCard
             image={IMG.featureParticipants}
-            title="Gerencie seus participantes com facilidade"
+            title="Acompanhe os participantes"
             description=""
             className="max-md:hidden min-h-[300px] lg:col-span-2 lg:min-h-[450px]"
             imageClassName="object-left-top"
@@ -243,7 +243,7 @@ function FeaturesSection() {
           />
           <FeatureCard
             image={IMG.featureParticipantsMobile}
-            title="Gerencie seus participantes com facilidade"
+            title="Acompanhe os participantes"
             description=""
             className="min-h-[300px] lg:col-span-2 lg:min-h-[450px] md:hidden"
             imageClassName="object-left-top"
