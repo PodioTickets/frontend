@@ -247,7 +247,7 @@ export function AnticipationModal({ eventId, onClose, onSuccess }: AnticipationM
                 <span className="font-family-dm-sans text-sm text-gray-11">
                   Valor disponível: R$ {formatBRL(availableTotal)}
                 </span>
-                {hasAmount && recommendedNet > 0 && (
+                {hasAmount && recommendedNet > 0 && amountCents !== recommendedNet && (
                   <button
                     type="button"
                     onClick={() => setAmountCents(recommendedNet)}
