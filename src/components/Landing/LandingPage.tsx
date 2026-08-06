@@ -1,8 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
-import { Check, CheckCircle2, Briefcase, Palette, ChevronRightIcon, ArrowRight } from "lucide-react";
+import { Check, CheckCircle2, Briefcase, Palette } from "lucide-react";
 import { Button } from "@/components/Button";
-import { ArrowUpRightIcon } from "@/components/Icons/ArrowUpRightIcon";
 import { cn } from "@/utils/cn";
 import { Reveal } from "@/components/Landing/Reveal";
 
@@ -16,7 +15,7 @@ import { Reveal } from "@/components/Landing/Reveal";
  */
 
 // Destino dos CTAs "Falar com um especialista". Troque pelo WhatsApp/contato real.
-const SPECIALIST_HREF = "https://www.huggy.chat/b7cff6c8-d928-4aa2-b825-9395b36c590b";
+const SPECIALIST_HREF = "https://app.podioticket.com.br/login";
 
 const IMG = {
   heroDashboards: "/images/landing/hero-dashboards.png",

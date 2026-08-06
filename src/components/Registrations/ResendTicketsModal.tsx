@@ -90,7 +90,7 @@ export function ResendTicketsModal({
                     Reenviar ingressos e comprovante
                   </p>
                   <p className="font-family-dm-sans font-normal text-[16px] leading-[1.3] text-gray-11 text-center w-[85%]">
-                    Após a confirmação do pagamento, os ingressos e o comprovante deste pedido serão enviados para o e-mail informado.
+                    Reenvie o ingresso e o comprovante de pagamento para o e-mail do participante.
                   </p>
                 </div>
 
