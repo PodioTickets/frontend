@@ -36,24 +36,45 @@ export function AnticipationModal({ eventId, onClose, onSuccess }: AnticipationM
   const contentRef = useRef<HTMLDivElement>(null);
 
   // O modal é um portal em document.body, ABERTO por cima de um vaul Drawer (Radix
-  // Dialog com focus-trap). O Radix escuta `focusin` no document e, ao ver o foco
-  // "fora" do drawer, o reivindica de volta → dava pra clicar mas NÃO digitar.
-  // Barramos a propagação dos eventos de foco/pointer no container do modal para
-  // que não cheguem ao listener do document — o foco fica no input. (O drawer
-  // segue modal; só o foco deste modal deixa de ser roubado.)
+  // Dialog com focus-trap). O Radix escuta focusin/focusout no `document` (fase
+  // bubble) e, ao ver o foco "fora" do drawer, o reivindica de volta → o foco pula
+  // do input e não dá pra digitar. Havia DOIS vazamentos e o hack antigo (parar a
+  // propagação só no container do modal) cobria apenas o primeiro — daí ser
+  // INTERMITENTE (dependia de onde o foco estava antes do clique):
+  //   (a) focusin cujo alvo está DENTRO do modal (o foco entrou no input);
+  //   (b) focusout de um elemento DO DRAWER cujo relatedTarget é o input do modal
+  //       (o foco saindo do drawer PARA o modal) — esse evento NÃO passa pelo
+  //       container do modal, então nunca era barrado e o Radix reivindicava.
+  // Barramos os dois na fase de CAPTURA do `document` (roda ANTES do listener
+  // bubble do Radix) com stopImmediatePropagation, só quando o foco envolve o
+  // modal. Não afeta a digitação (eventos input/change são independentes do foco)
+  // nem o trap do drawer quando o modal não está envolvido.
   useEffect(() => {
     const node = contentRef.current;
     if (!node) return;
-    const stop = (e: Event) => e.stopPropagation();
-    node.addEventListener("focusin", stop);
-    node.addEventListener("focusout", stop);
-    node.addEventListener("pointerdown", stop);
-    node.addEventListener("mousedown", stop);
+
+    const isInModal = (n: EventTarget | null) =>
+      n instanceof Node && node.contains(n);
+
+    const guardFocus = (e: FocusEvent) => {
+      // focusin: alvo entrou no modal | focusout: relatedTarget = quem recebe o foco.
+      const focusEntersModal =
+        e.type === "focusin" ? isInModal(e.target) : isInModal(e.relatedTarget);
+      if (focusEntersModal) e.stopImmediatePropagation();
+    };
+
+    // Clique no modal não deve ser tratado como interação externa do drawer.
+    const stopPointer = (e: Event) => e.stopPropagation();
+
+    document.addEventListener("focusin", guardFocus, true);
+    document.addEventListener("focusout", guardFocus, true);
+    node.addEventListener("pointerdown", stopPointer);
+    node.addEventListener("mousedown", stopPointer);
     return () => {
-      node.removeEventListener("focusin", stop);
-      node.removeEventListener("focusout", stop);
-      node.removeEventListener("pointerdown", stop);
-      node.removeEventListener("mousedown", stop);
+      document.removeEventListener("focusin", guardFocus, true);
+      document.removeEventListener("focusout", guardFocus, true);
+      node.removeEventListener("pointerdown", stopPointer);
+      node.removeEventListener("mousedown", stopPointer);
     };
   }, []);
 
@@ -66,7 +87,8 @@ export function AnticipationModal({ eventId, onClose, onSuccess }: AnticipationM
         const data = await organizerService.getAnticipationQuote(eventId);
         if (cancelled) return;
         setQuote(data);
-        setRawAmount(data.maxReceivable); // semeia com "antecipar tudo" (líquido máx)
+        // Inicia ZERADO: o resumo/valor recomendado só aparecem após o organizador
+        // digitar um valor (ou usar "Antecipar tudo"). Sem seed de "antecipar tudo".
       } catch (e: unknown) {
         if (cancelled) return;
         const msg = e instanceof Error ? e.message : "Erro ao carregar antecipação";
@@ -111,6 +133,10 @@ export function AnticipationModal({ eventId, onClose, onSuccess }: AnticipationM
   const recommendedNet = result.recommendedNet; // valor recomendado (fronteira)
   const effectiveRatePct = result.effectiveRatePct;
 
+  // Só revela o "Valor recomendado" e o resumo depois que há um valor informado
+  // (digitado ou via "Antecipar tudo"). Antes disso o modal fica "limpo".
+  const hasAmount = amountCents > 0;
+
   // Input estilo "acumulador de centavos": só dígitos, os 2 últimos são centavos.
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const digits = e.target.value.replace(/\D/g, "");
@@ -136,7 +162,11 @@ export function AnticipationModal({ eventId, onClose, onSuccess }: AnticipationM
 
   if (typeof document === "undefined") return null;
 
-  const noReceivables = !loading && maxReceivable <= 0;
+  // Antecipação desligada para a organização (admin controla por org). `enabled`
+  // ausente = backend legado → trata como habilitada. Tem precedência sobre o
+  // "sem recebíveis" para a mensagem ser específica.
+  const notEnabled = !loading && quote?.enabled === false;
+  const noReceivables = !loading && !notEnabled && maxReceivable <= 0;
 
   return createPortal(
     <div
@@ -173,6 +203,10 @@ export function AnticipationModal({ eventId, onClose, onSuccess }: AnticipationM
             <div className="flex items-center justify-center py-10">
               <Loading />
             </div>
+          ) : notEnabled ? (
+            <p className="font-family-dm-sans text-base text-gray-11 text-center py-6">
+              A antecipação de recebíveis não está habilitada para esta organização.
+            </p>
           ) : noReceivables ? (
             <p className="font-family-dm-sans text-base text-gray-11 text-center py-6">
               Nenhum recebível disponível para antecipação no momento.
@@ -207,54 +241,61 @@ export function AnticipationModal({ eventId, onClose, onSuccess }: AnticipationM
                 </button>
               </div>
 
-              {/* Valor disponível + Valor recomendado (pill sempre visível) */}
+              {/* Valor disponível (sempre) + Valor recomendado (botão; só após digitar).
+                  Clicar no recomendado seta o input para a fronteira ideal. */}
               <div className="flex items-center justify-between gap-3 flex-wrap">
                 <span className="font-family-dm-sans text-sm text-gray-11">
                   Valor disponível: R$ {formatBRL(availableTotal)}
                 </span>
-                {recommendedNet > 0 && (
-                  <div className="bg-primary-11 text-gray-1 font-family-dm-sans text-sm rounded-lg px-4 py-2 shrink-0">
+                {hasAmount && recommendedNet > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => setAmountCents(recommendedNet)}
+                    className="bg-primary-11 text-gray-1 font-family-dm-sans text-sm rounded-lg px-4 py-2 shrink-0 hover:bg-primary-10 transition-colors cursor-pointer"
+                  >
                     Valor recomendado:{" "}
                     <span className="font-bold">R$ {formatBRL(recommendedNet)}</span>
-                  </div>
+                  </button>
                 )}
               </div>
 
-              {/* Resumo — card cinza uniforme, divisor sutil antes do total final */}
-              <div className="bg-gray-3 rounded-lg p-4 px-5 flex flex-col gap-3">
-                <div className="flex items-center justify-between gap-3">
-                  <span className="font-family-dm-sans text-gray-12">Valor total:</span>
-                  <span className="font-family-dm-sans text-gray-12">
-                    R$ {formatBRL(consumedGross)}
-                  </span>
-                </div>
-                <div className="flex items-start justify-between gap-3">
-                  <div className="flex flex-col">
+              {/* Resumo — só aparece depois que há um valor informado. */}
+              {hasAmount && (
+                <div className="bg-gray-3 rounded-lg p-4 px-5 flex flex-col gap-3">
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="font-family-dm-sans text-gray-12">Valor total:</span>
                     <span className="font-family-dm-sans text-gray-12">
-                      Taxa de antecipação:
-                    </span>
-                    <span className="font-family-dm-sans text-xs text-gray-11">
-                      {effectiveRatePct.toLocaleString("pt-BR", {
-                        minimumFractionDigits: 2,
-                        maximumFractionDigits: 2,
-                      })}
-                      % sobre o valor total
+                      R$ {formatBRL(consumedGross)}
                     </span>
                   </div>
-                  <span className="font-family-dm-sans text-gray-12 shrink-0">
-                    − R$ {formatBRL(feeCents)}
-                  </span>
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex flex-col">
+                      <span className="font-family-dm-sans text-gray-12">
+                        Taxa de antecipação:
+                      </span>
+                      <span className="font-family-dm-sans text-xs text-gray-11">
+                        {effectiveRatePct.toLocaleString("pt-BR", {
+                          minimumFractionDigits: 2,
+                          maximumFractionDigits: 2,
+                        })}
+                        % sobre o valor total
+                      </span>
+                    </div>
+                    <span className="font-family-dm-sans text-gray-12 shrink-0">
+                      − R$ {formatBRL(feeCents)}
+                    </span>
+                  </div>
+                  <div className="h-px w-full bg-gray-6" />
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="font-family-dm-sans text-gray-11">
+                      Você recebe hoje:
+                    </span>
+                    <span className="font-family-dm-sans font-bold text-primary-11">
+                      R$ {formatBRL(receiveCents)}
+                    </span>
+                  </div>
                 </div>
-                <div className="h-px w-full bg-gray-6" />
-                <div className="flex items-center justify-between gap-3">
-                  <span className="font-family-dm-sans text-gray-11">
-                    Você recebe hoje:
-                  </span>
-                  <span className="font-family-dm-sans font-bold text-primary-11">
-                    R$ {formatBRL(receiveCents)}
-                  </span>
-                </div>
-              </div>
+              )}
             </>
           )}
         </div>
@@ -273,7 +314,7 @@ export function AnticipationModal({ eventId, onClose, onSuccess }: AnticipationM
             type="button"
             variant="default"
             onClick={handleConfirm}
-            disabled={loading || noReceivables || amountCents <= 0 || submitting}
+            disabled={loading || notEnabled || noReceivables || amountCents <= 0 || submitting}
             className="h-[44px] px-8 text-base font-bold font-manrope disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {submitting ? "Aguarde..." : "Confirmar"}

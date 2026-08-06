@@ -15,6 +15,9 @@ export interface AnticipationUnit {
 }
 
 export interface AnticipationQuote {
+  /** Antecipação habilitada para a organização (admin liga por org; default false).
+   *  `false` → cotação zerada; o modal exibe "não habilitada". Ausente = legado (trata como true). */
+  enabled?: boolean;
   /** Total antecipável BRUTO (Σ unidades) — "Valor disponível". */
   availableTotal: number;
   /** Compat legado (== availableTotal). */

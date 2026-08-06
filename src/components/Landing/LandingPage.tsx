@@ -37,8 +37,7 @@ function SpecialistButton({ className = "" }: { className?: string }) {
   return (
     <Button asChild className={cn("h-[52px] w-full gap-3 px-8 has-[>svg]:px-8 text-[16px] font-bold md:h-14 md:w-auto md:text-[20px]", className)}>
       <Link href={SPECIALIST_HREF}>
-        Falar com um especialista
-        <ArrowRight className="size-5" />
+        Criar meu evento
       </Link>
     </Button>
   );
@@ -200,13 +199,8 @@ function FeatureCard({
         sizes={sizes}
         className={`object-cover ${imageClassName}`}
       />
-      {/* gradiente para legibilidade do texto */}
-      <div className="absolute inset-0 bg-gradient-to-t from-[#0e1512] via-30% via-transparent to-transparent" />
       <div className="relative z-10 flex flex-col gap-3 p-6">
         <h3 className="font-manrope text-[18px] font-bold leading-[1.1] text-white md:text-[20px]">{title}</h3>
-        <p className="font-family-dm-sans text-[14px] leading-[1.3] text-[#d9d9d9] md:text-[18px]">
-          {description}
-        </p>
       </div>
     </div>
   );
@@ -226,15 +220,15 @@ function FeaturesSection() {
           {/* Linha 1: dois cards iguais (experiência + cupons/vouchers) */}
           <FeatureCard
             image={IMG.featureExperience}
-            title="Ofereça uma experiência profissional na inscrição"
-            description="Personalize categorias, kits e produtos do evento. Configure tamanhos de camisa, produtos opcionais, brindes e muito mais."
+            title="Inscrições que impressionam"
+            description=""
             className="min-h-[360px] lg:min-h-[557px]"
             imageClassName="object-top"
           />
           <FeatureCard
             image={IMG.featureVouchers}
             title="Ofereça descontos e cortesias com facilidade"
-            description="Crie cupons promocionais, vouchers e regras de desconto para impulsionar as inscrições e gerenciar benefícios para patrocinadores, parceiros e grupos específicos."
+            description=""
             className="min-h-[360px] lg:min-h-[557px]"
             imageClassName="object-top"
           />
@@ -242,7 +236,7 @@ function FeaturesSection() {
           <FeatureCard
             image={IMG.featureParticipants}
             title="Gerencie seus participantes com facilidade"
-            description="Tenha todas as informações dos inscritos organizadas. Pesquise atletas, exporte listas, acompanhe pagamentos e mantenha tudo sob controle."
+            description=""
             className="max-md:hidden min-h-[300px] lg:col-span-2 lg:min-h-[450px]"
             imageClassName="object-left-top"
             sizes="(min-width: 1024px) 1280px, 100vw"
@@ -250,7 +244,7 @@ function FeaturesSection() {
           <FeatureCard
             image={IMG.featureParticipantsMobile}
             title="Gerencie seus participantes com facilidade"
-            description="Tenha todas as informações dos inscritos organizadas. Pesquise atletas, exporte listas, acompanhe pagamentos e mantenha tudo sob controle."
+            description=""
             className="min-h-[300px] lg:col-span-2 lg:min-h-[450px] md:hidden"
             imageClassName="object-left-top"
             sizes="(min-width: 1024px) 1280px, 100vw"
