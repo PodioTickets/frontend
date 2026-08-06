@@ -10,10 +10,7 @@ import {
 } from "@/components/ui/drawer";
 import { X, FileText, Search, Download } from "lucide-react";
 import toast from "react-hot-toast";
-import { CalendarIcon } from "@/components/Icons/CalendarIcon";
-import { PixIcon } from "@/components/Icons/PixIcon";
 import { CardIcon } from "@/components/Icons/CardIcon";
-import { CreditCardIcon } from "@/components/Icons/CreditCardIcon";
 import { PaymentItemDetailsDrawer } from "./PaymentItemDetailsDrawer";
 import { AnticipationModal } from "./AnticipationModal";
 import { AwaitingReleaseExportModal } from "./AwaitingReleaseExportModal";
@@ -298,14 +295,7 @@ export function AwaitingReleaseDrawer({
     }
   };
 
-  const renderPaymentIcon = (method: "PIX" | "CREDIT_CARD") =>
-    method === "PIX" ? (
-      <PixIcon className="size-5 text-gray-12" />
-    ) : (
-      <CreditCardIcon className="w-7" />
-    );
-
-  const tabButton = (tab: FinancialTab, label: string) => (
+  const tabButton =(tab: FinancialTab, label: string) => (
     <button
       type="button"
       onClick={() => setActiveTab(tab)}
@@ -495,7 +485,6 @@ export function AwaitingReleaseDrawer({
                               <p className="font-family-dm-sans font-normal text-sm text-gray-11 truncate">{row.buyerSub}</p>
                             </div>
                           </div>
-                          <div className="shrink-0">{renderPaymentIcon(row.paymentMethod)}</div>
                         </div>
                         <p className="font-family-dm-sans font-medium text-sm text-gray-12">ID Pedido: {formatShortId(row.id)}</p>
                         <div className="bg-gray-2 border border-gray-6 rounded-lg min-h-[34px] flex items-center px-3 py-1">
@@ -623,9 +612,6 @@ export function AwaitingReleaseDrawer({
                   <div className="flex flex-1 h-full items-center justify-center min-h-px min-w-px p-4">
                     <p className="font-inter font-medium leading-[1.3] text-sm text-gray-12 text-center">Previsão liberação</p>
                   </div>
-                  <div className="flex h-full items-center justify-center p-4 w-[100px]">
-                    <p className="font-inter font-medium leading-[1.3] text-sm text-gray-12 text-center">Pagamento</p>
-                  </div>
                   <div className="flex flex-1 h-full items-center justify-end min-h-px min-w-px p-4">
                     <p className="font-inter font-medium leading-[1.3] text-sm text-gray-12 text-right">Valor pendente</p>
                   </div>
@@ -687,11 +673,6 @@ export function AwaitingReleaseDrawer({
                           <p className="font-inter font-semibold leading-[1.3] text-sm text-gray-12 text-center">
                             Próx. {formatDate(row.releaseISO)}
                           </p>
-                        </div>
-
-                        {/* Pagamento */}
-                        <div className="flex h-full items-center justify-center p-4 w-[100px]">
-                          {renderPaymentIcon(row.paymentMethod)}
                         </div>
 
                         {/* Valor pendente */}

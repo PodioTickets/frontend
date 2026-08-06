@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, XCircle, Building2, MapPin, Phone, ChevronRight, ChevronDown, Trash2, Plus } from "lucide-react";
+import { X, XCircle, Building2, MapPin, Phone, ChevronRight, ChevronDown, Trash2, Plus, Check, SlidersHorizontal } from "lucide-react";
 import {
   Drawer,
   DrawerClose,
@@ -60,6 +60,8 @@ interface OrgDetail extends AdminAuditOrganization {
   fiscalEmail?: string;
   /** Taxa mensal de antecipação (fração: 0.1 = 10%). */
   anticipationMonthlyRate?: number;
+  /** Antecipação de recebíveis habilitada para esta org (default false). */
+  anticipationEnabled?: boolean;
   pixKeys?: Array<{ key: string; keyType: string; isDefault: boolean }>;
   _count?: { events?: number; members?: number };
 }
@@ -419,6 +421,8 @@ export function OrganizerEditDrawer({ isOpen, onClose, org, onUpdated, mode = "e
   // Taxa MENSAL de antecipação, editada em PERCENT (ex.: "10" = 10%). Convertida
   // para fração (0.10) no payload. Default 10% (schema).
   const [anticipationRatePercent, setAnticipationRatePercent] = useState("10");
+  // Antecipação habilitada para a org. DESLIGADA por padrão (inclusive no create).
+  const [anticipationEnabled, setAnticipationEnabled] = useState(false);
   const [loadingCep, setLoadingCep] = useState(false);
   // Guarda o último CEP buscado pra não disparar fetch duplicado em re-renders.
   const lastFetchedCepRef = useRef<string>("");
@@ -459,6 +463,7 @@ export function OrganizerEditDrawer({ isOpen, onClose, org, onUpdated, mode = "e
       setOwnerDocError("");
       setFiscalEmail("");
       setAnticipationRatePercent("10");
+      setAnticipationEnabled(false);
       setShowAddPix(false);
       setNewPix(emptyPix);
       return;
@@ -509,6 +514,7 @@ export function OrganizerEditDrawer({ isOpen, onClose, org, onUpdated, mode = "e
             ? String(+(d.anticipationMonthlyRate * 100).toFixed(2))
             : "10",
         );
+        setAnticipationEnabled(d.anticipationEnabled ?? false);
         const loadedPix: PixKey[] = Array.isArray(d.pixKeys)
           ? d.pixKeys.map((k: any, i: number) => ({ id: `loaded-${i}`, key: k.key, keyType: k.keyType, isDefault: k.isDefault, bankName: k.bankName ?? "", accountHolderName: k.accountHolderName ?? "", accountHolderDocument: k.accountHolderDocument ? formatCPFOrCNPJ(k.accountHolderDocument) : "" }))
           : [];
@@ -622,6 +628,8 @@ export function OrganizerEditDrawer({ isOpen, onClose, org, onUpdated, mode = "e
           const p = parseFloat(anticipationRatePercent.replace(",", "."));
           return isNaN(p) || p < 0 || p > 100 ? undefined : p / 100;
         })(),
+        // Liga/desliga a antecipação da org (default desligado no create).
+        anticipationEnabled,
         pixKeys: pixKeys.map(({ key, keyType, bankName, accountHolderName, accountHolderDocument }, i) => ({
           key,
           keyType,
@@ -906,6 +914,45 @@ export function OrganizerEditDrawer({ isOpen, onClose, org, onUpdated, mode = "e
                     error={personType === "PF" ? ownerDocError : undefined}
                   />
                   <FormField label="E-mail fiscal" value={fiscalEmail} onChange={setFiscalEmail} placeholder="fiscal@org.com" type="email" className="min-w-[284px]" />
+                </div>
+              </div>
+
+              <DrawerDivider />
+
+              {/* Configurações específicas — antecipação de recebíveis desta org.
+                  Fica entre "Detalhes" e "Endereço". A antecipação é DESLIGADA por
+                  padrão (inclusive no cadastro); o admin liga aqui e define a taxa. */}
+              <div className="flex flex-col gap-6">
+                <SectionTitle icon={<SlidersHorizontal className="size-5" />} label="Configurações específicas" />
+
+                {/* Checkbox — ativar/desativar antecipação */}
+                <button
+                  type="button"
+                  onClick={() => setAnticipationEnabled((v) => !v)}
+                  aria-pressed={anticipationEnabled}
+                  className="flex items-start gap-3 text-left"
+                >
+                  <span
+                    className={cn(
+                      "size-6 shrink-0 rounded-md border flex items-center justify-center transition-colors mt-0.5",
+                      anticipationEnabled ? "bg-[#C8F4CC] border-[#94CE9A] text-gray-12" : "border-gray-6 bg-gray-1",
+                    )}
+                    aria-hidden
+                  >
+                    {anticipationEnabled && <Check className="size-3.5" strokeWidth={2.5} />}
+                  </span>
+                  <span className="flex flex-col gap-0.5">
+                    <span className="text-base font-medium font-family-dm-sans text-gray-12 leading-[1.3]">
+                      Habilitar antecipação de recebíveis
+                    </span>
+                    <span className="text-sm font-normal font-family-dm-sans text-gray-11 leading-[1.3]">
+                      Quando ativa, esta organização pode solicitar antecipação nos eventos. Desativada por padrão.
+                    </span>
+                  </span>
+                </button>
+
+                {/* Taxa — só é cobrada quando a antecipação está habilitada. */}
+                <div className="flex flex-wrap gap-x-4 gap-y-6">
                   <FormField
                     label="Taxa de antecipação (% ao mês)"
                     value={anticipationRatePercent}

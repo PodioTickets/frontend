@@ -117,6 +117,9 @@ export function StepContractsReview({ flow }: { flow: OrganizerSignupFlow }) {
         contract={openContract}
         onClose={() => setOpenContract(null)}
         onAccept={acceptContract}
+        alreadyAccepted={
+          openContract ? acceptedContracts.has(openContract.id) : false
+        }
       />
     </div>
   );

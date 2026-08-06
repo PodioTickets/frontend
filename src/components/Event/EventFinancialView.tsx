@@ -6,9 +6,7 @@ import { organizerService, userService } from "@/services";
 import { Button } from "@/components/Button";
 import toast from "react-hot-toast";
 import { Loading } from "@/components/Loading";
-import { CalendarIcon } from "@/components/Icons/CalendarIcon";
 import { TransferHistoryDrawer } from "@/components/Financial/TransferHistoryDrawer";
-import { InstallmentsDrawer } from "@/components/Financial/InstallmentsDrawer";
 import { AwaitingReleaseDrawer } from "@/components/Financial/AwaitingReleaseDrawer";
 import { RefundedDrawer } from "@/components/Financial/RefundedDrawer";
 import { ChargebackDrawer } from "@/components/Financial/ChargebackDrawer";
@@ -44,7 +42,6 @@ export function EventFinancialView({
   const [periodFilter] = useState("geral");
   const [mobileCardsScrollIndex, setMobileCardsScrollIndex] = useState(0);
   const [isTransferHistoryOpen, setIsTransferHistoryOpen] = useState(false);
-  const [isInstallmentsOpen, setIsInstallmentsOpen] = useState(false);
   const [isAwaitingReleaseOpen, setIsAwaitingReleaseOpen] = useState(false);
   const [isRefundedOpen, setIsRefundedOpen] = useState(false);
   const [isChargebackOpen, setIsChargebackOpen] = useState(false);
@@ -231,23 +228,6 @@ export function EventFinancialView({
                   setMobileCardsScrollIndex(Math.min(Math.max(0, idx), lastIdx));
                 }}
               >
-                {/* Parcelados a receber */}
-                <div className="bg-gray-1 border border-gray-6 rounded-lg min-w-[157px] w-[157px] shrink-0 snap-start">
-                  <div className="flex flex-col gap-3 pt-3 pb-1 px-3">
-                    <div className="w-8 h-8 rounded-lg bg-blue-4 flex items-center justify-center shrink-0">
-                      <CalendarIcon className="size-5 text-blue-12" />
-                    </div>
-                    <p className="font-family-dm-sans font-normal text-base text-gray-11">Parcelados a receber</p>
-                  </div>
-                  <div className="px-3 py-4">
-                    <p className="font-manrope font-extrabold text-lg text-gray-12">
-                      {(financialData.installmentsToReceive / 100).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                    </p>
-                  </div>
-                  <button onClick={() => setIsInstallmentsOpen(true)} className="text-sm text-gray-11 underline font-family-dm-sans font-normal pb-3 pt-1 px-3">
-                    Ver detalhes
-                  </button>
-                </div>
                 {/* Aguardando liberação */}
                 <div className="bg-gray-1 border border-gray-6 rounded-lg min-w-[157px] w-[157px] shrink-0 snap-start">
                   <div className="flex flex-col gap-3 pt-3 pb-1 px-3">
@@ -319,7 +299,7 @@ export function EventFinancialView({
               </div>
               {/* Carousel dots */}
               <div className="flex justify-center gap-1.5">
-                {[0, 1, 2, 3, 4].map((i) => (
+                {[0, 1, 2, 3].map((i) => (
                   <div
                     key={i}
                     className={`size-3 rounded-full shrink-0 ${i === mobileCardsScrollIndex ? "bg-primary-11" : "bg-gray-6"}`}
@@ -364,31 +344,8 @@ export function EventFinancialView({
               </p>
             </div>
 
-            {/* Parcelados a receber */}
-            <div className="bg-gray-1 border-t border-b border-r border-gray-6 px-4 py-3">
-              <div className="flex items-center justify-between mb-3">
-                <p className="font-family-dm-sans font-normal text-[14px] text-gray-11">
-                  Parcelados a receber
-                </p>
-                <div className="w-[28px] h-[28px] p-1 rounded-lg bg-blue-4 flex items-center justify-center">
-                  <CalendarIcon className="size-5 text-blue-12" />
-                </div>
-              </div>
-              <div className="flex items-center justify-between">
-                <p className="font-family-dm-sans font-bold text-[20px] text-gray-12">
-                  R${(financialData.installmentsToReceive / 100).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                </p>
-                <button
-                  onClick={() => setIsInstallmentsOpen(true)}
-                  className="text-[14px] text-gray-11 underline font-family-dm-sans font-medium cursor-pointer"
-                >
-                  Ver detalhes
-                </button>
-              </div>
-            </div>
-
             {/* Aguardando liberação */}
-            <div className="bg-gray-1 border border-l-0 border-gray-6 rounded-tr-[12px] px-4 py-3">
+            <div className="bg-gray-1 border-t border-b border-r border-gray-6 px-4 py-3">
               <div className="flex items-center justify-between mb-3">
                 <p className="font-family-dm-sans font-normal text-[14px] text-gray-11">
                   Aguardando liberação
@@ -410,8 +367,9 @@ export function EventFinancialView({
               </div>
             </div>
 
-            {/* Total já repassado */}
-            <div className="bg-gray-1 border-l border-b border-r border-gray-6 rounded-bl-[12px] px-4 py-3">
+            {/* Total já repassado — canto DIREITO do bloco; como o 6º slot (abaixo
+                dele) fica vazio, arredonda também a ponta inferior-direita. */}
+            <div className="bg-gray-1 border border-l-0 border-gray-6 rounded-tr-[12px] rounded-br-[12px] px-4 py-3">
               <div className="flex items-center justify-between mb-3">
                 <p className="font-family-dm-sans font-normal text-[14px] text-gray-11">
                   Total já repassado
@@ -434,7 +392,7 @@ export function EventFinancialView({
             </div>
 
             {/* Estornado */}
-            <div className="bg-gray-1 border-b border-r border-gray-6 px-4 py-3">
+            <div className="bg-gray-1 border-l border-b border-r border-gray-6 rounded-bl-[12px] px-4 py-3">
               <div className="flex items-center justify-between mb-3">
                 <p className="font-family-dm-sans font-normal text-[14px] text-gray-11">
                   Estornado
@@ -456,7 +414,8 @@ export function EventFinancialView({
               </div>
             </div>
 
-            {/* Chargebacks */}
+            {/* Chargebacks — último card ocupado; 6º slot (à direita) fica VAZIO.
+                Fecha a ponta inferior-direita do próprio card com rounded-br. */}
             <div className="bg-gray-1 border-b border-r border-gray-6 rounded-br-[12px] px-4 py-3">
               <div className="flex items-center justify-between mb-3">
                 <p className="font-family-dm-sans font-normal text-[14px] text-gray-11">
@@ -514,26 +473,6 @@ export function EventFinancialView({
         }}
         onNavigateNext={() => {
           setIsAwaitingReleaseOpen(false);
-          setIsInstallmentsOpen(true);
-        }}
-      />
-
-      {/* Installments Drawer */}
-      <InstallmentsDrawer
-        isOpen={isInstallmentsOpen}
-        onClose={() => setIsInstallmentsOpen(false)}
-        totalPending={financialData.installmentsToReceive}
-        releaseToday={0} // Será atualizado pelos dados reais do drawer
-        totalTransactions={0} // Será atualizado pelos dados reais do drawer
-        eventId={eventId}
-        eventName={event?.name}
-        categoryName="Nome da categoria"
-        onNavigatePrev={() => {
-          setIsInstallmentsOpen(false);
-          setIsAwaitingReleaseOpen(true);
-        }}
-        onNavigateNext={() => {
-          setIsInstallmentsOpen(false);
           setIsRefundedOpen(true);
         }}
       />
@@ -548,7 +487,7 @@ export function EventFinancialView({
         categoryName="Nome da categoria"
         onNavigatePrev={() => {
           setIsRefundedOpen(false);
-          setIsInstallmentsOpen(true);
+          setIsAwaitingReleaseOpen(true);
         }}
         onNavigateNext={() => {
           setIsRefundedOpen(false);

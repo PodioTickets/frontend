@@ -14,6 +14,8 @@ interface ContractReaderModalProps {
   onClose: () => void;
   /** Chamado ao confirmar o aceite; recebe o id do contrato. */
   onAccept: (id: string) => void;
+  /** Já aceito antes? Semeia o checkbox marcado ao reabrir o contrato. */
+  alreadyAccepted?: boolean;
 }
 
 /**
@@ -26,20 +28,22 @@ export function ContractReaderModal({
   contract,
   onClose,
   onAccept,
+  alreadyAccepted = false,
 }: ContractReaderModalProps) {
   const [accepted, setAccepted] = useState(false);
   const isOpen = !!contract;
 
-  // Reseta o checkbox a cada contrato aberto e trava o scroll do body.
+  // A cada contrato aberto, semeia o checkbox com o estado JÁ aceito (mantém
+  // marcado ao reabrir um contrato já confirmado) e trava o scroll do body.
   useEffect(() => {
     if (!isOpen) return;
-    setAccepted(false);
+    setAccepted(alreadyAccepted);
     const prev = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     return () => {
       document.body.style.overflow = prev;
     };
-  }, [isOpen, contract?.id]);
+  }, [isOpen, contract?.id, alreadyAccepted]);
 
   const handleConfirm = () => {
     if (!contract || !accepted) return;
