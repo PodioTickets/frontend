@@ -191,6 +191,7 @@ function FeatureCard({
     <div
       className={`group relative flex flex-col justify-end overflow-hidden rounded-2xl shadow-xl  ${className}`}
     >
+      <div className="w-full absolute bottom-0 h-full bg-linear-to-t from-[#111111] via-20% via-transparent to-transparent z-10"></div>
       <Image
         src={image}
         alt={title}
@@ -199,7 +200,7 @@ function FeatureCard({
         className={`object-cover ${imageClassName}`}
       />
       <div className="relative z-10 flex flex-col gap-3 p-6">
-        <h3 className="font-manrope text-[18px] font-bold leading-[1.1] text-white md:text-[20px]">{title}</h3>
+        <h3 className="font-manrope max-md:text-[18px] font-bold leading-[1.1] text-white text-[24px]">{title}</h3>
       </div>
     </div>
   );
