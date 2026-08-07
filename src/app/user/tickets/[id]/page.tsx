@@ -578,7 +578,11 @@ export default function TicketDetailsPage() {
                                   {participant.questionAnswers.map((qa: any) => (
                                     <div key={qa.id} className="flex flex-col py-4">
                                       <label className="text-base text-gray-12 font-family-dm-sans">
-                                        {qa.question?.question || "Pergunta"}
+                                        {/* `question` pode vir como STRING (texto direto,
+                                            ex.: getOrderDetails) ou OBJETO ({question}). */}
+                                        {(typeof qa.question === "string"
+                                          ? qa.question
+                                          : qa.question?.question) || "Pergunta"}
                                       </label>
                                       <p className="text-base font-medium text-gray-12 font-family-dm-sans">
                                         {formatAnswer(qa.answer)}
