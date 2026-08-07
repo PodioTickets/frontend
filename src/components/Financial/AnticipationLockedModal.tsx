@@ -4,12 +4,13 @@ import { useEffect } from "react";
 import { createPortal } from "react-dom";
 import { Zap } from "lucide-react";
 import { Button } from "../Button";
-import { PODIO_SUPPORT_WHATSAPP } from "../Event/ContactSubjectModal";
+
+/** Link do WhatsApp específico do pedido de liberação de antecipação. */
+const ANTICIPATION_WHATSAPP_URL =
+  "https://api.whatsapp.com/send/?phone=5511994302713&text=Preciso%20de%20antecipa%C3%A7%C3%A3o%20no%20meu%20evento";
 
 interface AnticipationLockedModalProps {
   onClose: () => void;
-  /** Nome do evento p/ compor a mensagem de contato (opcional). */
-  eventName?: string;
 }
 
 /**
@@ -19,7 +20,7 @@ interface AnticipationLockedModalProps {
  * suas vendas", explicação e as ações "Fechar" / "Falar com a equipe" (WhatsApp
  * do suporte). Portal em `document.body` (z-80) por cima do AnticipationModal.
  */
-export function AnticipationLockedModal({ onClose, eventName }: AnticipationLockedModalProps) {
+export function AnticipationLockedModal({ onClose }: AnticipationLockedModalProps) {
   // Fecha no Esc.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -30,10 +31,7 @@ export function AnticipationLockedModal({ onClose, eventName }: AnticipationLock
   }, [onClose]);
 
   const handleContactTeam = () => {
-    const suffix = eventName ? ` sobre o evento *${eventName}*` : "";
-    const message = `Olá! Tenho interesse na antecipação de recebíveis${suffix} e gostaria de passar pela análise do time.`;
-    const url = `https://wa.me/${PODIO_SUPPORT_WHATSAPP}?text=${encodeURIComponent(message)}`;
-    window.open(url, "_blank", "noopener,noreferrer");
+    window.open(ANTICIPATION_WHATSAPP_URL, "_blank", "noopener,noreferrer");
     onClose();
   };
 
