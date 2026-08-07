@@ -41,7 +41,7 @@ export function OrganizerSupportWidget() {
     const audio = isOpening ? openSoundRef.current : closeSoundRef.current;
     if (!audio) return;
     audio.currentTime = 0;
-    void audio.play().catch(() => {});
+    void audio.play().catch(() => { });
   }, []);
 
   const toggle = useCallback(() => {
@@ -88,112 +88,124 @@ export function OrganizerSupportWidget() {
             style={{ transformOrigin: "bottom right" }}
             className="w-[min(341px,calc(100vw-2rem))] bg-gray-1 rounded-lg shadow-[0px_2px_6px_0px_rgba(17,17,17,0.15)] overflow-hidden flex flex-col"
           >
-          {/* Header (escuro) */}
-          <div className="bg-[#111111] flex items-center justify-between px-4 py-3 gap-2">
-            <div className="flex gap-2 items-center min-w-0">
-              <span className="relative size-10 rounded-full overflow-hidden shrink-0">
-                <Image
-                  src="/images/guarim.jpeg"
-                  alt="Marina"
-                  width={40}
-                  height={40}
-                  className="size-10 rounded-full object-cover scale-150"
-                />
-              </span>
-              <div className="flex flex-col gap-1 min-w-0">
-                <p className="font-manrope font-bold text-base leading-[1.1] text-[#eeeeee] truncate">
-                  Guarim
-                </p>
-                <div className="flex gap-1 items-center">
-                  <span className="size-2 rounded-full bg-primary-11 shrink-0" />
-                  <p className="font-family-dm-sans font-normal text-sm leading-[1.3] text-[#b4b4b4]">
-                    Online agora
+            {/* Header (escuro) */}
+            <div className="bg-[#111111] flex items-center justify-between px-4 py-3 gap-2">
+              <div className="flex gap-2 items-center min-w-0">
+                <span className="relative size-10 rounded-full overflow-hidden shrink-0">
+                  <Image
+                    src="/images/guarim.jpeg"
+                    alt="Marina"
+                    width={40}
+                    height={40}
+                    className="size-10 rounded-full object-cover scale-150"
+                  />
+                </span>
+                <div className="flex flex-col gap-1 min-w-0">
+                  <p className="font-manrope font-bold text-base leading-[1.1] text-[#eeeeee] truncate">
+                    Guarim
                   </p>
+                  <div className="flex gap-1 items-center">
+                    <span className="size-2 rounded-full bg-primary-11 shrink-0" />
+                    <p className="font-family-dm-sans font-normal text-sm leading-[1.3] text-[#b4b4b4]">
+                      Online agora
+                    </p>
+                  </div>
                 </div>
               </div>
+              <button
+                type="button"
+                onClick={close}
+                aria-label="Fechar"
+                className="size-8 flex items-center justify-center rounded-lg hover:bg-white/10 transition-colors shrink-0 cursor-pointer"
+              >
+                <X className="size-5 text-[#eeeeee]" />
+              </button>
             </div>
-            <button
-              type="button"
-              onClick={close}
-              aria-label="Fechar"
-              className="size-8 flex items-center justify-center rounded-lg hover:bg-white/10 transition-colors shrink-0 cursor-pointer"
-            >
-              <X className="size-5 text-[#eeeeee]" />
-            </button>
-          </div>
 
-          {/* Botão principal → WhatsApp */}
-          <div className="p-4">
-            <a
-              href={ASSESSOR_WHATSAPP_URL}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="w-full"
-            >
-              <Button variant={"default"} className="w-full">
-                <WhatsappIcon variant="solid" className="size-6 text-[#141A15]" />
-                <span className="font-manrope font-bold text-base">
-                  Fale com seu assessor
-                </span>
-              </Button>
-            </a>
-          </div>
+            {/* Botão principal → WhatsApp */}
+            <div className="p-4">
+              <a
+                href={ASSESSOR_WHATSAPP_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-full"
+              >
+                <Button variant={"default"} className="w-full">
+                  <WhatsappIcon variant="solid" className="size-6 text-[#141A15]" />
+                  <span className="font-manrope font-bold text-base">
+                    Fale com seu assessor
+                  </span>
+                </Button>
+              </a>
+            </div>
 
-          {/* Horário de atendimento */}
-          <div className="border-t border-gray-6 p-4">
-            <p className="font-family-dm-sans font-normal text-sm leading-[1.3] text-gray-11">
-              Atendimento de segunda a sexta, das 8h às 18h. Fora desse horário, o tempo
-              de resposta pode ser maior
-            </p>
-          </div>
+            {/* Horário de atendimento */}
+            <div className="border-t border-gray-6 p-4">
+              <p className="font-family-dm-sans font-normal text-sm leading-[1.3] text-gray-11">
+                Atendimento de segunda a sexta, das 8h às 18h. Fora desse horário, o tempo
+                de resposta pode ser maior
+              </p>
+            </div>
           </motion.div>
         )}
       </AnimatePresence>
 
-      {/* Gatilho: avatar (fechado) / X (aberto). motion = leve pop no toque + troca
-          suave do ícone (cross-fade + rotação). */}
-      <motion.button
-        type="button"
-        onClick={toggle}
-        aria-label={open ? "Fechar suporte" : "Falar com o suporte"}
-        aria-expanded={open}
+      {/* Gatilho: avatar (fechado) / X (aberto). O wrapper motion faz o pop no toque
+          e o hover; o botão clipa o avatar (overflow), e a bolinha verde de "online"
+          fica FORA do clip (irmã do botão) pra não ser cortada. */}
+      <motion.div
+        className="relative shrink-0"
         whileTap={{ scale: 0.9 }}
         whileHover={{ scale: 1.05 }}
         transition={{ type: "spring", stiffness: 500, damping: 30 }}
-        className="size-11 rounded-full bg-gray-12 border border-primary-11 shrink-0 cursor-pointer overflow-hidden relative"
       >
-        <AnimatePresence initial={false} mode="wait">
-          {open ? (
-            <motion.span
-              key="close"
-              initial={{ opacity: 0, rotate: -90, scale: 0.6 }}
-              animate={{ opacity: 1, rotate: 0, scale: 1 }}
-              exit={{ opacity: 0, rotate: 90, scale: 0.6 }}
-              transition={{ duration: 0.15 }}
-              className="absolute inset-0 rounded-full flex items-center justify-center"
-            >
-              <X className="size-6 text-gray-2" />
-            </motion.span>
-          ) : (
-            <motion.span
-              key="avatar"
-              initial={{ opacity: 0, scale: 0.6 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.6 }}
-              transition={{ duration: 0.15 }}
-              className="absolute inset-0"
-            >
-              <Image
-                src="/images/guarim.jpeg"
-                alt="Suporte"
-                width={44}
-                height={44}
-                className="size-full rounded-full object-cover scale-150"
-              />
-            </motion.span>
-          )}
-        </AnimatePresence>
-      </motion.button>
+        <button
+          type="button"
+          onClick={toggle}
+          aria-label={open ? "Fechar suporte" : "Falar com o suporte"}
+          aria-expanded={open}
+          className="block size-[60px] rounded-full bg-gray-12 border border-primary-11 cursor-pointer overflow-hidden relative"
+        >
+          <AnimatePresence initial={false} mode="wait">
+            {open ? (
+              <motion.span
+                key="close"
+                initial={{ opacity: 0, rotate: -90, scale: 0.6 }}
+                animate={{ opacity: 1, rotate: 0, scale: 1 }}
+                exit={{ opacity: 0, rotate: 90, scale: 0.6 }}
+                transition={{ duration: 0.15 }}
+                className="absolute inset-0 rounded-full flex items-center justify-center"
+              >
+                <X className="size-6 text-gray-2" />
+              </motion.span>
+            ) : (
+              <motion.span
+                key="avatar"
+                initial={{ opacity: 0, scale: 0.6 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.6 }}
+                transition={{ duration: 0.15 }}
+                className="absolute inset-0"
+              >
+                <Image
+                  src="/images/guarim.jpeg"
+                  alt="Suporte"
+                  width={60}
+                  height={60}
+                  className="size-full rounded-full object-cover scale-150"
+                />
+              </motion.span>
+            )}
+          </AnimatePresence>
+        </button>
+        {/* Bolinha verde "online" — só quando fechado (avatar visível). */}
+        {!open && (
+          <span
+            aria-hidden
+            className="absolute bottom-0 right-0 size-4 rounded-full bg-primary-11 border-2 border-gray-1 pointer-events-none"
+          />
+        )}
+      </motion.div>
     </div>
   );
 }
