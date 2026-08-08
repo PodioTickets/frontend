@@ -752,18 +752,23 @@ export class OrganizerReportingService extends OrganizerServiceBase {
   }
 
   /**
-   * Reenvia o e-mail de confirmação do PEDIDO (todos os ingressos + comprovante)
-   * para o endereço informado — como se fosse o e-mail do comprador. O backend
-   * resolve o pedido a partir da inscrição, regera os anexos a partir do
-   * snapshot imutável e aplica o mesmo controle de acesso dos PDFs do pedido.
+   * Reenvia o e-mail de confirmação para o endereço informado. O backend resolve
+   * o pedido a partir da inscrição, regera os anexos a partir do snapshot
+   * imutável e aplica o mesmo controle de acesso dos PDFs do pedido.
+   *
+   * @param ticketOnly Quando `true`, envia SOMENTE o ingresso desta inscrição
+   *   (sem comprovante e sem os demais ingressos do pedido) — usado pelo modal de
+   *   inscrição. Omisso/`false` = pedido completo (todos os ingressos +
+   *   comprovante), usado pelo modal de pedido.
    */
   async resendRegistrationEmail(
     registrationId: string,
     email: string,
+    ticketOnly = false,
   ): Promise<void> {
     await this.apiClient.post(
       `/api/v1/registrations/${registrationId}/resend-email`,
-      { email },
+      { email, ticketOnly },
     );
   }
 

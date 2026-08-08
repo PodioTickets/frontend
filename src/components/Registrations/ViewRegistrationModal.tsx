@@ -387,11 +387,13 @@ export function ViewRegistrationModal() {
       if (!registrationId || resendingEmail) return;
       setResendingEmail(true);
       try {
-        await organizerService.resendRegistrationEmail(registrationId, email);
-        toast.success("Ingressos reenviados para o e-mail informado.");
+        // ticketOnly=true: envia SOMENTE este ingresso (sem comprovante nem os
+        // demais ingressos do pedido) — diferente do modal de pedido.
+        await organizerService.resendRegistrationEmail(registrationId, email, true);
+        toast.success("Ingresso reenviado para o e-mail informado.");
         setShowResendModal(false);
       } catch {
-        toast.error("Erro ao reenviar os ingressos. Tente novamente.");
+        toast.error("Erro ao reenviar o ingresso. Tente novamente.");
       } finally {
         setResendingEmail(false);
       }
@@ -797,7 +799,7 @@ export function ViewRegistrationModal() {
         onClick={() => setShowResendModal(true)}
         className="flex flex-1 md:flex-none border-gray-6 text-gray-12 items-center justify-center gap-2 px-5 py-2.5 font-family-dm-sans cursor-pointer"
       >
-        Reenviar por e-mail
+        Reenviar ingresso
       </Button>
     </div>
   );
@@ -1434,6 +1436,9 @@ export function ViewRegistrationModal() {
           onConfirm={handleResendEmail}
           loading={resendingEmail}
           ticketCount={1}
+          title="Reenviar ingresso"
+          description="Envie novamente o ingresso para o e-mail cadastrado na inscrição."
+          confirmLabel="Reenviar ingresso"
         />
       </>
     );
@@ -1514,6 +1519,9 @@ export function ViewRegistrationModal() {
         onConfirm={handleResendEmail}
         loading={resendingEmail}
         ticketCount={1}
+        title="Reenviar ingresso"
+        description="Envie novamente o ingresso para o e-mail cadastrado na inscrição."
+        confirmLabel="Reenviar ingresso"
       />
     </>
   );

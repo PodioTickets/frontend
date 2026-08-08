@@ -112,6 +112,11 @@ export function RequestTransferModal() {
   const setAmountCents = (v: number) =>
     setRawAmount(Math.min(Math.max(0, v), rawBalance));
 
+  // Só é possível confirmar com um valor válido (> 0 e dentro do saldo). Como
+  // `amountCents` é clampado a `rawBalance`, saldo 0 ⇒ amountCents 0 ⇒ botão
+  // desabilitado — cobre "sem saldo disponível" E "sem valor digitado".
+  const canConfirm = !isSubmitting && amountCents > 0 && amountCents <= rawBalance;
+
   const handleUseAll = () => {
     setAmountCents(rawBalance);
   };
@@ -312,7 +317,7 @@ export function RequestTransferModal() {
                       <Button
                         type="button"
                         onClick={handleConfirm}
-                        disabled={isSubmitting || availableBalance <= 0}
+                        disabled={!canConfirm}
                         className="flex-1 h-11 disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         {isSubmitting ? "Aguarde..." : "Confirmar"}
@@ -429,7 +434,7 @@ export function RequestTransferModal() {
                       <Button variant="outline" onClick={handleClose} className="h-[44px] px-8 border-[1.5px] border-gray-6 text-gray-12 font-bold text-[16px] font-manrope hover:bg-gray-2">
                         Cancelar
                       </Button>
-                      <Button variant="default" onClick={handleConfirm} disabled={isSubmitting || availableBalance <= 0} className="h-[44px] px-8 text-[16px] font-bold font-manrope disabled:opacity-50 disabled:cursor-not-allowed">
+                      <Button variant="default" onClick={handleConfirm} disabled={!canConfirm} className="h-[44px] px-8 text-[16px] font-bold font-manrope disabled:opacity-50 disabled:cursor-not-allowed">
                         {isSubmitting ? "Aguarde..." : "Confirmar"}
                       </Button>
                     </div>

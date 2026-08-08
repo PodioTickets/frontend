@@ -1,7 +1,7 @@
 "use client";
 
 import { useSearchParams, useRouter } from "next/navigation";
-import { useMemo, Suspense, useState, useEffect } from "react";
+import { useMemo, Suspense } from "react";
 import { EventCard } from "@/components/Event/Card";
 import { HomeFilters } from "@/components/HomeFilters";
 import { Button } from "@/components/Button";
@@ -14,7 +14,6 @@ import type { DateRange } from "react-day-picker";
 
 function MobileAdvancedSearch() {
   const searchParams = useSearchParams();
-  const [currentPage, setCurrentPage] = useState(1);
 
   const legacyLocation = searchParams.get("location");
   const stateFromUrl = searchParams.get("state");
@@ -44,7 +43,15 @@ function MobileAdvancedSearch() {
     ? new Date(dateTo).toISOString().split("T")[0]
     : undefined;
 
-  const { events, pagination, isLoading, query } = useEventSearch({
+  const {
+    events,
+    pagination,
+    isLoading,
+    query,
+    fetchNextPage,
+    isFetchingNextPage,
+    hasNextPage,
+  } = useEventSearch({
     q: searchQuery,
     state: effectiveLocation.state || undefined,
     city: effectiveLocation.city || undefined,
@@ -55,23 +62,8 @@ function MobileAdvancedSearch() {
     // mexeu no slider (piso > 0 / teto < 1000), então é seguro repassar direto.
     minPrice: priceMin ? parseFloat(priceMin) : undefined,
     maxPrice: priceMax ? parseFloat(priceMax) : undefined,
-    page: currentPage,
     limit: 20,
   });
-
-  // Resetar página quando filtros mudarem
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [
-    dateFrom,
-    dateTo,
-    searchQuery,
-    effectiveLocation.state,
-    effectiveLocation.city,
-    searchParams.get("modalities"),
-    priceMin,
-    priceMax,
-  ]);
 
   const hasFilters = useMemo(() => {
     return !!(
@@ -165,14 +157,14 @@ function MobileAdvancedSearch() {
                   <EventCard key={event.id} event={event} />
                 ))}
               </div>
-              {currentPage < pagination.totalPages && (
+              {hasNextPage && (
                 <Button
-                  onClick={() => setCurrentPage((prev) => prev + 1)}
+                  onClick={() => fetchNextPage()}
                   className="w-full mt-6 border border-gray-6 text-gray-12"
                   variant="outline"
-                  disabled={isLoading}
+                  disabled={isFetchingNextPage}
                 >
-                  {isLoading ? "Carregando..." : "Carregar mais eventos"}
+                  {isFetchingNextPage ? "Carregando..." : "Carregar mais eventos"}
                 </Button>
               )}
             </>
@@ -186,7 +178,6 @@ function MobileAdvancedSearch() {
 function SearchContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
-  const [currentPage, setCurrentPage] = useState(1);
 
   // Extrair parâmetros da URL
   const searchQuery = searchParams.get("q") || undefined;
@@ -223,7 +214,15 @@ function SearchContent() {
     : undefined;
 
   // Buscar eventos usando a API
-  const { events, pagination, isLoading, query } = useEventSearch({
+  const {
+    events,
+    pagination,
+    isLoading,
+    query,
+    fetchNextPage,
+    isFetchingNextPage,
+    hasNextPage,
+  } = useEventSearch({
     q: searchQuery,
     country,
     state: effectiveLocation.state || undefined,
@@ -236,25 +235,8 @@ function SearchContent() {
     // client-side antigo, que comparava `event.price` (nunca retornado) e não funcionava.
     minPrice: priceMin ? parseFloat(priceMin) : undefined,
     maxPrice: priceMax ? parseFloat(priceMax) : undefined,
-    page: currentPage,
     limit: 20,
   });
-
-  // Resetar página quando filtros mudarem
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [
-    searchQuery,
-    country,
-    effectiveLocation.state,
-    effectiveLocation.city,
-    dateFrom,
-    dateTo,
-    includePast,
-    searchParams.get("modalities"),
-    priceMin,
-    priceMax,
-  ]);
 
   const initialDateRange = useMemo(() => {
     if (dateFrom || dateTo) {
@@ -419,12 +401,10 @@ function SearchContent() {
   };
 
   const handleLoadMore = () => {
-    if (currentPage < pagination.totalPages) {
-      setCurrentPage((prev) => prev + 1);
-    }
+    fetchNextPage();
   };
 
-  const hasMore = currentPage < pagination.totalPages;
+  const hasMore = hasNextPage;
 
   return (
     <>
@@ -523,9 +503,11 @@ function SearchContent() {
                   onClick={handleLoadMore}
                   className="w-full mt-8 border border-gray-6 text-gray-12"
                   variant="outline"
-                  disabled={isLoading}
+                  disabled={isFetchingNextPage}
                 >
-                  {isLoading ? "Carregando..." : "Carregar mais eventos"}
+                  {isFetchingNextPage
+                    ? "Carregando..."
+                    : "Carregar mais eventos"}
                 </Button>
               )}
             </>
