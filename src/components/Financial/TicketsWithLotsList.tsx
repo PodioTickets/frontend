@@ -290,7 +290,7 @@ export function TicketsWithLotsList({
         <div className="bg-gray-4 border-b border-gray-6 flex h-[44px] items-center">
           <div className="flex h-full items-center p-4 w-[289.5px]">
             <p className="font-inter font-medium leading-[1.3] text-sm text-gray-12">
-              Ingresso/Lotes
+              Ingresso
             </p>
           </div>
           <div className="flex flex-1 h-full items-center min-h-px min-w-px p-4">
