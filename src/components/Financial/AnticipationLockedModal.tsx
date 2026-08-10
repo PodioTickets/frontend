@@ -5,12 +5,29 @@ import { createPortal } from "react-dom";
 import { Zap } from "lucide-react";
 import { Button } from "../Button";
 
-/** Link do WhatsApp específico do pedido de liberação de antecipação. */
-const ANTICIPATION_WHATSAPP_URL =
-  "https://api.whatsapp.com/send/?phone=5511994302713&text=Preciso%20de%20antecipa%C3%A7%C3%A3o%20no%20meu%20evento";
+/** Telefone do suporte para o pedido de liberação de antecipação. */
+const ANTICIPATION_WHATSAPP_PHONE = "5511994302713";
+
+/**
+ * Monta o link do WhatsApp com a mensagem pré-preenchida, incluindo o nome do
+ * evento quando disponível: "Preciso de antecipação no meu evento NOME". O texto
+ * é sempre encodado (encodeURIComponent) para não quebrar a URL com acentos,
+ * espaços ou caracteres especiais do nome.
+ */
+const buildAnticipationWhatsappUrl = (eventName?: string) => {
+  const name = eventName?.trim();
+  const message = name
+    ? `Preciso de antecipação no meu evento ${name}`
+    : "Preciso de antecipação no meu evento";
+  return `https://api.whatsapp.com/send/?phone=${ANTICIPATION_WHATSAPP_PHONE}&text=${encodeURIComponent(
+    message,
+  )}`;
+};
 
 interface AnticipationLockedModalProps {
   onClose: () => void;
+  /** Nome do evento — anexado à mensagem do WhatsApp quando informado. */
+  eventName?: string;
 }
 
 /**
@@ -20,7 +37,7 @@ interface AnticipationLockedModalProps {
  * suas vendas", explicação e as ações "Fechar" / "Falar com a equipe" (WhatsApp
  * do suporte). Portal em `document.body` (z-80) por cima do AnticipationModal.
  */
-export function AnticipationLockedModal({ onClose }: AnticipationLockedModalProps) {
+export function AnticipationLockedModal({ onClose, eventName }: AnticipationLockedModalProps) {
   // Fecha no Esc.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -31,7 +48,11 @@ export function AnticipationLockedModal({ onClose }: AnticipationLockedModalProp
   }, [onClose]);
 
   const handleContactTeam = () => {
-    window.open(ANTICIPATION_WHATSAPP_URL, "_blank", "noopener,noreferrer");
+    window.open(
+      buildAnticipationWhatsappUrl(eventName),
+      "_blank",
+      "noopener,noreferrer",
+    );
     onClose();
   };
 

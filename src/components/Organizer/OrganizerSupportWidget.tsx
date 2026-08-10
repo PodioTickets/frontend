@@ -5,11 +5,26 @@ import Image from "next/image";
 import { AnimatePresence, motion } from "framer-motion";
 import { X } from "lucide-react";
 import { WhatsappIcon } from "@/components/Icons/WhatsappIcon";
+import { useOrganizerPermissions } from "@/contexts/OrganizerPermissionsContext";
 import { Button } from "../Button";
 
-/** Link do WhatsApp do assessor (fornecido pelo produto). */
-const ASSESSOR_WHATSAPP_URL =
-  "https://api.whatsapp.com/send/?phone=5511994302713&text=Ol%C3%A1!%20Sou%20organizador%20na%20P%C3%B3dioTicket%20e%20tenho%20algumas%20d%C3%BAvidas.";
+/** Telefone do WhatsApp do assessor (fornecido pelo produto). */
+const ASSESSOR_WHATSAPP_PHONE = "5511994302713";
+
+/**
+ * Monta o link do WhatsApp do assessor com a mensagem pré-preenchida, incluindo o
+ * nome da organização quando disponível: "…Minha organização é NOME". O texto é
+ * sempre encodado (encodeURIComponent) para não quebrar a URL com acentos, espaços
+ * ou caracteres especiais do nome.
+ */
+const buildAssessorWhatsappUrl = (organizationName?: string) => {
+  const name = organizationName?.trim();
+  const base = "Olá! Sou organizador na PódioTicket e tenho algumas dúvidas.";
+  const message = name ? `${base} Minha organização é ${name}` : base;
+  return `https://api.whatsapp.com/send/?phone=${ASSESSOR_WHATSAPP_PHONE}&text=${encodeURIComponent(
+    message,
+  )}`;
+};
 
 /**
  * Widget flutuante de suporte no canto inferior direito da interface do
@@ -20,6 +35,11 @@ const ASSESSOR_WHATSAPP_URL =
  */
 export function OrganizerSupportWidget() {
   const [open, setOpen] = useState(false);
+  const { organization } = useOrganizerPermissions();
+  // Nome de exibição da organização: nome fantasia quando houver, senão razão social.
+  const assessorWhatsappUrl = buildAssessorWhatsappUrl(
+    organization?.tradeName || organization?.name,
+  );
   const rootRef = useRef<HTMLDivElement>(null);
   const openSoundRef = useRef<HTMLAudioElement | null>(null);
   const closeSoundRef = useRef<HTMLAudioElement | null>(null);
@@ -125,7 +145,7 @@ export function OrganizerSupportWidget() {
             {/* Botão principal → WhatsApp */}
             <div className="p-4">
               <a
-                href={ASSESSOR_WHATSAPP_URL}
+                href={assessorWhatsappUrl}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="w-full"

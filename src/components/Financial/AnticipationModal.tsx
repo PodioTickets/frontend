@@ -19,6 +19,8 @@ import { AnticipationLockedModal } from "./AnticipationLockedModal";
 interface AnticipationModalProps {
   eventId: string;
   onClose: () => void;
+  /** Nome do evento — repassado ao gate "Antecipe suas vendas" p/ a mensagem do WhatsApp. */
+  eventName?: string;
   /** Chamado após a antecipação ser solicitada com sucesso (ex.: recarregar o drawer). */
   onSuccess?: () => void;
 }
@@ -29,7 +31,7 @@ const formatBRL = (cents: number) =>
     maximumFractionDigits: 2,
   });
 
-export function AnticipationModal({ eventId, onClose, onSuccess }: AnticipationModalProps) {
+export function AnticipationModal({ eventId, onClose, eventName, onSuccess }: AnticipationModalProps) {
   const [loading, setLoading] = useState(true);
   const [quote, setQuote] = useState<AnticipationQuote | null>(null);
   const [rawAmount, setRawAmount] = useState(0);
@@ -340,7 +342,7 @@ export function AnticipationModal({ eventId, onClose, onSuccess }: AnticipationM
     {/* Gate "Antecipe suas vendas" — evento sem antecipação habilitada. Abre ao
         clicar "Confirmar" sem permissão (portal próprio z-80). */}
     {showLocked && (
-      <AnticipationLockedModal onClose={() => setShowLocked(false)} />
+      <AnticipationLockedModal onClose={() => setShowLocked(false)} eventName={eventName} />
     )}
    </>
   );

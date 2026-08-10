@@ -21,6 +21,7 @@ import {
 } from "@/lib/orderCouponDiscount";
 import type { Ticket } from "@/hooks/useTickets";
 import { isSemInteresseVariation } from "@/utils/semInteresseVariation";
+import { hasDisplayableDistance } from "@/utils/checkoutModalityDisplay";
 import { buildParticipantTicketSlots } from "@/lib/checkoutProductStep";
 import { useSubscriptionData } from "@/hooks/useSubscriptionData";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -797,7 +798,7 @@ export function SubscriptionStep({
         quantity,
         raceName: ticket.name,
         categoryName: ticket.groupId ? categoryById.get(ticket.groupId) : undefined,
-        distance: ticket.distance ? `${ticket.distance} ${ticket.distanceUnit || ""}` : "",
+        distance: hasDisplayableDistance(ticket.distance) ? `${ticket.distance} ${ticket.distanceUnit || ""}` : "",
         price: getTicketPrice(ticket),
         total: getTicketPrice(ticket) * quantity,
       });

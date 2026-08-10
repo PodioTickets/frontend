@@ -26,6 +26,7 @@ import { useDeleteParticipantModal } from "@/stores/modalStore";
 import { useCheckoutTimer } from "@/contexts/CheckoutTimerContext";
 import { buildParticipantsPatchPayload } from "@/lib/checkoutParticipants";
 import { questionAppliesToTicket } from "@/utils/questionAnswer";
+import { hasDisplayableDistance } from "@/utils/checkoutModalityDisplay";
 import { useCheckoutReservation } from "@/hooks/useCheckoutReservation";
 import { UserAutocomplete } from "../UserAutocomplete";
 import { MobileSummaryBar } from "./MobileSummaryBar";
@@ -666,7 +667,7 @@ export function InformationStep({
       category.tickets.forEach((ticket) => {
         const quantity = raceQuantities[ticket.id] || 0;
         if (quantity > 0) {
-          const distance = ticket.distance ? `${ticket.distance}${ticket.distanceUnit || "K"}` : "";
+          const distance = hasDisplayableDistance(ticket.distance) ? `${ticket.distance}${ticket.distanceUnit || "K"}` : "";
           grouped.push({
             quantity,
             categoryName: category.name,
@@ -683,7 +684,7 @@ export function InformationStep({
     uncategorizedTickets.forEach((ticket) => {
       const quantity = raceQuantities[ticket.id] || 0;
       if (quantity > 0) {
-        const distance = ticket.distance ? `${ticket.distance}${ticket.distanceUnit || "K"}` : "";
+        const distance = hasDisplayableDistance(ticket.distance) ? `${ticket.distance}${ticket.distanceUnit || "K"}` : "";
         grouped.push({
           quantity,
           categoryName: "",
