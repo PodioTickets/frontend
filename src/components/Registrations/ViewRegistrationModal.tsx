@@ -656,13 +656,15 @@ export function ViewRegistrationModal() {
     const dist = ticket?.distance;
     if (dist != null && String(dist).trim() !== "") {
       const distanceStr = String(dist).trim();
+      // Distância 0 (ou "0"/"0.0") = sem corrida associada → não exibe o bloco.
+      if (parseFloat(distanceStr.replace(",", ".")) === 0) return "—";
       // Legado já vinha com a unidade embutida (ex.: "5 KM") — não duplica.
       if (/[a-zA-Z]/.test(distanceStr)) return distanceStr;
       const unit = ticket?.distanceUnit || "Km";
       return `${distanceStr} ${unit}`;
     }
     const modalityDist = currentRegistration?.modalities?.[0]?.modality?.distance;
-    if (modalityDist != null) {
+    if (modalityDist != null && parseFloat(String(modalityDist)) > 0) {
       return `${(parseFloat(String(modalityDist)) / 1000).toFixed(1)} Km`;
     }
     return "—";
@@ -1437,7 +1439,7 @@ export function ViewRegistrationModal() {
           loading={resendingEmail}
           ticketCount={1}
           title="Reenviar ingresso"
-          description="Envie novamente o ingresso para o e-mail cadastrado na inscrição."
+          description="Reenvie o ingresso para o e-mail do participante."
           confirmLabel="Reenviar ingresso"
         />
       </>
@@ -1520,7 +1522,7 @@ export function ViewRegistrationModal() {
         loading={resendingEmail}
         ticketCount={1}
         title="Reenviar ingresso"
-        description="Envie novamente o ingresso para o e-mail cadastrado na inscrição."
+        description="Reenvie o ingresso para o e-mail do participante."
         confirmLabel="Reenviar ingresso"
       />
     </>

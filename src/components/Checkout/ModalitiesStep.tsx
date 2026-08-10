@@ -1,6 +1,7 @@
 "use client";
 
 import { TicketCategoryCard } from "./TicketCategoryCard";
+import { hasDisplayableDistance } from "@/utils/checkoutModalityDisplay";
 import { EventInfo } from "./EventInfo";
 import type { Event } from "@/interfaces/event";
 import { Fragment } from "react/jsx-runtime";
@@ -450,7 +451,7 @@ export function ModalitiesStep({ event, onNext, onBack, isSubmitting = false, di
       category.tickets.forEach((ticket) => {
         const quantity = raceQuantities[ticket.id] || 0;
         if (quantity > 0) {
-          const distance = ticket.distance ? `${ticket.distance}${ticket.distanceUnit || "K"}` : "";
+          const distance = hasDisplayableDistance(ticket.distance) ? `${ticket.distance}${ticket.distanceUnit || "K"}` : "";
           grouped.push({
             quantity,
             ticketName: ticket.name,
@@ -467,7 +468,7 @@ export function ModalitiesStep({ event, onNext, onBack, isSubmitting = false, di
     uncategorizedTickets.forEach((ticket) => {
       const quantity = raceQuantities[ticket.id] || 0;
       if (quantity > 0) {
-        const distance = ticket.distance ? `${ticket.distance}${ticket.distanceUnit || "K"}` : "";
+        const distance = hasDisplayableDistance(ticket.distance) ? `${ticket.distance}${ticket.distanceUnit || "K"}` : "";
         grouped.push({
           quantity,
           ticketName: ticket.name,

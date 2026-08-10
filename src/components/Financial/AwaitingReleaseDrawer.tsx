@@ -753,6 +753,7 @@ export function AwaitingReleaseDrawer({
       {isAnticipationOpen && (
         <AnticipationModal
           eventId={eventId}
+          eventName={eventName}
           onClose={() => setIsAnticipationOpen(false)}
           onSuccess={() => loadPendingReleases(currentPage)}
         />

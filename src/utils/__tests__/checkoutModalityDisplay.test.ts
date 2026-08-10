@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { ticketNameHasDistance } from "../checkoutModalityDisplay";
+import {
+  hasDisplayableDistance,
+  ticketNameHasDistance,
+} from "../checkoutModalityDisplay";
 
 describe("ticketNameHasDistance", () => {
   it.each([
@@ -30,4 +33,20 @@ describe("ticketNameHasDistance", () => {
     expect(ticketNameHasDistance(null)).toBe(false);
     expect(ticketNameHasDistance(undefined)).toBe(false);
   });
+});
+
+describe("hasDisplayableDistance", () => {
+  it.each([5, "5", "5 km", "14", "21.1", "21,1", 0.5])(
+    "exibe quando distância > 0 (%p)",
+    (value) => {
+      expect(hasDisplayableDistance(value)).toBe(true);
+    },
+  );
+
+  it.each([0, "0", "0.0", "0,0", "", "   ", null, undefined, "abc"])(
+    "oculta quando 0/ausente/não-numérico (%p)",
+    (value) => {
+      expect(hasDisplayableDistance(value)).toBe(false);
+    },
+  );
 });
