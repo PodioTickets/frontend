@@ -1,15 +1,58 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, ChevronLeft, ChevronRight } from "lucide-react";
 import { ImageWithInitialFallback } from "@/components/ImageWithInitialFallback";
+import { itemInitialLetter } from "@/utils/itemInitial";
 import {
   orderCarouselItemsWithPreferredInCenter,
   type ImageCarouselItem,
 } from "@/utils/ticketProductVisuals";
 
 export type { ImageCarouselItem } from "@/utils/ticketProductVisuals";
+
+/**
+ * Imagem principal do lightbox — exibida no TAMANHO NATURAL, apenas encolhida
+ * (`max-h-full`/`max-w-full`, `w/h-auto`) para caber na área livre já dimensionada
+ * por flexbox. NÃO usa `fill`/`object-contain` (que AMPLIAM imagens pequenas até
+ * preencher a caixa quase-tela-cheia → "grande demais"/borrada) nem unidades `vh`
+ * (que no iOS Safari resolvem pra viewport inteira, ignorando os insets do Header/
+ * MobileSummaryBar, e a imagem estouraria atrás das barras). Fallback = inicial.
+ */
+function LightboxImage({
+  src,
+  alt,
+  name,
+  fallbackId,
+}: {
+  src: string | null | undefined;
+  alt: string;
+  name: string;
+  fallbackId?: string;
+}) {
+  const trimmed = src?.trim() ?? "";
+  const [failed, setFailed] = useState(false);
+  useEffect(() => setFailed(false), [trimmed]);
+  const onError = useCallback(() => setFailed(true), []);
+
+  if (!trimmed || failed) {
+    return (
+      <span className="select-none font-family-dm-sans text-7xl font-semibold text-gray-11 md:text-8xl">
+        {itemInitialLetter(name, fallbackId)}
+      </span>
+    );
+  }
+  return (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      src={trimmed}
+      alt={alt}
+      onError={onError}
+      className="h-auto max-h-full w-auto max-w-full select-none object-contain"
+    />
+  );
+}
 
 interface ImageCarouselModalProps {
   items: ImageCarouselItem[];
@@ -81,24 +124,19 @@ export function ImageCarouselModal({
     };
   }, [isOpen]);
 
-  /* Insets do mobile: o Header (fixo no topo) e a MobileSummaryBar (fixa na
-   * base) cobrem o modal — e a barra é mais alta que o header, então centralizar
-   * na viewport inteira deixa a imagem baixa demais (parte escondida atrás da
-   * barra). Medimos as duas (robusto a mudanças de altura) e centralizamos a
-   * imagem na ÁREA LIVRE entre elas. No desktop não há barra e o layout
-   * centralizado já está correto → insets zerados (= inset-0 puro). */
-  const [mobileInsets, setMobileInsets] = useState({ top: 0, bottom: 0 });
+  /* Insets: o Header (fixo, `z-999` — ACIMA do modal em TODOS os breakpoints) e a
+   * MobileSummaryBar (fixa na base, só no mobile) cobrem o modal. Sem descontar o
+   * header, o topo do modal (inclusive o botão FECHAR) fica ESCONDIDO atrás da
+   * navbar. Medimos as duas alturas (robusto a mudanças) e confinamos o modal à
+   * ÁREA LIVRE entre elas — em desktop E mobile. A barra não existe no desktop
+   * (`querySelector` → null → 0), então o inset inferior se ajusta sozinho. */
+  const [viewportInsets, setViewportInsets] = useState({ top: 0, bottom: 0 });
   useEffect(() => {
     if (!isOpen || typeof window === "undefined") return;
     const compute = () => {
-      const isMobile = window.matchMedia("(max-width: 767px)").matches;
-      if (!isMobile) {
-        setMobileInsets({ top: 0, bottom: 0 });
-        return;
-      }
       const header = document.querySelector("header");
       const bar = document.querySelector('[data-mobile-summary-bar="true"]');
-      setMobileInsets({
+      setViewportInsets({
         top: header?.getBoundingClientRect().height ?? 0,
         bottom: bar?.getBoundingClientRect().height ?? 0,
       });
@@ -160,15 +198,16 @@ export function ImageCarouselModal({
             onClick={onClose}
           />
 
-          {/* Modal — centraliza na área livre entre Header e MobileSummaryBar no
-              mobile (insets); no desktop os insets são 0 (= viewport inteira). */}
+          {/* Modal — confinado à área livre entre Header (fixo, z-999) e a
+              MobileSummaryBar. Descontar o header em TODOS os breakpoints mantém o
+              botão FECHAR e o topo da imagem SEMPRE visíveis (fora da navbar). */}
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.95 }}
             transition={{ duration: 0.2 }}
             className="fixed inset-0 z-50 flex items-center justify-center p-4"
-            style={{ top: mobileInsets.top, bottom: mobileInsets.bottom }}
+            style={{ top: viewportInsets.top, bottom: viewportInsets.bottom }}
             onClick={onClose}
           >
             <div
@@ -209,18 +248,13 @@ export function ImageCarouselModal({
                     animate={{ opacity: 1, x: 0 }}
                     exit={{ opacity: 0, x: -20 }}
                     transition={{ duration: 0.3 }}
-                    className="relative h-full w-full max-w-5xl"
+                    className="flex h-full w-full max-w-3xl items-center justify-center"
                   >
-                    <ImageWithInitialFallback
+                    <LightboxImage
                       src={current.src}
                       alt={`${ticketName} — ${current.name}`}
                       name={current.name}
                       fallbackId={current.id}
-                      fill
-                      sizes="(max-width: 768px) 100vw, min(90vw, 896px)"
-                      className="w-full h-full border-0 bg-transparent"
-                      imgClassName="object-contain"
-                      letterClassName="text-7xl md:text-8xl"
                     />
                   </motion.div>
                 </div>
