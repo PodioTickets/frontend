@@ -724,7 +724,7 @@ const TicketItemDesktop = memo(({
             </h2>
 
             <div className="flex items-center gap-8 flex-wrap min-w-0">
-              {modalityInfo && (
+              {modalityInfo && distanceKm > 0 && (
                 <div className="flex items-center gap-2">
                   {modalityInfo.icon ? (
                     <div className="size-6 shrink-0 relative rounded overflow-hidden flex items-center justify-center">
