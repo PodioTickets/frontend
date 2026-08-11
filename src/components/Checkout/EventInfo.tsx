@@ -114,7 +114,7 @@ export function EventInfo({ event, onNext, isSubmitting = false, tickets = [], c
     uncategorizedTickets.forEach((ticket) => {
       const quantity = raceQuantities[ticket.id] || 0;
       if (quantity > 0) {
-        const distance = ticket.distance ? `${ticket.distance}${ticket.distanceUnit || "K"}` : "";
+        const distance = hasDisplayableDistance(ticket.distance) ? `${ticket.distance}${ticket.distanceUnit || "K"}` : "";
         grouped.push({
           quantity,
           ticketName: ticket.name,
