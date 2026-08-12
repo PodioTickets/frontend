@@ -6,7 +6,6 @@ import { ModalsProvider } from "./ModalsProvider";
 import { LanguageProvider } from "@/contexts/LanguageContext";
 import { ProfileCompleteChecker } from "./ProfileCompleteChecker";
 import { CouponLinkCapture } from "./CouponLinkCapture";
-import { AdBlockChecker } from "./AdBlockChecker";
 
 const Providers = ({ children }: PropsWithChildren) => {
   return (
@@ -16,7 +15,6 @@ const Providers = ({ children }: PropsWithChildren) => {
           <ModalsProvider />
           <ProfileCompleteChecker />
           <CouponLinkCapture />
-          <AdBlockChecker />
           {children}
         </AuthProvider>
       </QueryProvider>

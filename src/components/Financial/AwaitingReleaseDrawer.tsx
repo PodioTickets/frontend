@@ -571,10 +571,14 @@ export function AwaitingReleaseDrawer({
                     </p>
                   </div>
                 </div>
-                {/* Botão "Solicitar antecipação" OCULTO temporariamente — bug no
-                    cálculo de dias da antecipação (pula o pedido mais próximo de
-                    liberar / cobra dias a mais). Reexibir após corrigir o /quote
-                    (loadAnticipatableUnits / daysUntilRelease). */}
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setIsAnticipationOpen(true)}
+                  className="border-gray-6 text-gray-12 font-manrope font-bold text-base"
+                >
+                  Solicitar antecipação
+                </Button>
               </div>
 
               {/* Tabs + Search */}
