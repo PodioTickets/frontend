@@ -1330,7 +1330,7 @@ export function ViewRegistrationModal() {
                   <p className="font-family-dm-sans font-normal text-base text-gray-11 break-words">
                     {label}
                   </p>
-                  <p className="font-family-dm-sans font-medium text-base text-gray-12 break-words mt-4">
+                  <p className="font-family-dm-sans font-medium text-base text-gray-12 break-words mt-2">
                     R: {formatAnswer(q.answer)}
                   </p>
                 </div>
