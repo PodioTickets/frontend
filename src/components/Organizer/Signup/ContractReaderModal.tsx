@@ -117,7 +117,7 @@ export function ContractReaderModal({
 
             <div className="flex-1 overflow-y-auto bg-gray-2 p-5 md:p-6">
               <div className="flex flex-col gap-6 font-family-dm-sans">
-                <LegalDocumentBody blocks={contract.blocks} />
+                <LegalDocumentBody blocks={contract.blocks} compact />
               </div>
             </div>
 

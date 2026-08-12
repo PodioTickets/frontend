@@ -1,17 +1,21 @@
 import type { LucideIcon } from "lucide-react";
 import { FileText, ShieldCheck, RotateCcw, Wallet } from "lucide-react";
 import type { LegalBlock } from "@/components/LegalDocument";
-import { termsOfUse } from "./termsOfUse";
+import { contratoPrincipal } from "./organizerContracts/contratoPrincipal";
+import { politicaAntifraude } from "./organizerContracts/politicaAntifraude";
+import { politicaCancelamento } from "./organizerContracts/politicaCancelamento";
+import { politicaRepasse } from "./organizerContracts/politicaRepasse";
 
 /**
  * Contratos que o organizador precisa aceitar no auto-cadastro
  * (`/organizer/create`, etapa "revise os contratos"). O leitor renderiza
  * `blocks` via `LegalDocumentBody`.
  *
- * "Contrato principal" reusa os Termos de Uso existentes (`@/data/termsOfUse`).
- * Os demais (antifraude / cancelamento / repasse) ainda NÃO têm texto oficial no
- * repo — estão com um bloco PLACEHOLDER. Substitua `blocks` pelo conteúdo real
- * (mesmo formato `LegalBlock[]`) quando o jurídico fornecer.
+ * Cada `blocks` é o texto oficial extraído dos documentos jurídicos em
+ * `docs/*.docx` (versão 27/06/2026). O "Contrato principal" é o documento base;
+ * as três políticas são Documentos Complementares indissociáveis dele
+ * (Cláusula 3). Ao atualizar o texto oficial, regenere os arquivos em
+ * `./organizerContracts/` a partir dos `.docx` e ajuste `CONTRACT_UPDATED_AT`.
  */
 export interface OrganizerContract {
   id: string;
@@ -22,51 +26,40 @@ export interface OrganizerContract {
   blocks: LegalBlock[];
 }
 
-const CONTRACT_UPDATED_AT = "01/01/2026";
-
-/** TODO(jurídico): substituir pelo texto oficial do documento. */
-function placeholderBlocks(title: string): LegalBlock[] {
-  return [
-    {
-      type: "p",
-      text: `O texto oficial de "${title}" ainda será disponibilizado. Este é um conteúdo provisório apenas para validação do fluxo de aceite.`,
-    },
-  ];
-}
+const CONTRACT_UPDATED_AT = "27/06/2026";
 
 export const ORGANIZER_CONTRACTS: OrganizerContract[] = [
   {
     id: "main",
     title: "Contrato principal",
-    subtitle: "Regras gerais de uso da plataforma",
+    subtitle: "Intermediação tecnológica para eventos",
     icon: FileText,
     updatedAt: CONTRACT_UPDATED_AT,
-    // Reusa os Termos de Uso (ignora o bloco h1, que vira o título do leitor).
-    blocks: termsOfUse.filter((b) => b.type !== "h1"),
+    blocks: contratoPrincipal,
   },
   {
     id: "antifraud",
     title: "Política antifraude",
-    subtitle: "Prevenção e responsabilidades",
+    subtitle: "Prevenção a fraudes e segurança",
     icon: ShieldCheck,
     updatedAt: CONTRACT_UPDATED_AT,
-    blocks: placeholderBlocks("Política antifraude"),
+    blocks: politicaAntifraude,
   },
   {
     id: "cancellation",
     title: "Política de cancelamento",
-    subtitle: "Regras de estorno e cancelamento",
+    subtitle: "Reembolso e disputas de pagamento",
     icon: RotateCcw,
     updatedAt: CONTRACT_UPDATED_AT,
-    blocks: placeholderBlocks("Política de cancelamento"),
+    blocks: politicaCancelamento,
   },
   {
     id: "transfer",
     title: "Política de repasse",
-    subtitle: "Prazos e condições de pagamento",
+    subtitle: "Repasse e taxas de serviço",
     icon: Wallet,
     updatedAt: CONTRACT_UPDATED_AT,
-    blocks: placeholderBlocks("Política de repasse"),
+    blocks: politicaRepasse,
   },
 ];
 
