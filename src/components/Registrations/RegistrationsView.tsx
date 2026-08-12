@@ -155,10 +155,8 @@ export function RegistrationsView({
           </p>
         </div>
 
-        <RegistrationsStatsCards stats={stats} />
-
         {/* Mobile: Search + Limpar + Filtros row */}
-        <div className="md:hidden flex flex-col gap-2 items-center mb-4">
+        <div className="md:hidden flex flex-col gap-2 items-center my-4">
           <div className="flex-1 w-full min-w-[140px] border border-gray-6 rounded-lg h-10 flex items-center gap-2 px-3 bg-gray-1">
             <Search className="size-5 text-gray-11 shrink-0" />
             <input
