@@ -23,6 +23,9 @@ import { organizerService } from "@/services";
 import { Loading } from "../Loading";
 import { DistanceIcon } from "../Icons/DistanceIcon";
 import { ArrowButton } from "../ArrowButton";
+import { RegistrationQRCode } from "@/components/QRCode/RegistrationQRCode";
+import { formatShortId } from "@/utils/shortId";
+import { getCurrentSurface } from "@/lib/authSurface";
 import {
   isPersonBr,
   documentLabel,
@@ -273,6 +276,10 @@ export function ViewRegistrationModal() {
   const [registrationData, setRegistrationData] = useState<any>(null);
   const [isDownloadingTicket, setIsDownloadingTicket] = useState(false);
 
+  // Aba ativa do corpo (Figma 6379:147182): Informações | Produtos | Questionário.
+  // O cabeçalho "Ingresso" (com QR) fica FIXO acima das abas.
+  const [activeTab, setActiveTab] = useState<"info" | "products" | "questions">("info");
+
   // Reenvio do e-mail (mesmo fluxo do modal de pedido — ResendTicketsModal).
   const [showResendModal, setShowResendModal] = useState(false);
   const [resendingEmail, setResendingEmail] = useState(false);
@@ -441,6 +448,7 @@ export function ViewRegistrationModal() {
     setSavingProductId(null);
     setProductVariations({});
     setShowResendModal(false);
+    setActiveTab("info");
   }, [isOpen, registrationId]);
 
   /* DESKTOP apenas. Quando aberto SOBRE um vaul Drawer (fluxo financeiro), o vaul
@@ -496,6 +504,13 @@ export function ViewRegistrationModal() {
   }, [isOpen, isMdUp]);
 
   const currentRegistration = registrationData;
+
+  /* Edição das informações da inscrição (participante / respostas / variação) é
+   * EXCLUSIVA do admin. O modal é usado nas duas superfícies (admin e organizador),
+   * então gateamos pela SUPERFÍCIE autoritativa (meta do server), não por permissão
+   * de provider (o modal vive fora dos providers — ver feedback do projeto). A
+   * VERDADE é o backend: os endpoints de edição rejeitam não-admin (403). */
+  const isAdmin = getCurrentSurface() === "admin";
 
   const getGenderLabel = (gender?: string) => {
     if (!gender) return "";
@@ -1037,9 +1052,7 @@ export function ViewRegistrationModal() {
     </div>
   );
 
-  const divider = <div className="w-full h-px bg-gray-6" />;
-
-  // ── Seções (coluna única, compartilhadas entre desktop e mobile) ───────────
+  // ── Seções (compartilhadas entre desktop e mobile) ─────────────────────────
   const participantSection = (
     <section className="flex flex-col gap-4">
       <h3 className="font-manrope font-bold text-xl text-gray-12">
@@ -1146,45 +1159,61 @@ export function ViewRegistrationModal() {
             {infoField("Telefone", formatPhone(participantPhone) || "—")}
             {emergencyPhone ? infoField("Telefone de emergência", emergencyPhone) : null}
           </div>
-          <div className="flex justify-end">
-            <button
-              type="button"
-              onClick={startEditingParticipant}
-              className="font-family-dm-sans font-medium text-base text-gray-11 underline hover:text-gray-12 transition-colors cursor-pointer"
-            >
-              Editar
-            </button>
-          </div>
+          {isAdmin && (
+            <div className="flex justify-end">
+              <button
+                type="button"
+                onClick={startEditingParticipant}
+                className="font-family-dm-sans font-medium text-base text-gray-11 underline hover:text-gray-12 transition-colors cursor-pointer"
+              >
+                Editar
+              </button>
+            </div>
+          )}
         </>
       )}
     </section>
   );
 
-  const ingressoSection = (
-    <section className="flex flex-col gap-5">
-      <h3 className="font-manrope font-bold text-xl text-gray-12">Ingresso</h3>
-      <div className="flex flex-col gap-0">
-        <p className="font-family-dm-sans text-base text-gray-11">{categoryName}</p>
-        <p className="font-family-dm-sans font-medium text-xl text-gray-12">{ticketName}</p>
-        {/* Se o nome do ingresso já traz a distância (ex.: "3KM"), NÃO repete o
-            bloco de distância — mesma regra do card de ingresso do checkout. */}
-        {ticketDistance !== "—" && !ticketNameHasDistance(ticketName) && (
-          <div className="flex items-center gap-2">
-            <DistanceIcon className="size-5 text-gray-12" />
-            <p className="font-family-dm-sans font-medium text-lg text-gray-12">
-              {ticketDistance}
-            </p>
-          </div>
-        )}
+  /* Cabeçalho "Ingresso" (Figma 6379:147182): dados do ingresso à esquerda + QR
+     Code com "ID da inscrição" à direita. Fica FIXO acima das abas. */
+  const ingressoHeader = (
+    <div className="flex items-start justify-between gap-4 pb-5 border-b border-gray-6">
+      <section className="flex flex-col gap-4 min-w-0">
+        <h3 className="font-manrope font-bold text-xl text-gray-12">Ingresso</h3>
+        <div className="flex flex-col gap-0 min-w-0">
+          <p className="font-family-dm-sans text-base text-gray-11 break-words">{categoryName}</p>
+          <p className="font-family-dm-sans font-medium text-xl text-gray-12 break-words">{ticketName}</p>
+          {/* Se o nome do ingresso já traz a distância (ex.: "3KM"), NÃO repete o
+              bloco de distância — mesma regra do card de ingresso do checkout. */}
+          {ticketDistance !== "—" && !ticketNameHasDistance(ticketName) && (
+            <div className="flex items-center gap-2 mt-1">
+              <DistanceIcon className="size-5 text-gray-12" />
+              <p className="font-family-dm-sans font-medium text-lg text-gray-12">
+                {ticketDistance}
+              </p>
+            </div>
+          )}
+        </div>
+      </section>
+      <div className="flex flex-col items-end gap-1.5 shrink-0">
+        <RegistrationQRCode
+          qrCodeData={currentRegistration?.qrCode || { registrationId: registrationId || "" }}
+          size={122}
+        />
+        <p className="font-family-dm-sans text-xs text-gray-11 text-right">
+          ID da inscrição: {formatShortId(registrationId)}
+        </p>
       </div>
-    </section>
+    </div>
   );
 
   const hasEditableProduct = (products as ModalProduct[]).some((p) => !!p.productId);
-  const produtosSection =
-    products.length > 0 ? (
-      <section className="flex flex-col gap-5">
-        <h3 className="font-manrope font-bold text-xl text-gray-12">Produtos</h3>
+  const produtosSection = (
+    <section className="flex flex-col gap-5">
+      <h3 className="font-manrope font-bold text-xl text-gray-12">Produtos do kit</h3>
+      {products.length > 0 ? (
+        <>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-start">
           {(products as ModalProduct[]).map((product, index) => {
             const pid = product.productId || "";
@@ -1250,7 +1279,7 @@ export function ViewRegistrationModal() {
             );
           })}
         </div>
-        {hasEditableProduct && (
+        {isAdmin && hasEditableProduct && (
           <div className="flex justify-end">
             <button
               type="button"
@@ -1261,8 +1290,14 @@ export function ViewRegistrationModal() {
             </button>
           </div>
         )}
-      </section>
-    ) : null;
+        </>
+      ) : (
+        <p className="font-family-dm-sans font-normal text-base text-gray-11">
+          Nenhum produto para este participante.
+        </p>
+      )}
+    </section>
+  );
 
   const perguntasSection = (
     <section className="flex flex-col gap-4">
@@ -1291,12 +1326,12 @@ export function ViewRegistrationModal() {
                 );
               }
               return (
-                <div key={q.id || qid || index} className="flex flex-col gap-1.5 py-2">
+                <div key={q.id || qid || index} className="flex flex-col py-2">
                   <p className="font-family-dm-sans font-normal text-base text-gray-11 break-words">
                     {label}
                   </p>
-                  <p className="font-family-dm-sans font-medium text-base text-gray-12 break-words">
-                    {formatAnswer(q.answer)}
+                  <p className="font-family-dm-sans font-medium text-base text-gray-12 break-words mt-4">
+                    R: {formatAnswer(q.answer)}
                   </p>
                 </div>
               );
@@ -1323,15 +1358,17 @@ export function ViewRegistrationModal() {
               </Button>
             </div>
           ) : (
-            <div className="flex justify-end">
-              <button
-                type="button"
-                onClick={startEditingAnswers}
-                className="font-family-dm-sans font-medium text-base text-gray-11 underline hover:text-gray-12 transition-colors cursor-pointer"
-              >
-                Editar
-              </button>
-            </div>
+            isAdmin && (
+              <div className="flex justify-end">
+                <button
+                  type="button"
+                  onClick={startEditingAnswers}
+                  className="font-family-dm-sans font-medium text-base text-gray-11 underline hover:text-gray-12 transition-colors cursor-pointer"
+                >
+                  Editar
+                </button>
+              </div>
+            )
           )}
         </>
       ) : (
@@ -1342,16 +1379,43 @@ export function ViewRegistrationModal() {
     </section>
   );
 
-  // Conteúdo em coluna única — mesmo corpo no desktop e no mobile.
+  // Corpo (Figma 6379:147182): cabeçalho "Ingresso" fixo → abas → seção da aba
+  // ativa. Mesmo corpo no desktop e no mobile.
+  // Produtos/Questionário só aparecem se houver conteúdo (mesma regra do cliente).
+  const tabs: { key: "info" | "products" | "questions"; label: string }[] = [
+    { key: "info", label: "Informações" },
+    ...(products.length > 0
+      ? [{ key: "products" as const, label: "Produtos" }]
+      : []),
+    ...(questions.length > 0
+      ? [{ key: "questions" as const, label: "Questionário" }]
+      : []),
+  ];
   const content = (
-    <div className="flex flex-col gap-6 md:gap-8">
-      {participantSection}
-      {divider}
-      {ingressoSection}
-      {produtosSection && divider}
-      {produtosSection}
-      {divider}
-      {perguntasSection}
+    <div className="flex flex-col">
+      {ingressoHeader}
+      <div className="flex flex-wrap gap-2 pt-5">
+        {tabs.map((t) => (
+          <button
+            key={t.key}
+            type="button"
+            onClick={() => setActiveTab(t.key)}
+            className={cn(
+              "px-4 py-2.5 rounded-[32px] font-manrope font-semibold text-base leading-[1.1] transition-colors cursor-pointer",
+              activeTab === t.key
+                ? "bg-primary-11 text-primary-2"
+                : "bg-gray-5 text-gray-11 hover:bg-gray-6",
+            )}
+          >
+            {t.label}
+          </button>
+        ))}
+      </div>
+      <div className="pt-6">
+        {activeTab === "info" && participantSection}
+        {activeTab === "products" && produtosSection}
+        {activeTab === "questions" && perguntasSection}
+      </div>
     </div>
   );
 
