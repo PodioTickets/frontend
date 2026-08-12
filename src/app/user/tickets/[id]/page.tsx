@@ -398,6 +398,11 @@ export default function TicketDetailsPage() {
               const tab = activeTab[index] || "info";
               const qrCode = `${process.env.NEXT_PUBLIC_ROOT_SITE_URL}/user/tickets/${orderId}`;
               const ticket = participant.ticket || {};
+              // Abas condicionais: Produtos/Questionário só aparecem se houver conteúdo.
+              const hasProducts =
+                (participant.includedProducts?.length || 0) > 0 ||
+                (participant.additionalProducts?.length || 0) > 0;
+              const hasQuestions = (participant.questionAnswers?.length || 0) > 0;
               return (
                 <div
                   key={participant.id || index}
@@ -506,20 +511,24 @@ export default function TicketDetailsPage() {
                       >
                         Informações
                       </button>
-                      <button
-                        onClick={() => setActiveTab((prev) => ({ ...prev, [index]: "products" }))}
-                        className={`px-4 py-3 rounded-[32px] font-semibold text-base font-manrope leading-[1.1] transition-colors ${tab === "products" ? "bg-primary-11 text-primary-2" : "bg-gray-5 text-gray-11"
-                          }`}
-                      >
-                        Produtos
-                      </button>
-                      <button
-                        onClick={() => setActiveTab((prev) => ({ ...prev, [index]: "questions" }))}
-                        className={`px-4 py-3 rounded-[32px] font-semibold text-base font-manrope leading-[1.1] transition-colors ${tab === "questions" ? "bg-primary-11 text-primary-2" : "bg-gray-5 text-gray-11"
-                          }`}
-                      >
-                        Questionário
-                      </button>
+                      {hasProducts && (
+                        <button
+                          onClick={() => setActiveTab((prev) => ({ ...prev, [index]: "products" }))}
+                          className={`px-4 py-3 rounded-[32px] font-semibold text-base font-manrope leading-[1.1] transition-colors ${tab === "products" ? "bg-primary-11 text-primary-2" : "bg-gray-5 text-gray-11"
+                            }`}
+                        >
+                          Produtos
+                        </button>
+                      )}
+                      {hasQuestions && (
+                        <button
+                          onClick={() => setActiveTab((prev) => ({ ...prev, [index]: "questions" }))}
+                          className={`px-4 py-3 rounded-[32px] font-semibold text-base font-manrope leading-[1.1] transition-colors ${tab === "questions" ? "bg-primary-11 text-primary-2" : "bg-gray-5 text-gray-11"
+                            }`}
+                        >
+                          Questionário
+                        </button>
+                      )}
                     </div>
                   )}
 
@@ -620,8 +629,8 @@ export default function TicketDetailsPage() {
                                       ? qa.question
                                       : qa.question?.question) || "Pergunta"}
                                   </label>
-                                  <p className="text-base font-medium text-gray-12 font-family-dm-sans">
-                                    {formatAnswer(qa.answer)}
+                                  <p className="text-base font-medium text-gray-12 font-family-dm-sans mt-4">
+                                    R: {formatAnswer(qa.answer)}
                                   </p>
                                 </div>
                               ))}
