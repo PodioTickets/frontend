@@ -123,19 +123,6 @@ export default function OrganizerLoginPage() {
     }
   };
 
-  const footer = (
-    <p className="text-xs lg:text-sm text-gray-11 font-family-dm-sans text-center max-w-[328px] leading-[1.3]">
-      Ao continuar você concorda com nossos{" "}
-      <Link href={publicSiteHref("/terms")} className="font-bold text-gray-12 underline hover:text-gray-11 transition-colors">
-        Termos de serviço
-      </Link>{" "}
-      e{" "}
-      <Link href={publicSiteHref("/privacy")} className="font-bold text-gray-12 underline hover:text-gray-11 transition-colors">
-        Política de privacidade
-      </Link>
-    </p>
-  );
-
   const fecharModal = () => {
     setMfaToken(null);
     setMfaCode("");
@@ -232,126 +219,135 @@ export default function OrganizerLoginPage() {
         <div className="flex flex-col gap-6 w-full lg:max-w-[470px] lg:flex-1 lg:justify-center lg:gap-6 xl:gap-8">
 
           {/* Identity */}
-            <div className="flex flex-row items-center gap-3 lg:flex-col lg:items-center lg:gap-4 xl:gap-8">
-              <div className="size-[72px] lg:size-20 xl:size-24 rounded-full flex items-center justify-center shrink-0 bg-linear-to-t from-gray-1 to-gray-8 p-3">
-                <div className="size-full flex items-center justify-center bg-white rounded-full p-2.5 lg:p-3 xl:p-4">
-                  <HotelsIcon className="size-9 lg:size-11 xl:size-[52px] text-gray-12" />
-                </div>
-              </div>
-              <div className="flex flex-col gap-1 lg:gap-2 xl:gap-3 lg:items-center lg:text-center">
-                <h1 className="text-xl xl:text-2xl font-bold text-gray-12 font-manrope leading-[1.1]">
-                  Conecte sua conta
-                </h1>
-                <p className="text-sm xl:text-lg text-gray-11 font-family-dm-sans leading-[1.3]">
-                  Plataforma exclusiva para organizadores
-                </p>
+          <div className="flex flex-row items-center gap-3 lg:flex-col lg:items-center lg:gap-4 xl:gap-8">
+            <div className="size-[72px] lg:size-20 xl:size-24 rounded-full flex items-center justify-center shrink-0 bg-linear-to-t from-gray-1 to-gray-8 p-3">
+              <div className="size-full flex items-center justify-center bg-white rounded-full p-2.5 lg:p-3 xl:p-4">
+                <HotelsIcon className="size-9 lg:size-11 xl:size-[52px] text-gray-12" />
               </div>
             </div>
+            <div className="flex flex-col gap-1 lg:gap-2 xl:gap-3 lg:items-center lg:text-center">
+              <h1 className="text-xl xl:text-2xl font-bold text-gray-12 font-manrope leading-[1.1]">
+                Conecte sua conta
+              </h1>
+              <p className="text-sm xl:text-lg text-gray-11 font-family-dm-sans leading-[1.3]">
+                Plataforma exclusiva para organizadores
+              </p>
+            </div>
+          </div>
 
-            {/* Divider */}
-            <div className="w-full h-px bg-gray-6" />
+          {/* Divider */}
+          <div className="w-full h-px bg-gray-6" />
 
-            {/* Form */}
-            <form onSubmit={handleSubmit} className="flex flex-col gap-4 w-full">
-              {/* Email */}
-              <div className="flex flex-col gap-2">
-                <label className="text-base text-gray-12 font-family-dm-sans">Email</label>
-                <div className="relative">
-                  <div className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none">
-                    <Mail className="size-5 text-gray-11" />
-                  </div>
-                  <Input
-                    type="email"
-                    placeholder="Digite seu email"
-                    value={formData.email}
-                    onChange={(e) => handleInputChange("email", e.target.value)}
-                    className={`pl-10 h-12 ${errors.email ? "border-red-11" : ""}`}
-                    disabled={isSubmitting || authLoading}
-                  />
+          {/* Form */}
+          <form onSubmit={handleSubmit} className="flex flex-col gap-4 w-full">
+            {/* Email */}
+            <div className="flex flex-col gap-2">
+              <label className="text-base text-gray-12 font-family-dm-sans">Email</label>
+              <div className="relative">
+                <div className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none">
+                  <Mail className="size-5 text-gray-11" />
                 </div>
-                {errors.email && (
-                  <p className="text-sm text-red-11 font-family-dm-sans">{errors.email}</p>
-                )}
+                <Input
+                  type="email"
+                  placeholder="Digite seu email"
+                  value={formData.email}
+                  onChange={(e) => handleInputChange("email", e.target.value)}
+                  className={`pl-10 h-12 ${errors.email ? "border-red-11" : ""}`}
+                  disabled={isSubmitting || authLoading}
+                />
               </div>
-
-              {/* Password */}
-              <div className="flex flex-col gap-2">
-                <label className="text-base text-gray-12 font-family-dm-sans">Senha</label>
-                <div className="relative">
-                  <div className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none">
-                    <Lock className="size-5 text-gray-11" />
-                  </div>
-                  <Input
-                    type={showPassword ? "text" : "password"}
-                    placeholder="Digite sua senha"
-                    value={formData.password}
-                    onChange={(e) => handleInputChange("password", e.target.value)}
-                    className={`pl-10 pr-10 h-12 ${errors.password ? "border-red-11" : ""}`}
-                    disabled={isSubmitting || authLoading}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword((p) => !p)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-11 hover:text-gray-12 transition-colors"
-                    aria-label={showPassword ? "Ocultar senha" : "Mostrar senha"}
-                  >
-                    {showPassword ? <EyeOff className="size-5" /> : <Eye className="size-5" />}
-                  </button>
-                </div>
-                {errors.password && (
-                  <p className="text-sm text-red-11 font-family-dm-sans">{errors.password}</p>
-                )}
-              </div>
-
-              {/* Error banner */}
-              {loginError && (
-                <div className="flex items-center gap-2 w-full rounded-lg border border-red-6 bg-gradient-to-r from-red-4 to-red-3 p-3">
-                  <Info className="size-5 shrink-0 text-red-12" strokeWidth={1.75} aria-hidden />
-                  <p className="font-medium text-sm leading-[1.3] text-red-12 font-family-dm-sans">
-                    {loginError.text}
-                  </p>
-                </div>
+              {errors.email && (
+                <p className="text-sm text-red-11 font-family-dm-sans">{errors.email}</p>
               )}
+            </div>
 
-              {/* Forgot password */}
-              <div className="flex justify-end w-full">
-                <Link
-                  href="/organizer/forgot-password"
-                  className="text-sm lg:text-base font-semibold text-gray-11 font-family-dm-sans hover:text-gray-12 transition-colors underline"
+            {/* Password */}
+            <div className="flex flex-col gap-2">
+              <label className="text-base text-gray-12 font-family-dm-sans">Senha</label>
+              <div className="relative">
+                <div className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none">
+                  <Lock className="size-5 text-gray-11" />
+                </div>
+                <Input
+                  type={showPassword ? "text" : "password"}
+                  placeholder="Digite sua senha"
+                  value={formData.password}
+                  onChange={(e) => handleInputChange("password", e.target.value)}
+                  className={`pl-10 pr-10 h-12 ${errors.password ? "border-red-11" : ""}`}
+                  disabled={isSubmitting || authLoading}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((p) => !p)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-11 hover:text-gray-12 transition-colors"
+                  aria-label={showPassword ? "Ocultar senha" : "Mostrar senha"}
                 >
-                  Esqueci minha senha
-                </Link>
+                  {showPassword ? <EyeOff className="size-5" /> : <Eye className="size-5" />}
+                </button>
               </div>
+              {errors.password && (
+                <p className="text-sm text-red-11 font-family-dm-sans">{errors.password}</p>
+              )}
+            </div>
 
-              {/* Captcha Turnstile — no mobile segue o padrão do login mobile
+            {/* Error banner */}
+            {loginError && (
+              <div className="flex items-center gap-2 w-full rounded-lg border border-red-6 bg-gradient-to-r from-red-4 to-red-3 p-3">
+                <Info className="size-5 shrink-0 text-red-12" strokeWidth={1.75} aria-hidden />
+                <p className="font-medium text-sm leading-[1.3] text-red-12 font-family-dm-sans">
+                  {loginError.text}
+                </p>
+              </div>
+            )}
+
+            {/* Forgot password */}
+            <div className="flex justify-end w-full">
+              <Link
+                href="/organizer/forgot-password"
+                className="text-sm lg:text-base font-semibold text-gray-11 font-family-dm-sans hover:text-gray-12 transition-colors underline"
+              >
+                Esqueci minha senha
+              </Link>
+            </div>
+
+            {/* Captcha Turnstile — no mobile segue o padrão do login mobile
                   (scale ~0.85 com wrapper de altura fixa); no desktop fica em
                   tamanho cheio, igual ao login desktop. */}
-              {TURNSTILE_SITE_KEY && (
-                <div className="flex h-14 w-full items-center justify-center">
-                  <div className="w-full scale-[0.85] lg:scale-100">
-                    <Turnstile
-                      ref={turnstileRef}
-                      siteKey={TURNSTILE_SITE_KEY}
-                      onSuccess={setTurnstileToken}
-                      onError={() => setTurnstileToken(null)}
-                      onExpire={() => setTurnstileToken(null)}
-                      options={{ theme: "light", size: "flexible" }}
-                    />
-                  </div>
+            {TURNSTILE_SITE_KEY && (
+              <div className="flex w-full items-center justify-center empty:hidden">
+                <div className="w-full">
+                  <Turnstile
+                    ref={turnstileRef}
+                    siteKey={TURNSTILE_SITE_KEY}
+                    onSuccess={setTurnstileToken}
+                    onError={() => setTurnstileToken(null)}
+                    onExpire={() => setTurnstileToken(null)}
+                    style={{ width: "100%", display: "block" }}
+                    options={{ theme: "light", size: "flexible", appearance: "interaction-only" }}
+                  />
                 </div>
-              )}
+              </div>
+            )}
 
-              <Button
-                type="submit"
-                disabled={isSubmitting || authLoading || (!!TURNSTILE_SITE_KEY && !turnstileToken)}
+            <Button
+              type="submit"
+              disabled={isSubmitting || authLoading || (!!TURNSTILE_SITE_KEY && !turnstileToken)}
+            >
+              {isSubmitting || authLoading ? "Entrando..." : "Entrar na plataforma"}
+            </Button>
+
+            {/* Auto-cadastro de organizador */}
+            <p className="text-center text-sm lg:text-base text-gray-11 font-family-dm-sans">
+              Ainda não é organizador?{" "}
+              <Link
+                href="/organizer/create"
+                className="font-semibold text-primary-10 underline hover:text-primary-11 transition-colors"
               >
-                {isSubmitting || authLoading ? "Entrando..." : "Entrar na plataforma"}
-              </Button>
-            </form>
+                Cadastrar organização
+              </Link>
+            </p>
+          </form>
         </div>
-
-        {/* Footer */}
-        <div className="flex justify-center mt-2 lg:mt-6 lg:shrink-0">{footer}</div>
       </div>
 
       {/* ─── Desktop: right image ─── */}

@@ -457,7 +457,7 @@ export function ContactOrganizerModal({
                     "normal" reduzido via scale (~255×55); wrapper com altura
                     fixa absorve o espaço extra do scale. */}
                 {TURNSTILE_SITE_KEY && (
-                  <div className="flex h-14 w-full items-center justify-center">
+                  <div className="flex w-full items-center justify-center empty:hidden">
                     <div className="w-full scale-[0.85]">
                       <Turnstile
                         ref={mobileTurnstileRef}
@@ -465,7 +465,8 @@ export function ContactOrganizerModal({
                         onSuccess={setTurnstileToken}
                         onError={() => setTurnstileToken(null)}
                         onExpire={() => setTurnstileToken(null)}
-                        options={{ theme: "light", size: "flexible" }}
+                        style={{ width: "100%", display: "block" }}
+                        options={{ theme: "light", size: "flexible", appearance: "interaction-only" }}
                       />
                     </div>
                   </div>
@@ -543,7 +544,8 @@ export function ContactOrganizerModal({
                     onSuccess={setTurnstileToken}
                     onError={() => setTurnstileToken(null)}
                     onExpire={() => setTurnstileToken(null)}
-                    options={{ theme: "light", size: "flexible" }}
+                    style={{ width: "100%", display: "block" }}
+                    options={{ theme: "light", size: "flexible", appearance: "interaction-only" }}
                     className="w-full"
                   />
                 )}

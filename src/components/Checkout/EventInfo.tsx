@@ -8,6 +8,7 @@ import { useCheckout } from "@/contexts/CheckoutContext";
 import { useMemo } from "react";
 import type { Ticket } from "@/hooks/useTickets";
 import { getEventOrganizer, getEventOrganizationId } from "@/utils/organization";
+import { hasDisplayableDistance } from "@/utils/checkoutModalityDisplay";
 import { formatBRL as formatPrice } from "@/lib/money";
 import { ContactOrganizerFlow } from "@/components/Event/ContactOrganizerFlow";
 import { usePendingCouponSnapshot } from "@/hooks/usePendingCoupon";
@@ -96,7 +97,7 @@ export function EventInfo({ event, onNext, isSubmitting = false, tickets = [], c
       category.tickets.forEach((ticket) => {
         const quantity = raceQuantities[ticket.id] || 0;
         if (quantity > 0) {
-          const distance = ticket.distance ? `${ticket.distance}${ticket.distanceUnit || "K"}` : "";
+          const distance = hasDisplayableDistance(ticket.distance) ? `${ticket.distance}${ticket.distanceUnit || "K"}` : "";
           grouped.push({
             quantity,
             ticketName: ticket.name,
@@ -113,7 +114,7 @@ export function EventInfo({ event, onNext, isSubmitting = false, tickets = [], c
     uncategorizedTickets.forEach((ticket) => {
       const quantity = raceQuantities[ticket.id] || 0;
       if (quantity > 0) {
-        const distance = ticket.distance ? `${ticket.distance}${ticket.distanceUnit || "K"}` : "";
+        const distance = hasDisplayableDistance(ticket.distance) ? `${ticket.distance}${ticket.distanceUnit || "K"}` : "";
         grouped.push({
           quantity,
           ticketName: ticket.name,

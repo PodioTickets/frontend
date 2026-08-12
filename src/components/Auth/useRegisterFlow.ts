@@ -373,6 +373,8 @@ export function useRegisterFlow() {
           documentType: isBrazilianCountry(formData.nacionalidade) ? "CPF" : "PASSPORT",
           acceptedTerms: acceptedTermsChecked,
           acceptedPrivacyPolicy: acceptedTermsChecked,
+          // Anti-bot: enviado ao backend, que verifica via TurnstileGuard (obrigatório em prod).
+          turnstileToken: turnstileToken ?? undefined,
         });
 
         setCurrentStep(4);

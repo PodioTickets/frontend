@@ -123,7 +123,7 @@ function StatCard({
   hint?: string;
 }) {
   return (
-    <div className="rounded-xl border border-gray-6 bg-gray-1 p-4 shadow-[0px_2px_6px_0px_rgba(17,17,17,0.08)]">
+    <div className="rounded-xl border border-gray-6 bg-gray-1 p-4 ">
       <div className="flex items-center gap-2 text-gray-11">
         {icon}
         <p className="text-xs font-semibold font-family-dm-sans uppercase tracking-wide">
@@ -235,7 +235,7 @@ export function AdminUserActivityDashboard() {
   const topActionMax = stats?.topActions[0]?.count ?? 0;
 
   const inputShell =
-    "h-12 w-full rounded-lg border border-gray-6 bg-gray-1 px-3 text-sm text-gray-12 placeholder:text-gray-11 font-family-dm-sans outline-none focus-visible:border-gray-4 focus-visible:ring-[3px] focus-visible:ring-gray-4/50 shadow-[0px_2px_6px_0px_rgba(17,17,17,0.08)]";
+    "h-12 w-full rounded-lg border border-gray-6 bg-gray-1 px-3 text-sm text-gray-12 placeholder:text-gray-11 font-family-dm-sans outline-none focus-visible:border-gray-4 focus-visible:ring-[3px] focus-visible:ring-gray-4/50 ";
   const selectShell = cn(
     inputShell,
     "text-base md:text-sm cursor-pointer appearance-none bg-[length:1rem] bg-[right_0.75rem_center] bg-no-repeat pr-10"
@@ -251,7 +251,7 @@ export function AdminUserActivityDashboard() {
   return (
     <div className="flex flex-col gap-4 md:gap-5">
       {/* Filtros do dashboard */}
-      <div className="rounded-xl border border-gray-6 bg-gray-1 p-3 md:p-4 shadow-[0px_2px_6px_0px_rgba(17,17,17,0.08)]">
+      <div className="rounded-xl border border-gray-6 bg-gray-1 p-3 md:p-4 ">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-stretch sm:flex-wrap">
           <div className="w-full sm:w-[min(100%,200px)] shrink-0">
             <label className="sr-only">Período</label>
@@ -316,11 +316,11 @@ export function AdminUserActivityDashboard() {
       </div>
 
       {loading ? (
-        <div className="rounded-xl border border-gray-6 bg-gray-1 py-14 text-center text-sm text-gray-11 font-family-dm-sans shadow-[0px_2px_6px_0px_rgba(17,17,17,0.08)]">
+        <div className="rounded-xl border border-gray-6 bg-gray-1 py-14 text-center text-sm text-gray-11 font-family-dm-sans ">
           Carregando métricas…
         </div>
       ) : !stats ? (
-        <div className="rounded-xl border border-gray-6 bg-gray-1 py-14 text-center text-sm text-gray-11 font-family-dm-sans shadow-[0px_2px_6px_0px_rgba(17,17,17,0.08)]">
+        <div className="rounded-xl border border-gray-6 bg-gray-1 py-14 text-center text-sm text-gray-11 font-family-dm-sans ">
           Não foi possível carregar as métricas.
         </div>
       ) : (
@@ -371,7 +371,7 @@ export function AdminUserActivityDashboard() {
           </div>
 
           {/* Série diária — todas as atividades */}
-          <div className="rounded-xl border border-gray-6 bg-gray-1 p-4 shadow-[0px_2px_6px_0px_rgba(17,17,17,0.08)]">
+          <div className="rounded-xl border border-gray-6 bg-gray-1 p-4 ">
             <p className="text-sm font-bold text-gray-12 font-manrope mb-4">
               Eventos por dia
             </p>
@@ -379,7 +379,7 @@ export function AdminUserActivityDashboard() {
           </div>
 
           {/* Série diária — views da página de evento */}
-          <div className="rounded-xl border border-gray-6 bg-gray-1 p-4 shadow-[0px_2px_6px_0px_rgba(17,17,17,0.08)]">
+          <div className="rounded-xl border border-gray-6 bg-gray-1 p-4 ">
             <p className="text-sm font-bold text-gray-12 font-manrope mb-4">
               Views de evento por dia
             </p>
@@ -388,7 +388,7 @@ export function AdminUserActivityDashboard() {
 
           {/* Distribuições */}
           <div className="grid gap-4 md:grid-cols-2">
-            <div className="rounded-xl border border-gray-6 bg-gray-1 p-4 shadow-[0px_2px_6px_0px_rgba(17,17,17,0.08)]">
+            <div className="rounded-xl border border-gray-6 bg-gray-1 p-4 ">
               <p className="text-sm font-bold text-gray-12 font-manrope mb-4">
                 Por categoria
               </p>
@@ -411,7 +411,7 @@ export function AdminUserActivityDashboard() {
               )}
             </div>
 
-            <div className="rounded-xl border border-gray-6 bg-gray-1 p-4 shadow-[0px_2px_6px_0px_rgba(17,17,17,0.08)]">
+            <div className="rounded-xl border border-gray-6 bg-gray-1 p-4 ">
               <p className="text-sm font-bold text-gray-12 font-manrope mb-4">
                 Por origem
               </p>
@@ -435,7 +435,7 @@ export function AdminUserActivityDashboard() {
           </div>
 
           {/* Top ações */}
-          <div className="rounded-xl border border-gray-6 bg-gray-1 p-4 shadow-[0px_2px_6px_0px_rgba(17,17,17,0.08)]">
+          <div className="rounded-xl border border-gray-6 bg-gray-1 p-4 ">
             <p className="text-sm font-bold text-gray-12 font-manrope mb-4">
               Top 10 ações
             </p>

@@ -403,15 +403,16 @@ export function LoginModal() {
                           fino nativo no widget. Wrapper com altura fixa
                           absorve o espaço extra do scale. */}
                       {TURNSTILE_SITE_KEY && (
-                        <div className="flex h-14 w-full items-center justify-center">
-                          <div className="w-full scale-[0.85]">
+                        <div className="flex w-full items-center justify-center empty:hidden">
+                          <div className="w-full">
                             <Turnstile
                               ref={mobileTurnstileRef}
                               siteKey={TURNSTILE_SITE_KEY}
                               onSuccess={setTurnstileToken}
                               onError={() => setTurnstileToken(null)}
                               onExpire={() => setTurnstileToken(null)}
-                              options={{ theme: "light", size: "flexible" }}
+                              style={{ width: "100%", display: "block" }}
+                              options={{ theme: "light", size: "flexible", appearance: "interaction-only" }}
                             />
                           </div>
                         </div>
@@ -643,15 +644,16 @@ export function LoginModal() {
                           fino nativo no widget. Wrapper com altura fixa
                           absorve o espaço extra do scale. */}
                       {TURNSTILE_SITE_KEY && (
-                        <div className="flex h-14 w-full items-center justify-center">
-                          <div className="scale-100 w-full">
+                        <div className="flex w-full items-center justify-center empty:hidden">
+                          <div className="w-full">
                             <Turnstile
                               ref={desktopTurnstileRef}
                               siteKey={TURNSTILE_SITE_KEY}
                               onSuccess={setTurnstileToken}
                               onError={() => setTurnstileToken(null)}
                               onExpire={() => setTurnstileToken(null)}
-                              options={{ theme: "light", size: "flexible" }}
+                              style={{ width: "100%", display: "block" }}
+                              options={{ theme: "light", size: "flexible", appearance: "interaction-only" }}
                             />
                           </div>
                         </div>

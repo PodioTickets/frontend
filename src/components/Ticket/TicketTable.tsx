@@ -30,6 +30,7 @@ import {
   DrawerContent,
   DrawerTitle,
 } from "@/components/ui/drawer";
+import { hasDisplayableDistance } from "@/utils/checkoutModalityDisplay";
 
 export type TicketMoveCategoryOption = {
   id: string;
@@ -243,7 +244,7 @@ function SortableTicketRow({
   const duplicateInProgress = duplicatingTicketId != null;
   const isThisRowDuplicating = duplicatingTicketId === ticket.id;
 
-  const distanceLabel = ticket.distance
+  const distanceLabel = hasDisplayableDistance(ticket.distance)
     ? `${ticket.distance}${ticket.distanceUnit || "KM"}`
     : null;
 
@@ -272,7 +273,7 @@ function SortableTicketRow({
 
         <div className="flex h-full min-h-px min-w-px flex-1 flex-col items-center justify-center gap-2 p-4 text-sm leading-[1.3]">
           <p className="font-inter font-semibold text-gray-12">{ticket.modality || "—"}</p>
-          {ticket.distance && (
+          {hasDisplayableDistance(ticket.distance) && (
             <p className="font-family-dm-sans font-medium text-gray-11">
               {ticket.distance}
               {ticket.distanceUnit || "KM"}

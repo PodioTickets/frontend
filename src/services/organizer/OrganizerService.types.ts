@@ -53,6 +53,58 @@ export interface CreateOrganizationRequest {
   accountType?: "CORRENTE" | "POUPANCA"; // Tipo de conta
   accountHolderName?: string; // Nome do titular
   accountHolderDocument?: string; // CPF/CNPJ do titular
+  // Chaves PIX — substituição completa quando enviada (mesma semântica do admin).
+  // Permite o organizador gerir suas chaves pela tela de Configurações.
+  pixKeys?: PixKeyItemPayload[];
+}
+
+/** Item de chave PIX no payload de criação/atualização de organização. */
+export interface PixKeyItemPayload {
+  key: string;
+  keyType: string;
+  isDefault?: boolean;
+  bankName?: string;
+  accountHolderName?: string;
+  accountHolderDocument?: string;
+}
+
+/**
+ * Payload do auto-cadastro público de organizador
+ * (`POST /api/v1/auth/register/organizer`). PF: `document`/`legalName` são
+ * omitidos (derivados do CPF/nome fantasia no backend).
+ */
+export interface OrganizerSignupRequest {
+  completeName: string;
+  email: string;
+  password: string;
+  personType: "PF" | "PJ";
+  document?: string; // CNPJ (apenas dígitos) — PJ
+  legalName?: string; // Razão social — PJ
+  tradeName: string; // Nome fantasia
+  ownerName: string; // Nome do responsável
+  ownerDocument: string; // CPF do responsável (apenas dígitos)
+  zipCode: string;
+  street: string;
+  number?: string;
+  neighborhood: string;
+  city: string;
+  state: string;
+  orgEmail: string; // E-mail de contato da organização
+  whatsapp: string; // Apenas dígitos
+  phone?: string; // Apenas dígitos
+  turnstileToken?: string;
+}
+
+/** Usuário retornado pelo signup (mesmo shape do login), p/ auto-login. */
+export interface OrganizerSignupUser {
+  id: string;
+  email: string;
+  firstName?: string;
+  lastName?: string;
+  documentNumber?: string;
+  role: string;
+  accountType?: string;
+  avatarUrl?: string | null;
 }
 
 /** Chaves canônicas — ver API `organizations/me/members`. */

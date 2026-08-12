@@ -265,7 +265,7 @@ export function EventNotificationsPanel({
   }, [totalPages]);
 
   const inputShell =
-    "h-12 w-full rounded-lg border border-gray-6 bg-gray-1 px-3 text-sm text-gray-12 placeholder:text-gray-11 font-family-dm-sans outline-none focus-visible:border-gray-4 focus-visible:ring-[3px] focus-visible:ring-gray-4/50 shadow-[0px_2px_6px_0px_rgba(17,17,17,0.08)]";
+    "h-12 w-full rounded-lg border border-gray-6 bg-gray-1 px-3 text-sm text-gray-12 placeholder:text-gray-11 font-family-dm-sans outline-none focus-visible:border-gray-4 focus-visible:ring-[3px] focus-visible:ring-gray-4/50 ";
 
   const countLabel =
     pagination.total === 1
@@ -274,7 +274,7 @@ export function EventNotificationsPanel({
 
   if (forbidden) {
     return (
-      <div className="rounded-xl border border-gray-6 bg-gray-1 p-10 text-center shadow-[0px_2px_6px_0px_rgba(17,17,17,0.08)]">
+      <div className="rounded-xl border border-gray-6 bg-gray-1 p-10 text-center ">
         <p className="text-gray-11 font-family-dm-sans text-sm max-w-md mx-auto leading-relaxed">
           Você não tem permissão para{" "}
           <strong className="text-gray-12">notificar inscritos</strong> deste
@@ -286,7 +286,7 @@ export function EventNotificationsPanel({
 
   return (
     <div>
-      <div className="rounded-xl border border-gray-6 bg-gray-1 p-3 md:p-4 shadow-[0px_2px_6px_0px_rgba(17,17,17,0.08)] mb-4 md:mb-5">
+      <div className="rounded-xl border border-gray-6 bg-gray-1 p-3 md:p-4  mb-4 md:mb-5">
         <h2 className="text-base font-bold text-gray-12 font-manrope leading-[1.1] mb-3 md:hidden">
           Lista de mensagens
         </h2>
@@ -362,11 +362,11 @@ export function EventNotificationsPanel({
       {/* Mobile: cards (Figma 3025:56070) */}
       <div className="md:hidden flex flex-col gap-3">
         {loading ? (
-          <div className="rounded-xl border border-gray-6 bg-gray-1 py-14 text-center text-sm text-gray-11 font-family-dm-sans shadow-[0px_2px_6px_0px_rgba(17,17,17,0.08)]">
+          <div className="rounded-xl border border-gray-6 bg-gray-1 py-14 text-center text-sm text-gray-11 font-family-dm-sans ">
             Carregando registros…
           </div>
         ) : items.length === 0 ? (
-          <div className="rounded-xl border border-gray-6 bg-gray-1 py-14 text-center text-sm text-gray-11 font-family-dm-sans shadow-[0px_2px_6px_0px_rgba(17,17,17,0.08)] px-4">
+          <div className="rounded-xl border border-gray-6 bg-gray-1 py-14 text-center text-sm text-gray-11 font-family-dm-sans  px-4">
             {debouncedSearch || statusFilter !== "all"
               ? "Nenhuma notificação encontrada com os filtros atuais."
               : "Nenhuma notificação cadastrada."}
@@ -377,7 +377,7 @@ export function EventNotificationsPanel({
             return (
               <div
                 key={row.id}
-                className="rounded-xl border border-gray-6 bg-gray-1 p-4 shadow-[0px_2px_6px_0px_rgba(17,17,17,0.08)]"
+                className="rounded-xl border border-gray-6 bg-gray-1 p-4 "
               >
                 <div className="flex items-start justify-between gap-3 mb-3">
                   <div className="min-w-0 flex-1">
@@ -430,7 +430,7 @@ export function EventNotificationsPanel({
         className="md:hidden justify-center w-full max-w-full px-0 py-4"
       />
 
-      <div className="hidden md:block rounded-xl border border-gray-6 bg-gray-1 overflow-hidden shadow-[0px_2px_6px_0px_rgba(17,17,17,0.08)]">
+      <div className="hidden md:block rounded-xl border border-gray-6 bg-gray-1 overflow-hidden ">
         <div className="overflow-x-auto">
           <table className="w-full min-w-[900px]">
             <thead>

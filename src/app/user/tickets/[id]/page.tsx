@@ -9,6 +9,7 @@ import Image from "next/image";
 import { DistanceIcon } from "@/components/Icons/DistanceIcon";
 import { CalendarIcon } from "@/components/Icons/CalendarIcon";
 import { ClockIcon } from "@/components/Icons/ClockIcon";
+import { DetailsIcon } from "@/components/Icons/DetailsIcon";
 import { EventInfoCard } from "@/components/Event/EventInfoCard";
 import { RegistrationQRCode } from "@/components/QRCode/RegistrationQRCode";
 import { getAvatarUrl } from "@/utils/avatar";
@@ -22,6 +23,7 @@ import { formatDateBRT, formatEventHappensLabel, formatTimeBRT } from "@/utils/d
 import { shortId } from "@/utils/shortId";
 import { EventCardContent } from "@/components/Event/Card/EventCardContent";
 import Link from "next/link";
+import { FileText } from "lucide-react";
 
 export default function TicketDetailsPage() {
   const params = useParams();
@@ -31,7 +33,9 @@ export default function TicketDetailsPage() {
   const [orderData, setOrderData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [expandedParticipants, setExpandedParticipants] = useState<Record<number, boolean>>({});
-  const [activeTab, setActiveTab] = useState<Record<number, "info" | "products">>({});
+  const [activeTab, setActiveTab] = useState<Record<number, "info" | "products" | "questions">>({});
+  // Card "Detalhes do pedido" é colapsável (Figma 6396:47397); começa aberto.
+  const [orderDetailsOpen, setOrderDetailsOpen] = useState(true);
 
   useEffect(() => {
     if (!orderId) return;
@@ -203,9 +207,12 @@ export default function TicketDetailsPage() {
   // de loading só retorna DEPOIS destes hooks). Por isso os memos abaixo tratam null —
   // acessar `event.location`/`event.eventDate` direto (inclusive nas deps) estourava
   // no 1º render.
+  // "Local, Cidade, Estado" — MESMO formato do card da home (`EventCard`):
+  // usa `locationName` (rótulo do local escolhido no mapa), NÃO o `location`
+  // (endereço completo). Cai pra "Cidade, Estado" quando o local não tem nome.
   const addressLabel = useMemo(() => {
     if (!event) return "";
-    return [event.location, event.city, event.state]
+    return [event.locationName, event.city, event.state]
       .map((part: string | null | undefined) => (part ?? "").trim())
       .filter(Boolean)
       .join(", ");
@@ -250,7 +257,7 @@ export default function TicketDetailsPage() {
 
   if (!orderData) {
     return (
-      <div className="min-h-screen bg-gray-2">
+      <div className="min-h-dvh bg-gray-2">
         <div className="mx-auto max-w-[1280px] px-4 pt-13 pb-20">
           <div className="mb-6 flex items-center gap-3">
             <button
@@ -287,8 +294,20 @@ export default function TicketDetailsPage() {
   // não exibe a linha "Forma de pagamento". `pricing.total` é em centavos.
   const isFreeOrder = (pricing.total ?? 0) <= 0;
 
+  // Rótulo humano da forma de pagamento (usado no chip do card de detalhes).
+  const paymentMethodLabel =
+    payment.method === "CREDIT_CARD"
+      ? "Cartão de crédito"
+      : payment.method === "DEBIT_CARD"
+        ? "Cartão de débito"
+        : payment.method === "PIX"
+          ? "PIX"
+          : payment.method === "BOLETO"
+            ? "Boleto"
+            : payment.method || "";
+
   return (
-    <div className="min-h-screen bg-gray-2">
+    <div className="min-h-dvh bg-gray-2">
       {/* Mobile header — fixo no padrão do Figma: back à esquerda, título centralizado, border-bottom */}
       <div className="md:hidden bg-gray-2 border-b border-gray-6 px-4 py-2">
         <div className="flex items-center justify-between">
@@ -343,6 +362,7 @@ export default function TicketDetailsPage() {
             fallbackId={event.id}
             addressLabel={addressLabel}
             dateLabel={dateLabel}
+            dateClassName="text-gray-11"
             bannerRounded="none"
             // "Meus ingressos" mantém o visual próprio: banner compacto (metade) +
             // divisor em primary. Home/busca (EventCard) usam os defaults (w-full/gray-6).
@@ -378,6 +398,11 @@ export default function TicketDetailsPage() {
               const tab = activeTab[index] || "info";
               const qrCode = `${process.env.NEXT_PUBLIC_ROOT_SITE_URL}/user/tickets/${orderId}`;
               const ticket = participant.ticket || {};
+              // Abas condicionais: Produtos/Questionário só aparecem se houver conteúdo.
+              const hasProducts =
+                (participant.includedProducts?.length || 0) > 0 ||
+                (participant.additionalProducts?.length || 0) > 0;
+              const hasQuestions = (participant.questionAnswers?.length || 0) > 0;
               return (
                 <div
                   key={participant.id || index}
@@ -397,9 +422,7 @@ export default function TicketDetailsPage() {
                         <RegistrationQRCode qrCodeData={qrCode} size={120} />
                       </div>
                       <div className="flex flex-col items-start gap-2 py-3 md:gap-2 md:py-0">
-                        <p className="text-base text-gray-12 font-family-dm-sans">
-                          Participante {index + 1}
-                        </p>
+
                         <div className="flex flex-col items-start gap-1">
                           <p className="text-sm text-gray-11 font-family-dm-sans truncate max-w-full md:max-w-[400px]">
                             {ticket?.category?.name ?? "Ingresso avulso"}
@@ -427,55 +450,60 @@ export default function TicketDetailsPage() {
                   </button>
 
                   {/* Participant Profile Card */}
-                  <div className="px-4 py-4 border-b border-gray-6 flex items-center justify-between gap-3">
-                    <div className="border border-gray-6 rounded-xl p-3 flex items-center gap-2 min-w-0 flex-1">
-                      <div className="size-10 rounded-full bg-gray-6 flex items-center justify-center shrink-0 overflow-hidden">
-                        {participant.avatarUrl ? (
-                          <Image
-                            src={getAvatarUrl(participant.avatarUrl) as string}
-                            alt="Avatar"
-                            width={40}
-                            height={40}
-                            className="size-10 rounded-full object-cover"
-                          />
-                        ) : (
-                          <span className="text-sm font-bold text-gray-12">
-                            {participant.name.charAt(0).toUpperCase()}
-                          </span>
-                        )}
-                      </div>
-                      <div className="flex flex-col min-w-0">
-                        <p className="text-sm font-semibold text-gray-12 font-family-dm-sans truncate">
-                          {participant.name || `Participante ${index + 1}`}
-                        </p>
-                        <div className="flex flex-wrap gap-1.5 items-center text-xs md:text-sm text-gray-11 font-family-dm-sans">
-                          {participant.birthDate && (
-                            <>
-                              <span>{formatDate(participant.birthDate)}</span>
-                              <span className="size-1 bg-gray-11 rounded-full shrink-0" />
-                            </>
+                  <div className="px-4 py-4 border-b border-gray-6 gap-3">
+                    <p className="text-base text-gray-12 font-family-dm-sans mb-2">
+                      Participante {index + 1}
+                    </p>
+                    <div className="flex items-center justify-center">
+                      <div className="border border-gray-6 rounded-xl p-3 flex items-center gap-2 min-w-0 flex-1">
+                        <div className="size-10 rounded-full bg-gray-6 flex items-center justify-center shrink-0 overflow-hidden">
+                          {participant.avatarUrl ? (
+                            <Image
+                              src={getAvatarUrl(participant.avatarUrl) as string}
+                              alt="Avatar"
+                              width={40}
+                              height={40}
+                              className="size-10 rounded-full object-cover"
+                            />
+                          ) : (
+                            <span className="text-sm font-bold text-gray-12">
+                              {participant.name.charAt(0).toUpperCase()}
+                            </span>
                           )}
-                          {participant.gender && (
-                            <>
-                              <span>{getGenderLabel(participant.gender)}</span>
-                              {participant.cpf && <span className="size-1 bg-gray-11 rounded-full shrink-0" />}
-                            </>
-                          )}
-                          {participant.cpf && <span>{maskCPF(participant.cpf, isParticipantBr(participant))}</span>}
+                        </div>
+                        <div className="flex flex-col min-w-0">
+                          <p className="text-sm font-semibold text-gray-12 font-family-dm-sans truncate">
+                            {participant.name || `Participante ${index + 1}`}
+                          </p>
+                          <div className="flex flex-wrap gap-1.5 items-center text-xs md:text-sm text-gray-11 font-family-dm-sans">
+                            {participant.birthDate && (
+                              <>
+                                <span>{formatDate(participant.birthDate)}</span>
+                                <span className="size-1 bg-gray-11 rounded-full shrink-0" />
+                              </>
+                            )}
+                            {participant.gender && (
+                              <>
+                                <span>{getGenderLabel(participant.gender)}</span>
+                                {participant.cpf && <span className="size-1 bg-gray-11 rounded-full shrink-0" />}
+                              </>
+                            )}
+                            {participant.cpf && <span>{maskCPF(participant.cpf, isParticipantBr(participant))}</span>}
+                          </div>
                         </div>
                       </div>
+                      <button
+                        onClick={() => toggleParticipant(index)}
+                        className="size-8 flex items-center justify-center shrink-0"
+                      >
+                        <ArrowButton isOpen={isExpanded} />
+                      </button>
                     </div>
-                    <button
-                      onClick={() => toggleParticipant(index)}
-                      className="size-8 flex items-center justify-center shrink-0"
-                    >
-                      <ArrowButton isOpen={isExpanded} />
-                    </button>
                   </div>
 
                   {/* Tabs */}
                   {isExpanded && (
-                    <div className="flex gap-3 items-start px-4 pt-5">
+                    <div className="flex flex-wrap gap-3 items-start px-4 pt-5">
                       <button
                         onClick={() => setActiveTab((prev) => ({ ...prev, [index]: "info" }))}
                         className={`px-4 py-3 rounded-[32px] font-semibold text-base font-manrope leading-[1.1] transition-colors ${tab === "info" ? "bg-primary-11 text-primary-2" : "bg-gray-5 text-gray-11"
@@ -483,13 +511,24 @@ export default function TicketDetailsPage() {
                       >
                         Informações
                       </button>
-                      <button
-                        onClick={() => setActiveTab((prev) => ({ ...prev, [index]: "products" }))}
-                        className={`px-4 py-3 rounded-[32px] font-semibold text-base font-manrope leading-[1.1] transition-colors ${tab === "products" ? "bg-primary-11 text-primary-2" : "bg-gray-5 text-gray-11"
-                          }`}
-                      >
-                        Produtos
-                      </button>
+                      {hasProducts && (
+                        <button
+                          onClick={() => setActiveTab((prev) => ({ ...prev, [index]: "products" }))}
+                          className={`px-4 py-3 rounded-[32px] font-semibold text-base font-manrope leading-[1.1] transition-colors ${tab === "products" ? "bg-primary-11 text-primary-2" : "bg-gray-5 text-gray-11"
+                            }`}
+                        >
+                          Produtos
+                        </button>
+                      )}
+                      {hasQuestions && (
+                        <button
+                          onClick={() => setActiveTab((prev) => ({ ...prev, [index]: "questions" }))}
+                          className={`px-4 py-3 rounded-[32px] font-semibold text-base font-manrope leading-[1.1] transition-colors ${tab === "questions" ? "bg-primary-11 text-primary-2" : "bg-gray-5 text-gray-11"
+                            }`}
+                        >
+                          Questionário
+                        </button>
+                      )}
                     </div>
                   )}
 
@@ -562,29 +601,6 @@ export default function TicketDetailsPage() {
                               )}
                             </div>
                           </div>
-
-                          {participant.questionAnswers.length > 0 && (
-                            <>
-                              <div className="w-full h-px bg-gray-6" />
-                              <div>
-                                <h3 className="text-xl font-bold text-gray-12 font-manrope leading-[1.1] mb-5">
-                                  Perguntas do Organizador
-                                </h3>
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                  {participant.questionAnswers.map((qa: any) => (
-                                    <div key={qa.id} className="flex flex-col py-4">
-                                      <label className="text-base text-gray-12 font-family-dm-sans">
-                                        {qa.question?.question || "Pergunta"}
-                                      </label>
-                                      <p className="text-base font-medium text-gray-12 font-family-dm-sans">
-                                        {formatAnswer(qa.answer)}
-                                      </p>
-                                    </div>
-                                  ))}
-                                </div>
-                              </div>
-                            </>
-                          )}
                         </div>
                       )}
 
@@ -596,6 +612,36 @@ export default function TicketDetailsPage() {
                           orderCreatedAt={order.createdAt}
                         />
                       )}
+
+                      {tab === "questions" && (
+                        <div className="flex flex-col gap-4">
+                          <h3 className="text-xl font-bold text-gray-12 font-manrope leading-[1.1]">
+                            Perguntas do Organizador
+                          </h3>
+                          {participant.questionAnswers.length > 0 ? (
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                              {participant.questionAnswers.map((qa: any) => (
+                                <div key={qa.id} className="flex flex-col py-4">
+                                  <label className="text-base text-gray-12 font-family-dm-sans">
+                                    {/* `question` pode vir como STRING (texto direto,
+                                        ex.: getOrderDetails) ou OBJETO ({question}). */}
+                                    {(typeof qa.question === "string"
+                                      ? qa.question
+                                      : qa.question?.question) || "Pergunta"}
+                                  </label>
+                                  <p className="text-base font-medium text-gray-12 font-family-dm-sans mt-4">
+                                    R: {formatAnswer(qa.answer)}
+                                  </p>
+                                </div>
+                              ))}
+                            </div>
+                          ) : (
+                            <p className="text-base text-gray-11 font-family-dm-sans">
+                              Nenhuma pergunta do organizador para este participante.
+                            </p>
+                          )}
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
@@ -604,169 +650,166 @@ export default function TicketDetailsPage() {
           </div>
         )}
 
-        {/* Order Details */}
+        {/* Detalhes do pedido — card colapsável (Figma 6396:47397) */}
         <div className="mt-10">
-          <div className="bg-gray-1 border border-gray-6 rounded-xl overflow-hidden">
-            <div className="flex flex-col gap-2 px-4 py-6">
-              {/* Seção 1: meta do pedido — linhas com borda individual */}
-              <div className="flex flex-col gap-2">
-                <div className="border border-gray-6 rounded-lg p-4 flex flex-col md:flex-row items-start md:items-center justify-between gap-2">
-                  <p className="text-base font-semibold text-gray-12 font-manrope leading-[1.1]">
-                    Número do pedido:
-                  </p>
-                  <p className="text-base font-semibold text-gray-12 font-manrope leading-[1.1] md:text-right">
-                    #{shortId(order.id) || "N/A"}
-                  </p>
-                </div>
+          <div className="bg-gray-2 border border-gray-6 rounded-xl overflow-hidden">
+            {/* Header colapsável: ícone documento + título à esquerda, chevron à direita */}
+            <button
+              type="button"
+              onClick={() => setOrderDetailsOpen((v) => !v)}
+              aria-expanded={orderDetailsOpen}
+              className="w-full flex items-center justify-between gap-2 p-4 cursor-pointer"
+            >
+              <span className="flex items-center gap-2 min-w-0">
+                <FileText className="size-5 shrink-0 text-gray-12" />
+                <span className="text-base font-bold text-gray-12 font-manrope leading-[1.1] truncate">
+                  Detalhes do pedido
+                </span>
+              </span>
+              <span className="shrink-0">
+                <ArrowButton isOpen={orderDetailsOpen} />
+              </span>
+            </button>
 
-                <div className="border border-gray-6 rounded-lg p-4 flex flex-col md:flex-row items-start md:items-center justify-between gap-2">
-                  <p className="text-base font-semibold text-gray-12 font-manrope leading-[1.1]">
-                    Nome do evento:
-                  </p>
-                  <p className="text-base font-bold text-gray-12 font-manrope leading-[1.3] md:text-right">
-                    {event?.name || "N/A"}
-                  </p>
-                </div>
-
-                <div className="border border-gray-6 rounded-lg p-4 flex items-center justify-between gap-3">
-                  <p className="text-base font-semibold text-gray-12 font-manrope leading-[1.1]">
-                    Data da compra:
-                  </p>
-                  {/* Instante real → data + horário em BRT (America/Sao_Paulo). */}
-                  <div className="flex flex-col items-end gap-0.5">
-                    <p className="text-base font-bold text-gray-12 font-manrope leading-[1.1] text-right flex items-center">
-                      {order.createdAt ? formatDateBRT(order.createdAt) : "N/A"} -  {formatTimeBRT(order.createdAt, { hour: "2-digit", minute: "2-digit" })}
-                    </p>
-                  </div>
-                </div>
-
-                {!isFreeOrder && (
-                  <div className="border border-gray-6 rounded-lg p-4 flex items-center justify-between gap-3">
-                    <p className="text-base font-semibold text-gray-12 font-manrope leading-[1.1]">
-                      Forma de pagamento:
-                    </p>
-                    <p className="text-base font-bold text-gray-12 font-manrope leading-[1.1] text-right">
-                      {payment.method === "CREDIT_CARD"
-                        ? "Cartão de crédito"
-                        : payment.method === "DEBIT_CARD"
-                          ? "Cartão de débito"
-                          : payment.method === "PIX"
-                            ? "PIX"
-                            : payment.method === "BOLETO"
-                              ? "Boleto"
-                              : payment.method || "N/A"}
-                    </p>
-                  </div>
-                )}
-
-                <div className="border border-gray-6 rounded-lg p-4 flex items-center justify-between gap-3">
-                  <p className="text-base font-semibold text-gray-12 font-manrope leading-[1.1]">
-                    Participantes:
-                  </p>
-                  <p className="text-base font-bold text-gray-12 font-manrope leading-[1.1] text-right">
-                    {participants.length}
-                  </p>
-                </div>
-              </div>
-
-              <div className="w-full h-px bg-gray-6 my-2" />
-
-              {/* Seção 2: valores — linhas com borda individual */}
-              <div className="flex flex-col gap-2">
-                {/* Produtos adicionais — linha agregada (centavos do backend). */}
-                {(pricing.productsSubtotal ?? 0) > 0 && (
-                  <div className="border border-gray-6 rounded-lg p-4 flex items-center justify-between gap-3">
-                    <p className="text-base font-semibold text-gray-12 font-manrope leading-[1.1]">
-                      Produtos adicionais:
-                    </p>
-                    <p className="text-base font-bold text-gray-12 font-manrope leading-[1.1] text-right">
-                      {formatPrice(pricing.productsSubtotal ?? 0)}
-                    </p>
-                  </div>
-                )}
-
-
-                {/* Ingressos — agrupados por tipo idêntico "(Nx) Nome", acima do
-                    Subtotal. Preço = `ticket.unitPrice` do backend (só o
-                    ingresso, sem produtos). */}
-                {groupedTicketLines.map((line, lineIndex) => (
-                  <div
-                    key={lineIndex}
-                    className="border border-gray-6 rounded-lg p-4 flex items-center justify-between gap-3"
-                  >
-                    <span className="flex flex-col gap-0.5 min-w-0">
-                      <span className="text-xs text-gray-11 font-family-dm-sans leading-[1.3] truncate">
-                        {line.categoryName ?? "Ingresso avulso"}
-                      </span>
-                      <span className="text-base font-semibold text-gray-12 font-manrope leading-[1.2] break-words">
-                        {line.quantity > 1 ? `(${line.quantity}x) ` : ""}{line.ticketName}
-                      </span>
+            {orderDetailsOpen && (
+              <div className="flex flex-col gap-3 px-4 py-4 border-t border-gray-6">
+                {/* Chips resumo: forma de pagamento · data/hora · nº participantes */}
+                <div className="flex flex-wrap items-start gap-2">
+                  {!isFreeOrder && paymentMethodLabel && (
+                    <span className="bg-gray-4 rounded-lg px-3 py-2 text-base font-medium text-gray-12 font-family-dm-sans leading-[1.3] whitespace-nowrap">
+                      {paymentMethodLabel}
                     </span>
-                    <p className="text-base font-bold text-gray-12 font-manrope leading-[1.1] text-right shrink-0">
-                      {formatPrice(line.total * 100)}
-                    </p>
-                  </div>
-                ))}
-
-
-                <div className="border border-gray-6 rounded-lg p-4 flex items-center justify-between gap-3">
-                  <p className="text-base font-semibold text-gray-12 font-manrope leading-[1.1]">
-                    Subtotal:
-                  </p>
-                  <p className="text-base font-bold text-gray-12 font-manrope leading-[1.1] text-right">
-                    {formatPrice(pricing.subtotal ?? 0)}
-                  </p>
+                  )}
+                  {order.createdAt && (
+                    <span className="bg-gray-4 rounded-lg px-3 py-2 text-base font-medium text-gray-12 font-family-dm-sans leading-[1.3] whitespace-nowrap">
+                      {formatDateBRT(order.createdAt)} - {formatTimeBRT(order.createdAt, { hour: "2-digit", minute: "2-digit" })}
+                    </span>
+                  )}
+                  <span className="bg-gray-4 rounded-lg px-3 py-2 text-base font-medium text-gray-12 font-family-dm-sans leading-[1.3] whitespace-nowrap">
+                    {participants.length} {participants.length === 1 ? "participante" : "participantes"}
+                  </span>
                 </div>
 
-                {/* Cupom/voucher ANTES da taxa (taxa por último). */}
-                {(pricing.discount ?? 0) > 0 && (() => {
-                  const coupon = order.coupon ?? null;
-                  const voucher = order.voucher ?? null;
-                  // Cupom e voucher são exclusivos: com voucher, o desconto é do
-                  // voucher — rotula "Voucher CÓDIGO", não "Cupom".
-                  const isVoucher = !!voucher && !coupon;
-                  const isAutomaticCoupon = coupon?.couponType === "QUANTITY" || coupon?.couponType === "AGE";
-                  const couponPercent = coupon?.type === "PERCENTAGE" && coupon?.value > 0 ? coupon.value : undefined;
-                  const discountLabel = isVoucher
-                    ? `${voucher?.code ? `Voucher ${voucher.code}` : "Voucher"}:`
-                    : `${isAutomaticCoupon
-                      ? "Cupom automático"
-                      : coupon?.code
-                        ? `Cupom ${coupon.code}`
-                        : "Cupom"
-                    }${couponPercent != null && couponPercent > 0 ? ` (-${couponPercent}%)` : ""}:`;
-
-                  return (
-                    <div className="border border-gray-6 rounded-lg p-4 flex items-center justify-between gap-3">
-                      <p className="text-base font-semibold text-gray-12 font-manrope leading-[1.1]">
-                        {discountLabel}
+                {/* Meta do pedido — linhas label→valor (sem borda individual) */}
+                <div className="flex flex-col">
+                  <div className="flex items-center justify-between gap-8 py-2">
+                    <p className="text-base font-normal text-gray-12 font-family-dm-sans leading-[1.3]">
+                      Número do pedido:
+                    </p>
+                    <p className="text-base font-semibold text-gray-12 font-family-dm-sans leading-[1.3] text-right break-words">
+                      #{shortId(order.id) || "N/A"}
+                    </p>
+                  </div>
+                  <div className="flex items-center justify-between gap-8 py-2">
+                    <p className="text-base font-normal text-gray-12 font-family-dm-sans leading-[1.3] whitespace-nowrap">
+                      Nome do evento:
+                    </p>
+                    <p className="flex-1 min-w-0 text-base font-semibold text-gray-12 font-family-dm-sans leading-[1.3] text-right break-words">
+                      {event?.name || "N/A"}
+                    </p>
+                  </div>
+                  <div className="flex items-center justify-between gap-8 py-2">
+                    <p className="text-base font-normal text-gray-12 font-family-dm-sans leading-[1.3]">
+                      Número de participantes:
+                    </p>
+                    <p className="text-base font-semibold text-gray-12 font-family-dm-sans leading-[1.3] text-right">
+                      {participants.length}
+                    </p>
+                  </div>
+                  {/* Produtos adicionais — linha agregada (centavos do backend). */}
+                  {(pricing.productsSubtotal ?? 0) > 0 && (
+                    <div className="flex items-center justify-between gap-8 py-2">
+                      <p className="text-base font-normal text-gray-12 font-family-dm-sans leading-[1.3]">
+                        Produtos adicionais:
                       </p>
-                      <p className="text-base font-bold text-gray-12 font-manrope leading-[1.1] text-right">
-                        – {formatPrice(pricing.discount ?? 0)}
+                      <p className="text-base font-semibold text-gray-12 font-family-dm-sans leading-[1.3] text-right">
+                        {formatPrice(pricing.productsSubtotal ?? 0)}
                       </p>
                     </div>
-                  );
-                })()}
+                  )}
+                </div>
 
-                <div className="border border-gray-6 rounded-lg p-4 flex items-center justify-between gap-3">
-                  <p className="text-base font-semibold text-gray-12 font-manrope leading-[1.1]">
-                    Taxa de serviço:
-                  </p>
-                  <p className="text-base font-bold text-gray-12 font-manrope leading-[1.1] text-right">
-                    {formatPrice(pricing.serviceFee ?? 0)}
-                  </p>
+                <div className="w-full h-px bg-gray-6" />
+
+                {/* Totais — ingressos agrupados + subtotal/desconto/taxa/total */}
+                <div className="flex flex-col">
+                  {/* Ingressos agrupados por tipo idêntico "(Nx) Nome". Preço =
+                      `ticket.unitPrice` do backend (só o ingresso, sem produtos). */}
+                  {groupedTicketLines.map((line, lineIndex) => (
+                    <div key={lineIndex} className="flex items-center justify-between gap-8 py-2">
+                      <span className="flex flex-col min-w-0">
+                        <span className="text-xs text-gray-12 font-family-dm-sans truncate">
+                          {line.categoryName ?? "Ingresso avulso"}
+                        </span>
+                        <span className="text-base text-gray-12 font-family-dm-sans break-words">
+                          {line.quantity > 1 ? `(${line.quantity}x) ` : ""}{line.ticketName}
+                        </span>
+                      </span>
+                      <p className="text-base font-semibold text-gray-12 font-family-dm-sans leading-[1.3] text-right shrink-0">
+                        {formatPrice(line.total * 100)}
+                      </p>
+                    </div>
+                  ))}
+
+                  <div className="flex items-center justify-between gap-8 py-2">
+                    <p className="text-base font-normal text-gray-12 font-family-dm-sans leading-[1.3]">
+                      Subtotal:
+                    </p>
+                    <p className="text-base font-semibold text-gray-12 font-family-dm-sans leading-[1.3] text-right">
+                      {formatPrice(pricing.subtotal ?? 0)}
+                    </p>
+                  </div>
+
+                  {/* Cupom/voucher ANTES da taxa (taxa por último). */}
+                  {(pricing.discount ?? 0) > 0 && (() => {
+                    const coupon = order.coupon ?? null;
+                    const voucher = order.voucher ?? null;
+                    // Cupom e voucher são exclusivos: com voucher, o desconto é do
+                    // voucher — rotula "Voucher CÓDIGO", não "Cupom".
+                    const isVoucher = !!voucher && !coupon;
+                    const isAutomaticCoupon = coupon?.couponType === "QUANTITY" || coupon?.couponType === "AGE";
+                    const couponPercent = coupon?.type === "PERCENTAGE" && coupon?.value > 0 ? coupon.value : undefined;
+                    const discountLabel = isVoucher
+                      ? `${voucher?.code ? `Voucher ${voucher.code}` : "Voucher"}:`
+                      : `${isAutomaticCoupon
+                        ? "Cupom automático"
+                        : coupon?.code
+                          ? `Cupom ${coupon.code}`
+                          : "Cupom"
+                      }${couponPercent != null && couponPercent > 0 ? ` (-${couponPercent}%)` : ""}:`;
+
+                    return (
+                      <div className="flex items-center justify-between gap-8 py-2">
+                        <p className="text-base font-normal text-gray-12 font-family-dm-sans leading-[1.3] break-words">
+                          {discountLabel}
+                        </p>
+                        <p className="text-base font-semibold text-gray-12 font-family-dm-sans leading-[1.3] text-right shrink-0">
+                          – {formatPrice(pricing.discount ?? 0)}
+                        </p>
+                      </div>
+                    );
+                  })()}
+
+                  <div className="flex items-center justify-between gap-8 py-2">
+                    <p className="text-base font-normal text-gray-12 font-family-dm-sans leading-[1.3]">
+                      Taxa de serviço:
+                    </p>
+                    <p className="text-base font-semibold text-gray-12 font-family-dm-sans leading-[1.3] text-right">
+                      {formatPrice(pricing.serviceFee ?? 0)}
+                    </p>
+                  </div>
+
+                  <div className="flex items-center justify-between gap-8 py-2">
+                    <p className="text-base font-normal text-gray-12 font-family-dm-sans leading-[1.3]">
+                      Total do pedido:
+                    </p>
+                    <p className="text-base font-semibold text-gray-12 font-family-dm-sans leading-[1.3] text-right">
+                      {formatPrice(pricing.total ?? 0)}
+                    </p>
+                  </div>
                 </div>
               </div>
-            </div>
-
-            <div className="px-4 py-4 pb-8 flex items-center justify-center gap-1">
-              <p className="text-xl font-medium text-gray-12 font-manrope leading-[1.1]">
-                Total pago:
-              </p>
-              <p className="text-2xl font-bold text-gray-12 font-manrope leading-[1.1]">
-                {formatPrice(pricing.total ?? 0)}
-              </p>
-            </div>
+            )}
           </div>
         </div>
       </div>

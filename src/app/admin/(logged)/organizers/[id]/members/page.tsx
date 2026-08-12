@@ -224,7 +224,7 @@ export default function AdminOrgMembersPage() {
         </div>
 
         {/* Search */}
-        <div className="rounded-xl border border-gray-6 bg-gray-1 p-3 md:p-4 shadow-[0px_2px_6px_0px_rgba(17,17,17,0.08)] mb-5">
+        <div className="rounded-xl border border-gray-6 bg-gray-1 p-3 md:p-4  mb-5">
           <div className="relative w-full">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-5 text-gray-11 pointer-events-none" />
             <input
@@ -232,7 +232,7 @@ export default function AdminOrgMembersPage() {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Buscar por nome, email…"
-              className="w-full h-12 pl-11 pr-4 rounded-lg border border-gray-6 bg-gray-1 text-base md:text-sm text-gray-12 placeholder:text-gray-11 font-family-dm-sans shadow-[0px_2px_6px_0px_rgba(17,17,17,0.08)] outline-none focus-visible:border-gray-8"
+              className="w-full h-12 pl-11 pr-4 rounded-lg border border-gray-6 bg-gray-1 text-base md:text-sm text-gray-12 placeholder:text-gray-11 font-family-dm-sans  outline-none focus-visible:border-gray-8"
             />
           </div>
         </div>
@@ -240,14 +240,14 @@ export default function AdminOrgMembersPage() {
         {/* Mobile: cards */}
         <div className="md:hidden flex flex-col gap-3">
           {pageSlice.length === 0 ? (
-            <div className="rounded-xl border border-gray-6 bg-gray-1 py-14 text-center text-sm text-gray-11 font-family-dm-sans shadow-[0px_2px_6px_0px_rgba(17,17,17,0.08)] px-4">
+            <div className="rounded-xl border border-gray-6 bg-gray-1 py-14 text-center text-sm text-gray-11 font-family-dm-sans  px-4">
               {search ? "Nenhum membro encontrado." : "Nenhum membro na organização."}
             </div>
           ) : (
             pageSlice.map((m) => {
               const name = `${m.user.firstName ?? ""} ${m.user.lastName ?? ""}`.trim();
               return (
-                <div key={m.id} className="rounded-xl border border-gray-6 bg-gray-1 p-4 shadow-[0px_2px_6px_0px_rgba(17,17,17,0.08)]">
+                <div key={m.id} className="rounded-xl border border-gray-6 bg-gray-1 p-4 ">
                   <div className="flex items-start gap-3 min-w-0">
                     <UserAvatar
                       avatarUrl={m.user.avatarUrl}
@@ -284,7 +284,7 @@ export default function AdminOrgMembersPage() {
         </div>
 
         {/* Desktop: table */}
-        <div className="hidden md:block rounded-xl border border-gray-6 bg-gray-1 overflow-hidden shadow-[0px_2px_6px_0px_rgba(17,17,17,0.08)]">
+        <div className="hidden md:block rounded-xl border border-gray-6 bg-gray-1 overflow-hidden ">
           <div className="overflow-x-auto">
             <table className="w-full min-w-[640px]">
               <thead>

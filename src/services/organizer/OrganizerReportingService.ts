@@ -1,4 +1,5 @@
 import type { Event } from "@/interfaces/event";
+import type { AnticipationQuote } from "@/utils/anticipation";
 import { OrganizerServiceBase } from "./OrganizerServiceBase";
 import type {
   CreateOrganizerRequest,
@@ -322,21 +323,41 @@ export class OrganizerReportingService extends OrganizerServiceBase {
   }
 
   /**
+   * Baixa o CSV do "aguardando liberação" — aba `avista` (pending) ou
+   * `parcelados` (parcelas a receber). Retorna o blob + o nome de arquivo
+   * sugerido no `Content-Disposition` (exige CORS exposedHeaders).
+   */
+  async exportFinancialPending(
+    eventId: string,
+    type: "avista" | "parcelados",
+    fields?: string[],
+  ): Promise<{ blob: Blob; filename: string }> {
+    const response = await this.apiClient.get<Blob>(
+      `/api/v1/events/${eventId}/financial/pending/export`,
+      {
+        params: {
+          type,
+          ...(fields && fields.length ? { fields: fields.join(",") } : {}),
+        },
+        responseType: "blob",
+      },
+    );
+    const contentDisposition =
+      (response.headers as Record<string, string>)["content-disposition"] ?? "";
+    const match = contentDisposition.match(/filename="?([^"]+)"?/);
+    const filename =
+      match?.[1] ?? `aguardando-liberacao-${type}-${eventId.slice(0, 8)}.csv`;
+    return { blob: response.data as unknown as Blob, filename };
+  }
+
+  /**
    * Cotação da antecipação de recebíveis: total disponível p/ antecipar, taxa
    * mensal e a lista de pedidos (oldest-first) p/ o front calcular a prévia local.
    */
-  async getAnticipationQuote(eventId: string): Promise<{
-    anticipatableTotal: number;
-    monthlyRate: number;
-    orders: { orderId: string; netAmount: number; daysUntilRelease: number }[];
-  }> {
-    const { data: response } = await this.apiClient.get<{
-      data: {
-        anticipatableTotal: number;
-        monthlyRate: number;
-        orders: { orderId: string; netAmount: number; daysUntilRelease: number }[];
-      };
-    }>(`/api/v1/events/${eventId}/repasse/anticipations/quote`);
+  async getAnticipationQuote(eventId: string): Promise<AnticipationQuote> {
+    const { data: response } = await this.apiClient.get<{ data: AnticipationQuote }>(
+      `/api/v1/events/${eventId}/repasse/anticipations/quote`,
+    );
     return response.data;
   }
 
@@ -731,19 +752,86 @@ export class OrganizerReportingService extends OrganizerServiceBase {
   }
 
   /**
-   * Reenvia o e-mail de confirmação do PEDIDO (todos os ingressos + comprovante)
-   * para o endereço informado — como se fosse o e-mail do comprador. O backend
-   * resolve o pedido a partir da inscrição, regera os anexos a partir do
-   * snapshot imutável e aplica o mesmo controle de acesso dos PDFs do pedido.
+   * Reenvia o e-mail de confirmação para o endereço informado. O backend resolve
+   * o pedido a partir da inscrição, regera os anexos a partir do snapshot
+   * imutável e aplica o mesmo controle de acesso dos PDFs do pedido.
+   *
+   * @param ticketOnly Quando `true`, envia SOMENTE o ingresso desta inscrição
+   *   (sem comprovante e sem os demais ingressos do pedido) — usado pelo modal de
+   *   inscrição. Omisso/`false` = pedido completo (todos os ingressos +
+   *   comprovante), usado pelo modal de pedido.
    */
   async resendRegistrationEmail(
     registrationId: string,
     email: string,
+    ticketOnly = false,
   ): Promise<void> {
     await this.apiClient.post(
       `/api/v1/registrations/${registrationId}/resend-email`,
-      { email },
+      { email, ticketOnly },
     );
+  }
+
+  /**
+   * Edição dos dados do participante de uma inscrição pelo ORGANIZADOR (painel de
+   * inscrições). PATCH parcial — só os campos enviados são atualizados. O backend
+   * grava no recibo imutável + colunas-espelho e reaplica o gate `edit_event`
+   * (verdade do servidor). Retorna a inscrição re-hidratada (mesmo shape do GET)
+   * para o front atualizar o estado sem refetch.
+   */
+  async updateRegistrationParticipant(
+    registrationId: string,
+    payload: {
+      name?: string;
+      email?: string;
+      documentType?: string;
+      documentNumber?: string;
+      phone?: string;
+      birthDate?: string;
+      gender?: string;
+      country?: string;
+      emergencyContactName?: string;
+      emergencyContactPhone?: string;
+    },
+  ): Promise<Registration> {
+    const { data: response } = await this.apiClient.patch<{
+      data: { registration: Registration };
+    }>(`/api/v1/registrations/${registrationId}/participant`, payload);
+    return response.data.registration;
+  }
+
+  /**
+   * Edição em lote das respostas das perguntas do organizador (ORGANIZADOR).
+   * Backend atualiza a tabela relacional + o recibo imutável e reaplica o gate
+   * `edit_event`. Retorna a inscrição re-hidratada (mesmo shape do GET).
+   */
+  async updateRegistrationAnswers(
+    registrationId: string,
+    answers: { questionId: string; answer: string }[],
+  ): Promise<Registration> {
+    const { data: response } = await this.apiClient.patch<{
+      data: { registration: Registration };
+    }>(`/api/v1/registrations/${registrationId}/answers`, { answers });
+    return response.data.registration;
+  }
+
+  /**
+   * Troca da variação de um produto incluso pelo ORGANIZADOR (sem os limites do
+   * comprador). Backend recalcula estoque e reaplica o gate `edit_event`. Retorna
+   * a inscrição re-hidratada (mesmo shape do GET).
+   */
+  async updateRegistrationProductVariationAsOrganizer(
+    registrationId: string,
+    productId: string,
+    variationId: string,
+  ): Promise<Registration> {
+    const { data: response } = await this.apiClient.patch<{
+      data: { registration: Registration };
+    }>(
+      `/api/v1/registrations/${registrationId}/products/${productId}/variation/organizer`,
+      { variationId },
+    );
+    return response.data.registration;
   }
 
   async contactOrganizer(

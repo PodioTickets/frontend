@@ -6,6 +6,7 @@ import { ArrowButton } from "../ArrowButton";
 import { DistanceIcon } from "../Icons/DistanceIcon";
 import { CalendarIcon } from "../Icons/CalendarIcon";
 import { ClockIcon } from "../Icons/ClockIcon";
+import { hasDisplayableDistance } from "@/utils/checkoutModalityDisplay";
 import { Counter } from "./Counter";
 import type { Kit } from "@/constants/kits";
 import { formatBRL as formatPrice } from "@/lib/money";
@@ -199,12 +200,14 @@ export function KitCard({ kit, index }: KitCardProps) {
 
                         {/* Info Icons */}
                         <div className="grid grid-cols-2 gap-4 items-center">
-                          <div className="flex items-center gap-2">
-                            <DistanceIcon className="size-6 shrink-0" />
-                            <p className="text-base font-medium text-gray-12 font-family-dm-sans leading-[1.3]">
-                              {race.distanceKm} km
-                            </p>
-                          </div>
+                          {hasDisplayableDistance(race.distanceKm) && (
+                            <div className="flex items-center gap-2">
+                              <DistanceIcon className="size-6 shrink-0" />
+                              <p className="text-base font-medium text-gray-12 font-family-dm-sans leading-[1.3]">
+                                {race.distanceKm} km
+                              </p>
+                            </div>
+                          )}
                           <div className="flex items-center gap-2">
                             <CalendarIcon className="size-6 shrink-0" />
                             <p className="text-base font-medium text-gray-12 font-family-dm-sans leading-[1.3]">
@@ -358,12 +361,14 @@ export function KitCard({ kit, index }: KitCardProps) {
                       <div className="flex flex-col gap-5">
                         <h2 className="text-xl font-bold">{race.name}</h2>
                         <div className="flex items-center gap-8 flex-wrap">
-                          <div className="flex items-center gap-2">
-                            <DistanceIcon className="size-6" />
-                            <p className="text-lg font-medium text-gray-12">
-                              {race.distanceKm} km
-                            </p>
-                          </div>
+                          {hasDisplayableDistance(race.distanceKm) && (
+                            <div className="flex items-center gap-2">
+                              <DistanceIcon className="size-6" />
+                              <p className="text-lg font-medium text-gray-12">
+                                {race.distanceKm} km
+                              </p>
+                            </div>
+                          )}
                           <div className="flex items-center gap-2">
                             <CalendarIcon className="size-6" />
                             <p className="text-lg font-medium text-gray-12">

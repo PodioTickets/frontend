@@ -90,6 +90,18 @@ export function ticketNameHasDistance(name: string | null | undefined): boolean 
   return /\d+(?:[.,]\d+)?\s*km\b/i.test(name);
 }
 
+/**
+ * `true` só quando a distância deve ser exibida — existe e é > 0. Aceita number
+ * ou string ("0", "", "5", "14"): normaliza vírgula decimal e faz `parseFloat`.
+ * Distância 0 / ausente / não-numérica → oculta o bloco de ícone + distância
+ * (regra única do checkout, modal do organizador, kits, etc.).
+ */
+export function hasDisplayableDistance(distance: unknown): boolean {
+  if (distance == null) return false;
+  const n = parseFloat(String(distance).replace(",", "."));
+  return Number.isFinite(n) && n > 0;
+}
+
 export function getCheckoutModalityInfo(
   ticket: Ticket,
   event: Event,

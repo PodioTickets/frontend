@@ -144,7 +144,7 @@ export default function EventPage() {
   // Só mostrar "não encontrado" quando terminou de carregar e realmente não tem evento
   if (!isLoading && !event) {
     return (
-      <section className="flex flex-col min-h-screen items-center max-w-[1280px] mx-auto lg:px-8 py-20">
+      <section className="flex flex-col min-h-dvh items-center max-w-[1280px] mx-auto lg:px-8 py-20">
         <div className="flex flex-col items-center justify-center">
           <h1 className="text-2xl font-bold mb-4">Evento não encontrado</h1>
           <p className="text-gray-11 mb-6">
@@ -247,7 +247,7 @@ export default function EventPage() {
   return (
     <>
       {/* Mobile Layout */}
-      <div className="md:hidden bg-gray-2 min-h-screen pb-24 px-4">
+      <div className="md:hidden bg-gray-2 min-h-dvh pb-24 px-4">
         {event.bannerUrl && event.bannerUrl.trim() !== "" && !imageError && (
           <div
             className="absolute top-0 left-0 w-full max-h-[300px] h-full blur-sm"
@@ -590,7 +590,7 @@ export default function EventPage() {
           </div>
         )}
 
-        <section className="flex flex-col min-h-screen items-center max-w-[1280px] mx-auto px-4 lg:px-8 relative">
+        <section className="flex flex-col min-h-dvh items-center max-w-[1280px] mx-auto px-4 lg:px-8 relative">
           {/* Layout 2 colunas: esquerda = banner + tópicos (1º tópico logo
               abaixo do banner), direita = card de informações.
               Sem `items-start`: as colunas esticam (stretch) para a mesma

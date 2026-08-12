@@ -1,8 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
-import { Check, CheckCircle2, Briefcase, Palette, ChevronRightIcon, ArrowRight } from "lucide-react";
+import { Check, CheckCircle2, Briefcase, Palette } from "lucide-react";
 import { Button } from "@/components/Button";
-import { ArrowUpRightIcon } from "@/components/Icons/ArrowUpRightIcon";
 import { cn } from "@/utils/cn";
 import { Reveal } from "@/components/Landing/Reveal";
 
@@ -16,7 +15,7 @@ import { Reveal } from "@/components/Landing/Reveal";
  */
 
 // Destino dos CTAs "Falar com um especialista". Troque pelo WhatsApp/contato real.
-const SPECIALIST_HREF = "https://www.huggy.chat/b7cff6c8-d928-4aa2-b825-9395b36c590b";
+const SPECIALIST_HREF = "https://app.podioticket.com.br/login";
 
 const IMG = {
   heroDashboards: "/images/landing/hero-dashboards.png",
@@ -37,8 +36,7 @@ function SpecialistButton({ className = "" }: { className?: string }) {
   return (
     <Button asChild className={cn("h-[52px] w-full gap-3 px-8 has-[>svg]:px-8 text-[16px] font-bold md:h-14 md:w-auto md:text-[20px]", className)}>
       <Link href={SPECIALIST_HREF}>
-        Falar com um especialista
-        <ArrowRight className="size-5" />
+        Criar meu evento
       </Link>
     </Button>
   );
@@ -193,6 +191,7 @@ function FeatureCard({
     <div
       className={`group relative flex flex-col justify-end overflow-hidden rounded-2xl shadow-xl  ${className}`}
     >
+      <div className="w-full absolute bottom-0 h-full bg-linear-to-t from-[#111111] via-20% via-transparent to-transparent z-10"></div>
       <Image
         src={image}
         alt={title}
@@ -200,13 +199,8 @@ function FeatureCard({
         sizes={sizes}
         className={`object-cover ${imageClassName}`}
       />
-      {/* gradiente para legibilidade do texto */}
-      <div className="absolute inset-0 bg-gradient-to-t from-[#0e1512] via-30% via-transparent to-transparent" />
       <div className="relative z-10 flex flex-col gap-3 p-6">
-        <h3 className="font-manrope text-[18px] font-bold leading-[1.1] text-white md:text-[20px]">{title}</h3>
-        <p className="font-family-dm-sans text-[14px] leading-[1.3] text-[#d9d9d9] md:text-[18px]">
-          {description}
-        </p>
+        <h3 className="font-manrope max-md:text-[18px] font-bold leading-[1.1] text-white text-[24px]">{title}</h3>
       </div>
     </div>
   );
@@ -226,31 +220,31 @@ function FeaturesSection() {
           {/* Linha 1: dois cards iguais (experiência + cupons/vouchers) */}
           <FeatureCard
             image={IMG.featureExperience}
-            title="Ofereça uma experiência profissional na inscrição"
-            description="Personalize categorias, kits e produtos do evento. Configure tamanhos de camisa, produtos opcionais, brindes e muito mais."
+            title="Inscrições que impressionam"
+            description=""
             className="min-h-[360px] lg:min-h-[557px]"
             imageClassName="object-top"
           />
           <FeatureCard
             image={IMG.featureVouchers}
-            title="Ofereça descontos e cortesias com facilidade"
-            description="Crie cupons promocionais, vouchers e regras de desconto para impulsionar as inscrições e gerenciar benefícios para patrocinadores, parceiros e grupos específicos."
+            title="Ofereça descontos e cortesias"
+            description=""
             className="min-h-[360px] lg:min-h-[557px]"
             imageClassName="object-top"
           />
           {/* Linha 2: card largura total (participantes) */}
           <FeatureCard
             image={IMG.featureParticipants}
-            title="Gerencie seus participantes com facilidade"
-            description="Tenha todas as informações dos inscritos organizadas. Pesquise atletas, exporte listas, acompanhe pagamentos e mantenha tudo sob controle."
+            title="Acompanhe os participantes"
+            description=""
             className="max-md:hidden min-h-[300px] lg:col-span-2 lg:min-h-[450px]"
             imageClassName="object-left-top"
             sizes="(min-width: 1024px) 1280px, 100vw"
           />
           <FeatureCard
             image={IMG.featureParticipantsMobile}
-            title="Gerencie seus participantes com facilidade"
-            description="Tenha todas as informações dos inscritos organizadas. Pesquise atletas, exporte listas, acompanhe pagamentos e mantenha tudo sob controle."
+            title="Acompanhe os participantes"
+            description=""
             className="min-h-[300px] lg:col-span-2 lg:min-h-[450px] md:hidden"
             imageClassName="object-left-top"
             sizes="(min-width: 1024px) 1280px, 100vw"

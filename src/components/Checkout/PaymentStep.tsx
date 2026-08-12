@@ -11,6 +11,7 @@ import {
 } from "./CheckoutAddressSection";
 import { formatBRL as formatPrice } from "@/lib/money";
 import { getPostalCodeConfig } from "@/utils/postalCode";
+import { hasDisplayableDistance } from "@/utils/checkoutModalityDisplay";
 import { MobileSummaryBar, SummaryRow } from "./MobileSummaryBar";
 import { formatDocumentDisplay, isPersonBr } from "@/utils/documentDisplay";
 import { formatDateBR } from "@/utils/datetimeBR";
@@ -440,7 +441,7 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
             quantity: t.quantity,
             categoryName: local?.groupId ? categoryNameMap.get(local.groupId) : undefined,
             raceName: t.batchName ?? local?.name ?? "",
-            distance: local?.distance ? `${local.distance} ${local.distanceUnit || ""}` : "",
+            distance: hasDisplayableDistance(local?.distance) ? `${local?.distance} ${local?.distanceUnit || ""}` : "",
             price: unitPrice,
             total: lineTotal,
           });
@@ -473,7 +474,7 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
       quantity,
       categoryName: ticket.groupId ? categoryNameMap.get(ticket.groupId) : undefined,
       raceName: ticket.name,
-      distance: ticket.distance ? `${ticket.distance} ${ticket.distanceUnit || ""}` : "",
+      distance: hasDisplayableDistance(ticket.distance) ? `${ticket.distance} ${ticket.distanceUnit || ""}` : "",
       price: getTicketPrice(ticket),
       total: getTicketPrice(ticket) * quantity,
     }));

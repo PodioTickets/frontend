@@ -36,6 +36,13 @@ export function AdBlockChecker() {
     if (!isParticipantSurface || checkedRef.current) return;
     // Dispensado nesta aba: não paga nem o custo da detecção.
     if (isAdBlockNoticeDismissed()) return;
+    // Mobile: aviso removido (só desktop). No celular o modal virava atrito na
+    // compra; `md` do Tailwind (<768px) = mobile. Não roda nem a detecção.
+    if (
+      typeof window !== "undefined" &&
+      window.matchMedia("(max-width: 767px)").matches
+    )
+      return;
 
     checkedRef.current = true;
     const controller = new AbortController();

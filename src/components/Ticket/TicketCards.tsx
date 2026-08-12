@@ -4,6 +4,7 @@ import { Pencil, Trash2, Plus, Minus, ChevronLeft, ChevronRight } from "lucide-r
 import { DistanceIcon } from "@/components/Icons/DistanceIcon";
 import { CalendarIcon } from "@/components/Icons/CalendarIcon";
 import { ClockIcon } from "@/components/Icons/ClockIcon";
+import { hasDisplayableDistance } from "@/utils/checkoutModalityDisplay";
 import type { Ticket } from "@/hooks/useTickets";
 
 interface TicketCardsProps {
@@ -56,7 +57,7 @@ export function TicketCards({
             </div>
 
             <div className="flex gap-4 items-center text-sm text-gray-11 font-family-dm-sans">
-              {ticket.distance && (
+              {hasDisplayableDistance(ticket.distance) && (
                 <div className="flex gap-1 items-center">
                   <DistanceIcon className="size-4" />
                   <span>{ticket.distance}{ticket.distanceUnit}</span>

@@ -7,6 +7,7 @@ import { ClockIcon } from "../Icons/ClockIcon";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import type { Ticket } from "@/hooks/useTickets";
 import { DistanceIcon } from "../Icons/DistanceIcon";
+import { hasDisplayableDistance } from "@/utils/checkoutModalityDisplay";
 import { ProductCardGallery } from "./ProductCardGallery";
 import { formatPhoneForCountry } from "@/utils/phone";
 import { isBrazilianCountry } from "@/validators/Auth.validator";
@@ -336,7 +337,7 @@ export function ParticipantSummaryModal({
                       {ticket.name}
                     </p>
                     <div className="flex gap-8 items-center flex-wrap">
-                      {ticket.distance && (
+                      {hasDisplayableDistance(ticket.distance) && (
                         <div className="flex gap-2 items-center">
                           <DistanceIcon className="size-6 text-gray-12" />
                           <p className="font-family-dm-sans font-medium text-lg leading-[1.3] text-gray-12">

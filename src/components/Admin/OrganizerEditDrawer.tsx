@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, XCircle, Building2, MapPin, Phone, ChevronRight, ChevronDown, Trash2, Plus } from "lucide-react";
+import { X, XCircle, Building2, MapPin, Phone, ChevronRight, ChevronDown, Trash2, Plus, Check, SlidersHorizontal } from "lucide-react";
 import {
   Drawer,
   DrawerClose,
@@ -20,11 +20,17 @@ import { EVENT_IMAGE_SPECS } from "@/lib/eventImageSpecs";
 import type { AdminAuditOrganization } from "@/services/admin/AdminService";
 import { cn } from "@/utils/cn";
 import toast from "react-hot-toast";
+import { FormField } from "@/components/FormField";
 import { FinanceIcon } from "../Icons/Organizer/FinanceIcon";
 import { lookupCepDigits } from "@/utils/lookupCep";
 import { formatDateBRT } from "@/utils/datetimeBR";
-import { getCpfValidationMessage } from "@/utils/cpf";
-import { getCnpjValidationMessage } from "@/utils/cnpj";
+import {
+  PIX_KEY_LABELS,
+  PIX_KEY_TYPE_OPTIONS,
+  maskPixKey,
+  pixKeyPlaceholder,
+  getPixKeyValidationMessage,
+} from "@/utils/pixKey";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -52,6 +58,10 @@ interface OrgDetail extends AdminAuditOrganization {
   ownerName?: string;
   ownerDocument?: string;
   fiscalEmail?: string;
+  /** Taxa mensal de antecipação (fração: 0.1 = 10%). */
+  anticipationMonthlyRate?: number;
+  /** Antecipação de recebíveis habilitada para esta org (default false). */
+  anticipationEnabled?: boolean;
   pixKeys?: Array<{ key: string; keyType: string; isDefault: boolean }>;
   _count?: { events?: number; members?: number };
 }
@@ -101,34 +111,6 @@ function formatCPFOrCNPJ(v?: string | null): string {
   if (!v) return "";
   const d = digits(v);
   return d.length <= 11 ? formatCPF(d) : formatCNPJ(d);
-}
-
-/** Aplica máscara de CPF/CNPJ à chave PIX só quando o tipo é documento. */
-function maskPixKey(keyType: string, value: string): string {
-  if (keyType === "CPF") return formatCPF(value);
-  if (keyType === "CNPJ") return formatCNPJ(value);
-  return value;
-}
-
-/** Placeholder da chave PIX conforme o tipo selecionado. */
-function pixKeyPlaceholder(keyType: string): string {
-  if (keyType === "CPF") return "000.000.000-00";
-  if (keyType === "CNPJ") return "00.000.000/0000-00";
-  if (keyType === "EMAIL") return "email@exemplo.com";
-  if (keyType === "PHONE") return "(00) 00000-0000";
-  return "Digite a chave PIX";
-}
-
-/**
- * Valida a chave PIX quando o tipo é documento (CPF/CNPJ) — mesma validação do
- * checkout (`getCpfValidationMessage`/`getCnpjValidationMessage`). Demais tipos
- * (e-mail/telefone/aleatória) não passam por validação de documento aqui.
- * Retorna a mensagem de erro ou null.
- */
-function getPixKeyValidationMessage(keyType: string, key: string): string | null {
-  if (keyType === "CPF") return getCpfValidationMessage(key);
-  if (keyType === "CNPJ") return getCnpjValidationMessage(key);
-  return null;
 }
 
 function formatPhone(v?: string | null): string {
@@ -242,59 +224,8 @@ function SectionTitle({ icon, label }: { icon: React.ReactNode; label: string })
   );
 }
 
-function FieldInput({
-  label,
-  value,
-  onChange,
-  placeholder,
-  readOnly,
-  type = "text",
-  className,
-  error,
-}: {
-  label: string;
-  value: string;
-  onChange?: (v: string) => void;
-  placeholder?: string;
-  readOnly?: boolean;
-  type?: string;
-  className?: string;
-  error?: string;
-}) {
-  return (
-    <div className={cn("flex flex-col gap-2 flex-1", className)}>
-      <label className="text-base font-normal font-family-dm-sans text-gray-12 leading-[1.3]">
-        {label}
-      </label>
-      <input
-        type={type}
-        value={value}
-        onChange={onChange ? (e) => onChange(e.target.value) : undefined}
-        placeholder={placeholder}
-        readOnly={readOnly}
-        className={cn(
-          "h-12 w-full rounded-lg border px-3 text-base font-normal font-family-dm-sans leading-[1.3] outline-none transition-colors",
-          readOnly
-            ? "bg-gray-3 border-gray-4 text-gray-12 cursor-default"
-            : "bg-gray-1 text-gray-12 placeholder:text-gray-11 focus:border-gray-8",
-          error && !readOnly && "border-red-8 focus:border-red-8",
-          !error && "border-gray-6",
-        )}
-      />
-      {error ? (
-        <p className="text-sm text-red-11 font-family-dm-sans leading-[1.3]">{error}</p>
-      ) : null}
-    </div>
-  );
-}
-
-const PIX_KEY_LABELS: Record<string, string> = {
-  CPF: "CPF",
-  CNPJ: "CNPJ",
-  EMAIL: "E-mail",
-  PHONE: "Telefone",
-  EVP: "Chave aleatória",
-};
+// FieldInput foi extraído para o componente compartilhado `@/components/FormField`
+// (usado também pelo wizard de auto-cadastro de organizador).
 
 function PixKeyCard({
   pixKey,
@@ -335,11 +266,11 @@ function PixKeyCard({
       {expanded && (
         <div className="px-5 pb-5 flex flex-col gap-6">
           <div className="flex flex-wrap gap-x-4 gap-y-6">
-            <FieldInput label="Tipo de Chave" value={typeLabel} readOnly className="min-w-[290px]" />
-            <FieldInput label="Chave cadastrada" value={keyDisplay} readOnly className="min-w-[290px]" />
-            <FieldInput label="Nome do titular" value={pixKey.accountHolderName ?? ""} readOnly className="min-w-[290px]" />
-            <FieldInput label="CPF/CNPJ do titular" value={formatCPFOrCNPJ(pixKey.accountHolderDocument)} readOnly className="min-w-[290px]" />
-            <FieldInput label="Banco" value={pixKey.bankName ?? ""} readOnly className="min-w-[290px]" />
+            <FormField label="Tipo de Chave" value={typeLabel} readOnly className="min-w-[290px]" />
+            <FormField label="Chave cadastrada" value={keyDisplay} readOnly className="min-w-[290px]" />
+            <FormField label="Nome do titular" value={pixKey.accountHolderName ?? ""} readOnly className="min-w-[290px]" />
+            <FormField label="CPF/CNPJ do titular" value={formatCPFOrCNPJ(pixKey.accountHolderDocument)} readOnly className="min-w-[290px]" />
+            <FormField label="Banco" value={pixKey.bankName ?? ""} readOnly className="min-w-[290px]" />
           </div>
           <button
             type="button"
@@ -487,6 +418,11 @@ export function OrganizerEditDrawer({ isOpen, onClose, org, onUpdated, mode = "e
   // Erro de documento no modo PF (conflito de CPF) — vai no campo "CPF do responsável".
   const [ownerDocError, setOwnerDocError] = useState("");
   const [fiscalEmail, setFiscalEmail] = useState("");
+  // Taxa MENSAL de antecipação, editada em PERCENT (ex.: "10" = 10%). Convertida
+  // para fração (0.10) no payload. Default 10% (schema).
+  const [anticipationRatePercent, setAnticipationRatePercent] = useState("10");
+  // Antecipação habilitada para a org. DESLIGADA por padrão (inclusive no create).
+  const [anticipationEnabled, setAnticipationEnabled] = useState(false);
   const [loadingCep, setLoadingCep] = useState(false);
   // Guarda o último CEP buscado pra não disparar fetch duplicado em re-renders.
   const lastFetchedCepRef = useRef<string>("");
@@ -526,6 +462,8 @@ export function OrganizerEditDrawer({ isOpen, onClose, org, onUpdated, mode = "e
       setOwnerDocument("");
       setOwnerDocError("");
       setFiscalEmail("");
+      setAnticipationRatePercent("10");
+      setAnticipationEnabled(false);
       setShowAddPix(false);
       setNewPix(emptyPix);
       return;
@@ -571,6 +509,12 @@ export function OrganizerEditDrawer({ isOpen, onClose, org, onUpdated, mode = "e
         setOwnerName(d.ownerName ?? "");
         setOwnerDocument(formatCPF(d.ownerDocument));
         setFiscalEmail(d.fiscalEmail ?? "");
+        setAnticipationRatePercent(
+          d.anticipationMonthlyRate != null
+            ? String(+(d.anticipationMonthlyRate * 100).toFixed(2))
+            : "10",
+        );
+        setAnticipationEnabled(d.anticipationEnabled ?? false);
         const loadedPix: PixKey[] = Array.isArray(d.pixKeys)
           ? d.pixKeys.map((k: any, i: number) => ({ id: `loaded-${i}`, key: k.key, keyType: k.keyType, isDefault: k.isDefault, bankName: k.bankName ?? "", accountHolderName: k.accountHolderName ?? "", accountHolderDocument: k.accountHolderDocument ? formatCPFOrCNPJ(k.accountHolderDocument) : "" }))
           : [];
@@ -679,6 +623,13 @@ export function OrganizerEditDrawer({ isOpen, onClose, org, onUpdated, mode = "e
         ownerName: ownerName.trim() || undefined,
         ownerDocument: digits(ownerDocument) || undefined,
         fiscalEmail: fiscalEmail.trim() || undefined,
+        // Percent → fração (0.10). Só envia quando válido (0–100%).
+        anticipationMonthlyRate: (() => {
+          const p = parseFloat(anticipationRatePercent.replace(",", "."));
+          return isNaN(p) || p < 0 || p > 100 ? undefined : p / 100;
+        })(),
+        // Liga/desliga a antecipação da org (default desligado no create).
+        anticipationEnabled,
         pixKeys: pixKeys.map(({ key, keyType, bankName, accountHolderName, accountHolderDocument }, i) => ({
           key,
           keyType,
@@ -932,7 +883,7 @@ export function OrganizerEditDrawer({ isOpen, onClose, org, onUpdated, mode = "e
                       internamente no `document`/`name` ao salvar. */}
                   {personType === "PJ" && (
                     <>
-                      <FieldInput
+                      <FormField
                         label="CNPJ"
                         value={cnpjValue}
                         onChange={(v) => {
@@ -943,7 +894,7 @@ export function OrganizerEditDrawer({ isOpen, onClose, org, onUpdated, mode = "e
                         className="min-w-[284px]"
                         error={cnpjError}
                       />
-                      <FieldInput
+                      <FormField
                         label="Razão social"
                         value={name}
                         onChange={setName}
@@ -952,9 +903,9 @@ export function OrganizerEditDrawer({ isOpen, onClose, org, onUpdated, mode = "e
                       />
                     </>
                   )}
-                  <FieldInput label="Nome fantasia" value={tradeName} onChange={setTradeName} placeholder="Nome fantasia" className="min-w-[284px]" />
-                  <FieldInput label="Nome do responsável" value={ownerName} onChange={(v) => { setOwnerName(v); if (ownerDocError) setOwnerDocError(""); }} placeholder="Nome completo" className="min-w-[284px]" />
-                  <FieldInput
+                  <FormField label="Nome fantasia" value={tradeName} onChange={setTradeName} placeholder="Nome fantasia" className="min-w-[284px]" />
+                  <FormField label="Nome do responsável" value={ownerName} onChange={(v) => { setOwnerName(v); if (ownerDocError) setOwnerDocError(""); }} placeholder="Nome completo" className="min-w-[284px]" />
+                  <FormField
                     label="CPF do responsável"
                     value={ownerDocument}
                     onChange={(v) => { setOwnerDocument(formatCPF(v)); if (ownerDocError) setOwnerDocError(""); }}
@@ -962,7 +913,54 @@ export function OrganizerEditDrawer({ isOpen, onClose, org, onUpdated, mode = "e
                     className="min-w-[284px]"
                     error={personType === "PF" ? ownerDocError : undefined}
                   />
-                  <FieldInput label="E-mail fiscal" value={fiscalEmail} onChange={setFiscalEmail} placeholder="fiscal@org.com" type="email" className="min-w-[284px]" />
+                  <FormField label="E-mail fiscal" value={fiscalEmail} onChange={setFiscalEmail} placeholder="fiscal@org.com" type="email" className="min-w-[284px]" />
+                </div>
+              </div>
+
+              <DrawerDivider />
+
+              {/* Configurações específicas — antecipação de recebíveis desta org.
+                  Fica entre "Detalhes" e "Endereço". A antecipação é DESLIGADA por
+                  padrão (inclusive no cadastro); o admin liga aqui e define a taxa. */}
+              <div className="flex flex-col gap-6">
+                <SectionTitle icon={<SlidersHorizontal className="size-5" />} label="Configurações específicas" />
+
+                {/* Checkbox — ativar/desativar antecipação */}
+                <button
+                  type="button"
+                  onClick={() => setAnticipationEnabled((v) => !v)}
+                  aria-pressed={anticipationEnabled}
+                  className="flex items-start gap-3 text-left"
+                >
+                  <span
+                    className={cn(
+                      "size-6 shrink-0 rounded-md border flex items-center justify-center transition-colors mt-0.5",
+                      anticipationEnabled ? "bg-[#C8F4CC] border-[#94CE9A] text-gray-12" : "border-gray-6 bg-gray-1",
+                    )}
+                    aria-hidden
+                  >
+                    {anticipationEnabled && <Check className="size-3.5" strokeWidth={2.5} />}
+                  </span>
+                  <span className="flex flex-col gap-0.5">
+                    <span className="text-base font-medium font-family-dm-sans text-gray-12 leading-[1.3]">
+                      Habilitar antecipação de recebíveis
+                    </span>
+                    <span className="text-sm font-normal font-family-dm-sans text-gray-11 leading-[1.3]">
+                      Quando ativa, esta organização pode solicitar antecipação nos eventos. Desativada por padrão.
+                    </span>
+                  </span>
+                </button>
+
+                {/* Taxa — só é cobrada quando a antecipação está habilitada. */}
+                <div className="flex flex-wrap gap-x-4 gap-y-6">
+                  <FormField
+                    label="Taxa de antecipação (% ao mês)"
+                    value={anticipationRatePercent}
+                    onChange={(v) => setAnticipationRatePercent(v.replace(/[^\d.,]/g, ""))}
+                    placeholder="10"
+                    inputMode="decimal"
+                    className="min-w-[284px]"
+                  />
                 </div>
               </div>
 
@@ -972,7 +970,7 @@ export function OrganizerEditDrawer({ isOpen, onClose, org, onUpdated, mode = "e
               <div className="flex flex-col gap-6">
                 <SectionTitle icon={<MapPin className="size-5" />} label="Endereço" />
                 <div className="flex flex-wrap gap-x-4 gap-y-6">
-                  <FieldInput
+                  <FormField
                     label="CEP"
                     value={zipCode}
                     onChange={(v) => {
@@ -1008,11 +1006,11 @@ export function OrganizerEditDrawer({ isOpen, onClose, org, onUpdated, mode = "e
                     placeholder={loadingCep ? "Buscando endereço..." : "00000-000"}
                     className="min-w-[264px]"
                   />
-                  <FieldInput label="Estado" value={state} onChange={setState} placeholder="Selecione o estado" className="min-w-[183px]" />
-                  <FieldInput label="Rua" value={street} onChange={setStreet} placeholder="Digite o nome da sua rua" className="min-w-[340px]" />
-                  <FieldInput label="Número" value={streetNumber} onChange={setStreetNumber} placeholder="Ex: 123" className="min-w-[189px] max-w-[189px]" />
-                  <FieldInput label="Bairro" value={neighborhood} onChange={setNeighborhood} placeholder="Digite o nome do seu bairro" className="min-w-[183px]" />
-                  <FieldInput label="Cidade" value={city} onChange={setCity} placeholder="Nome da cidade" className="min-w-[208px]" />
+                  <FormField label="Estado" value={state} onChange={setState} placeholder="Selecione o estado" className="min-w-[183px]" />
+                  <FormField label="Rua" value={street} onChange={setStreet} placeholder="Digite o nome da sua rua" className="min-w-[340px]" />
+                  <FormField label="Número" value={streetNumber} onChange={setStreetNumber} placeholder="Ex: 123" className="min-w-[189px] max-w-[189px]" />
+                  <FormField label="Bairro" value={neighborhood} onChange={setNeighborhood} placeholder="Digite o nome do seu bairro" className="min-w-[183px]" />
+                  <FormField label="Cidade" value={city} onChange={setCity} placeholder="Nome da cidade" className="min-w-[208px]" />
                 </div>
               </div>
 
@@ -1022,7 +1020,7 @@ export function OrganizerEditDrawer({ isOpen, onClose, org, onUpdated, mode = "e
               <div className="flex flex-col gap-6">
                 <SectionTitle icon={<Phone className="size-5" />} label="Contatos da organização" />
                 <div className="grid grid-cols-2 gap-4">
-                  <FieldInput
+                  <FormField
                     label="E-mail"
                     value={email}
                     onChange={(v) => {
@@ -1034,8 +1032,8 @@ export function OrganizerEditDrawer({ isOpen, onClose, org, onUpdated, mode = "e
                     className="min-w-[290px]"
                     error={emailError}
                   />
-                  <FieldInput label="WhatsApp" value={whatsapp} onChange={(v) => setWhatsapp(withPhoneMask(v))} placeholder="(00) 00000-0000" className="min-w-[290px]" />
-                  <FieldInput label="Telefone" value={phone} onChange={(v) => setPhone(withPhoneMask(v))} placeholder="(00) 00000-0000" className="min-w-[290px]" />
+                  <FormField label="WhatsApp" value={whatsapp} onChange={(v) => setWhatsapp(withPhoneMask(v))} placeholder="(00) 00000-0000" className="min-w-[290px]" />
+                  <FormField label="Telefone" value={phone} onChange={(v) => setPhone(withPhoneMask(v))} placeholder="(00) 00000-0000" className="min-w-[290px]" />
                 </div>
               </div>
 
@@ -1090,17 +1088,11 @@ export function OrganizerEditDrawer({ isOpen, onClose, org, onUpdated, mode = "e
                             setPixKeyError(null);
                           }}
                           placeholder="Selecione o tipo"
-                          options={[
-                            { id: "CPF", label: "CPF" },
-                            { id: "CNPJ", label: "CNPJ" },
-                            { id: "EMAIL", label: "E-mail" },
-                            { id: "PHONE", label: "Telefone" },
-                            { id: "EVP", label: "Chave aleatória" },
-                          ]}
+                          options={PIX_KEY_TYPE_OPTIONS}
                         />
                       </div>
 
-                      <FieldInput
+                      <FormField
                         label="Chave PIX"
                         value={newPix.key}
                         onChange={(v) => {
@@ -1111,21 +1103,21 @@ export function OrganizerEditDrawer({ isOpen, onClose, org, onUpdated, mode = "e
                         error={pixKeyError ?? undefined}
                         className="min-w-[200px]"
                       />
-                      <FieldInput
+                      <FormField
                         label="Nome do titular"
                         value={newPix.accountHolderName}
                         onChange={(v) => setNewPix((p) => ({ ...p, accountHolderName: v }))}
                         placeholder="Nome completo do titular"
                         className="min-w-[200px]"
                       />
-                      <FieldInput
+                      <FormField
                         label="CPF/CNPJ do titular"
                         value={newPix.accountHolderDocument}
                         onChange={(v) => setNewPix((p) => ({ ...p, accountHolderDocument: formatCPFOrCNPJ(v) }))}
                         placeholder="000.000.000-00"
                         className="min-w-[200px]"
                       />
-                      <FieldInput
+                      <FormField
                         label="Banco"
                         value={newPix.bankName}
                         onChange={(v) => setNewPix((p) => ({ ...p, bankName: v }))}

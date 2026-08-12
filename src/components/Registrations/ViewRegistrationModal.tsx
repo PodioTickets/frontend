@@ -6,9 +6,9 @@ import {
   useModalStore,
 } from "@/stores/modalStore";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, ChevronLeft, ChevronRight } from "lucide-react";
-import Image from "next/image";
-import Link from "next/link";
+import { X, ChevronLeft, Check } from "lucide-react";
+import { createPortal } from "react-dom";
+import { cn } from "@/utils/cn";
 import {
   useState,
   useMemo,
@@ -19,12 +19,13 @@ import {
 } from "react";
 import toast from "react-hot-toast";
 import { Drawer, DrawerContent, DrawerTitle } from "@/components/ui/drawer";
-import { RegistrationQRCode } from "../QRCode/RegistrationQRCode";
-import { getAvatarUrl } from "@/utils/avatar";
 import { organizerService } from "@/services";
 import { Loading } from "../Loading";
 import { DistanceIcon } from "../Icons/DistanceIcon";
 import { ArrowButton } from "../ArrowButton";
+import { RegistrationQRCode } from "@/components/QRCode/RegistrationQRCode";
+import { formatShortId } from "@/utils/shortId";
+import { getCurrentSurface } from "@/lib/authSurface";
 import {
   isPersonBr,
   documentLabel,
@@ -35,7 +36,65 @@ import { ImageWithInitialFallback } from "../ImageWithInitialFallback";
 import { Button } from "../Button";
 import { formatAnswer } from "@/utils/questionAnswer";
 import { isSemInteresseVariation } from "@/utils/semInteresseVariation";
-import { formatShortId } from "@/utils/shortId";
+import { FormField } from "@/components/FormField";
+import { SearchSelect } from "@/components/SearchSelect";
+import { ResendTicketsModal } from "./ResendTicketsModal";
+import { formatCPF, formatPhone as formatPhoneMask } from "@/utils/masks";
+import { isValidCPF } from "@/utils/cpf";
+import { maskDateBR, brDateToYmd } from "@/utils/dateInput";
+import { ticketNameHasDistance } from "@/utils/checkoutModalityDisplay";
+
+/** Rascunho editável dos dados do participante (edição inline do organizador).
+ *  Valores CRUS (sem máscara de exibição) — a máscara é aplicada no input. */
+interface ParticipantDraft {
+  name: string;
+  email: string;
+  documentNumber: string;
+  documentType: string;
+  phone: string;
+  birthDate: string; // dd/mm/aaaa no input
+  gender: string; // masculino | feminino | outro
+  country: string;
+  emergencyContactName: string;
+  emergencyContactPhone: string;
+}
+
+/** Produto já normalizado para exibição (map de `rawProducts`). */
+interface ModalProduct {
+  id?: string;
+  productId?: string | null;
+  variationId?: string | null;
+  productName: string;
+  productImage: string | null;
+  variationType?: string | null;
+  variationName?: string | null;
+  price: number | string;
+  isIncluded?: boolean;
+  variationEdited?: boolean;
+}
+
+/** Variação disponível (de `getProductById`) p/ o dropdown de edição. */
+interface ProductVariationOption {
+  id: string;
+  name: string;
+  price?: number;
+  stock?: number;
+  availableStock?: number;
+}
+
+/** Resposta de pergunta do organizador (snapshot/relacional). */
+interface AnswerItem {
+  id?: string;
+  question?: { id?: string; question?: string; description?: string } | string;
+  answer?: unknown;
+}
+
+/** Opções de sexo — mesmos ids gravados no checkout (`InformationStep`). */
+const GENDER_OPTIONS: { value: string; label: string }[] = [
+  { value: "masculino", label: "Masculino" },
+  { value: "feminino", label: "Feminino" },
+  { value: "outro", label: "Outro" },
+];
 
 /** Badge exibido quando o organizador trocou a variação do produto do
  *  participante (snapshot `variationEdited: true`). */
@@ -47,16 +106,206 @@ function VariationEditedBadge() {
   );
 }
 
+/**
+ * Select de variação do produto no modo EDIÇÃO (design do Figma: box full-width
+ * "Selecione a opção" + seta). O menu é PORTALADO no `body` com posição `fixed`
+ * ancorada no gatilho — assim FLUTUA por cima (absolute) sem ser cortado pelo body
+ * do modal com `overflow-y-auto`. Reposiciona no scroll/resize e fecha ao clicar fora.
+ */
+function VariationFloatingDropdown({
+  currentName,
+  currentId,
+  variations,
+  loading,
+  saving,
+  open,
+  onToggle,
+  onClose,
+  onSelect,
+}: {
+  currentName: string | null;
+  currentId: string;
+  variations: ProductVariationOption[];
+  loading: boolean;
+  saving: boolean;
+  open: boolean;
+  onToggle: () => void;
+  onClose: () => void;
+  onSelect: (variationId: string) => void;
+}) {
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+  const [pos, setPos] = useState<{ top: number; left: number; width: number } | null>(null);
+
+  const reposition = useCallback(() => {
+    const el = triggerRef.current;
+    if (!el) return;
+    const r = el.getBoundingClientRect();
+    // Menu alinhado sob o box (mesma largura/esquerda do gatilho).
+    const width = r.width;
+    const left = r.left;
+    // Estima a altura p/ decidir abrir p/ baixo ou p/ cima (evita sair da viewport).
+    const estH = Math.min(260, Math.max(48, variations.length * 44 + 8));
+    const spaceBelow = window.innerHeight - r.bottom;
+    const top =
+      spaceBelow < estH + 8 && r.top > estH + 8 ? r.top - estH - 4 : r.bottom + 4;
+    setPos({ top, left, width });
+  }, [variations.length]);
+
+  useEffect(() => {
+    if (!open) return;
+    reposition();
+    const handler = () => reposition();
+    // capture=true p/ pegar o scroll do container interno do modal também.
+    window.addEventListener("scroll", handler, true);
+    window.addEventListener("resize", handler);
+    const onDown = (e: MouseEvent) => {
+      const t = e.target as Node;
+      if (triggerRef.current?.contains(t) || menuRef.current?.contains(t)) return;
+      onClose();
+    };
+    document.addEventListener("mousedown", onDown);
+    return () => {
+      window.removeEventListener("scroll", handler, true);
+      window.removeEventListener("resize", handler);
+      document.removeEventListener("mousedown", onDown);
+    };
+  }, [open, reposition, onClose]);
+
+  const isSoldOut = (v: ProductVariationOption) => {
+    const stock = v.stock ?? 0;
+    if (stock <= 0) return false; // ilimitado
+    if (v.availableStock == null) return false;
+    return v.availableStock <= 0;
+  };
+
+  return (
+    <>
+      <button
+        ref={triggerRef}
+        type="button"
+        onClick={onToggle}
+        disabled={saving}
+        className={cn(
+          "w-full min-w-[147px] h-9 flex items-center justify-between gap-2 px-3 rounded-lg border bg-gray-1 transition-colors",
+          saving
+            ? "opacity-60 cursor-wait border-gray-7"
+            : "cursor-pointer border-gray-7 hover:border-gray-8",
+        )}
+      >
+        <span
+          className={cn(
+            "font-family-dm-sans font-normal text-sm truncate",
+            currentName ? "text-gray-12" : "text-gray-11",
+          )}
+        >
+          {saving ? "Salvando..." : currentName || "Selecione a opção"}
+        </span>
+        <ArrowButton isOpen={open} className="size-3 text-gray-12 shrink-0" />
+      </button>
+      {open &&
+        pos &&
+        typeof document !== "undefined" &&
+        createPortal(
+          <div
+            ref={menuRef}
+            style={{
+              position: "fixed",
+              top: pos.top,
+              left: pos.left,
+              width: pos.width,
+              zIndex: 9999,
+            }}
+            className="bg-gray-1 border border-gray-6 rounded-lg shadow-lg overflow-hidden max-h-[260px] overflow-y-auto"
+          >
+            {loading ? (
+              <div className="px-3 py-3 font-family-dm-sans text-sm text-gray-11">
+                Carregando…
+              </div>
+            ) : variations.length === 0 ? (
+              <div className="px-3 py-3 font-family-dm-sans text-sm text-gray-11">
+                Nenhuma variação disponível
+              </div>
+            ) : (
+              variations.map((v, i) => {
+                const isCurrent = v.id === currentId;
+                const out = !isCurrent && isSoldOut(v);
+                return (
+                  <button
+                    key={v.id}
+                    type="button"
+                    disabled={saving || out}
+                    onClick={() => onSelect(v.id)}
+                    className={cn(
+                      "flex items-center gap-2 w-full px-3 py-3 text-left transition-colors",
+                      out ? "opacity-50 cursor-not-allowed" : "hover:bg-gray-3 cursor-pointer",
+                      i < variations.length - 1 && "border-b border-gray-6",
+                      isCurrent && "bg-gray-3",
+                    )}
+                  >
+                    <Check
+                      className={cn(
+                        "size-4 shrink-0",
+                        isCurrent ? "text-primary-11 opacity-100" : "opacity-0",
+                      )}
+                    />
+                    <span className="font-family-dm-sans font-medium text-base text-gray-12 truncate">
+                      {v.name}
+                    </span>
+                    {out && (
+                      <span className="ml-auto font-family-dm-sans text-xs text-gray-10 shrink-0">
+                        Esgotado
+                      </span>
+                    )}
+                  </button>
+                );
+              })
+            )}
+          </div>,
+          document.body,
+        )}
+    </>
+  );
+}
+
 
 export function ViewRegistrationModal() {
   const { isOpen, closeViewRegistrationModal, data } = useViewRegistrationModal();
   const { openPaymentDetailsModal } = usePaymentDetailsModal();
-  const [isQuestionsModalOpen, setIsQuestionsModalOpen] = useState(false);
-  const [isProductsModalOpen, setIsProductsModalOpen] = useState(false);
-  const [productsPage, setProductsPage] = useState(1);
   const [loadingRegistration, setLoadingRegistration] = useState(false);
   const [registrationData, setRegistrationData] = useState<any>(null);
   const [isDownloadingTicket, setIsDownloadingTicket] = useState(false);
+
+  // Aba ativa do corpo (Figma 6379:147182): Informações | Produtos | Questionário.
+  // O cabeçalho "Ingresso" (com QR) fica FIXO acima das abas.
+  const [activeTab, setActiveTab] = useState<"info" | "products" | "questions">("info");
+
+  // Reenvio do e-mail (mesmo fluxo do modal de pedido — ResendTicketsModal).
+  const [showResendModal, setShowResendModal] = useState(false);
+  const [resendingEmail, setResendingEmail] = useState(false);
+
+  // Edição inline da seção "Informações do participante" (organizador).
+  const [editingParticipant, setEditingParticipant] = useState(false);
+  const [savingParticipant, setSavingParticipant] = useState(false);
+  const [participantDraft, setParticipantDraft] = useState<ParticipantDraft | null>(null);
+  const [participantErrors, setParticipantErrors] = useState<Record<string, string>>({});
+
+  // Edição inline das respostas das perguntas (organizador).
+  const [editingAnswers, setEditingAnswers] = useState(false);
+  const [savingAnswers, setSavingAnswers] = useState(false);
+  const [answersDraft, setAnswersDraft] = useState<Record<string, string> | null>(null);
+
+  // Edição da variação dos produtos (organizador). No modo edição cada card mostra
+  // o select box (Figma); o menu é um dropdown FLUTUANTE portalado (não corta no
+  // scroll). `editingProducts` = modo edição ligado; `openVariationPid` = card com o
+  // menu aberto; `savingProductId` = card salvando.
+  const [editingProducts, setEditingProducts] = useState(false);
+  const [openVariationPid, setOpenVariationPid] = useState<string | null>(null);
+  const [savingProductId, setSavingProductId] = useState<string | null>(null);
+  const [productVariations, setProductVariations] = useState<
+    Record<string, ProductVariationOption[]>
+  >({});
+  const [loadingVariations, setLoadingVariations] = useState(false);
 
   /* Split de superfície: mobile usa Drawer (vaul) full-screen rolável; desktop
    * mantém o modal centralizado original. Mesmo padrão do
@@ -138,6 +387,27 @@ export function ViewRegistrationModal() {
     }
   }, [registrationId, isDownloadingTicket]);
 
+  /* Reenvia o e-mail do pedido (ingressos + comprovante) p/ o endereço informado,
+   * como se fosse o comprador. Mesmo endpoint/fluxo do modal de pedido. */
+  const handleResendEmail = useCallback(
+    async (email: string) => {
+      if (!registrationId || resendingEmail) return;
+      setResendingEmail(true);
+      try {
+        // ticketOnly=true: envia SOMENTE este ingresso (sem comprovante nem os
+        // demais ingressos do pedido) — diferente do modal de pedido.
+        await organizerService.resendRegistrationEmail(registrationId, email, true);
+        toast.success("Ingresso reenviado para o e-mail informado.");
+        setShowResendModal(false);
+      } catch {
+        toast.error("Erro ao reenviar o ingresso. Tente novamente.");
+      } finally {
+        setResendingEmail(false);
+      }
+    },
+    [registrationId, resendingEmail],
+  );
+
   useEffect(() => {
     if (!isOpen || !registrationId) {
       setRegistrationData(null);
@@ -163,6 +433,22 @@ export function ViewRegistrationModal() {
     };
 
     fetchRegistration();
+  }, [isOpen, registrationId]);
+
+  // Sai do modo de edição ao fechar o modal ou trocar de inscrição (evita
+  // rascunho vazando entre inscrições diferentes).
+  useEffect(() => {
+    setEditingParticipant(false);
+    setParticipantDraft(null);
+    setParticipantErrors({});
+    setEditingAnswers(false);
+    setAnswersDraft(null);
+    setEditingProducts(false);
+    setOpenVariationPid(null);
+    setSavingProductId(null);
+    setProductVariations({});
+    setShowResendModal(false);
+    setActiveTab("info");
   }, [isOpen, registrationId]);
 
   /* DESKTOP apenas. Quando aberto SOBRE um vaul Drawer (fluxo financeiro), o vaul
@@ -219,17 +505,24 @@ export function ViewRegistrationModal() {
 
   const currentRegistration = registrationData;
 
+  /* Edição das informações da inscrição (participante / respostas / variação) é
+   * EXCLUSIVA do admin. O modal é usado nas duas superfícies (admin e organizador),
+   * então gateamos pela SUPERFÍCIE autoritativa (meta do server), não por permissão
+   * de provider (o modal vive fora dos providers — ver feedback do projeto). A
+   * VERDADE é o backend: os endpoints de edição rejeitam não-admin (403). */
+  const isAdmin = getCurrentSurface() === "admin";
+
   const getGenderLabel = (gender?: string) => {
     if (!gender) return "";
     const labels: Record<string, string> = {
       male: "Masculino",
       female: "Feminino",
       other: "Outro",
-      MALE: "Masculino",
-      FEMALE: "Feminino",
-      OTHER: "Outro",
+      masculino: "Masculino",
+      feminino: "Feminino",
+      outro: "Outro",
     };
-    return labels[gender] || labels[gender.toLowerCase()] || gender;
+    return labels[gender.toLowerCase()] || gender;
   };
 
   // Evita o flash do layout de desktop antes do 1º paint decidir o breakpoint.
@@ -259,7 +552,7 @@ export function ViewRegistrationModal() {
             data-vaul-no-drag
             className="bg-gray-2 h-full w-full border-l border-gray-6"
           >
-            <DrawerTitle className="sr-only">Informações da inscrição</DrawerTitle>
+            <DrawerTitle className="sr-only">Detalhes do ingresso</DrawerTitle>
             <div className="flex flex-1 items-center justify-center">
               <Loading />
             </div>
@@ -342,16 +635,6 @@ export function ViewRegistrationModal() {
   const formatPhone = (phone?: string | null) =>
     formatPersonPhone(phone, participantCountry);
 
-  // Máscara parcial de PII para CPF exibido em resumos/cabeçalhos compactos.
-  const maskCpf = (cpf: string | null | undefined): string => {
-    if (!cpf) return "—";
-    const digits = cpf.replace(/\D/g, "");
-    if (digits.length < 11) return cpf;
-    return `***.${digits.slice(3, 6)}.${digits.slice(6, 9)}-**`;
-  };
-
-  const participantCPF = participantIsBr ? maskCpf(participantCPFRaw) : (participantCPFRaw || "—");
-
   /* birthDate: o snapshot manda date-only "YYYY-MM-DD". `new Date(date-only)` é
    * interpretado como UTC meia-noite → em BRT (UTC-3) volta pro dia anterior.
    * Por isso parseamos YMD manualmente; só caímos no `new Date` pra ISO completo
@@ -371,10 +654,13 @@ export function ViewRegistrationModal() {
       return "—";
     }
   })();
-  const participantGender = getGenderLabel(snapshotParticipant?.gender || user?.gender);
+  const rawGender = (snapshotParticipant?.gender || user?.gender || "") as string;
+  const participantGender = getGenderLabel(rawGender);
   const participantPhone = snapshotParticipant?.phone || user?.phone || null;
-  const emergencyPhone = currentRegistration.emergencyContact?.name
-    ? currentRegistration.emergencyContact.name + " - " + formatPhone((currentRegistration.emergencyContact.phone ?? "").toString())
+  const emergencyName = (currentRegistration.emergencyContact?.name || "") as string;
+  const emergencyRawPhone = (currentRegistration.emergencyContact?.phone || "") as string;
+  const emergencyPhone = emergencyName || emergencyRawPhone
+    ? [emergencyName, emergencyRawPhone ? formatPhone(emergencyRawPhone) : ""].filter(Boolean).join(" - ")
     : null;
 
   /* Distância: o snapshot manda `distance` ("14") + `distanceUnit` ("KM")
@@ -385,13 +671,15 @@ export function ViewRegistrationModal() {
     const dist = ticket?.distance;
     if (dist != null && String(dist).trim() !== "") {
       const distanceStr = String(dist).trim();
+      // Distância 0 (ou "0"/"0.0") = sem corrida associada → não exibe o bloco.
+      if (parseFloat(distanceStr.replace(",", ".")) === 0) return "—";
       // Legado já vinha com a unidade embutida (ex.: "5 KM") — não duplica.
       if (/[a-zA-Z]/.test(distanceStr)) return distanceStr;
       const unit = ticket?.distanceUnit || "Km";
       return `${distanceStr} ${unit}`;
     }
     const modalityDist = currentRegistration?.modalities?.[0]?.modality?.distance;
-    if (modalityDist != null) {
+    if (modalityDist != null && parseFloat(String(modalityDist)) > 0) {
       return `${(parseFloat(String(modalityDist)) / 1000).toFixed(1)} Km`;
     }
     return "—";
@@ -432,6 +720,9 @@ export function ViewRegistrationModal() {
         variationPrice != null && variationPrice > 0 ? variationPrice : unitPrice;
       return {
         id: item.id,
+        // productId p/ a edição de variação (o `id` do snapshot é o productId).
+        productId: item.id,
+        variationId: item.selectedVariation?.id || null,
         productName: item.name || "Produto",
         productImage: image || null,
         variationType: item.variationType || null,
@@ -447,6 +738,8 @@ export function ViewRegistrationModal() {
     // Legado (findOneLive)
     return {
       id: item.id,
+      productId: item.product?.id || item.productId || null,
+      variationId: item.variation?.id || item.variationId || null,
       productName: item.product?.name || "Produto",
       productImage: item.product?.image || null,
       variationType: item.product?.variationType || null,
@@ -503,18 +796,627 @@ export function ViewRegistrationModal() {
 
   // Formatar telefone
 
-  /* Botão de download do ingresso (PDF). Definido uma vez e reutilizado nos
-   * rodapés mobile e desktop — mesma ação/estado de loading nos dois layouts. */
-  const downloadTicketButton = (
-    <Button
-      type="button"
-      variant={"outline"}
-      onClick={handleDownloadTicket}
-      disabled={isDownloadingTicket}
-      className="flex w-full md:w-auto border-gray-6 text-gray-12 items-center justify-center gap-2 px-5 py-2.5 font-family-dm-sans disabled:cursor-not-allowed disabled:opacity-60 cursor-pointer"
-    >
-      {isDownloadingTicket ? "Gerando ingresso..." : "Baixar ingresso"}
-    </Button>
+  /* Rodapé: ações do modal (baixar ingresso + reenviar por e-mail). Definido uma
+   * vez e reutilizado nos rodapés mobile e desktop. O reenvio abre o
+   * `ResendTicketsModal` (mesmo do modal de pedido). */
+  const footerActions = (
+    <div className="flex items-center gap-2 w-full md:w-auto">
+      <Button
+        type="button"
+        variant={"outline"}
+        onClick={handleDownloadTicket}
+        disabled={isDownloadingTicket}
+        className="flex flex-1 md:flex-none border-gray-6 text-gray-12 items-center justify-center gap-2 px-5 py-2.5 font-family-dm-sans disabled:cursor-not-allowed disabled:opacity-60 cursor-pointer"
+      >
+        {isDownloadingTicket ? "Gerando ingresso..." : "Baixar ingresso"}
+      </Button>
+      <Button
+        type="button"
+        variant={"outline"}
+        onClick={() => setShowResendModal(true)}
+        className="flex flex-1 md:flex-none border-gray-6 text-gray-12 items-center justify-center gap-2 px-5 py-2.5 font-family-dm-sans cursor-pointer"
+      >
+        Reenviar ingresso
+      </Button>
+    </div>
+  );
+
+  // ── Edição inline da seção "Informações do participante" (organizador) ─────
+  const startEditingParticipant = () => {
+    setParticipantErrors({});
+    setParticipantDraft({
+      name: participantName === "—" ? "" : participantName,
+      email: participantEmail === "—" ? "" : participantEmail,
+      documentNumber: participantIsBr
+        ? formatCPF(participantCPFRaw || "")
+        : participantCPFRaw || "",
+      documentType: participantDocumentType || (participantIsBr ? "CPF" : "PASSPORT"),
+      phone: participantIsBr ? formatPhoneMask(participantPhone || "") : participantPhone || "",
+      birthDate: participantBirthDate === "—" ? "" : participantBirthDate,
+      gender: rawGender ? rawGender.toLowerCase() : "",
+      country: participantCountry || "",
+      emergencyContactName: emergencyName,
+      emergencyContactPhone: participantIsBr
+        ? formatPhoneMask(emergencyRawPhone)
+        : emergencyRawPhone,
+    });
+    setEditingParticipant(true);
+  };
+
+  const cancelEditingParticipant = () => {
+    setEditingParticipant(false);
+    setParticipantDraft(null);
+    setParticipantErrors({});
+  };
+
+  const setDraftField = (field: keyof ParticipantDraft, value: string) => {
+    setParticipantDraft((prev) => (prev ? { ...prev, [field]: value } : prev));
+    setParticipantErrors((prev) => {
+      if (!prev[field]) return prev;
+      const next = { ...prev };
+      delete next[field];
+      return next;
+    });
+  };
+
+  const handleSaveParticipant = async () => {
+    if (!participantDraft || !registrationId) return;
+    const d = participantDraft;
+    const errors: Record<string, string> = {};
+
+    if (!d.name.trim()) errors.name = "Informe o nome";
+    if (d.email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(d.email.trim()))
+      errors.email = "E-mail inválido";
+    if (participantIsBr && d.documentNumber.trim() && !isValidCPF(d.documentNumber))
+      errors.documentNumber = "CPF inválido";
+    if (d.birthDate.trim() && !brDateToYmd(d.birthDate))
+      errors.birthDate = "Data inválida (dd/mm/aaaa)";
+
+    if (Object.keys(errors).length > 0) {
+      setParticipantErrors(errors);
+      return;
+    }
+
+    // BR: envia só dígitos (o display re-mascara). Estrangeiro: valor cru.
+    const cleanPhone = (v: string) => (participantIsBr ? v.replace(/\D/g, "") : v.trim());
+
+    setSavingParticipant(true);
+    try {
+      const updated = await organizerService.updateRegistrationParticipant(registrationId, {
+        name: d.name.trim(),
+        email: d.email.trim(),
+        documentType: d.documentType,
+        documentNumber: d.documentNumber.trim(),
+        phone: cleanPhone(d.phone),
+        birthDate: brDateToYmd(d.birthDate),
+        gender: d.gender,
+        country: d.country,
+        emergencyContactName: d.emergencyContactName.trim(),
+        emergencyContactPhone: cleanPhone(d.emergencyContactPhone),
+      });
+      setRegistrationData(updated);
+      setEditingParticipant(false);
+      setParticipantDraft(null);
+      toast.success("Dados do participante atualizados");
+    } catch (error) {
+      const msg =
+        (error as { response?: { data?: { message?: string | string[] } } })?.response
+          ?.data?.message || "Erro ao salvar. Tente novamente.";
+      toast.error(Array.isArray(msg) ? msg[0] : msg);
+    } finally {
+      setSavingParticipant(false);
+    }
+  };
+
+  // ── Edição inline das respostas das perguntas (organizador) ────────────────
+  const qKey = (q: AnswerItem): string | undefined =>
+    typeof q.question === "string" ? undefined : q.question?.id;
+
+  const startEditingAnswers = () => {
+    const draft: Record<string, string> = {};
+    for (const q of questions as AnswerItem[]) {
+      const qid = qKey(q);
+      if (qid) draft[qid] = formatAnswer(q.answer);
+    }
+    setAnswersDraft(draft);
+    setEditingAnswers(true);
+  };
+
+  const cancelEditingAnswers = () => {
+    setEditingAnswers(false);
+    setAnswersDraft(null);
+  };
+
+  const handleSaveAnswers = async () => {
+    if (!answersDraft || !registrationId) return;
+    const answers = Object.entries(answersDraft).map(([questionId, answer]) => ({
+      questionId,
+      answer,
+    }));
+    if (!answers.length) {
+      setEditingAnswers(false);
+      return;
+    }
+    setSavingAnswers(true);
+    try {
+      const updated = await organizerService.updateRegistrationAnswers(registrationId, answers);
+      setRegistrationData(updated);
+      setEditingAnswers(false);
+      setAnswersDraft(null);
+      toast.success("Respostas atualizadas");
+    } catch (error) {
+      const msg =
+        (error as { response?: { data?: { message?: string | string[] } } })?.response
+          ?.data?.message || "Erro ao salvar. Tente novamente.";
+      toast.error(Array.isArray(msg) ? msg[0] : msg);
+    } finally {
+      setSavingAnswers(false);
+    }
+  };
+
+  // ── Edição da variação dos produtos (organizador) ──────────────────────────
+  // No modo edição os cards mostram o select box (Figma) com dropdown FLUTUANTE
+  // portalado (não corta no scroll). As variações não vêm no payload → prefetch ao
+  // entrar em edição (uma vez por produto).
+  const startEditingProducts = () => {
+    setEditingProducts(true);
+    const toFetch = (products as ModalProduct[])
+      .map((p) => p.productId)
+      .filter((pid): pid is string => !!pid && !productVariations[pid]);
+    if (toFetch.length === 0) return;
+    setLoadingVariations(true);
+    void Promise.all(
+      toFetch.map(async (pid) => {
+        try {
+          const prod = await organizerService.getProductById(pid);
+          return [pid, (prod?.variations ?? []) as ProductVariationOption[]] as const;
+        } catch {
+          return [pid, [] as ProductVariationOption[]] as const;
+        }
+      }),
+    )
+      .then((results) => {
+        setProductVariations((prev) => {
+          const next = { ...prev };
+          for (const [pid, vars] of results) next[pid] = vars;
+          return next;
+        });
+      })
+      .finally(() => setLoadingVariations(false));
+  };
+
+  const exitEditingProducts = () => {
+    setEditingProducts(false);
+    setOpenVariationPid(null);
+  };
+
+  const toggleVariationList = async (pid: string) => {
+    if (openVariationPid === pid) {
+      setOpenVariationPid(null);
+      return;
+    }
+    setOpenVariationPid(pid);
+    if (productVariations[pid]) return;
+    setLoadingVariations(true);
+    try {
+      const prod = await organizerService.getProductById(pid);
+      setProductVariations((prev) => ({
+        ...prev,
+        [pid]: (prod?.variations ?? []) as ProductVariationOption[],
+      }));
+    } catch {
+      setProductVariations((prev) => ({ ...prev, [pid]: [] }));
+    } finally {
+      setLoadingVariations(false);
+    }
+  };
+
+  const handlePickVariation = async (
+    pid: string,
+    variationId: string,
+    currentVariationId: string,
+  ) => {
+    if (!registrationId || savingProductId) return;
+    if (variationId === currentVariationId) {
+      setOpenVariationPid(null);
+      return;
+    }
+    setSavingProductId(pid);
+    try {
+      const updated =
+        await organizerService.updateRegistrationProductVariationAsOrganizer(
+          registrationId,
+          pid,
+          variationId,
+        );
+      setRegistrationData(updated);
+      setOpenVariationPid(null);
+      toast.success("Variação atualizada");
+    } catch (error) {
+      const msg =
+        (error as { response?: { data?: { message?: string | string[] } } })?.response
+          ?.data?.message || "Erro ao salvar. Tente novamente.";
+      toast.error(Array.isArray(msg) ? msg[0] : msg);
+    } finally {
+      setSavingProductId(null);
+    }
+  };
+
+  // Campo somente-leitura (label em cima, valor embaixo) — grid do participante/perguntas.
+  const infoField = (label: string, value: string) => (
+    <div key={label} className="flex flex-col gap-1.5 py-2">
+      <p className="font-family-dm-sans font-normal text-base text-gray-11">{label}</p>
+      <p className="font-family-dm-sans font-medium text-base text-gray-12 break-words">
+        {value || "—"}
+      </p>
+    </div>
+  );
+
+  // ── Seções (compartilhadas entre desktop e mobile) ─────────────────────────
+  const participantSection = (
+    <section className="flex flex-col gap-4">
+      <h3 className="font-manrope font-bold text-xl text-gray-12">
+        Informações do participante
+      </h3>
+      {editingParticipant && participantDraft ? (
+        <>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-x-4 gap-y-3">
+            <FormField
+              label="Nome"
+              value={participantDraft.name}
+              onChange={(v) => setDraftField("name", v)}
+              error={participantErrors.name}
+            />
+            <FormField
+              label="Data de nascimento"
+              value={participantDraft.birthDate}
+              onChange={(v) => setDraftField("birthDate", maskDateBR(v))}
+              placeholder="dd/mm/aaaa"
+              inputMode="numeric"
+              error={participantErrors.birthDate}
+            />
+            <div className="flex flex-col gap-2">
+              <label className="font-family-dm-sans text-base text-gray-12">Sexo</label>
+              <SearchSelect
+                value={participantDraft.gender}
+                onChange={(o) => setDraftField("gender", o.value)}
+                options={GENDER_OPTIONS}
+                placeholder="Selecione"
+              />
+            </div>
+            <FormField
+              label={documentLabel(participantIsBr)}
+              value={participantDraft.documentNumber}
+              onChange={(v) =>
+                setDraftField("documentNumber", participantIsBr ? formatCPF(v) : v)
+              }
+              inputMode={participantIsBr ? "numeric" : "text"}
+              error={participantErrors.documentNumber}
+            />
+            <FormField
+              label="Email"
+              value={participantDraft.email}
+              onChange={(v) => setDraftField("email", v)}
+              inputMode="email"
+              error={participantErrors.email}
+            />
+            <FormField
+              label="Telefone"
+              value={participantDraft.phone}
+              onChange={(v) =>
+                setDraftField("phone", participantIsBr ? formatPhoneMask(v) : v)
+              }
+              inputMode="tel"
+            />
+            <FormField
+              label="Telefone de emergência"
+              value={participantDraft.emergencyContactPhone}
+              onChange={(v) =>
+                setDraftField(
+                  "emergencyContactPhone",
+                  participantIsBr ? formatPhoneMask(v) : v,
+                )
+              }
+              inputMode="tel"
+            />
+            <FormField
+              label="Nome do contato de emergência"
+              value={participantDraft.emergencyContactName}
+              onChange={(v) => setDraftField("emergencyContactName", v)}
+            />
+          </div>
+          <div className="flex items-center justify-end gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={cancelEditingParticipant}
+              disabled={savingParticipant}
+              className="border-gray-6 text-gray-12 font-manrope font-bold"
+            >
+              Cancelar
+            </Button>
+            <Button
+              type="button"
+              onClick={handleSaveParticipant}
+              isLoading={savingParticipant}
+              className="font-manrope font-bold"
+            >
+              Salvar
+            </Button>
+          </div>
+        </>
+      ) : (
+        <>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-x-4 gap-y-1">
+            {infoField("Nome", participantName)}
+            {infoField("Data de nascimento", participantBirthDate)}
+            {infoField("Sexo", participantGender)}
+            {infoField(
+              documentLabel(participantIsBr),
+              formatDocumentDisplay(participantCPFRaw, participantIsBr) || "—",
+            )}
+            {infoField("Email", participantEmail)}
+            {infoField("Telefone", formatPhone(participantPhone) || "—")}
+            {emergencyPhone ? infoField("Telefone de emergência", emergencyPhone) : null}
+          </div>
+          {isAdmin && (
+            <div className="flex justify-end">
+              <button
+                type="button"
+                onClick={startEditingParticipant}
+                className="font-family-dm-sans font-medium text-base text-gray-11 underline hover:text-gray-12 transition-colors cursor-pointer"
+              >
+                Editar
+              </button>
+            </div>
+          )}
+        </>
+      )}
+    </section>
+  );
+
+  /* Cabeçalho "Ingresso" (Figma 6379:147182): dados do ingresso à esquerda + QR
+     Code com "ID da inscrição" à direita. Fica FIXO acima das abas. */
+  const ingressoHeader = (
+    <div className="flex items-start justify-between gap-4 pb-5 border-b border-gray-6">
+      <section className="flex flex-col gap-4 min-w-0">
+        <h3 className="font-manrope font-bold text-xl text-gray-12">Ingresso</h3>
+        <div className="flex flex-col gap-0 min-w-0">
+          <p className="font-family-dm-sans text-base text-gray-11 break-words">{categoryName}</p>
+          <p className="font-family-dm-sans font-medium text-xl text-gray-12 break-words">{ticketName}</p>
+          {/* Se o nome do ingresso já traz a distância (ex.: "3KM"), NÃO repete o
+              bloco de distância — mesma regra do card de ingresso do checkout. */}
+          {ticketDistance !== "—" && !ticketNameHasDistance(ticketName) && (
+            <div className="flex items-center gap-2 mt-1">
+              <DistanceIcon className="size-5 text-gray-12" />
+              <p className="font-family-dm-sans font-medium text-lg text-gray-12">
+                {ticketDistance}
+              </p>
+            </div>
+          )}
+        </div>
+      </section>
+      <div className="flex flex-col items-end gap-1.5 shrink-0">
+        <RegistrationQRCode
+          qrCodeData={currentRegistration?.qrCode || { registrationId: registrationId || "" }}
+          size={122}
+        />
+        <p className="font-family-dm-sans text-xs text-gray-11 text-right">
+          ID da inscrição: {formatShortId(registrationId)}
+        </p>
+      </div>
+    </div>
+  );
+
+  const hasEditableProduct = (products as ModalProduct[]).some((p) => !!p.productId);
+  const produtosSection = (
+    <section className="flex flex-col gap-5">
+      <h3 className="font-manrope font-bold text-xl text-gray-12">Produtos do kit</h3>
+      {products.length > 0 ? (
+        <>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-start">
+          {(products as ModalProduct[]).map((product, index) => {
+            const pid = product.productId || "";
+            // Só variações reais (oculta "Sem interesse").
+            const vars = (productVariations[pid] ?? []).filter(
+              (v) => !isSemInteresseVariation({ name: v.name }),
+            );
+            const inEdit = editingProducts && !!pid;
+            return (
+              <div
+                key={product.id || index}
+                className="border border-gray-6 rounded-[12px] p-4 flex flex-col gap-2"
+              >
+                {product.variationEdited && <VariationEditedBadge />}
+                <div className="flex gap-3 items-stretch">
+                  <div className="size-[100px] rounded-lg border border-gray-6 shrink-0 overflow-hidden bg-gray-4">
+                    <ImageWithInitialFallback
+                      src={product.productImage}
+                      alt={product.productName}
+                      name={product.productName}
+                      sizes="100px"
+                      fill
+                      className="object-cover w-full h-full border-0"
+                    />
+                  </div>
+                  <div className="flex-1 flex flex-col justify-between min-w-0 min-h-[100px] py-1 gap-2">
+                    <p className="font-family-dm-sans font-semibold text-base text-gray-12 line-clamp-3">
+                      {product.productName}
+                    </p>
+                    {inEdit ? (
+                      // Modo edição (Figma): select box full-width "Selecione a opção".
+                      <VariationFloatingDropdown
+                        currentName={product.variationName ?? null}
+                        currentId={product.variationId || ""}
+                        variations={vars}
+                        loading={loadingVariations && vars.length === 0}
+                        saving={savingProductId === pid}
+                        open={openVariationPid === pid}
+                        onToggle={() => toggleVariationList(pid)}
+                        onClose={() => setOpenVariationPid(null)}
+                        onSelect={(vid) =>
+                          handlePickVariation(pid, vid, product.variationId || "")
+                        }
+                      />
+                    ) : (
+                      // Leitura: "Tamanho: XL" (Figma 6310).
+                      <div className="flex justify-end w-full min-w-0">
+                        {product.variationName ? (
+                          <div className="flex gap-1 items-center min-w-0">
+                            <span className="font-family-dm-sans text-base text-gray-12 whitespace-nowrap shrink-0">
+                              {product.variationType || "Variação"}:
+                            </span>
+                            <span className="font-manrope font-semibold text-base text-gray-12 truncate">
+                              {product.variationName}
+                            </span>
+                          </div>
+                        ) : null}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+        {isAdmin && hasEditableProduct && (
+          <div className="flex justify-end">
+            <button
+              type="button"
+              onClick={editingProducts ? exitEditingProducts : startEditingProducts}
+              className="font-family-dm-sans font-medium text-base text-gray-11 underline hover:text-gray-12 transition-colors cursor-pointer"
+            >
+              {editingProducts ? "Concluir" : "Editar"}
+            </button>
+          </div>
+        )}
+        </>
+      ) : (
+        <p className="font-family-dm-sans font-normal text-base text-gray-11">
+          Nenhum produto para este participante.
+        </p>
+      )}
+    </section>
+  );
+
+  const perguntasSection = (
+    <section className="flex flex-col gap-4">
+      <h3 className="font-manrope font-bold text-xl text-gray-12">
+        Perguntas do Organizador
+      </h3>
+      {questions.length > 0 ? (
+        <>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-3">
+            {(questions as AnswerItem[]).map((q, index) => {
+              const qid = qKey(q);
+              const label =
+                (typeof q.question === "string" ? q.question : q.question?.question) ||
+                `Pergunta ${index + 1}`;
+              // Editando + pergunta com id → a RESPOSTA vira input.
+              if (editingAnswers && answersDraft && qid) {
+                return (
+                  <FormField
+                    key={qid}
+                    label={label}
+                    value={answersDraft[qid] ?? ""}
+                    onChange={(v) =>
+                      setAnswersDraft((prev) => (prev ? { ...prev, [qid]: v } : prev))
+                    }
+                  />
+                );
+              }
+              return (
+                <div key={q.id || qid || index} className="flex flex-col py-2">
+                  <p className="font-family-dm-sans font-normal text-base text-gray-11 break-words">
+                    {label}
+                  </p>
+                  <p className="font-family-dm-sans font-medium text-base text-gray-12 break-words mt-4">
+                    R: {formatAnswer(q.answer)}
+                  </p>
+                </div>
+              );
+            })}
+          </div>
+          {editingAnswers ? (
+            <div className="flex items-center justify-end gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={cancelEditingAnswers}
+                disabled={savingAnswers}
+                className="border-gray-6 text-gray-12 font-manrope font-bold"
+              >
+                Cancelar
+              </Button>
+              <Button
+                type="button"
+                onClick={handleSaveAnswers}
+                isLoading={savingAnswers}
+                className="font-manrope font-bold"
+              >
+                Salvar
+              </Button>
+            </div>
+          ) : (
+            isAdmin && (
+              <div className="flex justify-end">
+                <button
+                  type="button"
+                  onClick={startEditingAnswers}
+                  className="font-family-dm-sans font-medium text-base text-gray-11 underline hover:text-gray-12 transition-colors cursor-pointer"
+                >
+                  Editar
+                </button>
+              </div>
+            )
+          )}
+        </>
+      ) : (
+        <p className="font-family-dm-sans font-normal text-base text-gray-11">
+          Nenhuma pergunta respondida
+        </p>
+      )}
+    </section>
+  );
+
+  // Corpo (Figma 6379:147182): cabeçalho "Ingresso" fixo → abas → seção da aba
+  // ativa. Mesmo corpo no desktop e no mobile.
+  // Produtos/Questionário só aparecem se houver conteúdo (mesma regra do cliente).
+  const tabs: { key: "info" | "products" | "questions"; label: string }[] = [
+    { key: "info", label: "Informações" },
+    ...(products.length > 0
+      ? [{ key: "products" as const, label: "Produtos" }]
+      : []),
+    ...(questions.length > 0
+      ? [{ key: "questions" as const, label: "Questionário" }]
+      : []),
+  ];
+  const content = (
+    <div className="flex flex-col">
+      {ingressoHeader}
+      <div className="flex flex-wrap gap-2 pt-5">
+        {tabs.map((t) => (
+          <button
+            key={t.key}
+            type="button"
+            onClick={() => setActiveTab(t.key)}
+            className={cn(
+              "px-4 py-2.5 rounded-[32px] font-manrope font-semibold text-base leading-[1.1] transition-colors cursor-pointer",
+              activeTab === t.key
+                ? "bg-primary-11 text-primary-2"
+                : "bg-gray-5 text-gray-11 hover:bg-gray-6",
+            )}
+          >
+            {t.label}
+          </button>
+        ))}
+      </div>
+      <div className="pt-6">
+        {activeTab === "info" && participantSection}
+        {activeTab === "products" && produtosSection}
+        {activeTab === "questions" && perguntasSection}
+      </div>
+    </div>
   );
 
   /* MOBILE: Drawer (vaul) full-screen — abre SOBRE os drawers do fluxo financeiro
@@ -531,6 +1433,7 @@ export function ViewRegistrationModal() {
    * o default `true` o mantém ATIVO), igual aos drawers que envolvem este fluxo. */
   if (!isMdUp) {
     return (
+      <>
       <Drawer
         open={isOpen}
         onOpenChange={(open) => {
@@ -543,7 +1446,7 @@ export function ViewRegistrationModal() {
           data-vaul-no-drag
           className="bg-gray-2 h-full w-full border-l border-gray-6"
         >
-          <DrawerTitle className="sr-only">Informações da inscrição</DrawerTitle>
+          <DrawerTitle className="sr-only">Detalhes do ingresso</DrawerTitle>
           <div className="flex flex-col h-full min-h-0 w-full overflow-hidden">
             <div className="bg-gray-1 border-b border-gray-6 shrink-0">
               <div className="flex items-center gap-1 h-[52px] px-4">
@@ -581,188 +1484,29 @@ export function ViewRegistrationModal() {
               className="flex-1 overflow-y-auto min-h-0 px-4 py-4 overscroll-contain"
               style={{ WebkitOverflowScrolling: "touch" }}
             >
-              <h1 className="font-manrope font-bold text-xl text-gray-12 mb-5">
-                Informações da inscrição
-              </h1>
-
-              {/* Participant ticket block */}
-              <div className="flex flex-col gap-5 pb-6 border-b border-gray-6">
-                <p className="font-family-dm-sans font-medium text-base text-gray-12">
-                  Participante 1
-                </p>
-                <div className="flex flex-col gap-4">
-                  <p className="font-family-dm-sans font-normal text-base text-gray-11">
-                    {categoryName}
-                  </p>
-                  <p className="font-manrope font-bold text-lg text-gray-12">
-                    {ticketName}
-                  </p>
-                </div>
-                <div className="flex items-center gap-2">
-                  <DistanceIcon className="size-6 shrink-0 text-gray-12" />
-                  <p className="font-family-dm-sans font-medium text-base text-gray-12">
-                    {ticketDistance}
-                  </p>
-                </div>
-                <div className="relative shrink-0 size-[130px]">
-                  {currentRegistration?.qrCode ? (
-                    <RegistrationQRCode
-                      qrCodeData={currentRegistration.qrCode}
-                      size={130}
-                      className="w-full h-full"
-                    />
-                  ) : (
-                    <div className="w-full h-full bg-gray-2 border border-gray-6 rounded-lg flex items-center justify-center">
-                      <span className="text-xs text-gray-11">QR Code</span>
-                    </div>
-                  )}
-                </div>
-                <div className="border border-gray-6 rounded-xl p-3">
-                  <div className="flex gap-2 items-center">
-                    <div className="relative shrink-0 size-10 rounded-full overflow-hidden">
-                      {user?.avatarUrl ? (
-                        <Image
-                          src={getAvatarUrl(user.avatarUrl || "") as string}
-                          alt={participantName}
-                          width={40}
-                          height={40}
-                          className="rounded-full object-cover w-full h-full"
-                        />
-                      ) : (
-                        <div className="size-10 rounded-full bg-primary-10/20 flex items-center justify-center">
-                          <span className="text-primary-11 font-semibold text-sm">
-                            {participantName.charAt(0).toUpperCase()}
-                          </span>
-                        </div>
-                      )}
-                    </div>
-                    <div className="flex flex-col gap-3 min-w-0 flex-1">
-                      <p className="font-family-dm-sans font-semibold text-sm text-gray-12 truncate">
-                        {participantName}
-                      </p>
-                      <div className="flex flex-wrap items-center gap-2 text-sm text-gray-11 font-family-dm-sans">
-                        <span>{participantBirthDate}</span>
-                        <span className="size-1 bg-gray-11 rounded-full shrink-0" />
-                        <span>{participantGender}</span>
-                        <span className="size-1 bg-gray-11 rounded-full shrink-0" />
-                        <span>{participantCPF}</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Personal info fields */}
-              <div className="flex flex-col gap-0 pt-8 pb-6">
-                {[
-                  { label: "Nome", value: participantName },
-                  { label: "Email", value: participantEmail },
-                  { label: documentLabel(participantIsBr), value: formatDocumentDisplay(participantCPFRaw, participantIsBr) || "—" },
-                  { label: "Data de nascimento", value: participantBirthDate },
-                  { label: "Telefone", value: formatPhone(participantPhone) || "—" },
-                  { label: "Telefone de emergência", value: emergencyPhone || "—" },
-                  { label: "Sexo", value: participantGender || "—" },
-                ].map(({ label, value }) => (
-                  <div key={label} className="flex flex-col gap-1 py-4 first:pt-0">
-                    <p className="font-family-dm-sans font-normal text-base text-gray-12">
-                      {label}
-                    </p>
-                    <p className="font-family-dm-sans font-medium text-base text-gray-12">
-                      {value}
-                    </p>
-                  </div>
-                ))}
-              </div>
-
-              <div className="w-full h-px bg-gray-6" />
-
-              {/* Perguntas do Organizador */}
-              <div className="py-8">
-                <h2 className="font-manrope font-bold text-lg text-gray-12 mb-4">
-                  Perguntas do Organizador
-                </h2>
-                {questions.length > 0 ? (
-                  <div className="flex flex-col gap-4">
-                    {questions.map((q: any, index: number) => (
-                      <div key={q.id || index} className="flex flex-col gap-1 py-4">
-                        <p className="font-family-dm-sans font-normal text-base text-gray-12">
-                          {q.question?.question || q.question || `Pergunta ${index + 1}`}
-                        </p>
-                        <p className="font-family-dm-sans font-medium text-base text-gray-12">
-                          {formatAnswer(q.answer)}
-                        </p>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="font-family-dm-sans font-normal text-base text-gray-11">
-                    Nenhuma pergunta respondida
-                  </p>
-                )}
-              </div>
-
-              <div className="w-full h-px bg-gray-6" />
-
-              {/* Produtos */}
-              <div className="py-8">
-                <h2 className="font-manrope font-bold text-lg text-gray-12 mb-4">
-                  Produtos
-                </h2>
-                {products.length > 0 ? (
-                  <div className="flex flex-col gap-4">
-                    {products.map((product: any, index: number) => (
-                      <div
-                        key={product.id || index}
-                        className="bg-gray-1 border border-gray-6 rounded-xl p-4"
-                      >
-                        <div className="flex gap-3">
-                          <div className="size-[100px] rounded-lg border border-gray-6 shrink-0 overflow-hidden">
-                            <ImageWithInitialFallback
-                              src={product.productImage}
-                              alt={product.productName}
-                              name={product.productName}
-                              sizes="100"
-                              fill
-                              className="object-cover w-full h-full border-0"
-                            />
-                          </div>
-                          <div className="flex-1 flex flex-col justify-between min-w-0">
-                            <p className="font-family-dm-sans font-semibold text-base text-gray-12 line-clamp-2">
-                              {product.productName}
-                            </p>
-                            {product.variationName && (
-                              <p className="font-family-dm-sans font-normal text-sm text-gray-11">
-                                {product.variationType || "Variação"}: {product.variationName}
-                              </p>
-                            )}
-                            {product.variationEdited && (
-                              <div className="mt-1">
-                                <VariationEditedBadge />
-                              </div>
-                            )}
-                            <p className="font-manrope font-semibold text-base text-gray-12 mt-1">
-                              {product.isIncluded ? "Incluído" : `R$ ${typeof product.price === "number" ? (product.price / 100).toFixed(2).replace(".", ",") : product.price}`}
-                            </p>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="font-family-dm-sans font-normal text-base text-gray-11">
-                    Nenhum produto adicionado
-                  </p>
-                )}
-              </div>
+              {content}
             </div>
 
-            {/* Footer: baixar ingresso (PDF) */}
+            {/* Footer: baixar ingresso + reenviar por e-mail */}
             <div className="shrink-0 border-t border-gray-6 bg-gray-1 px-4 py-3">
-              {downloadTicketButton}
+              {footerActions}
             </div>
           </div>
         </DrawerContent>
       </Drawer>
+
+        {/* Reenvio por e-mail — overlay próprio (z-70), mesmo do modal de pedido. */}
+        <ResendTicketsModal
+          isOpen={showResendModal}
+          onClose={() => setShowResendModal(false)}
+          onConfirm={handleResendEmail}
+          loading={resendingEmail}
+          ticketCount={1}
+          title="Reenviar ingresso"
+          description="Reenvie o ingresso para o e-mail do participante."
+          confirmLabel="Reenviar ingresso"
+        />
+      </>
     );
   }
 
@@ -794,9 +1538,9 @@ export function ViewRegistrationModal() {
               // wrapper cobre o overlay, então clicar fora do card NÃO fecha o modal.
               className="fixed inset-0 z-[61] flex items-center justify-center pointer-events-auto"
             >
-              <div className="flex flex-col bg-gray-1 rounded-lg shadow-2xl w-full max-w-[1095px] mx-4 relative overflow-hidden pointer-events-auto">
+              <div className="flex flex-col bg-gray-1 rounded-xl shadow-2xl w-full max-w-[820px] mx-4 max-h-[88vh] relative overflow-hidden pointer-events-auto">
                 {/* Header */}
-                <div className="flex items-center justify-between px-5 py-3 border-b border-gray-6 gap-2">
+                <div className="flex items-center justify-between px-5 py-3 border-b border-gray-6 gap-2 shrink-0">
                   <div className="flex items-center gap-2 min-w-0 flex-1">
                     {showBackToPaymentDetails ? (
                       <button
@@ -809,7 +1553,7 @@ export function ViewRegistrationModal() {
                       </button>
                     ) : null}
                     <h2 className="font-family-dm-sans font-semibold text-[20px] leading-[1.3] text-gray-12 truncate min-w-0">
-                      Informações da inscrição
+                      Detalhes do ingresso
                     </h2>
                   </div>
                   <button
@@ -821,295 +1565,12 @@ export function ViewRegistrationModal() {
                   </button>
                 </div>
 
-                {/* Content */}
-                <div className="flex h-[642px]">
-                  {/* Left Section */}
-                  <div className="flex-1 flex flex-col min-w-[400px] p-5">
-                    {/* Participant Header */}
-                    <div className="flex flex-col pr-5 border-b border-gray-6">
-                      <div className="flex items-center justify-between pb-6">
-                        <div className="flex flex-col gap-5 max-w-[70%]">
-                          <div className="flex flex-col gap-2">
-                            <p className="font-family-dm-sans font-normal text-sm leading-[1.3] text-gray-12 truncate">ID: <span className="text-gray-11">{formatShortId(currentRegistration.id)}</span></p>
-                            <p className="font-family-dm-sans font-normal text-base leading-[1.3] text-gray-12">
-                              Participante
-                            </p>
-                          </div>
-                          <div className="flex flex-col">
-                            <p className="font-family-dm-sans font-normal text-base leading-[1.3] text-gray-11 truncate">
-                              {categoryName}
-                            </p>
-                            <p className="font-manrope font-bold text-[20px] leading-[1.1] text-gray-12 truncate">
-                              {ticketName}
-                            </p>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <DistanceIcon className="size-6" />
-                            <p className="font-family-dm-sans font-medium text-[18px] leading-[1.3] text-gray-12">
-                              {ticketDistance}
-                            </p>
-                          </div>
-                        </div>
-                        {/* QR Code */}
-                        <div className="flex items-center">
-                          <div className="aspect-square w-[116px] h-[116px] relative">
-                            {currentRegistration?.qrCode ? (
-                              <RegistrationQRCode
-                                qrCodeData={currentRegistration.qrCode}
-                                size={116}
-                                className="w-full h-full"
-                              />
-                            ) : (
-                              <div className="w-full h-full bg-gray-2 border border-gray-6 flex items-center justify-center">
-                                <span className="text-xs text-gray-11 text-center">
-                                  QR Code
-                                </span>
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      </div>
+                {/* Content — coluna única rolável */}
+                <div className="flex-1 min-h-0 overflow-y-auto p-5">{content}</div>
 
-                      {/* Profile Card */}
-                      <div className="flex items-center pb-5">
-                        <div className="border border-gray-6 rounded-xl p-3 w-full">
-                          <div className="flex gap-2 items-center">
-                            <div className="relative shrink-0 size-10 rounded-full overflow-hidden">
-                              {user?.avatarUrl ? (
-                                <Image
-                                  src={getAvatarUrl(user.avatarUrl || "") as string}
-                                  alt={participantName}
-                                  width={40}
-                                  height={40}
-                                  className="rounded-full object-cover"
-                                />
-                              ) : (
-                                <div className="size-10 rounded-full bg-primary-10/20 flex items-center justify-center">
-                                  <span className="text-primary-11 font-semibold text-sm">
-                                    {participantName.charAt(0).toUpperCase()}
-                                  </span>
-                                </div>
-                              )}
-                            </div>
-                            <div className="flex flex-col gap-3">
-                              <p className="font-family-dm-sans font-semibold text-sm leading-[1.3] text-gray-12">
-                                {participantName.split(" ")[0]}
-                              </p>
-                              <div className="flex gap-2 items-center">
-                                <p className="font-family-dm-sans font-normal text-sm leading-[1.3] text-gray-11">
-                                  {participantBirthDate}
-                                </p>
-                                <div className="size-1 bg-gray-11 rounded-full" />
-                                <p className="font-family-dm-sans font-normal text-sm leading-[1.3] text-gray-11">
-                                  {participantGender}
-                                </p>
-                                <div className="size-1 bg-gray-11 rounded-full" />
-                                <p className="font-family-dm-sans font-normal text-sm leading-[1.3] text-gray-11">
-                                  {participantCPF}
-                                </p>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Participant Information */}
-                    <div className="flex flex-wrap gap-x-3 gap-y-2 pt-5 pr-5">
-                      <p className="font-manrope font-bold text-[20px] leading-[1.1] text-gray-12 w-full mb-0">
-                        Informações do participante
-                      </p>
-                      <div className="grid grid-cols-2 w-full">
-                        <div className="flex flex-col py-4">
-                          <p className="font-family-dm-sans font-normal text-base leading-[1.3] text-gray-12">
-                            Nome
-                          </p>
-                          <p className="font-family-dm-sans font-medium text-base leading-[1.3] text-gray-12">
-                            {participantName}
-                          </p>
-                        </div>
-                        <div className="flex flex-col py-4">
-                          <p className="font-family-dm-sans font-normal text-base leading-[1.3] text-gray-12">
-                            Email
-                          </p>
-                          <p className="font-family-dm-sans font-medium text-base leading-[1.3] text-gray-12 truncate">
-                            {participantEmail}
-                          </p>
-                        </div>
-                        <div className="flex flex-col py-4">
-                          <p className="font-family-dm-sans font-normal text-base leading-[1.3] text-gray-12">
-                            {documentLabel(participantIsBr)}
-                          </p>
-                          <p className="font-family-dm-sans font-medium text-base leading-[1.3] text-gray-12">
-                            {formatDocumentDisplay(participantCPFRaw, participantIsBr) || "—"}
-                          </p>
-                        </div>
-                        <div className="flex flex-col py-4">
-                          <p className="font-family-dm-sans font-normal text-base leading-[1.3] text-gray-12">
-                            Data de nascimento:
-                          </p>
-                          <p className="font-family-dm-sans font-medium text-base leading-[1.3] text-gray-12">
-                            {participantBirthDate}
-                          </p>
-                        </div>
-                        <div className="flex flex-col py-4">
-                          <p className="font-family-dm-sans font-normal text-base leading-[1.3] text-gray-12">
-                            Telefone:
-                          </p>
-                          <p className="font-family-dm-sans font-medium text-base leading-[1.3] text-gray-12">
-                            {formatPhone(participantPhone) || "—"}
-                          </p>
-                        </div>
-                        <div className="flex flex-col py-4">
-                          <p className="font-family-dm-sans font-normal text-base leading-[1.3] text-gray-12">
-                            Sexo
-                          </p>
-                          <p className="font-family-dm-sans font-medium text-base leading-[1.3] text-gray-12">
-                            {participantGender || "—"}
-                          </p>
-                        </div>
-
-                      </div>
-                      {emergencyPhone && (
-                        <div className="flex flex-col py-4">
-                          <p className="font-family-dm-sans font-normal text-base leading-[1.3] text-gray-12">
-                            Telefone de emergência
-                          </p>
-                          <p className="font-family-dm-sans font-medium text-base leading-[1.3] text-gray-12">
-                            {emergencyPhone || "—"}
-                          </p>
-                        </div>
-                      )}
-
-                    </div>
-                  </div>
-
-                  {/* Divider */}
-                  <div className="w-px bg-gray-6" />
-
-                  {/* Right Section */}
-                  <div className="flex-1 flex flex-col w-[537px] pr-4">
-                    {/* Organizer Questions */}
-                    <div className="flex flex-wrap gap-x-3 gap-y-2 py-5 pl-5 border-b border-gray-6">
-                      <div className="flex items-center justify-between w-full">
-                        <p className="font-manrope font-bold text-[20px] leading-[1.1] text-gray-12">
-                          Perguntas do Organizador
-                        </p>
-                        {questions.length > 4 && (
-                          <button
-                            onClick={() => setIsQuestionsModalOpen(true)}
-                            className="font-family-dm-sans font-medium text-base leading-[1.3] text-gray-11 underline hover:text-gray-12 transition-colors cursor-pointer"
-                          >
-                            Ver mais
-                          </button>
-                        )}
-                      </div>
-                      <div className="grid grid-cols-2 w-full">
-                        {questions.length > 0 ? (
-                          questions.slice(0, 4).map((q: any, index: number) => (
-                            <div key={q.id || index} className="flex flex-col py-4">
-                              <p className="font-family-dm-sans font-medium text-base leading-[1.3] text-gray-12">
-                                Pergunta: {q.question?.question || q.question || `Pergunta ${index + 1}`}
-                              </p>
-                              <p className="font-family-dm-sans font-normal text-gray-11 text-sm mb-2">{q.question?.description}</p>
-                              <p className="font-family-dm-sans font-normal text-base leading-[1.3] text-gray-12">
-                                R: {formatAnswer(q.answer)}
-                              </p>
-                            </div>
-                          ))
-                        ) : (
-                          <div className="col-span-2 py-4">
-                            <p className="font-family-dm-sans font-normal text-base leading-[1.3] text-gray-11">
-                              Nenhuma pergunta respondida
-                            </p>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Products */}
-                    <div className="flex flex-col gap-5 pt-5 pl-5 flex-1 overflow-y-auto">
-                      <div className="flex items-center justify-between w-full">
-                        <p className="font-manrope font-bold text-[20px] leading-[1.1] text-gray-12">
-                          Produtos
-                        </p>
-                        {products.length > 2 && (
-                          <button
-                            onClick={() => setIsProductsModalOpen(true)}
-                            className="font-family-dm-sans font-medium text-base leading-[1.3] text-gray-11 underline hover:text-gray-12 transition-colors cursor-pointer pr-4"
-                          >
-                            Ver mais
-                          </button>
-                        )}
-                      </div>
-                      <div className="flex flex-col gap-4 pb-4 pr-4">
-                        {products.length > 0 ? (
-                          products.slice(0, 2).map((product: any, index: number) => {
-                            return (
-                              <div
-                                key={product.id || index}
-                                className="border border-gray-6 rounded-xl overflow-hidden"
-                              >
-                                <div className="p-4">
-                                  <div className="flex gap-3">
-                                    <div className="size-[100px] rounded-lg border border-gray-6 shrink-0 overflow-hidden">
-                                      <ImageWithInitialFallback
-                                        src={product.productImage}
-                                        alt={product.productName}
-                                        name={product.productName}
-                                        sizes="100px"
-                                        fill
-                                        className="object-cover w-full h-full border-0"
-                                      />
-                                    </div>
-                                    <div className="flex-1 flex flex-col justify-between py-2">
-                                      <p className="font-family-dm-sans font-semibold text-base leading-[1.3] text-gray-12 line-clamp-2 mb-2">
-                                        {product.productName}
-                                      </p>
-
-                                      <div className="flex items-end justify-between">
-                                        <p className="font-manrope font-semibold text-base leading-[1.1] text-gray-12">
-                                          {product.isIncluded ? "Incluído" : `R$ ${typeof product.price === "number" ? (product.price / 100).toFixed(2).replace(".", ",") : product.price}`}
-                                        </p>
-                                        {product.variationName && (
-                                          <div className="flex flex-col items-end">
-                                            {product.variationEdited && (
-                                              <div className="mb-2">
-                                                <VariationEditedBadge />
-                                              </div>
-                                            )}
-                                            <div className="flex gap-1 items-center">
-                                              <p className="font-family-dm-sans font-normal text-base leading-[1.1] text-gray-12">
-                                                {product.variationType || "Variação"}:
-                                              </p>
-                                              <p className="font-manrope font-semibold text-base leading-[1.1] text-gray-12">
-                                                {product.variationName}
-                                              </p>
-                                            </div>
-                                          </div>
-                                        )}
-                                      </div>
-                                    </div>
-                                  </div>
-                                </div>
-                              </div>
-                            );
-                          })
-                        ) : (
-                          <div className="py-4">
-                            <p className="font-family-dm-sans font-normal text-base leading-[1.3] text-gray-11">
-                              Nenhum produto adicionado
-                            </p>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Footer: baixar ingresso (PDF) */}
-                <div className="flex items-center justify-start px-5 py-3 border-t border-gray-6">
-                  {downloadTicketButton}
+                {/* Footer: baixar ingresso + reenviar por e-mail */}
+                <div className="flex items-center justify-start gap-2 px-5 py-3 border-t border-gray-6">
+                  {footerActions}
                 </div>
               </div>
             </motion.div>
@@ -1117,197 +1578,17 @@ export function ViewRegistrationModal() {
         )}
       </AnimatePresence>
 
-      {/* Questions Modal */}
-      <AnimatePresence>
-        {isQuestionsModalOpen && (
-          <motion.div
-            key="questions-modal"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.2 }}
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
-            onClick={() => setIsQuestionsModalOpen(false)}
-          >
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95, y: 20 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              transition={{ duration: 0.2, ease: "easeOut" }}
-              onClick={(e) => e.stopPropagation()}
-              className="bg-gray-1 rounded-lg shadow-2xl w-full max-w-[539px] mx-4 relative overflow-hidden"
-            >
-              {/* Header */}
-              <div className="flex items-center justify-between px-5 py-4 border-b border-gray-6">
-                <h2 className="font-family-dm-sans font-bold text-[20px] leading-[1.3] text-gray-12">
-                  Perguntas do organizador
-                </h2>
-                <button
-                  onClick={() => setIsQuestionsModalOpen(false)}
-                  className="size-9 flex items-center justify-center rounded-lg hover:bg-gray-3 transition-colors cursor-pointer"
-                >
-                  <X className="size-5 text-gray-11" />
-                </button>
-              </div>
-
-              {/* Content */}
-              <div className="p-5 max-h-[515px] overflow-y-auto">
-                {questions.length > 0 ? (
-                  <div className="grid grid-cols-2 gap-5">
-                    {questions.map((q: any, index: number) => (
-                      <div key={q.id || index} className="flex flex-col gap-2">
-                        <label className="font-family-dm-sans font-normal leading-[1.3] text-gray-12">
-                          Pergunta: {q.question?.question || q.question || `Pergunta ${index + 1}`}
-                        </label>
-                        <p className="font-family-dm-sans font-medium leading-[1.3] text-gray-12">
-                          {formatAnswer(q.answer)}
-                        </p>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="py-4">
-                    <p className="font-family-dm-sans font-normal text-base leading-[1.3] text-gray-11">
-                      Nenhuma pergunta respondida
-                    </p>
-                  </div>
-                )}
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* Products Modal */}
-      <AnimatePresence>
-        {isProductsModalOpen && (
-          <motion.div
-            key="products-modal"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.2 }}
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
-            onClick={() => setIsProductsModalOpen(false)}
-          >
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95, y: 20 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              transition={{ duration: 0.2, ease: "easeOut" }}
-              onClick={(e) => e.stopPropagation()}
-              className="bg-gray-1 rounded-lg shadow-2xl w-full max-w-[815px] mx-4 relative overflow-hidden"
-            >
-              {/* Header */}
-              <div className="flex items-center justify-between px-5 py-4 border-b border-gray-6">
-                <h2 className="font-family-dm-sans font-bold text-[20px] leading-[1.3] text-gray-12">
-                  Produtos
-                </h2>
-                <button
-                  onClick={() => setIsProductsModalOpen(false)}
-                  className="size-9 flex items-center justify-center rounded-lg hover:bg-gray-3 transition-colors cursor-pointer"
-                >
-                  <X className="size-5 text-gray-11" />
-                </button>
-              </div>
-
-              {/* Content */}
-              <div className="p-5 max-h-[540px] overflow-y-auto">
-                {products.length > 0 ? (
-                  <div className="flex flex-col gap-4">
-                    {products.map((product: any, index: number) => {
-                      return (
-                        <div
-                          key={product.id || index}
-                          className="border border-gray-6 rounded-xl overflow-hidden"
-                        >
-                          <div className="p-4">
-                            <div className="flex gap-3">
-                              <div className="size-[100px] rounded-lg border border-gray-6 shrink-0 overflow-hidden">
-                                <ImageWithInitialFallback
-                                  src={product.productImage}
-                                  alt={product.productName}
-                                  name={product.productName}
-                                  sizes="100px"
-                                  fill
-                                  className="object-cover w-full h-full border-0"
-                                />
-                              </div>
-                              <div className="flex-1 flex flex-col justify-between py-2 min-w-0">
-                                <p className="font-family-dm-sans font-semibold text-base leading-[1.3] text-gray-12 line-clamp-2 mb-2">
-                                  {product.productName}
-                                </p>
-                                {product.variationEdited && (
-                                  <div className="mb-2">
-                                    <VariationEditedBadge />
-                                  </div>
-                                )}
-                                <div className="flex items-center justify-between">
-                                  <p className="font-manrope font-semibold text-base leading-[1.1] text-gray-12">
-                                    {product.isIncluded ? "Incluído" : `R$ ${typeof product.price === "number" ? (product.price / 100).toFixed(2).replace(".", ",") : product.price}`}
-                                  </p>
-                                  {product.variationName && (
-                                    <div className="flex gap-1 items-center">
-                                      <p className="font-family-dm-sans font-normal text-base leading-[1.3] text-gray-12">
-                                        {product.variationType || "Variação"}:
-                                      </p>
-                                      <p className="font-manrope font-semibold text-base leading-[1.1] text-gray-12">
-                                        {product.variationName}
-                                      </p>
-                                    </div>
-                                  )}
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                ) : (
-                  <div className="py-4">
-                    <p className="font-family-dm-sans font-normal text-base leading-[1.3] text-gray-11">
-                      Nenhum produto adicionado
-                    </p>
-                  </div>
-                )}
-              </div>
-
-              {/* Pagination */}
-              {products.length > 0 && (
-                <div className="flex items-center justify-end gap-2 px-5 py-4 border-t border-gray-6">
-                  <button
-                    onClick={() => setProductsPage((prev) => Math.max(1, prev - 1))}
-                    disabled={productsPage === 1}
-                    className="size-8 flex items-center justify-center bg-transparent rounded-lg hover:bg-gray-3 transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
-                  >
-                    <ChevronLeft className="size-4 text-gray-11" />
-                  </button>
-                  {Array.from({ length: Math.ceil(products.length / 10) || 1 }, (_, i) => i + 1).map((page) => (
-                    <button
-                      key={page}
-                      onClick={() => setProductsPage(page)}
-                      className={`size-8 flex items-center justify-center border rounded-lg transition-colors ${productsPage === page
-                        ? "bg-primary-11 border-primary-11 text-[#FBFEFB]"
-                        : "bg-gray-4 border-transparent hover:bg-gray-3 text-gray-12"
-                        }`}
-                    >
-                      {page}
-                    </button>
-                  ))}
-                  <button
-                    onClick={() => setProductsPage((prev) => Math.min(Math.ceil(products.length / 10) || 1, prev + 1))}
-                    disabled={productsPage >= (Math.ceil(products.length / 10) || 1)}
-                    className="size-8 flex items-center justify-center bg-transparent rounded-lg hover:bg-gray-3 transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
-                  >
-                    <ChevronRight className="size-4 text-gray-11" />
-                  </button>
-                </div>
-              )}
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      {/* Reenvio por e-mail — overlay próprio (z-70), mesmo do modal de pedido. */}
+      <ResendTicketsModal
+        isOpen={showResendModal}
+        onClose={() => setShowResendModal(false)}
+        onConfirm={handleResendEmail}
+        loading={resendingEmail}
+        ticketCount={1}
+        title="Reenviar ingresso"
+        description="Reenvie o ingresso para o e-mail do participante."
+        confirmLabel="Reenviar ingresso"
+      />
     </>
   );
 }

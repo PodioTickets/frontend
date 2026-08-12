@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/Button";
 import { X, Building2, Ticket } from "lucide-react";
 import { useRequestTransferModal } from "@/stores/modalStore";
+import { useOrganizerNavigate } from "@/hooks/useOrganizerNavigate";
 import Image from "next/image";
 import { ArrowButton } from "@/components/ArrowButton";
 import { Input } from "../Input";
@@ -12,6 +13,8 @@ import { FinanceIcon } from "../Icons/Organizer/FinanceIcon";
 import { getApiClient } from "@/services/base/ApiClient";
 import toast from "react-hot-toast";
 import { ChooseAccountModal, mapPixKeyToAccount, type PixAccount } from "./ChooseAccountModal";
+import { PixKeyRequiredModal } from "./PixKeyRequiredModal";
+import { Loading } from "../Loading";
 import { organizerService } from "@/services";
 import { useModalSubmitState } from "@/hooks/useModalSubmitState";
 
@@ -51,8 +54,10 @@ function formatWithdrawalError(err: any): string {
 
 export function RequestTransferModal() {
   const { isOpen, closeRequestTransferModal, data } = useRequestTransferModal();
-  const [amount, setAmount] = useState("");
-  const [amountFocused, setAmountFocused] = useState(false);
+  const orgNavigate = useOrganizerNavigate();
+  // Valor em CENTAVOS, estilo "acumulador" (igual ao AnticipationModal): só dígitos,
+  // os 2 últimos são os centavos. `rawAmount` é o cru; `amountCents` é clampado ao saldo.
+  const [rawAmount, setRawAmount] = useState(0);
   const [showSuccess, setShowSuccess] = useState(false);
   const [transferAmount, setTransferAmount] = useState("");
   const { isSubmitting, runSubmit } = useModalSubmitState();
@@ -98,66 +103,34 @@ export function RequestTransferModal() {
   const displayPixKey = selectedAccount?.pixKey || data?.pixKey || "—";
   const displayHolder = selectedAccount?.holder || "—";
 
+  // Organização sem chave Pix cadastrada → mostra o gate "Cadastre uma chave Pix"
+  // NO LUGAR do modal de saque (só decide após carregar as contas).
+  const noPixKey = !loadingAccounts && pixAccounts.length === 0;
+
+  // Valor sacável (centavos), clampado entre 0 e o saldo disponível.
+  const amountCents = Math.min(Math.max(0, rawAmount), rawBalance);
+  const setAmountCents = (v: number) =>
+    setRawAmount(Math.min(Math.max(0, v), rawBalance));
+
+  // Só é possível confirmar com um valor válido (> 0 e dentro do saldo). Como
+  // `amountCents` é clampado a `rawBalance`, saldo 0 ⇒ amountCents 0 ⇒ botão
+  // desabilitado — cobre "sem saldo disponível" E "sem valor digitado".
+  const canConfirm = !isSubmitting && amountCents > 0 && amountCents <= rawBalance;
+
   const handleUseAll = () => {
-    setAmount(availableBalance.toFixed(2).replace(".", ","));
+    setAmountCents(rawBalance);
   };
 
+  // Input estilo "acumulador de centavos" (igual antecipação): só dígitos, os 2
+  // últimos viram centavos. "1"→R$0,01, "1234"→R$12,34.
   const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    let value = e.target.value;
-    value = value.replace(/R\$\s*/g, "").replace(/\s/g, "").replace(/[^\d,]/g, "");
-
-    if (value === "" || value === ",") {
-      setAmount(value === "," ? "0," : "");
-      return;
-    }
-
-    const parts = value.split(",");
-    if (parts.length > 2) {
-      value = parts[0] + "," + parts.slice(1).join("");
-    }
-    if (parts.length === 2 && parts[1].length > 2) {
-      const dec = parts[1];
-      // "1,000" (usuário digitou 0 no inteiro) -> "10,00"
-      if (dec.length === 3 && dec.endsWith("00") && dec[0] !== "0") {
-        value = parts[0] + dec[0] + ",00";
-      } else {
-        value = parts[0] + "," + dec.slice(-2);
-      }
-    }
-
-    const numericValue = value.replace(",", ".");
-    if (numericValue === "" || (!isNaN(parseFloat(numericValue)) && parseFloat(numericValue) >= 0)) {
-      setAmount(value);
-    }
-  };
-
-  const formatAmount = (value: string) => {
-    if (!value || value === "0") return "R$ 0,00";
-    const numericValue = value.replace(",", ".");
-    const num = parseFloat(numericValue) || 0;
-    return `R$ ${num.toFixed(2).replace(".", ",")}`;
-  };
-
-  const displayValue = amountFocused
-    ? "R$ " + (amount || "")
-    : formatAmount(amount);
-
-  const handleAmountBlur = () => {
-    setAmountFocused(false);
-    if (!amount) return;
-    const normalized = amount.replace(",", ".");
-    const num = parseFloat(normalized);
-    if (isNaN(num) || num <= 0) {
-      setAmount("");
-      return;
-    }
-    setAmount(num.toFixed(2).replace(".", ","));
+    const digits = e.target.value.replace(/\D/g, "");
+    setAmountCents(parseInt(digits || "0", 10));
   };
 
   const handleConfirm = async () => {
-    const numericAmount = parseFloat(amount.replace(",", "."));
-    if (!numericAmount) return;
-    if (numericAmount > availableBalance) return;
+    if (amountCents <= 0) return;
+    if (amountCents > rawBalance) return;
 
     const eventId = data?.eventId as string | undefined;
     if (!eventId) {
@@ -175,11 +148,11 @@ export function RequestTransferModal() {
         await getApiClient().post(
           `/api/v1/events/${eventId}/repasse/withdrawals`,
           {
-            amount: Math.round(numericAmount * 100),
+            amount: amountCents,
             pixKeyId: selectedAccount.id,
           }
         );
-        setTransferAmount(formatAmount(amount));
+        setTransferAmount(formatCentsBRL(amountCents));
         setShowSuccess(true);
       } catch (err: any) {
         toast.error(formatWithdrawalError(err));
@@ -189,8 +162,7 @@ export function RequestTransferModal() {
 
   const handleClose = () => {
     setShowSuccess(false);
-    setAmount("");
-    setAmountFocused(false);
+    setRawAmount(0);
     setTransferAmount("");
     closeRequestTransferModal();
   };
@@ -203,16 +175,22 @@ export function RequestTransferModal() {
     }
   };
 
-  const numericAmount = parseFloat(amount.replace(",", ".") || "0");
-
   if (!isOpen) return null;
 
   const formatBalance = (val: number) => val.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).replace(".", ",");
 
   return (
     <>
+      {/* Enquanto carrega as contas Pix, um overlay de loading — evita piscar o
+          form de saque antes de saber se há chave (o gate deve vir ANTES). */}
+      {isOpen && loadingAccounts && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <Loading />
+        </div>
+      )}
+
       <AnimatePresence>
-        {isOpen && (
+        {isOpen && !loadingAccounts && pixAccounts.length > 0 && (
           <>
             <motion.div
               initial={{ opacity: 0 }}
@@ -267,11 +245,9 @@ export function RequestTransferModal() {
                           <div className="flex items-center justify-between gap-2 border border-gray-6 rounded-lg px-3 py-4 md:py-6 bg-gray-1">
                             <input
                               type="text"
-                              inputMode="decimal"
-                              value={displayValue}
+                              inputMode="numeric"
+                              value={formatCentsBRL(amountCents)}
                               onChange={handleAmountChange}
-                              onFocus={() => setAmountFocused(true)}
-                              onBlur={handleAmountBlur}
                               placeholder="R$ 0,00"
                               className="flex-1 min-w-0 text-xl md:text-2xl font-manrope font-extrabold tracking-[1px] text-gray-12 bg-transparent border-none outline-none"
                             />
@@ -341,7 +317,7 @@ export function RequestTransferModal() {
                       <Button
                         type="button"
                         onClick={handleConfirm}
-                        disabled={isSubmitting || !selectedAccount}
+                        disabled={!canConfirm}
                         className="flex-1 h-11 disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         {isSubmitting ? "Aguarde..." : "Confirmar"}
@@ -406,11 +382,9 @@ export function RequestTransferModal() {
                         <div className="relative">
                           <input
                             type="text"
-                            inputMode="decimal"
-                            value={displayValue}
+                            inputMode="numeric"
+                            value={formatCentsBRL(amountCents)}
                             onChange={handleAmountChange}
-                            onFocus={() => setAmountFocused(true)}
-                            onBlur={handleAmountBlur}
                             placeholder="R$ 0,00"
                             className="h-[71px] text-[24px] font-manrope font-extrabold tracking-[1px] border border-gray-6 rounded-lg pl-3 pr-28 py-2 w-full outline-none focus:ring-[3px] focus:ring-gray-4/50 focus:border-gray-4 transition-[color,box-shadow] placeholder:text-gray-11"
                           />
@@ -460,7 +434,7 @@ export function RequestTransferModal() {
                       <Button variant="outline" onClick={handleClose} className="h-[44px] px-8 border-[1.5px] border-gray-6 text-gray-12 font-bold text-[16px] font-manrope hover:bg-gray-2">
                         Cancelar
                       </Button>
-                      <Button variant="default" onClick={handleConfirm} disabled={isSubmitting || !selectedAccount} className="h-[44px] px-8 text-[16px] font-bold font-manrope disabled:opacity-50 disabled:cursor-not-allowed">
+                      <Button variant="default" onClick={handleConfirm} disabled={!canConfirm} className="h-[44px] px-8 text-[16px] font-bold font-manrope disabled:opacity-50 disabled:cursor-not-allowed">
                         {isSubmitting ? "Aguarde..." : "Confirmar"}
                       </Button>
                     </div>
@@ -504,6 +478,19 @@ export function RequestTransferModal() {
         loading={loadingAccounts}
         initialSelectedId={selectedAccount?.id}
       />
+
+      {/* Gate "Cadastre uma chave Pix" — mostrado NO LUGAR do modal de saque quando a
+          organização não tem chave Pix (portal próprio z-80). "Fechar" fecha tudo;
+          "Cadastrar" leva direto à aba de chave Pix do perfil da organização. */}
+      {isOpen && noPixKey && (
+        <PixKeyRequiredModal
+          onClose={handleClose}
+          onRegister={() => {
+            handleClose();
+            orgNavigate.push("/organizer/organization/settings?tab=pix");
+          }}
+        />
+      )}
     </>
   );
 }

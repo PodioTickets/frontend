@@ -273,7 +273,7 @@ export default function OrganizerTeamPage() {
           <SystemAuditLogTab />
         ) : (
           <>
-            <div className="rounded-xl border border-gray-6 bg-gray-1 p-3 md:p-4 shadow-[0px_2px_6px_0px_rgba(17,17,17,0.08)] mb-4 md:mb-5">
+            <div className="rounded-xl border border-gray-6 bg-gray-1 p-3 md:p-4 mb-4 md:mb-5">
               <h2 className="text-base font-bold text-gray-12 font-manrope leading-[1.1] mb-3 md:hidden">
                 Lista de colaboradores
               </h2>
@@ -284,7 +284,7 @@ export default function OrganizerTeamPage() {
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
                   placeholder="Buscar por nome, email..."
-                  className="w-full h-12 pl-11 md:pl-12 pr-4 rounded-lg border border-gray-6 bg-gray-1 text-base md:text-sm text-gray-12 placeholder:text-gray-11 font-family-dm-sans shadow-[0px_2px_6px_0px_rgba(17,17,17,0.08)] outline-none focus-visible:border-gray-4 focus-visible:ring-[3px] focus-visible:ring-gray-4/50"
+                  className="w-full h-12 pl-11 md:pl-12 pr-4 rounded-lg border border-gray-6 bg-gray-1 text-base md:text-sm text-gray-12 placeholder:text-gray-11 font-family-dm-sans outline-none focus-visible:border-gray-4 focus-visible:ring-[3px] focus-visible:ring-gray-4/50"
                 />
               </div>
             </div>
@@ -292,7 +292,7 @@ export default function OrganizerTeamPage() {
             {/* Mobile: cards */}
             <div className="md:hidden flex flex-col gap-3">
               {pageSlice.length === 0 ? (
-                <div className="rounded-xl border border-gray-6 bg-gray-1 py-14 text-center text-sm text-gray-11 font-family-dm-sans shadow-[0px_2px_6px_0px_rgba(17,17,17,0.08)] px-4">
+                <div className="rounded-xl border border-gray-6 bg-gray-1 py-14 text-center text-sm text-gray-11 font-family-dm-sans px-4">
                   {search
                     ? "Nenhum membro encontrado."
                     : "Nenhum colaborador na organização."}
@@ -307,7 +307,7 @@ export default function OrganizerTeamPage() {
                   return (
                     <div
                       key={m.id}
-                      className="rounded-xl border border-gray-6 bg-gray-1 p-4 shadow-[0px_2px_6px_0px_rgba(17,17,17,0.08)]"
+                      className="rounded-xl border border-gray-6 bg-gray-1 p-4"
                     >
                       <div className="flex items-start gap-3 min-w-0">
                         <UserAvatar
@@ -361,7 +361,7 @@ export default function OrganizerTeamPage() {
             />
 
             {/* Desktop: table */}
-            <div className="hidden md:block rounded-xl border border-gray-6 bg-gray-1 overflow-hidden shadow-[0px_2px_6px_0px_rgba(17,17,17,0.08)]">
+            <div className="hidden md:block rounded-xl border border-gray-6 bg-gray-1 overflow-hidden">
               <div className="overflow-x-auto">
                 <table className="w-full min-w-[640px]">
                   <thead>

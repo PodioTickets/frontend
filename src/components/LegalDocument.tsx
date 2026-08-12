@@ -25,8 +25,14 @@ function toSections(blocks: LegalBlock[]): Section[] {
   return sections;
 }
 
-/** Renderiza o corpo de uma seção; runs consecutivos de li/oli viram <ul>/<ol>. */
-function renderBody(blocks: LegalBlock[]): ReactNode[] {
+/**
+ * Renderiza o corpo de uma seção; runs consecutivos de li/oli viram <ul>/<ol>.
+ * `compact` = variante para os modais de leitura (corpo text-xs, títulos
+ * text-base); o padrão preserva o tamanho maior da página cheia (/terms,
+ * /privacy).
+ */
+function renderBody(blocks: LegalBlock[], compact: boolean): ReactNode[] {
+  const bodyText = compact ? "text-xs" : "text-base";
   const out: ReactNode[] = [];
   let buf: LegalBlock[] = [];
   let kind: "ul" | "ol" | null = null;
@@ -75,21 +81,24 @@ function renderBody(blocks: LegalBlock[]): ReactNode[] {
         break;
       case "h3":
         out.push(
-          <h3 key={i} className="font-manrope font-bold text-base md:text-lg text-gray-12 mt-2">
+          <h3
+            key={i}
+            className={`font-manrope font-bold ${compact ? "text-base" : "text-base md:text-lg"} text-gray-12 mt-2`}
+          >
             {b.text}
           </h3>,
         );
         break;
       case "kv":
         out.push(
-          <p key={i} className="text-base text-gray-12 leading-[1.3]">
+          <p key={i} className={`${bodyText} text-gray-12 leading-[1.3]`}>
             <strong className="font-bold">{b.label}:</strong> {b.text}
           </p>,
         );
         break;
       default:
         out.push(
-          <p key={i} className="text-base text-gray-12 leading-[1.3]">
+          <p key={i} className={`${bodyText} text-gray-12 leading-[1.3]`}>
             {b.text}
           </p>,
         );
@@ -101,26 +110,39 @@ function renderBody(blocks: LegalBlock[]): ReactNode[] {
 
 /**
  * Corpo de um documento legal: intro + seções (h2) separadas por divisores.
- * Reutilizado pela página (/terms, /privacy) e pelo TermsOfServiceModal do
- * cadastro — o pai controla largura, padding e gap do container.
+ * Reutilizado pela página (/terms, /privacy) e pelos modais de leitura
+ * (TermsOfServiceModal, ContractReaderModal) — o pai controla largura, padding
+ * e gap do container.
+ *
+ * `compact` (usado só nos modais) reduz o corpo para text-xs e os títulos para
+ * text-base; sem ele, mantém-se o tamanho original da página cheia.
  */
-export function LegalDocumentBody({ blocks }: { blocks: LegalBlock[] }) {
+export function LegalDocumentBody({
+  blocks,
+  compact = false,
+}: {
+  blocks: LegalBlock[];
+  compact?: boolean;
+}) {
   const sections = toSections(blocks);
   const intro = sections[0];
   const rest = sections.slice(1).filter((s) => s.heading);
+  const bodyWrap = `flex flex-col gap-2${compact ? " text-xs" : ""}`;
 
   return (
     <>
       {intro.body.length > 0 && (
-        <div key="intro" className="flex flex-col gap-2">{renderBody(intro.body)}</div>
+        <div key="intro" className={bodyWrap}>{renderBody(intro.body, compact)}</div>
       )}
       {rest.flatMap((s, i) => [
         <div key={`div-${i}`} className="h-px w-full bg-gray-6" />,
         <div key={`sec-${i}`} className="flex flex-col gap-6">
-          <h2 className="font-manrope font-extrabold text-xl md:text-2xl leading-[1.1] text-gray-12">
+          <h2
+            className={`font-manrope font-extrabold ${compact ? "text-base" : "text-xl md:text-2xl"} leading-[1.1] text-gray-12`}
+          >
             {s.heading!.text}
           </h2>
-          <div className="flex flex-col gap-2">{renderBody(s.body)}</div>
+          <div className={bodyWrap}>{renderBody(s.body, compact)}</div>
         </div>,
       ])}
     </>

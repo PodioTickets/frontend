@@ -277,7 +277,9 @@ const TicketItemMobile = memo(({
             <h2 className="text-base font-bold text-gray-12 font-manrope leading-[1.1] break-words">
               {ticket.name}
             </h2>
-            {modalityInfo && (
+            {/* Modalidade + distância só quando há distância (> 0). Distância 0 =
+                sem corrida associada → oculta o ícone + texto. */}
+            {modalityInfo && distanceKm > 0 && (
               <div className="flex items-center gap-2">
                 {modalityInfo.icon ? (
                   <div className="size-5 shrink-0 relative rounded overflow-hidden flex items-center justify-center">
@@ -395,7 +397,7 @@ const TicketItemMobile = memo(({
                 modality (fallback p/ placeholder cinza) e o texto exibe a
                 distância. Sem `DistanceIcon` separado nem nome da modality. */}
             <div className="flex items-center gap-8 flex-wrap min-w-0 w-full">
-              {modalityInfo && (
+              {modalityInfo && distanceKm > 0 && (
                 <div className="flex items-center gap-2">
                   {modalityInfo.icon ? (
                     <div className="size-6 shrink-0 relative rounded overflow-hidden flex items-center justify-center">
@@ -722,7 +724,7 @@ const TicketItemDesktop = memo(({
             </h2>
 
             <div className="flex items-center gap-8 flex-wrap min-w-0">
-              {modalityInfo && (
+              {modalityInfo && distanceKm > 0 && (
                 <div className="flex items-center gap-2">
                   {modalityInfo.icon ? (
                     <div className="size-6 shrink-0 relative rounded overflow-hidden flex items-center justify-center">

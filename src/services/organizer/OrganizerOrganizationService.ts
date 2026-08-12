@@ -10,6 +10,8 @@ import type {
   CreateOrganizerRequest,
   Organizer,
   CreateOrganizationRequest,
+  OrganizerSignupRequest,
+  OrganizerSignupUser,
   OrganizerPermissionKey,
   OrganizationMember,
   Organization,
@@ -156,6 +158,129 @@ export class OrganizerOrganizationService extends OrganizerCatalogService {
       createdAt: org.createdAt,
       updatedAt: org.updatedAt,
     };
+  }
+
+  /**
+   * Auto-cadastro público de organizador. Cria conta ORGANIZER + organização
+   * ativa + membro OWNER e o backend AUTOLOGA na superfície organizer (cookies
+   * httpOnly na resposta). Retorna o `user` (mesmo shape do login) para o
+   * `useAuth` popular o contexto sem novo GET. Rota pública (só Turnstile).
+   */
+  async signupOrganizer(
+    payload: OrganizerSignupRequest,
+  ): Promise<OrganizerSignupUser> {
+    try {
+      const { data: response } = await this.apiClient.post<{
+        data: { user: OrganizerSignupUser };
+      }>("/api/v1/auth/register/organizer", payload);
+      return response.data.user;
+    } catch (error: any) {
+      // Normaliza a mensagem do backend (ex.: 409 "Já existe uma conta...")
+      // para o wizard exibir texto útil em vez de "Request failed".
+      const backendMsg =
+        error?.response?.data?.message ?? error?.response?.data?.error;
+      const message = Array.isArray(backendMsg)
+        ? backendMsg[0]
+        : backendMsg || error?.message || "Erro ao criar conta de organizador.";
+      throw new Error(message);
+    }
+  }
+
+  /**
+   * Disponibilidade do DOCUMENTO da ORGANIZAÇÃO (CPF de PF / CNPJ de PJ) no
+   * auto-cadastro público. Valida contra a tabela `Organization` (não `User`) —
+   * usado pelo wizard para checar AO VIVO se já existe organização com aquele
+   * documento. Rota pública; retorna só `{ available }`. Em falha de rede,
+   * assume `true` (não trava o preenchimento; o submit ainda revalida).
+   */
+  async checkOrganizationDocumentAvailability(
+    document: string,
+  ): Promise<boolean> {
+    try {
+      const { data } = await this.apiClient.get<{
+        data?: { available?: boolean };
+        available?: boolean;
+      }>("/api/v1/organizations/document-availability", {
+        params: { document },
+      });
+      const available = data?.data?.available ?? data?.available;
+      return available !== false;
+    } catch {
+      return true;
+    }
+  }
+
+  /**
+   * Disponibilidade do CPF do RESPONSÁVEL (`Organization.ownerDocument`) no
+   * auto-cadastro público — checa AO VIVO se já existe OUTRA organização cujo
+   * responsável tem este CPF. Distinto de `checkOrganizationDocumentAvailability`
+   * (que valida o DOCUMENTO da org: CPF de PF / CNPJ de PJ). Rota pública;
+   * retorna só `{ available }`. Em falha de rede assume `true` (não trava o
+   * preenchimento; o submit ainda revalida no backend).
+   */
+  async checkOrganizationOwnerDocumentAvailability(
+    document: string,
+  ): Promise<boolean> {
+    try {
+      const { data } = await this.apiClient.get<{
+        data?: { available?: boolean };
+        available?: boolean;
+      }>("/api/v1/organizations/owner-document-availability", {
+        params: { document },
+      });
+      const available = data?.data?.available ?? data?.available;
+      return available !== false;
+    } catch {
+      return true;
+    }
+  }
+
+  /**
+   * Disponibilidade do E-MAIL de login na conta ORGANIZER no auto-cadastro
+   * público. Escopo por `accountType=ORGANIZER` — uma conta USER homônima NÃO
+   * bloqueia (coexistem via `@@unique([email, accountType])`). Rota pública;
+   * retorna só `{ available }`. Em falha de rede assume `true` (não trava o
+   * preenchimento; o submit ainda revalida no backend).
+   */
+  async checkOrganizerEmailAvailability(email: string): Promise<boolean> {
+    const normalized = email.trim().toLowerCase();
+    if (!normalized.includes("@")) return true;
+    try {
+      const { data } = await this.apiClient.get<{
+        data?: { available?: boolean };
+        available?: boolean;
+      }>("/api/v1/auth/email/availability", {
+        params: { email: normalized, accountType: "ORGANIZER" },
+      });
+      const available = data?.data?.available ?? data?.available;
+      return available !== false;
+    } catch {
+      return true;
+    }
+  }
+
+  /**
+   * Disponibilidade do E-MAIL DE CONTATO da ORGANIZAÇÃO no auto-cadastro público.
+   * Valida contra `Organization.email` (campo de contato, distinto do e-mail de
+   * login) — se já existe org com este e-mail de contato, bloqueia. Comparação
+   * case-insensitive no backend. Rota pública; `{ available }`. Falha de rede →
+   * `true` (não trava; o submit revalida no backend).
+   */
+  async checkOrganizationEmailAvailability(email: string): Promise<boolean> {
+    const normalized = email.trim().toLowerCase();
+    if (!normalized.includes("@")) return true;
+    try {
+      const { data } = await this.apiClient.get<{
+        data?: { available?: boolean };
+        available?: boolean;
+      }>("/api/v1/organizations/email-availability", {
+        params: { email: normalized },
+      });
+      const available = data?.data?.available ?? data?.available;
+      return available !== false;
+    } catch {
+      return true;
+    }
   }
 
   // Novos métodos de Organization

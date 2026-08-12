@@ -15,6 +15,12 @@ interface ResendTicketsModalProps {
   loading?: boolean;
   /** Quantidade de ingressos do pedido (texto dinâmico singular/plural). */
   ticketCount: number;
+  /** Título do modal. Default = fluxo de pedido (ingressos + comprovante). */
+  title?: string;
+  /** Texto de apoio abaixo do título. Default = fluxo de pedido. */
+  description?: string;
+  /** Rótulo do botão de confirmação. Default = "Reenviar". */
+  confirmLabel?: string;
 }
 
 // Validação leve no client (a verdade é o backend). Mesmo regex do ChangeEmailModal.
@@ -31,7 +37,9 @@ export function ResendTicketsModal({
   onClose,
   onConfirm,
   loading = false,
-  ticketCount,
+  title = "Reenviar ingressos e comprovante",
+  description = "Reenvie o ingresso e o comprovante de pagamento para o e-mail do participante.",
+  confirmLabel = "Reenviar",
 }: ResendTicketsModalProps) {
   const [email, setEmail] = useState("");
   const [error, setError] = useState<string | undefined>();
@@ -87,10 +95,10 @@ export function ResendTicketsModal({
               <div className="flex flex-col gap-6 w-full">
                 <div className="flex flex-col gap-2 items-center w-full">
                   <p className="font-family-dm-sans font-semibold text-[20px] leading-[1.3] text-gray-12 text-center">
-                    Reenviar ingressos e comprovante
+                    {title}
                   </p>
                   <p className="font-family-dm-sans font-normal text-[16px] leading-[1.3] text-gray-11 text-center w-[85%]">
-                    Após a confirmação do pagamento, os ingressos e o comprovante deste pedido serão enviados para o e-mail informado.
+                    {description}
                   </p>
                 </div>
 
@@ -146,7 +154,7 @@ export function ResendTicketsModal({
                   isLoading={loading}
                   className="flex-1 h-12"
                 >
-                  Reenviar
+                  {confirmLabel}
                 </Button>
               </div>
             </div>

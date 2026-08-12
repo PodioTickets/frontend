@@ -2,6 +2,7 @@
 
 import { OrganizerSidebar } from "@/components/Organizer/OrganizerSidebar";
 import { OrganizerMobileNav } from "@/components/Organizer/OrganizerMobileNav";
+import { OrganizerSupportWidget } from "@/components/Organizer/OrganizerSupportWidget";
 import { OrganizerAuditPageViewTracker } from "@/components/Organizer/OrganizerAuditPageViewTracker";
 import { useOrganizerAccess } from "@/hooks/useOrganizerAccess";
 import {
@@ -29,6 +30,7 @@ function OrganizerLayoutContent({ children }: { children: React.ReactNode }) {
       <main className="flex-1 ml-0 md:ml-[218px] min-w-0">
         {children}
       </main>
+      <OrganizerSupportWidget />
     </div>
   );
 }

@@ -1,198 +1,148 @@
-// Conteúdo dos Termos de Uso do Comprador (gerado do antigo public/termos-comprador.pdf,
-// removido do repo — recuperável no histórico do git).
+// Conteúdo dos Termos de Uso do Participante.
+// Gerado de docs/Termo de Uso do Participante.docx (versão 07/07/2026).
 import type { LegalBlock } from "@/components/LegalDocument";
 
 export const termsOfUse: LegalBlock[] = [
-  {
-    "type": "h1",
-    "text": "TERMOS DE USO DO COMPRADOR"
-  },
-  {
-    "type": "sub",
-    "text": "PLATAFORMA PÓDIOTICKET — CONTRATO DE ADESÃO ELETRÔNICO"
-  },
-  {
-    "type": "p",
-    "text": "Estes Termos de Uso regem a relação jurídica entre a PÓDIOTICKET (plataforma intermediadora de tecnologia) e o Usuário Comprador (atleta ou participante). Ao utilizar a plataforma, adquirir ingressos, inscrições ou realizar contribuições, o Usuário declara ter lido, compreendido e aceitado todas as condições abaixo estipuladas."
-  },
-  {
-    "type": "h2",
-    "text": "1. NATUREZA DO SERVIÇO E LIMITAÇÃO DE RESPONSABILIDADE"
-  },
-  {
-    "type": "kv",
-    "label": "Intermediação Tecnológica",
-    "text": "A PÓDIOTICKET é uma plataforma online que atua exclusivamente como intermediadora na venda de ingressos e inscrições para eventos esportivos e culturais. A PÓDIOTICKET não produz, não organiza e não realiza os eventos divulgados."
-  },
-  {
-    "type": "kv",
-    "label": "Responsabilidade do Organizador",
-    "text": "O Organizador do evento é o único e exclusivo responsável por todo o planejamento, realização, definição de atrações, programação, local, data, alteração de preços, gerenciamento de filas/portaria, entrega de kits/brindes e cumprimento integral da legislação (incluindo o benefício da meia-entrada)."
-  },
-  {
-    "type": "kv",
-    "label": "Exclusão de Responsabilidade",
-    "text": "O Usuário isenta expressamente a PÓDIOTICKET de qualquer responsabilidade por cancelamentos, adiamentos, alterações de cronograma ou por qualquer dano material, moral ou estético ocorrido no decorrer ou em decorrência do evento."
-  },
-  {
-    "type": "h2",
-    "text": "2. REQUISITOS DE CADASTRO E SEGURANÇA"
-  },
-  {
-    "type": "kv",
-    "label": "Veracidade dos Dados",
-    "text": "O Comprador é o único responsável pela veracidade, exatidão e atualização dos dados inseridos no cadastro. Dados incorretos, incompletos ou falsos podem invalidar a compra sem direito a qualquer tipo de indenização."
-  },
-  {
-    "type": "kv",
-    "label": "Vínculo por CPF",
-    "text": "Para maior segurança do usuário e prevenção de fraudes, o ingresso ou inscrição e a conta na plataforma são estritamente vinculados ao CPF do comprador."
-  },
-  {
-    "type": "kv",
-    "label": "Guarda de Senha",
-    "text": "O Usuário é inteiramente responsável por manter o sigilo de sua senha de acesso, respondendo civil e criminalmente por todas as atividades realizadas em sua conta."
-  },
-  {
-    "type": "h2",
-    "text": "3. PROCESSO DE COMPRA E FORMAS DE PAGAMENTO"
-  },
-  {
-    "type": "kv",
-    "label": "Canais Oficiais",
-    "text": "As compras devem ser realizadas exclusivamente através do domínio oficial podioticket.com.br e seus subdomínios. A PÓDIOTICKET não reconhece e não se responsabiliza por ingressos adquiridos por terceiros, cambistas ou plataformas paralelas não autorizadas."
-  },
-  {
-    "type": "kv",
-    "label": "Formas de Pagamento",
-    "text": "Serão aceitos pagamentos processados via Cartão de Crédito e PIX. Não há suporte para pagamentos via boleto bancário ou transferências manuais."
-  },
-  {
-    "type": "kv",
-    "label": "Cobrança na Fatura",
-    "text": "O comprador está ciente de que os lançamentos na fatura do cartão de crédito podem aparecer identificados em nome da PÓDIOTICKET ou de seus processadores e gateways de pagamentos parceiros, conforme regras operacionais do sistema."
-  },
-  {
-    "type": "kv",
-    "label": "Análise de Risco",
-    "text": "Todas as transações passam por um sistema automatizado de análise de fraude e risco. A recusa ou cancelamento preventivo da compra pelo processador de pagamentos não gera direito a indenizações."
-  },
-  {
-    "type": "h2",
-    "text": "4. ENTREGA E ACESSO AOS INGRESSOS"
-  },
-  {
-    "type": "kv",
-    "label": "Envio Eletrônico",
-    "text": "Após a aprovação do pagamento pelo sistema, os ingressos/inscrições serão enviados em formato eletrônico (PDF) para o e-mail cadastrado e, quando aprovados em tempo real, disponibilizados imediatamente na tela de confirmação."
-  },
-  {
-    "type": "kv",
-    "label": "Área do Cliente",
-    "text": "O Usuário também poderá acessar, visualizar e baixar seus ingressos a qualquer momento na área autenticada do site, na seção \"Meus Ingressos\" ou \"Meus Pedidos\"."
-  },
-  {
-    "type": "kv",
-    "label": "Responsabilidade do Recebimento",
-    "text": "É dever exclusivo do Comprador configurar seus filtros e verificar suas caixas de SPAM, \"Promoções\" ou \"Lixo Eletrônico\" caso não localize o envio em sua caixa de entrada principal."
-  },
-  {
-    "type": "h2",
-    "text": "5. POLÍTICA DE CANCELAMENTO, ARREPENDIMENTO E ESTORNO"
-  },
-  {
-    "type": "kv",
-    "label": "Direito de Arrependimento (Art. 49 do CDC)",
-    "text": "Em estrito respeito ao Código de Defesa do Consumidor brasileiro, o Comprador poderá desistir da compra e solicitar o cancelamento em até 7 (sete) dias corridos a contar da data de efetivação e aprovação do pedido."
-  },
-  {
-    "type": "kv",
-    "label": "Estorno de Valores",
-    "text": "Caso o cancelamento seja devidamente solicitado dentro do prazo legal de 7 dias, o estorno ocorrerá da seguinte forma:"
-  },
-  {
-    "type": "kv",
-    "label": "PIX",
-    "text": "O valor elegível será devolvido diretamente para a mesma conta bancária de origem em até 7 dias úteis."
-  },
-  {
-    "type": "kv",
-    "label": "Cartão de Crédito",
-    "text": "O estorno é enviado ao banco emissor do cartão, podendo constar como crédito no mesmo mês ou na fatura seguinte/subsequente, a depender exclusivamente das regras da respectiva instituição financeira."
-  },
-  {
-    "type": "kv",
-    "label": "Taxa de Serviço e Custos de Cancelamento",
-    "text": "O valor da taxa de serviço de intermediação retida no ato da compra não é restituído em caso de cancelamento, uma vez que o serviço de intermediação foi integralmente prestado. A PÓDIOTICKET reserva-se o direito de reter ou cobrar uma taxa de cancelamento variável, calculada com base nos custos operacionais específicos da transação e processamento do estorno, cujo valor exato será informado de forma transparente ao usuário no momento da sua solicitação."
-  },
-  {
-    "type": "kv",
-    "label": "Ausência no Evento",
-    "text": "O não comparecimento ao evento (No-show) por livre escolha, atraso ou impedimento pessoal do Usuário não dá direito a reembolso, créditos ou estornos fora do prazo legal de arrependimento."
-  },
-  {
-    "type": "kv",
-    "label": "Transferências e Alterações",
-    "text": "Não há suporte técnico na plataforma para alterações manuais de modalidade ou trocas entre eventos diferentes. Eventuais substituições de participantes deverão seguir estritamente as regras e o Regulamento próprio emitido pelo Organizador do evento."
-  },
-  {
-    "type": "h2",
-    "text": "6. COMUNICAÇÃO, PRIVACIDADE E DADOS (LGPD)"
-  },
-  {
-    "type": "kv",
-    "label": "Tratamento de Dados",
-    "text": "Ao fornecer seus dados na plataforma ou em landing pages associadas, o Usuário manifesta seu consentimento livre, expresso e informado para o tratamento de seus dados pessoais para fins de execução do serviço, segurança, prevenção a fraudes e comunicações operacionais, em conformidade com a Lei Geral de Proteção de Dados (LGPD)."
-  },
-  {
-    "type": "kv",
-    "label": "Comunicação Digital",
-    "text": "O Usuário autoriza o envio de e-mails, SMS e mensagens via aplicativos como WhatsApp contendo informações, notificações operacionais, atualizações de segurança, bem como conteúdos informativos e promocionais da PÓDIOTICKET, do Organizador ou de seus parceiros comerciais."
-  },
-  {
-    "type": "kv",
-    "label": "Canal de Atendimento",
-    "text": "O contato oficial com a plataforma para requisições, dúvidas ou suporte deverá ser feito obrigatoriamente através do e-mail suporte@podioticket.com.br ou pelos canais de atendimento digital disponibilizados no site oficial."
-  },
-  {
-    "type": "h2",
-    "text": "7. DECLARAÇÕES E COMPROMISSOS DO COMPRADOR"
-  },
-  {
-    "type": "p",
-    "text": "Ao concluir a inscrição ou compra, o Usuário Comprador declara expressamente que:"
-  },
-  {
-    "type": "oli",
-    "text": "Participará do evento por sua livre e espontânea vontade, declarando-se física, técnica e mentalmente apto a realizar a atividade proposta, isentando integralmente a PÓDIOTICKET e os Organizadores de qualquer responsabilidade sobre sua integridade física ou saúde (estendendo-se aos seus herdeiros e sucessores);"
-  },
-  {
-    "type": "oli",
-    "text": "Isenta a organização e a plataforma de qualquer responsabilidade sobre pertences pessoais, equipamentos ou objetos de valor deixados em guarda-volumes, chapelarias ou demais dependências do perímetro do evento;"
-  },
-  {
-    "type": "oli",
-    "text": "Caso realize a inscrição em nome de terceiros, declara possuir plenos poderes e autorização expressa para representá-los e fornecer seus dados pessoais, garantindo que os mesmos também preenchem os requisitos de aptidão física e técnica exigidos pelo regulamento do evento;"
-  },
-  {
-    "type": "oli",
-    "text": "Autoriza o uso gratuito de seu direito de imagem (e dos terceiros por ele cadastrados) obtido durante o evento, para fins de divulgação, cobertura jornalística e promoção comercial da PÓDIOTICKET, dos Organizadores e patrocinadores, em qualquer mídia física ou digital;"
-  },
-  {
-    "type": "oli",
-    "text": "Está ciente de que eventuais cupons de desconto concedidos pelo Organizador incidem exclusivamente sobre o valor de face do ingresso/inscrição (ou produtos adicionais habilitados), mas que a taxa de conveniência/serviço da PÓDIOTICKET é calculada de forma fixa ou percentual com base no valor original de face, antes da aplicação de descontos."
-  },
-  {
-    "type": "h2",
-    "text": "8. FORO COMPETENTE"
-  },
-  {
-    "type": "kv",
-    "label": "Eleição de Foro",
-    "text": "Em estrita consonância com as regras protetivas estabelecidas pelo Código de Defesa do Consumidor (CDC) para contratos eletrônicos de adesão, fica estabelecido que qualquer controvérsia, litígio ou pleito decorrente destes Termos de Uso será obrigatoriamente dirimido perante o foro do domicílio do Usuário Comprador, garantindo o pleno acesso à justiça e facilitando a defesa de seus direitos."
-  },
-  {
-    "type": "p",
-    "text": "Atualizado eletronicamente e publicado em conformidade com as operações vigentes."
-  }
+  { type: "h1", text: "TERMOS DE USO DO PARTICIPANTE" },
+  { type: "sub", text: "Contrato de Adesão Eletrônico — Relação de Consumo (B2C)" },
+  { type: "p", text: "PODIOTICKET LTDA — CNPJ 65.174.909/0001-01" },
+  { type: "p", text: "Rua Desembargador José de Mesquita, 776, Sala 05, Araés Office Tower, Araés, Cuiabá-MT, CEP 78.005-560" },
+  { type: "p", text: "Estes Termos de Uso regem a relação jurídica entre a PODIOTICKET LTDA (“Plataforma” ou “PódioTicket”) e o Participante, pessoa física que acessa, navega ou realiza inscrições por meio da Plataforma. Ao concluir qualquer inscrição ou compra, o Participante declara ter lido, compreendido e aceito integralmente o presente instrumento, incluindo a Política de Privacidade e os demais documentos a ele vinculados." },
+  { type: "p", text: "Este documento é um contrato de adesão, regido pelo Código de Defesa do Consumidor (Lei 8.078/1990), pela Lei Geral de Proteção de Dados (Lei 13.709/2018), pelo Decreto 7.962/2013 e pelas demais normas brasileiras aplicáveis." },
+  { type: "p", text: "As cláusulas que limitam direitos do Participante estão redigidas em negrito, na forma exigida pelo art. 54, §4º do CDC." },
+  { type: "h2", text: "1. GLOSSÁRIO" },
+  { type: "kv", label: "Plataforma", text: "o site, aplicativo e demais sistemas de titularidade da PODIOTICKET LTDA, acessíveis em podioticket.com.br e seus subdomínios, destinados à divulgação de Eventos e à venda de Inscrições." },
+  { type: "kv", label: "Participante ou Comprador", text: "pessoa física, consumidor, que acessa a Plataforma para comprar Inscrições para Eventos de seu interesse." },
+  { type: "kv", label: "Organizador", text: "pessoa física ou jurídica responsável pelo planejamento, organização, realização e execução do Evento, que utiliza a Plataforma como canal de venda de Inscrições." },
+  { type: "kv", label: "Evento", text: "corrida de rua, triathlon, festival, show, feira, congresso, espetáculo cultural ou qualquer outra atividade de organização e responsabilidade exclusiva do Organizador, divulgada na Plataforma — a título exemplificativo." },
+  { type: "kv", label: "Inscrição", text: "documento ou código digital que confere ao Participante o direito de participar do Evento nas condições estabelecidas pelo Organizador." },
+  { type: "kv", label: "Taxa de Serviço", text: "remuneração da Plataforma pela intermediação tecnológica, cobrada por ocasião de cada venda de Inscrição, cujo valor é informado de forma transparente antes da conclusão da compra." },
+  { type: "kv", label: "Processador de Pagamentos", text: "empresa parceira responsável pelo processamento técnico-financeiro das transações realizadas na Plataforma." },
+  { type: "kv", label: "Conta do Participante", text: "área de acesso restrito e individual na Plataforma, vinculada ao CPF do Participante." },
+  { type: "h2", text: "2. NATUREZA DO SERVIÇO" },
+  { type: "p", text: "2.1. A PódioTicket é uma plataforma de intermediação tecnológica. Ela disponibiliza a infraestrutura digital necessária para que Organizadores de eventos divulguem suas Inscrições e para que Participantes as adquiram com segurança." },
+  { type: "p", text: "2.2. A PódioTicket não organiza, não promove, não realiza e não patrocina os Eventos divulgados. Toda a responsabilidade pelo planejamento, realização, segurança, infraestrutura, percurso, cronometragem, entrega de kits, atendimento médico de emergência e cumprimento da legislação aplicável ao Evento é exclusiva do Organizador." },
+  { type: "p", text: "2.3. A Plataforma poderá ser responsabilizada solidariamente perante o Participante, nos termos do CDC, por falhas diretamente relacionadas à sua atividade de intermediação, tais como falha técnica na entrega da Inscrição digital, erro no processamento do pagamento ou ausência das informações mínimas exigidas por lei sobre o Evento. Situações relacionadas à execução do Evento em si, como cancelamento, alteração ou má realização, são de responsabilidade exclusiva do Organizador, sem prejuízo do direito de regresso da Plataforma." },
+  { type: "p", text: "2.4. A Plataforma reserva-se o direito de recusar o cadastro de Eventos que violem a legislação vigente ou os padrões de qualidade e segurança exigidos, sem que isso gere qualquer responsabilidade perante o Participante." },
+  { type: "h2", text: "3. CADASTRO E ELEGIBILIDADE" },
+  { type: "h3", text: "3.1. Requisitos gerais" },
+  { type: "p", text: "3.1.1. O cadastro é destinado a maiores de 18 (dezoito) anos com CPF válido e endereço de e-mail ativo. Menores de 18 anos somente podem se cadastrar se devidamente assistidos ou representados por seus responsáveis legais, que assumem integral responsabilidade pelas ações realizadas em nome do menor na Plataforma." },
+  { type: "p", text: "3.1.2. É vedado o cadastro de pessoas que tenham sido suspensas ou canceladas pela Plataforma, ou que não possam celebrar contratos de consumo nos termos do Código Civil." },
+  { type: "p", text: "3.1.3. O Participante é o único responsável pela veracidade, exatidão e atualização dos dados fornecidos no cadastro, respondendo civil e criminalmente por informações falsas ou incorretas." },
+  { type: "h3", text: "3.2. Vínculo por CPF e segurança da conta" },
+  { type: "p", text: "3.2.1. A conta na Plataforma e todas as Inscrições adquiridas são vinculadas ao CPF do Participante, como medida de segurança e prevenção a fraudes." },
+  { type: "p", text: "3.2.2. O Participante é integralmente responsável por manter o sigilo de suas credenciais de acesso (login e senha), respondendo por todas as ações realizadas em sua conta. Em caso de acesso não autorizado ou suspeita de comprometimento da conta, o Participante deve notificar imediatamente a Plataforma pelo canal oficial de atendimento." },
+  { type: "p", text: "3.2.3. A Plataforma pode, a qualquer tempo, suspender ou cancelar contas que apresentem indícios de fraude, uso indevido ou violação destes Termos, notificando o Participante pelos canais cadastrados." },
+  { type: "h3", text: "3.3. Inscrição em nome de terceiros" },
+  { type: "p", text: "3.3.1. O Participante que realizar inscrição em nome de terceiro(s) declara possuir autorização expressa e prévia do representado para fornecer seus dados pessoais à Plataforma e para vinculá-lo aos termos deste instrumento, às declarações da Seção 8 e ao Regulamento do Evento." },
+  { type: "p", text: "3.3.2. O Participante cadastrante é o único responsável perante a Plataforma e o Organizador pelas obrigações decorrentes das inscrições de terceiros por ele realizadas, incluindo as declarações de aptidão física, se aplicável." },
+  { type: "h3", text: "3.4. Mecanismo de aceite eletrônico" },
+  { type: "p", text: "3.4.1. A aceitação destes Termos ocorre por meio eletrônico, no momento em que o Participante, ao concluir o fluxo de compra ou cadastro na Plataforma, marca a caixa de confirmação (\"checkbox\") ou clica no botão de aceitação expressamente vinculado a este documento, disponibilizado antes da confirmação final da transação." },
+  { type: "p", text: "3.4.2. O Participante tem acesso ao texto integral destes Termos e da Política de Privacidade por meio de link disponível nessa tela de confirmação, podendo acessá-los, salvá-los e imprimi-los antes de manifestar sua concordância." },
+  { type: "p", text: "3.4.3. A manifestação de concordância pelo mecanismo descrito acima produz todos os efeitos legais de aceitação de contrato de adesão eletrônico, nos termos do Decreto 7.962/2013 e do art. 46 do Código de Defesa do Consumidor. A Plataforma registra data, hora e versão dos Termos aceitos, dados que podem ser utilizados como prova da manifestação de vontade do Participante." },
+  { type: "h2", text: "4. PROCESSO DE COMPRA E PAGAMENTO" },
+  { type: "p", text: "4.1. As compras devem ser realizadas exclusivamente pelo domínio oficial podioticket.com.br e seus subdomínios. A Plataforma não reconhece nem se responsabiliza por Inscrições adquiridas de terceiros, cambistas ou canais não autorizados." },
+  { type: "p", text: "4.2. Formas de pagamento aceitas: Cartão de Débito, Crédito e PIX." },
+  { type: "p", text: "4.3. Todas as transações passam por sistema automatizado de análise de risco e antifraude. A recusa preventiva de uma compra pelo Processador de Pagamentos não implica responsabilidade da Plataforma e não gera direito a indenização." },
+  { type: "p", text: "4.4. Compras com cartão de crédito que necessitem de verificação adicional podem ter a aprovação suspensa por até 48 (quarenta e oito) horas. O Participante será notificado por e-mail sobre o resultado da análise." },
+  { type: "p", text: "4.5. O lançamento na fatura do cartão poderá aparecer identificado em nome da PódioTicket ou de seus Processadores de Pagamentos parceiros, conforme as regras operacionais de cada bandeira." },
+  { type: "p", text: "4.6. A Taxa de Serviço cobrada pela Plataforma é informada de forma clara e destacada antes da conclusão da compra, compondo o valor total exibido ao Participante. Eventuais cupons de desconto concedidos pelo Organizador incidem sobre o valor de face da Inscrição; a Taxa de Serviço incide sobre o valor final, já com o desconto aplicado." },
+  { type: "p", text: "4.7. Meia-entrada" },
+  { type: "p", text: "4.7.1. Nos Eventos em que, a critério e sob responsabilidade do Organizador, incidir a obrigatoriedade legal prevista na Lei nº 12.933/2013 e no Decreto nº 8.537/2015, a Plataforma disponibilizará, em seus sistemas de venda, as ferramentas necessárias para que o Organizador configure e aplique o desconto de meia-entrada às categorias de beneficiários por ele definidas (estudantes, idosos, pessoas com deficiência e jovens de baixa renda cadastrados no CadÚnico), observada a cota legal mínima de 40% (quarenta por cento) das Inscrições em cada categoria." },
+  { type: "p", text: "4.7.2. Cabe exclusivamente ao Organizador definir, dentro dos parâmetros da legislação aplicável, se, quando e de que forma se dará a comprovação da condição de beneficiário pelo Participante — podendo essa comprovação ocorrer previamente ao Evento (por exemplo, no ato da inscrição ou em momento anterior por ele determinado) ou no credenciamento/acesso ao Evento, conforme critério estabelecido e divulgado pelo próprio Organizador na página do Evento." },
+  { type: "p", text: "4.7.3. A Plataforma atua unicamente como fornecedora da ferramenta tecnológica que viabiliza a aplicação do desconto configurado pelo Organizador, não lhe cabendo qualquer ingerência, decisão ou responsabilidade sobre a concessão, os critérios, a documentação exigida ou a efetiva verificação do benefício." },
+  { type: "h2", text: "5. ENTREGA E ACESSO ÀS INSCRIÇÕES" },
+  { type: "p", text: "5.1. Aprovado o pagamento, a Inscrição é disponibilizada: (a) imediatamente na tela de confirmação; e (b) enviada ao endereço de e-mail cadastrado e disponibilizada na área autenticada \"Meus Ingressos\"." },
+  { type: "p", text: "5.2. É responsabilidade exclusiva do Participante verificar suas caixas de SPAM, \"Promoções\" ou \"Lixo Eletrônico\" caso não localize a Inscrição na caixa de entrada principal. A Plataforma não se responsabiliza por falha de entrega decorrente de configurações do serviço de e-mail do Participante." },
+  { type: "p", text: "5.3. A Inscrição é pessoal e intransferível, salvo quando o Regulamento do Evento expressamente autorizar a transferência de titularidade na forma prevista na Seção 6." },
+  { type: "p", text: "5.4. O uso de Inscrição por pessoa diversa do titular, sem observância do Regulamento do Evento, é de exclusiva responsabilidade do Participante cadastrante, podendo resultar no impedimento de acesso ao Evento." },
+  { type: "h2", text: "6. TRANSFERÊNCIA DE INSCRIÇÃO" },
+  { type: "p", text: "6.1. A transferência de Inscrição para outro Participante é condicionada à expressa permissão do Regulamento do Evento divulgado pelo Organizador. Na ausência de previsão expressa, a Inscrição é intransferível." },
+  { type: "p", text: "6.2. Quando permitida pelo Organizador, a transferência deve ser formalizada exclusivamente pelas ferramentas disponibilizadas na Plataforma, sendo vedada a transferência por meios externos." },
+  { type: "p", text: "6.3. O novo Participante assumirá integralmente as obrigações decorrentes da Inscrição, incluindo as declarações de aptidão física da Seção 8, e deverá aceitar estes Termos de Uso para que a transferência produza efeitos." },
+  { type: "p", text: "6.4. Eventuais taxas administrativas de transferência, quando cobradas, serão informadas ao Participante antes da confirmação da operação." },
+  { type: "h2", text: "7. CANCELAMENTO, ARREPENDIMENTO E REEMBOLSO" },
+  { type: "h3", text: "7.1. Direito de arrependimento legal" },
+  { type: "p", text: "7.1.1. O Participante pode exercer o direito de arrependimento, conforme a política de cancelamento e reembolso e solicitar o cancelamento da compra em até 7 (sete) dias corridos contados da data de aprovação do pagamento, nos termos do art. 49 do Código de Defesa do Consumidor. Nesse caso, o reembolso será integral, incluindo qualquer Taxa de Serviço cobrada." },
+  { type: "p", text: "7.1.2. Caso a data de realização do Evento esteja dentro do prazo de 7 (sete) dias contados da compra, o direito de arrependimento poderá ser exercido até, no mínimo, 48 (quarenta e oito) horas antes do horário de início do Evento, salvo regra mais favorável ao Participante informada no ato da compra." },
+  { type: "p", text: "7.1.3. A solicitação de arrependimento deve ser realizada pelos canais oficiais de atendimento da Plataforma descritos na Seção 12." },
+  { type: "h3", text: "7.2. Prazos de reembolso" },
+  { type: "p", text: "7.2.1. O reembolso decorrente do exercício do direito de arrependimento seguirá os prazos abaixo, a contar da confirmação do cancelamento:" },
+  { type: "kv", label: "PIX", text: "Devolução à mesma conta bancária de origem em até 7 (sete) dias úteis da confirmação do cancelamento." },
+  { type: "kv", label: "Cartão de crédito", text: "Estorno ao banco emissor do cartão em até 7 (sete) dias úteis da confirmação. O crédito pode constar na fatura do mesmo mês ou subsequente, conforme as regras da instituição financeira emissora do cartão." },
+  { type: "kv", label: "Cartão de débito", text: "Devolução à mesma conta bancária de origem em até 7 (sete) dias úteis da confirmação do cancelamento." },
+  { type: "h3", text: "7.3. Cancelamento fora do prazo legal" },
+  { type: "p", text: "7.3.1. Após o prazo de 7 (sete) dias do art. 49 do CDC, a possibilidade de cancelamento e eventual reembolso depende exclusivamente da política do Evento estabelecida pelo Organizador, a qual deve ser verificada pelo Participante antes da compra, na página do Evento." },
+  { type: "p", text: "7.3.2. Nos casos em que o Organizador autorizar o cancelamento após o prazo legal, a Plataforma poderá reter a Taxa de Serviço, pelo fato de a intermediação ter sido prestada, desde que o valor retido e os critérios de cálculo sejam informados previamente ao Participante no momento da solicitação." },
+  { type: "h3", text: "7.4. Cancelamento ou alteração do Evento pelo Organizador" },
+  { type: "p", text: "7.4.1. Em caso de cancelamento definitivo do Evento pelo Organizador, o Participante tem direito ao reembolso integral do valor pago, incluindo a Taxa de Serviço. O processamento do reembolso é de responsabilidade do Organizador; a Plataforma atuará como facilitadora e, se necessário, processará o reembolso diretamente, exercendo o direito de regresso contra o Organizador." },
+  { type: "p", text: "7.4.2. Em caso de alteração relevante das condições do Evento (data, local, percurso ou modalidade), o Participante que não concordar com as alterações terá direito ao reembolso integral do valor pago." },
+  { type: "p", text: "7.4.3. A comunicação de cancelamento ou alteração relevante será feita pela Plataforma e/ou pelo Organizador ao endereço de e-mail cadastrado pelo Participante." },
+  { type: "h3", text: "7.5. Ausência ao Evento" },
+  { type: "p", text: "7.5.1. O não comparecimento ao Evento por livre escolha, atraso ou impedimento pessoal do Participante não gera direito a reembolso fora do prazo legal de 7 (sete) dias do art. 49 do CDC, salvo quando o Regulamento do Evento expressamente prever tal hipótese." },
+  { type: "h2", text: "8. DECLARAÇÕES DO PARTICIPANTE" },
+  { type: "p", text: "Ao concluir a inscrição, o Participante declara expressamente que:" },
+  { type: "p", text: "8.1. Leu e compreendeu o Regulamento do Evento disponibilizado pelo Organizador, e está ciente das condições, percurso, modalidade, categorias e demais exigências específicas da prova." },
+  { type: "p", text: "8.2. Está ciente das disposições do Regulamento do Evento, inclusive quanto as condições físicas e técnicas adequadas para a participação na atividade esportiva inscrita, tendo consultado ou se responsabilizando por consultar profissional de saúde quando entender necessário." },
+  { type: "p", text: "8.4. Está ciente de que pertences pessoais, equipamentos ou objetos de valor de sua responsabilidade no local do Evento estão sob sua guarda exclusiva, cabendo ao Participante adotar as cautelas que entender adequadas. A eventual disponibilização de serviços de guarda-volumes é de responsabilidade do Organizador." },
+  { type: "p", text: "8.5. Quando inscrever terceiros, declarou ter obtido autorização expressa desses terceiros para fornecer seus dados pessoais à Plataforma e para vinculá-los a este instrumento e ao Regulamento do Evento, nos termos da Seção 3.3." },
+  { type: "h3", text: "8.6. Autorização de uso de imagem" },
+  { type: "p", text: "8.6.1. O Participante autoriza, a título gratuito e pelo prazo de 2 (dois) anos contados do Evento, o uso de sua imagem captada durante a realização do Evento exclusivamente para: (a) cobertura jornalística e editorial do Evento; (b) divulgação institucional da PódioTicket em seus canais próprios; e (c) materiais institucionais e de divulgação do Evento do Organizador e de seus patrocinadores oficiais, limitado ao uso não publicitário e não comercial para terceiros alheios ao Evento, vedada a cessão a terceiros para campanhas de produtos ou serviços próprios." },
+  { type: "p", text: "8.6.2. Fica vedado o uso da imagem do Participante para fins publicitários ou comerciais alheios ao Evento, para campanhas de terceiros não relacionados ao Evento, ou de qualquer forma que viole a honra, a reputação ou a dignidade do Participante." },
+  { type: "p", text: "8.6.3. A autorização acima não se estende automaticamente a terceiros inscritos pelo Participante. Cada participante registrado por terceiro recebe um e-mail de boas-vindas com a oportunidade de manifestar sua preferência quanto ao uso de imagem." },
+  { type: "h2", text: "9. PROTEÇÃO DE DADOS PESSOAIS (LGPD)" },
+  { type: "p", text: "9.1. A PódioTicket atua como Controladora dos dados pessoais coletados diretamente dos Participantes no âmbito destes Termos, em conformidade com a Lei 13.709/2018 (LGPD)." },
+  { type: "h3", text: "9.2. Quais dados coletamos e por quê" },
+  { type: "p", text: "9.2.1. Para a execução do contrato de inscrição (base legal: LGPD art. 7º, V — execução de contrato): nome completo, CPF, e-mail, telefone, nacionalidade gênero, dados de pagamento, categoria e modalidade do Evento." },
+  { type: "p", text: "9.2.2. Para segurança e prevenção a fraudes (base legal: LGPD art. 7º, IX — legítimo interesse do controlador): endereço IP, dados do dispositivo de acesso, histórico de transações." },
+  { type: "p", text: "9.2.3. Para comunicações operacionais obrigatórias (base legal: LGPD art. 7º, V — execução de contrato): endereço de e-mail e, quando aplicável, número de telefone. Para comunicações promocionais e de marketing (base legal: LGPD art. 7º, I — consentimento): somente com autorização expressa e distinta do Participante, revogável a qualquer tempo." },
+  { type: "p", text: "9.2.4. Para melhoria dos serviços e análises (base legal: LGPD art. 7º, IX — legítimo interesse, observados os limites do art. 10): dados de navegação, preferências de Eventos, padrões de uso da Plataforma, mediante consentimento via configuração de cookies (Seção 10)." },
+  { type: "h3", text: "9.3. Com quem compartilhamos seus dados" },
+  { type: "p", text: "9.3.1. Com o Organizador do Evento inscrito: nome, CPF, e-mail, telefone e dados da inscrição, para fins de gestão do Evento e credenciamento. Ao receber esses dados, o Organizador passa a atuar como Controlador autônomo e independente para os fins relacionados ao Evento, respondendo diretamente perante o Participante pelo tratamento realizado a partir desse momento, sem prejuízo das obrigações da Plataforma como Controladora original da coleta." },
+  { type: "p", text: "9.3.2. Com o Processador de Pagamentos: dados necessários ao processamento da transação financeira." },
+  { type: "p", text: "9.3.3. Com autoridades competentes: quando exigido por ordem judicial, requisição policial ou administrativa, observados os limites legais." },
+  { type: "p", text: "9.3.4. A PódioTicket não vende dados pessoais dos Participantes a terceiros." },
+  { type: "h3", text: "9.4. Por quanto tempo guardamos seus dados" },
+  { type: "p", text: "9.4.1. Os dados vinculados à inscrição são mantidos pelo período necessário à execução do contrato e, após o Evento, pelo prazo mínimo legal para fins de cumprimento de obrigação legal tributária e de eventual exercício de direito em juízo (arts. 15 e 16 da LGPD)." },
+  { type: "p", text: "9.4.2. Os registros de acesso à Plataforma (logs de navegação, endereços IP e data e hora de cada acesso) são mantidos pela Plataforma, nos termos do art. 15 da Lei nº 12.965/2014 (Marco Civil da Internet), podendo ser estendidos por ordem judicial." },
+  { type: "h2", text: "10. COOKIES E RASTREAMENTO" },
+  { type: "p", text: "10.1. A Plataforma utiliza cookies e tecnologias similares de rastreamento para:" },
+  { type: "li", text: "cookies estritamente necessários: viabilizar o funcionamento técnico da Plataforma, manter sessões de login ativas e garantir a segurança das transações;" },
+  { type: "li", text: "cookies de desempenho e análise: mensurar o tráfego e o comportamento de navegação para melhorar os serviços;" },
+  { type: "li", text: "cookies de personalização: lembrar preferências do Participante entre sessões;" },
+  { type: "li", text: "cookies de marketing: para comunicações personalizadas, quando o Participante autorizar expressamente." },
+  { type: "p", text: "10.2. O Participante pode configurar seu navegador para recusar ou deletar cookies não essenciais. A desativação de cookies necessários pode prejudicar o funcionamento regular da Plataforma." },
+  { type: "p", text: "10.3. Os cookies de desempenho, personalização e marketing só serão ativados após consentimento expresso do Participante, conforme exibido no aviso de cookies ao acessar a Plataforma pela primeira vez." },
+  { type: "h2", text: "11. CONDUTAS VEDADAS E USO INDEVIDO DA PLATAFORMA" },
+  { type: "p", text: "11.1. É expressamente vedado ao Participante:" },
+  { type: "li", text: "adquirir Inscrições com fins de revenda, cambismo ou obtenção de vantagem comercial não autorizada;" },
+  { type: "li", text: "fornecer dados falsos, usar a identidade de terceiros ou utilizar meios de pagamento que não lhe pertençam;" },
+  { type: "li", text: "utilizar robôs, scripts, crawlers ou qualquer mecanismo automatizado para interagir com a Plataforma;" },
+  { type: "li", text: "tentar acessar áreas restritas, código-fonte ou infraestrutura tecnológica da Plataforma;" },
+  { type: "li", text: "praticar qualquer ato que caracterize lavagem de dinheiro, financiamento ao terrorismo ou atividade ilícita." },
+  { type: "p", text: "11.2. O descumprimento das proibições acima autoriza a Plataforma a suspender ou cancelar a conta do Participante imediatamente, sem prejuízo das medidas civis e criminais cabíveis." },
+  { type: "h2", text: "12. CANAL DE ATENDIMENTO" },
+  { type: "p", text: "12.1. Para dúvidas sobre compras, inscrições, reembolsos ou aspectos técnicos da Plataforma, o Participante deve utilizar os seguintes canais oficiais, disponíveis em dias úteis das 09h às 17h (horário de Brasília):" },
+  { type: "li", text: "E-mail: suporte@podioticket.com.br" },
+  { type: "li", text: "Chat ou WhatsApp: conforme disponibilizado no site oficial (podioticket.com.br)." },
+  { type: "p", text: "12.2. Para dúvidas específicas sobre o Evento (data, local, regulamento, kit, percurso), o Participante deve contatar diretamente o Organizador, cujos dados de contato são disponibilizados na página do Evento na Plataforma." },
+  { type: "p", text: "12.3. Solicitações relativas à proteção de dados pessoais (exercício de direitos de titular nos termos da LGPD) devem ser encaminhadas pelo e-mail lgpd@podioticket.com.br, com a identificação do Participante, sendo respondidas em até 15 (quinze) dias corridos." },
+  { type: "p", text: "12.4. A Plataforma se compromete a responder às solicitações de cancelamento e reembolso dentro dos prazos estabelecidos no Código de Defesa do Consumidor e no Decreto 7.962/2013." },
+  { type: "h2", text: "13. LIMITAÇÃO DE RESPONSABILIDADE DA PLATAFORMA" },
+  { type: "p", text: "13.1. A responsabilidade da PódioTicket limita-se às falhas diretamente relacionadas à sua atividade de intermediação tecnológica, nos termos da Seção 2.3." },
+  { type: "p", text: "13.2. A PódioTicket não se responsabiliza por danos decorrentes de: (a) falhas na realização do Evento, incluindo cancelamento, alteração, interrupção ou má execução; (b) atos do Organizador ou de seus prepostos; (c) danos físicos ou à saúde do Participante durante o Evento; (d) ataques cibernéticos, falhas de terceiros provedores de internet ou de força maior." },
+  { type: "p", text: "13.3. As situações descritas na letra (c) do item anterior são de responsabilidade exclusiva do Organizador, que detém o controle da infraestrutura, segurança e execução do Evento. O Participante pode acionar o Organizador diretamente e, quando aplicável, a PódioTicket, nos termos do art. 14 do CDC." },
+  { type: "p", text: "13.4. A Plataforma não se responsabiliza por conteúdo inserido pelo Organizador nas páginas dos Eventos, cabendo a este a veracidade e precisão das informações divulgadas." },
+  { type: "h2", text: "14. ATUALIZAÇÃO DESTES TERMOS" },
+  { type: "p", text: "14.1. A PódioTicket reserva-se o direito de atualizar estes Termos a qualquer tempo, publicando a nova versão na Plataforma com indicação da data de vigência." },
+  { type: "p", text: "14.2. Alterações que impliquem redução de direitos do Participante serão comunicadas com antecedência mínima de 30 (trinta) dias por e-mail e aviso na Plataforma, assegurando ao Participante o direito de encerrar sua conta sem ônus caso não concorde com as novas condições." },
+  { type: "p", text: "14.3. A continuidade de uso da Plataforma após a entrada em vigor das alterações implica aceitação tácita dos novos Termos, observado o prazo de comunicação acima." },
+  { type: "h2", text: "15. DISPOSIÇÕES GERAIS E FORO" },
+  { type: "p", text: "15.1. Este instrumento representa o acordo integral entre a PódioTicket e o Participante quanto ao objeto aqui tratado, prevalecendo sobre quaisquer comunicações ou negociações anteriores." },
+  { type: "p", text: "15.2. A eventual tolerância da PódioTicket em relação a descumprimento de qualquer cláusula não será considerada novação ou renúncia de direitos." },
+  { type: "p", text: "15.3. Caso qualquer disposição deste instrumento seja considerada inválida ou inaplicável, as demais cláusulas permanecerão em pleno vigor." },
+  { type: "p", text: "15.4. Estes Termos são regidos pela legislação brasileira. Na hipótese de conflito entre versões em idiomas distintos, prevalecerá a versão em português." },
+  { type: "p", text: "15.5. Para dirimir quaisquer controvérsias decorrentes destes Termos, fica eleito o foro do domicílio do Participante, nos termos do art. 101, I do Código de Defesa do Consumidor, sem prejuízo do direito do Participante de buscar atendimento junto aos órgãos de defesa do consumidor (Procon) de sua localidade." },
+  { type: "p", text: "Atualizado eletronicamente e publicado em conformidade com as operações vigentes." },
+  { type: "p", text: "Versão: 07/07/2026." },
 ];
