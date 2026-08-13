@@ -109,18 +109,19 @@ export function EventTopicsPreviewContent({
             </Fragment>
           ))}
 
-          {/* Regulamento — link simples, igual ao cliente (mobile). */}
+          {/* Regulamento — mesmo botão da tela pública (mobile). */}
           {event?.regulationUrl && (
             <>
-              <div className="my-4">
-                <h2 className="mb-3 text-lg font-bold text-gray-12">Regulamento</h2>
+              <div className="my-4 flex flex-col gap-3">
+                <h2 className="text-lg font-bold text-gray-12">Regulamento</h2>
                 <a
                   href={event.regulationUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-sm font-medium text-primary-11 underline hover:text-primary-10"
                 >
-                  Acessar regulamento
+                  <Button variant="outline" className="border-gray-6 text-gray-12">
+                    Ler regulamento
+                  </Button>
                 </a>
               </div>
               <div className="h-px w-full bg-gray-6" />

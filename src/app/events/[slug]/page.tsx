@@ -329,19 +329,23 @@ export default function EventPage() {
           })}
 
           {/* Regulamento - exibido como tópico quando houver regulationUrl */}
-          {event.regulationUrl && (
+          {sanitizeUrl(event.regulationUrl) && (
             <>
-              <div className="my-4">
-                <h2 className="text-lg font-bold text-gray-12 mb-3">
+              <div className="flex flex-col gap-3 my-4">
+                <h2 className="text-lg font-bold text-gray-12">
                   Regulamento
                 </h2>
                 <a
-                  href={event.regulationUrl}
+                  href={sanitizeUrl(event.regulationUrl)!}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-sm text-primary-11 font-medium underline hover:text-primary-10"
                 >
-                  Acessar regulamento
+                  <Button
+                    variant="outline"
+                    className="text-gray-12 border-gray-6"
+                  >
+                    Ler regulamento
+                  </Button>
                 </a>
               </div>
               <div className="w-full h-px bg-gray-6" />
