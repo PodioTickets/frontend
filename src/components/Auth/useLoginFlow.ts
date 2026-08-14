@@ -12,6 +12,11 @@ import {
   readReturnPath,
   clearReturnPath,
 } from "@/utils/authRedirect";
+import {
+  getPendingCoupon,
+  getPendingCouponKind,
+  couponParamName,
+} from "@/hooks/usePendingCoupon";
 
 /**
  * Fluxo de login (e-mail/senha + MFA + Google OAuth), extraído do `LoginModal`
@@ -110,9 +115,25 @@ export function useLoginFlow() {
     // round-trip do OAuth — ver utils/authRedirect).
     let returnTo: string | null = null;
     if (typeof window !== "undefined") {
-      const currentPath = window.location.pathname + window.location.search;
+      let currentPath = window.location.pathname + window.location.search;
+      /* Cupom/voucher de link vive só em MEMÓRIA (buffer volátil) + URL — e o
+       * buffer NÃO sobrevive ao reload de página inteira do OAuth do Google. Se o
+       * param não estiver na URL neste instante, injeta-o no `returnTo` a partir
+       * do buffer; sem isso, quem loga com Google volta sem o `?cupom=` e perde o
+       * desconto. (O signup por e-mail é em MODAL, sem reload, então preserva o
+       * buffer naturalmente — por isso só o Google quebrava.) */
+      const pending = getPendingCoupon();
+      if (pending) {
+        const paramName = couponParamName(getPendingCouponKind() ?? "coupon");
+        const [pathPart, queryPart = ""] = currentPath.split("?");
+        const params = new URLSearchParams(queryPart);
+        if (!params.has(paramName)) {
+          params.set(paramName, pending);
+          currentPath = `${pathPart}?${params.toString()}`;
+        }
+      }
       // Não salvar se já estiver na página de callback ou auth
-      if (!currentPath.startsWith("/auth/")) {
+      if (!window.location.pathname.startsWith("/auth/")) {
         saveReturnPath(currentPath);
         returnTo = sanitizeReturnPath(currentPath);
       }
