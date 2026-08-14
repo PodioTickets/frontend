@@ -324,6 +324,8 @@ export function TransferHistoryDrawer({
                   currentPage={currentPage}
                   totalPages={totalPages}
                   onPageChange={setCurrentPage}
+                  totalItems={filteredTransfers.length}
+                  pageSize={itemsPerPage}
                   className="pt-2"
                 />
               )}
@@ -486,7 +488,7 @@ export function TransferHistoryDrawer({
                   )}
                 </div>
 
-                <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />
+                <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} totalItems={filteredTransfers.length} pageSize={itemsPerPage} />
               </div>
             </div>
           </div>

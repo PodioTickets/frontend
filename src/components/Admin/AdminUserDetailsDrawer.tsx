@@ -153,6 +153,7 @@ export function AdminUserDetailsDrawer({ userId, fallback, onClose }: AdminUserD
   });
   const registrations = regQuery.data?.items ?? [];
   const regTotalPages = regQuery.data?.pagination.totalPages ?? 1;
+  const regTotal = regQuery.data?.pagination.total ?? 0;
 
   // Inicializa o form quando o detalhe carrega (ou troca de usuário).
   useEffect(() => {
@@ -533,6 +534,8 @@ export function AdminUserDetailsDrawer({ userId, fallback, onClose }: AdminUserD
                     currentPage={regPage}
                     totalPages={regTotalPages}
                     onPageChange={setRegPage}
+                    totalItems={regTotal}
+                    pageSize={REG_PAGE_SIZE}
                     className="w-auto justify-start"
                   />
                 ) : (

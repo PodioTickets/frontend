@@ -336,7 +336,7 @@ export function QuestionDetailsDrawer({
                       {/* Footer: paginação + CSV */}
                       <div className="p-4 flex md:flex-row flex-col gap-4 justify-between items-center border-t border-[#D9D9D9]">
                         {/* Paginação */}
-                        <Pagination className="w-max" currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />
+                        <Pagination className="w-max" currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} totalItems={filteredTextAnswers.length} pageSize={TEXT_ANSWERS_PAGE_SIZE} />
 
 
 

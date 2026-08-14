@@ -458,7 +458,7 @@ export function CreateQuestionModal() {
                                     value={option}
                                     onChange={(e) => handleOptionChange(index, e.target.value)}
                                     placeholder="Digite aqui a opção"
-                                    className="h-auto border-0 bg-transparent px-0 focus:ring-0 text-sm font-medium font-inter text-gray-12 focus:outline-none focus:border-0"
+                                    className="w-full h-auto border-0 bg-transparent px-0 focus:ring-0 text-sm font-medium font-inter text-gray-12 focus:outline-none focus:border-0"
                                   />
                                 </div>
                                 <div className="flex items-center justify-center px-4 w-[74px]">

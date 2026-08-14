@@ -111,6 +111,8 @@ export default function UserTicketsPage() {
                 currentPage={pagination.page}
                 onPageChange={setPage}
                 totalPages={pagination.totalPages}
+                totalItems={pagination.total}
+                pageSize={pagination.limit}
                 className="mt-6"
               />
             </div>

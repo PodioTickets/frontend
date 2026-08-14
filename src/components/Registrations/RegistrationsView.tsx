@@ -2,7 +2,8 @@
 
 import type { Dispatch, ReactNode, SetStateAction } from "react";
 import Image from "next/image";
-import { Search, Users, CheckCircle, XCircle, ChevronLeft, ChevronRight } from "lucide-react";
+import Link from "next/link";
+import { Search, Users, CheckCircle, XCircle, ChevronLeft, ChevronRight, UserPlus } from "lucide-react";
 import type { DateRange } from "react-day-picker";
 import { Button } from "@/components/Button";
 import { Input } from "@/components/Input";
@@ -83,6 +84,12 @@ function getPageNumbers(currentPage: number, totalPages: number): (number | '...
 
 export interface RegistrationsViewProps {
   header: ReactNode;
+  /**
+   * Quando presente, exibe o botão "Adicionar inscrito" à direita do título
+   * (desktop) e nas ações do mobile — leva ao wizard de inscrição de cortesia.
+   * A página decide a visibilidade (permissão `edit_event`); ausente = escondido.
+   */
+  addRegistrantHref?: string;
   event: (Pick<Event, "id" | "name"> & { slug?: string }) | null;
   eventId: string;
   registrations: RegistrationListRow[];
@@ -114,6 +121,7 @@ export interface RegistrationsViewProps {
 
 export function RegistrationsView({
   header,
+  addRegistrantHref,
   event,
   eventId,
   registrations,
@@ -142,18 +150,44 @@ export function RegistrationsView({
   openPaymentDetailsModal,
   openExportDataModal,
 }: RegistrationsViewProps) {
+  // Registros exibidos na página ATUAL (página cheia, exceto a última).
+  const registrosShown = Math.max(
+    0,
+    Math.min(pagination.page * pagination.limit, pagination.total) -
+      (pagination.page - 1) * pagination.limit
+  );
   return (
     <div className="min-h-screen bg-gray-2">
       {header}
 
       <div className="max-w-7xl mx-auto px-4 lg:px-6 2xl:px-0">
         {/* Page Title - Desktop only */}
-        <div className="mb-6 hidden md:block">
-          <h1 className="text-3xl font-bold text-gray-12 mb-2">Inscrições</h1>
-          <p className="text-gray-11">
-            Acompanhe todas as inscrições do evento e gerencie pedidos, pagamentos e status.
-          </p>
+        <div className="mb-6 hidden md:flex items-start justify-between gap-4">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-12 mb-2">Inscrições</h1>
+            <p className="text-gray-11">
+              Acompanhe todas as inscrições do evento e gerencie pedidos, pagamentos e status.
+            </p>
+          </div>
+         {/*  {addRegistrantHref && (
+            <Button asChild variant={"outline"} className="h-11 border-gray-6 text-gray-12 shrink-0 gap-2 font-manrope font-bold">
+              <Link href={addRegistrantHref}>
+                Adicionar inscrito
+              </Link>
+            </Button>
+          )} */}
         </div>
+
+        {/* Mobile: botão "Adicionar inscrito" (full-width, quando permitido) */}
+        {/* {addRegistrantHref && (
+          <div className="md:hidden mt-4">
+            <Button variant={"outline"} asChild className="h-11 border-gray-6 text-gray-12 w-full gap-2 font-manrope font-bold">
+              <Link href={addRegistrantHref}>
+                Adicionar inscrito
+              </Link>
+            </Button>
+          </div>
+        )} */}
 
         {/* Mobile: Search + Limpar + Filtros row */}
         <div className="md:hidden flex flex-col gap-2 items-center my-4">
@@ -533,7 +567,10 @@ export function RegistrationsView({
                   })}
                 </div>
                 {pagination.totalPages > 1 && (
-                  <div className="flex items-center justify-center gap-2">
+                  <div className="flex items-center justify-center gap-2 flex-wrap">
+                    <p className="shrink-0 text-sm text-gray-11 font-family-dm-sans whitespace-nowrap">
+                      Exibindo {registrosShown.toLocaleString("pt-BR")} de {pagination.total.toLocaleString("pt-BR")} registros
+                    </p>
                     <button
                       type="button"
                       onClick={() => setPagination((p) => ({ ...p, page: Math.max(1, p.page - 1) }))}
@@ -649,6 +686,7 @@ export function RegistrationsView({
                 {/* Pagination */}
                 {pagination.totalPages > 1 && (
                   <div className="flex items-center justify-center gap-2 py-4 px-5 border-t border-gray-6">
+
                     <button
                       onClick={() =>
                         setPagination((prev) => ({
@@ -689,7 +727,12 @@ export function RegistrationsView({
                     >
                       <ChevronRight className="size-4" />
                     </button>
+
+                    <p className="shrink-0 text-sm text-gray-11 font-family-dm-sans whitespace-nowrap mr-auto">
+                      Exibindo {registrosShown.toLocaleString("pt-BR")} de {pagination.total.toLocaleString("pt-BR")} registros
+                    </p>
                   </div>
+
                 )}
               </div>
 

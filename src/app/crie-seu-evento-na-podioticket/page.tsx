@@ -32,6 +32,25 @@ export const metadata: Metadata = {
   },
 };
 
+// Pixel da plataforma (mesmo id do disparo JS). Fallback p/ navegadores sem JS.
+const META_PIXEL_ID = process.env.NEXT_PUBLIC_META_PIXEL_ID || "4668633066757382";
+
 export default function LandingRoute() {
-  return <LandingPage />;
+  return (
+    <>
+      <LandingPage />
+      {/* Meta Pixel (noscript): PageView quando o JS está desabilitado. O disparo
+          normal (com JS) acontece no <LandingPixel/> dentro de <LandingPage/>. */}
+      <noscript>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          height="1"
+          width="1"
+          style={{ display: "none" }}
+          alt=""
+          src={`https://www.facebook.com/tr?id=${META_PIXEL_ID}&ev=PageView&noscript=1`}
+        />
+      </noscript>
+    </>
+  );
 }

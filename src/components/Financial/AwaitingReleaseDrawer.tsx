@@ -521,6 +521,8 @@ export function AwaitingReleaseDrawer({
                 currentPage={tabCurrentPage}
                 totalPages={tabTotalPages}
                 onPageChange={onTabPageChange}
+                totalItems={tabTotalCount}
+                pageSize={itemsPerPage}
                 disabled={isLoading}
                 className="pt-2"
               />
@@ -571,10 +573,14 @@ export function AwaitingReleaseDrawer({
                     </p>
                   </div>
                 </div>
-                {/* Botão "Solicitar antecipação" OCULTO temporariamente — bug no
-                    cálculo de dias da antecipação (pula o pedido mais próximo de
-                    liberar / cobra dias a mais). Reexibir após corrigir o /quote
-                    (loadAnticipatableUnits / daysUntilRelease). */}
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setIsAnticipationOpen(true)}
+                  className="border-gray-6 text-gray-12 font-manrope font-bold text-base"
+                >
+                  Solicitar antecipação
+                </Button>
               </div>
 
               {/* Tabs + Search */}
@@ -702,7 +708,7 @@ export function AwaitingReleaseDrawer({
 
               {/* Footer: paginação (esquerda) + Exportar CSV (direita) */}
               <div className="mt-4 flex items-center justify-between gap-4">
-                <Pagination className="w-max" onPageChange={onTabPageChange} currentPage={tabCurrentPage} totalPages={tabTotalPages} disabled={isLoading} />
+                <Pagination className="w-max" onPageChange={onTabPageChange} currentPage={tabCurrentPage} totalPages={tabTotalPages} totalItems={tabTotalCount} pageSize={itemsPerPage} disabled={isLoading} />
                 <Button
                   type="button"
                   onClick={() => setIsExportModalOpen(true)}

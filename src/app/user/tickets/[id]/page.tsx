@@ -34,8 +34,8 @@ export default function TicketDetailsPage() {
   const [loading, setLoading] = useState(true);
   const [expandedParticipants, setExpandedParticipants] = useState<Record<number, boolean>>({});
   const [activeTab, setActiveTab] = useState<Record<number, "info" | "products" | "questions">>({});
-  // Card "Detalhes do pedido" é colapsável (Figma 6396:47397); começa aberto.
-  const [orderDetailsOpen, setOrderDetailsOpen] = useState(true);
+  // Card "Detalhes do pedido" é colapsável (Figma 6396:47397); começa minimizado.
+  const [orderDetailsOpen, setOrderDetailsOpen] = useState(false);
 
   useEffect(() => {
     if (!orderId) return;
@@ -629,7 +629,7 @@ export default function TicketDetailsPage() {
                                       ? qa.question
                                       : qa.question?.question) || "Pergunta"}
                                   </label>
-                                  <p className="text-base font-medium text-gray-12 font-family-dm-sans mt-4">
+                                  <p className="text-base font-medium text-gray-12 font-family-dm-sans mt-2">
                                     R: {formatAnswer(qa.answer)}
                                   </p>
                                 </div>
