@@ -8,6 +8,7 @@ import type {
   BackendParticipant,
   ProductPatchItem,
 } from "@/lib/checkoutParticipants";
+import { surfaceHeader } from "@/lib/authSurface";
 
 const API_BASE_URL =
   (process.env.NEXT_PUBLIC_API_URL || "http://localhost:3333").replace(/\/$/, "");
@@ -42,7 +43,7 @@ export function useCourtesyRegistration() {
       const res = await fetch(`${API_BASE_URL}/api/v1/orders/courtesy`, {
         method: "POST",
         credentials: "include",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...surfaceHeader() },
         body: JSON.stringify(payload),
       });
       if (res.ok) {
@@ -73,7 +74,7 @@ export function useCourtesyRegistration() {
       const res = await fetch(`${API_BASE_URL}/api/v1/orders/${orderId}/courtesy-finalize`, {
         method: "POST",
         credentials: "include",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...surfaceHeader() },
       });
       if (res.ok) {
         return (await res.json()) as CourtesyOrderResponse;

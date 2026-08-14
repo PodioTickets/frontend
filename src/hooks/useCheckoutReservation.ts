@@ -12,6 +12,7 @@ import {
   type ReserveOrderRequest,
 } from "@/interfaces/order";
 import { toOrderResponse } from "@/lib/orderResponseNormalizer";
+import { surfaceHeader } from "@/lib/authSurface";
 
 const API_BASE_URL =
   (process.env.NEXT_PUBLIC_API_URL || "http://localhost:3333").replace(/\/$/, "");
@@ -39,6 +40,12 @@ export function generateIdempotencyKey(): string {
 function authHeaders(extra?: Record<string, string>): HeadersInit {
   return {
     "Content-Type": "application/json",
+    // Superfície da sessão (client/organizer/admin): o backend escolhe o cookie
+    // httpOnly correto (`pt_at_<surface>`) por este header. Sem ele, o `fetch`
+    // cru caía no default `client` e o organizador (cookie `pt_at_organizer`)
+    // recebia 401 no fluxo de cortesia. No checkout público retorna "client"
+    // (= default do backend), então nada muda lá.
+    ...surfaceHeader(),
     ...extra,
   };
 }

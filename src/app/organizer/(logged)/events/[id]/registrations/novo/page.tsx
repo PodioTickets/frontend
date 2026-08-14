@@ -2,7 +2,8 @@
 
 import { Fragment, Suspense, useEffect, useRef, useState } from "react";
 import { useParams } from "next/navigation";
-import { ArrowLeft, CheckCircle2 } from "lucide-react";
+import Image from "next/image";
+import { ArrowLeft } from "lucide-react";
 import toast from "react-hot-toast";
 import { cn } from "@/utils/cn";
 import { Button } from "@/components/Button";
@@ -233,16 +234,34 @@ function CourtesyStepper({ activeStep, currentLabel, onBack, showBack }: { activ
   );
 }
 
-/* ── Conclusão ───────────────────────────────────────────────────────────── */
+/* ── Conclusão (Figma 6410:130364) ───────────────────────────────────────── */
 function DoneStep({ onSee }: { onSee: () => void }) {
   return (
-    <div className="flex flex-col items-center text-center gap-4 py-16">
-      <CheckCircle2 className="size-16 text-primary-11" strokeWidth={1.5} />
-      <h2 className="text-2xl font-bold text-gray-12 font-manrope">Inscrição criada!</h2>
-      <p className="text-gray-11 font-family-dm-sans max-w-md">
-        A inscrição de cortesia foi criada e o ingresso enviado por e-mail.
-      </p>
-      <Button type="button" onClick={onSee} className="h-12 px-8 mt-2 font-manrope font-bold">Ver nas inscrições</Button>
+    <div className="w-full flex flex-col items-center text-center">
+      <div className="flex flex-col items-center gap-2">
+        {/* Badge verde (selo + check) com shine suave atrás */}
+        <div className="relative flex items-center justify-center p-6">
+          <div className="absolute inset-2 rounded-full bg-primary-5/50 blur-2xl" aria-hidden />
+          <Image src="/images/success-badge.svg" alt="" width={87} height={84} className="relative" priority />
+        </div>
+        <div className="flex flex-col items-center gap-4">
+          <h2 className="text-[32px] font-extrabold font-manrope text-gray-12 leading-[1.1]">
+            Inscrições criadas!
+          </h2>
+          <p className="text-lg font-medium font-family-dm-sans text-gray-12 leading-[1.3]">
+            Cada participante recebeu o próprio ingresso por e-mail.
+          </p>
+        </div>
+      </div>
+      <div className="pt-8">
+        <Button
+          type="button"
+          onClick={onSee}
+          className="h-[52px] px-16 text-xl font-bold font-manrope rounded-lg"
+        >
+          Ver nas inscrições
+        </Button>
+      </div>
     </div>
   );
 }
