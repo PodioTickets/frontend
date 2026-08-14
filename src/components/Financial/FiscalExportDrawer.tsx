@@ -496,6 +496,7 @@ export function FiscalExportDrawer({
                 currentPage={page}
                 totalPages={totalPages}
                 onPageChange={setPage}
+                totalItems={total}
                 disabled={loading}
                 className="bg-transparent! md:w-auto!"
               />

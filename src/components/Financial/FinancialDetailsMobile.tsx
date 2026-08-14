@@ -283,6 +283,7 @@ export function FinancialDetailsMobile({
               currentPage={currentPage}
               totalPages={totalPages}
               onPageChange={onPageChange}
+              totalItems={count}
               className="p-4"
             />
           )}

@@ -853,6 +853,7 @@ export function AdminAuditLogTab() {
             totalPages={totalPages}
             currentPage={page}
             onPageChange={setPage}
+            totalItems={total}
           />
         )}
       </div>
@@ -863,6 +864,7 @@ export function AdminAuditLogTab() {
             totalPages={totalPages}
             currentPage={page}
             onPageChange={setPage}
+            totalItems={total}
           />
         </div>
       )}

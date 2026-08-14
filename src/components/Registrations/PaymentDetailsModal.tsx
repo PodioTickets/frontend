@@ -1405,7 +1405,7 @@ export function PaymentDetailsModal() {
                             </div>
                           ))}
                         </div>
-                        <Pagination currentPage={ticketsPage} onPageChange={setTicketsPage} totalPages={totalPages} />
+                        <Pagination currentPage={ticketsPage} onPageChange={setTicketsPage} totalPages={totalPages} totalItems={participants.length} />
                       </div>
 
                       <div className='flex items-center gap-2'>

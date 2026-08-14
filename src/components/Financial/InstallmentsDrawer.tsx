@@ -354,6 +354,7 @@ export function InstallmentsDrawer({
                   currentPage={currentPage}
                   totalPages={totalPages}
                   onPageChange={setCurrentPage}
+                  totalItems={filteredInstallments.length}
                   className="pt-2"
                 />
               )}
@@ -552,6 +553,7 @@ export function InstallmentsDrawer({
                     currentPage={currentPage}
                     totalPages={totalPages}
                     onPageChange={setCurrentPage}
+                    totalItems={filteredInstallments.length}
                     className="border-t border-gray-6 px-5 py-4"
                   />
                 )}

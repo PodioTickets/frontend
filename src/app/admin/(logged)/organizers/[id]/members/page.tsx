@@ -63,11 +63,13 @@ function PaginationBar({
   page,
   onPageChange,
   variant,
+  totalItems,
 }: {
   totalPages: number;
   page: number;
   onPageChange: (p: number) => void;
   variant: "desktop" | "mobile";
+  totalItems?: number;
 }) {
   if (totalPages <= 1) return null;
   const safePage = Math.min(page, totalPages);
@@ -95,6 +97,16 @@ function PaginationBar({
         isMobile ? "justify-center w-full py-4 flex-wrap" : "justify-end px-4 py-5 border-t border-gray-6",
       )}
     >
+      {totalItems != null && (
+        <p
+          className={cn(
+            "shrink-0 text-sm text-gray-11 font-family-dm-sans whitespace-nowrap",
+            !isMobile && "mr-auto"
+          )}
+        >
+          Mostrando {totalItems.toLocaleString("pt-BR")} registros
+        </p>
+      )}
       <button type="button" onClick={() => onPageChange(Math.max(1, safePage - 1))} disabled={safePage <= 1} className={navBtn} aria-label="Página anterior">
         <ChevronLeft className={cn("size-4", isMobile ? "text-gray-12" : "text-gray-11")} />
       </button>
@@ -280,7 +292,7 @@ export default function AdminOrgMembersPage() {
               );
             })
           )}
-          <PaginationBar totalPages={totalPages} page={safePage} onPageChange={setPage} variant="mobile" />
+          <PaginationBar totalPages={totalPages} page={safePage} onPageChange={setPage} totalItems={filtered.length} variant="mobile" />
         </div>
 
         {/* Desktop: table */}
@@ -357,7 +369,7 @@ export default function AdminOrgMembersPage() {
               </tbody>
             </table>
           </div>
-          <PaginationBar totalPages={totalPages} page={safePage} onPageChange={setPage} variant="desktop" />
+          <PaginationBar totalPages={totalPages} page={safePage} onPageChange={setPage} totalItems={filtered.length} variant="desktop" />
         </div>
 
       </div>
