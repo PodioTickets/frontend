@@ -11,6 +11,7 @@ import { lookupCepDigits } from "@/utils/lookupCep";
 import { lookupCnpjDigits } from "@/utils/lookupCnpj";
 import { onlyDigits, formatCEP, formatPhone } from "@/utils/masks";
 import { ORGANIZER_CONTRACT_IDS } from "@/data/organizerContracts";
+import { trackPlatformMetaPixel } from "@/lib/metaPixel";
 import {
   accessStepSchema,
   personTypeStepSchema,
@@ -451,6 +452,8 @@ export function useOrganizerSignupFlow() {
     try {
       const payload = buildOrganizerSignupPayload(formData, turnstileToken);
       await signupOrganizer(payload);
+      // Conversão do funil de captação: cadastro de organizador concluído.
+      trackPlatformMetaPixel("CompleteRegistration");
       setStepIndex(DONE_STEP_INDEX);
     } catch (err) {
       const message =

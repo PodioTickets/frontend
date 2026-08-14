@@ -27,6 +27,7 @@ import { useSubscriptionData } from "@/hooks/useSubscriptionData";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Loading } from "../Loading";
 import { MobileSummaryBar } from "./MobileSummaryBar";
+import { useHidePricing } from "@/contexts/HidePricingContext";
 import { ImageCarouselModal } from "./ImageCarouselModal";
 import {
   type Product,
@@ -210,7 +211,8 @@ function ProductCard({
   variant: "mobile" | "desktop";
   requiredSection?: boolean;
 }) {
-  const sideLabel = selectedVariation
+  const hidePricing = useHidePricing();
+  const sideLabel = selectedVariation && !hidePricing
     ? previewVariationListPriceLabelForProduct(product, selectedVariation.price, selectedVariation.name)
     : undefined;
 
@@ -227,9 +229,11 @@ function ProductCard({
             <ProductCardGallery product={product} />
             <div className="flex flex-col justify-between flex-1 min-w-0">
               <p className="text-base font-semibold text-gray-12">{product.name}</p>
-              <p className="text-sm font-semibold text-gray-11">
-                {formatProductCardBasePriceLabel(product)}
-              </p>
+              {!hidePricing && (
+                <p className="text-sm font-semibold text-gray-11">
+                  {formatProductCardBasePriceLabel(product)}
+                </p>
+              )}
             </div>
           </div>
         </div>
@@ -262,9 +266,11 @@ function ProductCard({
         <ProductCardGallery product={product} />
         <div className="flex flex-col h-[100px] justify-between gap-2 flex-1 min-w-0">
           <p className="text-sm text-gray-12 font-semibold truncate">{product.name}</p>
-          <p className="text-sm text-gray-11 font-semibold">
-            {formatProductCardBasePriceLabel(product)}
-          </p>
+          {!hidePricing && (
+            <p className="text-sm text-gray-11 font-semibold">
+              {formatProductCardBasePriceLabel(product)}
+            </p>
+          )}
         </div>
       </div>
       <div className="flex flex-col gap-2 border-t border-gray-6 pt-3">
@@ -342,6 +348,7 @@ export function SubscriptionStep({
   isSubmitting = false,
 }: SubscriptionStepProps) {
   const { raceQuantities, participants, updateParticipant } = useCheckout();
+  const hidePricing = useHidePricing();
   const eventId = event?.id;
 
   const {
@@ -589,7 +596,7 @@ export function SubscriptionStep({
       return {
         id: variation.id || `${product.id}-${index}`,
         label: variation.name,
-        suffix: soldOut
+        suffix: soldOut || hidePricing
           ? undefined
           : previewVariationListPriceLabelForProduct(product, variation.price, variation.name),
         disabled: soldOut,
@@ -1019,9 +1026,11 @@ export function SubscriptionStep({
                   {ticket.name}
                 </p>
               </div>
-              <p className="font-manrope font-bold text-sm leading-[1.2] text-gray-12 shrink-0">
-                {formatPrice(ticketPrice)}
-              </p>
+              {!hidePricing && (
+                <p className="font-manrope font-bold text-sm leading-[1.2] text-gray-12 shrink-0">
+                  {formatPrice(ticketPrice)}
+                </p>
+              )}
             </div>
 
             {/* Resumo de produtos: adicionais (cobrados) + inclusos (grátis). */}
@@ -1032,7 +1041,7 @@ export function SubscriptionStep({
                     {optional.length}x{" "}
                     {optional.length > 1 ? "Itens adicionais" : "Item adicional"}
                   </span>
-                  <span className="font-bold">{formatPrice(optionalTotal)}</span>
+                  {!hidePricing && <span className="font-bold">{formatPrice(optionalTotal)}</span>}
                 </p>
               </div>
             )}
@@ -1071,9 +1080,11 @@ export function SubscriptionStep({
                         <p className="text-sm font-semibold text-gray-12 font-family-dm-sans line-clamp-2 flex-1 min-w-0">
                           {item.name}
                         </p>
-                        <p className="text-sm font-semibold text-gray-12 font-manrope">
-                          {item.isIncluded ? "Incluso" : formatPrice(item.priceReais)}
-                        </p>
+                        {!hidePricing && (
+                          <p className="text-sm font-semibold text-gray-12 font-manrope">
+                            {item.isIncluded ? "Incluso" : formatPrice(item.priceReais)}
+                          </p>
+                        )}
                       </div>
                     </div>
                     <div className="px-3 py-2.5">
@@ -1191,9 +1202,11 @@ export function SubscriptionStep({
                         <p className="text-sm font-semibold text-gray-12">
                           {getAdditionalProductsCount(participantIndex)}x {getAdditionalProductsCount(participantIndex) > 1 ? "Itens adicionais" : "Item adicional"}:
                         </p>
-                        <p className="text-base font-bold text-gray-12">
-                          {formatPrice(getAdditionalProductsTotal(participantIndex))}
-                        </p>
+                        {!hidePricing && (
+                          <p className="text-base font-bold text-gray-12">
+                            {formatPrice(getAdditionalProductsTotal(participantIndex))}
+                          </p>
+                        )}
                       </div>
                     )}
                     <div className="flex items-center justify-between gap-3">
@@ -1207,7 +1220,7 @@ export function SubscriptionStep({
                         )}
                         <span className="text-sm font-semibold text-gray-12">{ticket.name}</span>
                       </span>
-                      <p className="text-base font-bold text-gray-12 shrink-0">{formatPrice(ticketPrice)}</p>
+                      {!hidePricing && <p className="text-base font-bold text-gray-12 shrink-0">{formatPrice(ticketPrice)}</p>}
                     </div>
                   </div>
                   <div className="px-3 py-4 flex items-center justify-between">
@@ -1263,7 +1276,7 @@ export function SubscriptionStep({
                           )}
                           <span className="text-sm font-semibold text-gray-12">{ticket.name}</span>
                         </span>
-                        <p className="text-base font-bold text-gray-12 shrink-0">{formatPrice(ticketPrice)}</p>
+                        {!hidePricing && <p className="text-base font-bold text-gray-12 shrink-0">{formatPrice(ticketPrice)}</p>}
                       </div>
                     </div>
 
@@ -1520,16 +1533,20 @@ export function SubscriptionStep({
                             )}
                             {ticket.name}
                           </span>
-                          <span className="text-gray-12 font-bold shrink-0">
-                            {formatPrice(ticketPrice)}
-                          </span>
+                          {!hidePricing && (
+                            <span className="text-gray-12 font-bold shrink-0">
+                              {formatPrice(ticketPrice)}
+                            </span>
+                          )}
                         </p>
                         {getAdditionalProductsCount(participantIndex) > 0 && (
                           <p className="text-sm font-medium text-gray-12 flex items-center justify-between">
                             {getAdditionalProductsCount(participantIndex)}x {getAdditionalProductsCount(participantIndex) > 1 ? "Itens adicionais" : "Item adicional"}:
-                            <span className="text-gray-12 font-bold">
-                              {formatPrice(getAdditionalProductsTotal(participantIndex))}
-                            </span>
+                            {!hidePricing && (
+                              <span className="text-gray-12 font-bold">
+                                {formatPrice(getAdditionalProductsTotal(participantIndex))}
+                              </span>
+                            )}
                           </p>
                         )}
                       </div>
@@ -1557,13 +1574,15 @@ export function SubscriptionStep({
                 })}
               </div>
 
+              {!hidePricing && (
               <div className="flex flex-col gap-2 mt-6">
                 <p className="text-sm font-medium text-gray-12 flex items-center justify-between">
                   Subtotal:
                   <span className="text-gray-12">{formatPrice(totalPrice + totalProductsPrice)}</span>
                 </p>
               </div>
-              {hasCouponLine && (
+              )}
+              {!hidePricing && hasCouponLine && (
                 <div className="flex flex-col gap-2 mt-2">
                   <p className="text-sm font-medium text-gray-12 flex items-center justify-between">
                     {formatCouponLineLabel(appliedCoupon!)}:
@@ -1571,7 +1590,7 @@ export function SubscriptionStep({
                   </p>
                 </div>
               )}
-              {hasVoucherLine && (
+              {!hidePricing && hasVoucherLine && (
                 <div className="flex flex-col gap-2 mt-2">
                   <p className="text-sm font-medium text-gray-12 flex items-center justify-between">
                     {formatVoucherLineLabel(appliedVoucher!.code)}:
@@ -1579,7 +1598,7 @@ export function SubscriptionStep({
                   </p>
                 </div>
               )}
-              {serviceFee > 0 && (
+              {!hidePricing && serviceFee > 0 && (
                 <div className={`flex flex-col gap-2 mt-2`}>
                   <p className="text-sm font-medium text-gray-12 flex items-center justify-between">
                     Taxa de serviço:
@@ -1588,10 +1607,12 @@ export function SubscriptionStep({
                 </div>
               )}
 
+              {!hidePricing && (
               <div className="flex items-center justify-between text-xl font-bold text-gray-12 mt-4 border-t border-gray-6 pt-4">
                 <p>Total:</p>
                 <p>{formatPrice(totalAmount)}</p>
               </div>
+              )}
 
               <Button
                 onClick={() => handleSaveAndNext(selectedParticipant)}

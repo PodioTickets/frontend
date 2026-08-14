@@ -45,6 +45,7 @@ function isValidUuidParam(value: string): boolean {
 
 const KIND_FILTER_OPTIONS: { value: string; label: string }[] = [
   { value: "", label: "Todos os tipos" },
+  { value: "ORGANIZATION_UPDATE", label: "ORGANIZATION_UPDATE" },
   { value: "EVENT_CREATE", label: "EVENT_CREATE" },
   { value: "EVENT_UPDATE", label: "EVENT_UPDATE" },
   { value: "TICKET_UPDATE", label: "TICKET_UPDATE" },

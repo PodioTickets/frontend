@@ -36,6 +36,7 @@ import { Loading } from "../Loading";
 import { getCpfValidationMessage, isValidCPF } from "@/utils/cpf";
 import { isBrazilianCountry } from "@/validators/Auth.validator";
 import { formatBRL as formatPrice } from "@/lib/money";
+import { useHidePricing } from "@/contexts/HidePricingContext";
 import { formatDateBR } from "@/utils/datetimeBR";
 import { OrderApiError } from "@/interfaces/order";
 import {
@@ -91,6 +92,7 @@ export function InformationStep({
   } = useCheckout();
 
   const eventId = event?.id;
+  const hidePricing = useHidePricing();
   const { clearTimer, orderId, currentOrder: timerCurrentOrder, syncFromOrder } = useCheckoutTimer();
   const { patchParticipants, removeReservedSlot, getOrder } = useCheckoutReservation();
   const queryClient = useQueryClient();
@@ -1583,7 +1585,7 @@ export function InformationStep({
       case "text": {
         const questionError = fieldErrors[participantIndex]?.[`question_${question.id}`];
         return (
-          <div className="flex flex-1 flex-col gap-2">
+          <div className="flex flex-col gap-2">
             <label className="text-base font-normal text-gray-12 font-family-dm-sans">
               {question.question}
               {isRequired && <span className="text-red-9 ml-1">*</span>}
@@ -1600,7 +1602,7 @@ export function InformationStep({
                 clearParticipantFieldError(participantIndex, `question_${question.id}`);
                 updateQuestionAnswer(participantIndex, question.id, e.target.value);
               }}
-              className={`mt-auto w-full h-12 px-3 rounded-lg border bg-transparent text-gray-12 focus:outline-none focus:bg-gray-3 transition-colors font-family-dm-sans text-base placeholder:text-gray-11 ${questionError ? "border-red-6 focus:border-red-10" : "border-gray-6 focus:border-primary-10"}`}
+              className={`w-full h-12 px-3 rounded-lg border bg-transparent text-gray-12 focus:outline-none focus:bg-gray-3 transition-colors font-family-dm-sans text-base placeholder:text-gray-11 ${questionError ? "border-red-6 focus:border-red-10" : "border-gray-6 focus:border-primary-10"}`}
               placeholder="Digite sua resposta"
             />
             {questionError && <p className="text-sm text-red-11">{questionError}</p>}
@@ -1614,7 +1616,7 @@ export function InformationStep({
       case "select": {
         const questionError = fieldErrors[participantIndex]?.[`question_${question.id}`];
         return (
-          <div className="flex flex-1 flex-col gap-2">
+          <div className="flex flex-col gap-2">
             <label className="text-base font-normal text-gray-12 font-family-dm-sans">
               {question.question}
               {isRequired && <span className="text-red-9 ml-1">*</span>}
@@ -1624,7 +1626,7 @@ export function InformationStep({
                 {question.description ?? ""}
               </label>
             )}
-            <div className="mt-auto flex flex-col gap-3">
+            <div className="flex flex-col gap-3">
               {question.options?.map((option) => {
                 const isSelected =
                   typeof answer === "string" && answer === option;
@@ -1663,7 +1665,7 @@ export function InformationStep({
             ? [answer]
             : [];
         return (
-          <div className="flex flex-1 flex-col gap-2">
+          <div className="flex flex-col gap-2">
             <label className="text-base font-normal text-gray-12 font-family-dm-sans">
               {question.question}
               {isRequired && <span className="text-red-9 ml-1">*</span>}
@@ -1673,7 +1675,7 @@ export function InformationStep({
                 {question.description ?? ""}
               </label>
             )}
-            <div className="mt-auto flex flex-col gap-3">
+            <div className="flex flex-col gap-3">
               {question.options?.map((option) => {
                 const isSelected = selectedOptions.includes(option);
                 return (
@@ -1707,7 +1709,7 @@ export function InformationStep({
         const questionError = fieldErrors[participantIndex]?.[`question_${question.id}`];
         const trueFalseOptions = ["Verdadeiro", "Falso"];
         return (
-          <div className="flex flex-1 flex-col gap-2">
+          <div className="flex flex-col gap-2">
             <label className="text-base font-normal text-gray-12 font-family-dm-sans">
               {question.question}
               {isRequired && <span className="text-red-9 ml-1">*</span>}
@@ -1717,7 +1719,7 @@ export function InformationStep({
                 {question.description ?? ""}
               </label>
             )}
-            <div className="mt-auto flex flex-col gap-3">
+            <div className="flex flex-row flex-wrap gap-6">
               {trueFalseOptions.map((option) => {
                 const isSelected = typeof answer === "string" && answer === option;
                 return (
@@ -1747,7 +1749,7 @@ export function InformationStep({
       case "number": {
         const questionError = fieldErrors[participantIndex]?.[`question_${question.id}`];
         return (
-          <div className="flex flex-1 flex-col gap-2">
+          <div className="flex flex-col gap-2">
             <label className="text-base font-normal text-gray-12 font-family-dm-sans">
               {question.question}
               {isRequired && <span className="text-red-9 ml-1">*</span>}
@@ -1764,7 +1766,7 @@ export function InformationStep({
                 clearParticipantFieldError(participantIndex, `question_${question.id}`);
                 updateQuestionAnswer(participantIndex, question.id, e.target.value);
               }}
-              className={`mt-auto w-full h-12 px-3 rounded-lg border bg-transparent text-gray-12 focus:outline-none focus:bg-gray-3 transition-colors font-family-dm-sans text-base placeholder:text-gray-11 ${questionError ? "border-red-6 focus:border-red-10" : "border-gray-6 focus:border-primary-10"}`}
+              className={`w-full md:w-1/2 h-12 px-3 rounded-lg border bg-transparent text-gray-12 focus:outline-none focus:bg-gray-3 transition-colors font-family-dm-sans text-base placeholder:text-gray-11 ${questionError ? "border-red-6 focus:border-red-10" : "border-gray-6 focus:border-primary-10"}`}
               placeholder="Digite um número"
             />
             {questionError && <p className="text-sm text-red-11">{questionError}</p>}
@@ -1846,9 +1848,11 @@ export function InformationStep({
                           {ticket.raceName ? ` ${ticket.raceName}` : ""}
                         </p>
                       </div>
-                      <p className="text-sm font-semibold text-gray-12 font-family-dm-sans shrink-0">
-                        {formatPrice(ticket.total)}
-                      </p>
+                      {!hidePricing && (
+                        <p className="text-sm font-semibold text-gray-12 font-family-dm-sans shrink-0">
+                          {formatPrice(ticket.total)}
+                        </p>
+                      )}
                     </div>
                   ))}
 
@@ -1861,23 +1865,25 @@ export function InformationStep({
                     </button>
                   )}
 
+                  {!hidePricing && (
                   <div className="flex items-center justify-between w-full text-sm text-gray-12">
                     <p className="font-semibold">Subtotal:</p>
                     <p className="font-semibold font-family-dm-sans">{formatPrice(totalPrice)}</p>
                   </div>
-                  {appliedCoupon && showCouponDiscount && couponDiscountAmount > 0 && (
+                  )}
+                  {!hidePricing && appliedCoupon && showCouponDiscount && couponDiscountAmount > 0 && (
                     <div className="flex items-center justify-between w-full text-sm text-gray-12">
                       <p className="font-semibold">{formatCouponLineLabel(appliedCoupon)}:</p>
                       <p className="font-semibold font-family-dm-sans">- {formatPrice(couponDiscountAmount)}</p>
                     </div>
                   )}
-                  {hasVoucherLine && (
+                  {!hidePricing && hasVoucherLine && (
                     <div className="flex items-center justify-between w-full text-sm text-gray-12">
                       <p className="font-semibold">{formatVoucherLineLabel(appliedVoucher!.code)}:</p>
                       <p className="font-semibold font-family-dm-sans">- {formatPrice(voucherDiscountAmount)}</p>
                     </div>
                   )}
-                  {displayedServiceFee > 0 && (
+                  {!hidePricing && displayedServiceFee > 0 && (
                     <div className="flex items-center justify-between w-full text-sm text-gray-12">
                       <p className="font-semibold">Taxa de serviço:</p>
                       <p className="font-semibold font-family-dm-sans">{formatPrice(displayedServiceFee)}</p>
@@ -1885,10 +1891,12 @@ export function InformationStep({
                   )}
                 </div>
 
+                {!hidePricing && (
                 <div className="flex items-center justify-between border-t border-gray-6 pt-5 text-base font-bold text-gray-12">
                   <p>Total:</p>
                   <p>{formatPrice(totalAmountWithAge)}</p>
                 </div>
+                )}
               </div>
             </div>
           </div>
@@ -2054,6 +2062,7 @@ export function InformationStep({
                                 <TrashIcon className="size-4 text-red-6 cursor-pointer" />
                               </button>
                             </div>
+                            {!hidePricing && (
                             <div className="hidden md:flex items-baseline gap-2">
                               <h1 className="text-xl font-bold text-gray-12">
                                 {formatPrice(priceBreakdown.discounted)}
@@ -2064,6 +2073,7 @@ export function InformationStep({
                                 </p>
                               )}
                             </div>
+                            )}
                           </div>
                         </div>
                       </div>
@@ -2494,7 +2504,7 @@ export function InformationStep({
                               <h2 className="text-2xl font-extrabold text-gray-12 font-manrope">
                                 Perguntas do Organizador
                               </h2>
-                              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+                              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 items-start">
                                 {(questionsByTicketId.get(ticketId) ?? []).map((question) => (
                                   <div
                                     key={question.id}
@@ -2512,6 +2522,7 @@ export function InformationStep({
                         )}
 
                         <div className="flex items-center justify-between gap-2 mt-10">
+                          {hidePricing ? <span /> : (
                           <div className="flex items-baseline gap-2">
                             <h1 className="text-xl font-bold text-gray-12">
                               {formatPrice(priceBreakdown.discounted)}
@@ -2522,6 +2533,7 @@ export function InformationStep({
                               </p>
                             )}
                           </div>
+                          )}
                           <Button
                             onClick={async () => {
                               const errors = getParticipantValidationErrors(participantIndex, ticket.ageLimit, ticket.gender);

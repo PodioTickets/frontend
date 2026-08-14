@@ -15,6 +15,7 @@ import { eventInformationHasChanges } from "@/lib/eventEditValidation";
 import { hasValidCoordinates } from "@/utils/googleMapsGeo";
 import { organizerEventEditClientPage } from "@/lib/organizerAudit";
 import { wouldRegistrationEndBeforeStart, REGISTRATION_END_BEFORE_START_TOAST, isRegistrationStartNotBeforeEvent, REGISTRATION_START_NOT_BEFORE_EVENT_TOAST } from "@/utils/registrationPeriod";
+import { getFriendlyBackendError } from "@/lib/backendErrorMessage";
 import toast from "react-hot-toast";
 
 export default function ReviewInformationPage() {
@@ -87,16 +88,8 @@ export default function ReviewInformationPage() {
       // Re-fixa o baseline no contexto (zera o dirty após salvar).
       commitInitialFormData(resolvedPdfUrl ? { regulationUrl: resolvedPdfUrl } : undefined);
       toast.success("Informações salvas com sucesso!");
-    } catch (error: any) {
-      let errorMessage = "Erro ao salvar evento";
-      if (error.response?.data?.message) {
-        errorMessage = error.response.data.message;
-      } else if (error.response?.data?.errors?.length) {
-        errorMessage = error.response.data.errors.map((e: any) => e.message || e).join(", ");
-      } else if (error.message) {
-        errorMessage = error.message;
-      }
-      toast.error(errorMessage);
+    } catch (error) {
+      toast.error(getFriendlyBackendError(error, "Erro ao salvar evento"));
     } finally {
       setSaving(false);
     }

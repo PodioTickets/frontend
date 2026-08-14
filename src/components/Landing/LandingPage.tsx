@@ -1,9 +1,8 @@
 import Image from "next/image";
-import Link from "next/link";
 import { Check, CheckCircle2, Briefcase, Palette } from "lucide-react";
-import { Button } from "@/components/Button";
-import { cn } from "@/utils/cn";
 import { Reveal } from "@/components/Landing/Reveal";
+import { SpecialistButton } from "@/components/Landing/SpecialistButton";
+import { LandingPixel } from "@/components/Landing/LandingPixel";
 
 /**
  * Landing page institucional (pública) da PódioTicket — fiel ao Figma
@@ -31,16 +30,6 @@ const IMG = {
 /* ----------------------------------------------------------------------------
  * Primitivos
  * ------------------------------------------------------------------------- */
-
-function SpecialistButton({ className = "" }: { className?: string }) {
-  return (
-    <Button asChild className={cn("h-[52px] w-full gap-3 px-8 has-[>svg]:px-8 text-[16px] font-bold md:h-14 md:w-auto md:text-[20px]", className)}>
-      <Link href={SPECIALIST_HREF}>
-        Criar meu evento
-      </Link>
-    </Button>
-  );
-}
 
 function CheckItem({ children }: { children: React.ReactNode }) {
   return (
@@ -98,7 +87,7 @@ function Hero() {
               A PódioTicket reúne inscrições, participantes, financeiro e
               comunicação em uma única plataforma para eventos esportivos
             </p>
-            <SpecialistButton className="mt-2" />
+            <SpecialistButton href={SPECIALIST_HREF} className="mt-2" />
           </div>
         </Reveal>
 
@@ -410,7 +399,7 @@ function CtaSection() {
                 simplificar sua operação.
               </p>
             </div>
-            <SpecialistButton className="md:w-fit" />
+            <SpecialistButton href={SPECIALIST_HREF} className="md:w-fit" />
           </div>
           <div className="relative min-h-[240px] lg:min-h-[295px]">
             <Image
@@ -509,6 +498,8 @@ function ModalitiesBand() {
 export function LandingPage() {
   return (
     <main className="bg-gray-2">
+      {/* Meta Pixel da plataforma: PageView ao acessar a landing. */}
+      <LandingPixel />
       {/* Sem JS os blocos do <Reveal> nascem opacity-0 — reativa tudo. */}
       <noscript>
         <style>{`[data-reveal]{opacity:1 !important;transform:none !important}`}</style>

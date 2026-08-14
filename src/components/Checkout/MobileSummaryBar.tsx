@@ -8,6 +8,7 @@ import { Tooltip } from "../Tooltip";
 import { SeeDetailsIcon } from "../Icons/SeeDetailsIcon";
 import { usePathname } from "next/navigation";
 import { formatBRL as formatPrice } from "@/lib/money";
+import { useHidePricing } from "@/contexts/HidePricingContext";
 
 /**
  * Barra de resumo fixa (mobile) unificada do checkout.
@@ -139,6 +140,9 @@ export function MobileSummaryBar({
   // A aba "Ver detalhes" alterna o sheet (abre/fecha no mesmo controle).
   const toggleSheet = useCallback(() => setOpen(!open), [setOpen, open]);
 
+  // Fluxo de cortesia: sem valores. Barra fixa mínima só com o CTA.
+  const hidePricing = useHidePricing();
+
   // Drag-to-dismiss: o gesto é disparado SÓ pelo header/grabber (via
   // dragControls + dragListener={false}) pra não competir com o scroll do
   // corpo do sheet. Soltar abaixo do limiar (deslocamento ou velocidade)
@@ -176,6 +180,25 @@ export function MobileSummaryBar({
     serviceFee > 0 ? (
       <SummaryRow label="Taxa de serviço" value={formatPrice(serviceFee)} />
     ) : null;
+
+  // Cortesia: nenhuma linha de valor — só o CTA numa barra fixa mínima.
+  if (hidePricing) {
+    if (!cta) return null;
+    return (
+      <div data-mobile-summary-bar="true" className="fixed bottom-0 left-0 right-0 z-50 md:hidden">
+        <div className="bg-gray-2 border-t border-gray-6 shadow-lg px-4 py-3 pb-5">
+          <Button
+            onClick={cta.onClick}
+            disabled={cta.disabled}
+            isLoading={cta.loading}
+            className="w-full font-bold font-manrope disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {cta.label}
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <>

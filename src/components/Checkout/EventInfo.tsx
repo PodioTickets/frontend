@@ -10,6 +10,7 @@ import type { Ticket } from "@/hooks/useTickets";
 import { getEventOrganizer, getEventOrganizationId } from "@/utils/organization";
 import { hasDisplayableDistance } from "@/utils/checkoutModalityDisplay";
 import { formatBRL as formatPrice } from "@/lib/money";
+import { useHidePricing } from "@/contexts/HidePricingContext";
 import { ContactOrganizerFlow } from "@/components/Event/ContactOrganizerFlow";
 import { usePendingCouponSnapshot } from "@/hooks/usePendingCoupon";
 import { useCouponPreview } from "@/hooks/useCouponPreview";
@@ -51,6 +52,7 @@ interface EventInfoProps {
 
 export function EventInfo({ event, onNext, isSubmitting = false, tickets = [], categorizedTickets = [], uncategorizedTickets = [], appliedCoupon = null, appliedVoucher = null, voucherDiscountOverride = 0, disableNext = false }: EventInfoProps) {
   const { raceQuantities } = useCheckout();
+  const hidePricing = useHidePricing();
   const [isContactModalOpen, setIsContactModalOpen] = useState(false);
   const pendingCoupon = usePendingCouponSnapshot();
   const { data: couponPreview } = useCouponPreview(event.id, pendingCoupon);
@@ -395,9 +397,11 @@ export function EventInfo({ event, onNext, isSubmitting = false, tickets = [], c
                     <span className="text-gray-11 text-xs truncate w-full line-clamp-1">{ticket.categoryName ? `${ticket.categoryName}` : "Ingresso Avulso"}</span>
                     <span className="text-gray-12 text-sm truncate">({ticket.quantity}x){" "} {ticket.ticketName}:{" "}</span>
                   </div>
-                  <span className="text-gray-12 font-bold">
-                    {formatPrice(ticket.total)}
-                  </span>
+                  {!hidePricing && (
+                    <span className="text-gray-12 font-bold">
+                      {formatPrice(ticket.total)}
+                    </span>
+                  )}
                 </div>
               ))}
             </>
@@ -407,12 +411,14 @@ export function EventInfo({ event, onNext, isSubmitting = false, tickets = [], c
             </p>
           )}
         </div>
+        {!hidePricing && (
         <div className="mt-4 flex items-center justify-between w-full text-sm text-gray-12">
           <p className="font-semibold">Subtotal:</p>
           <p className="font-bold">{formatPrice(totalPrice)}</p>
         </div>
+        )}
 
-        {groupedTickets.length > 0 && (
+        {!hidePricing && groupedTickets.length > 0 && (
           <>
 
             {hasCouponLine ? (

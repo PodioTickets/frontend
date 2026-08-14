@@ -11,6 +11,7 @@ import {
   roundCoordinate,
   formatCoordinatesLabel,
   parseGoogleAddressComponents,
+  isAddressIdentified,
   type ParsedAddressComponents,
 } from "@/utils/googleMapsGeo";
 
@@ -86,7 +87,7 @@ export function LocationPickerModal({
   const applyPositionRef = useRef<
     | ((
         pos: { lat: number; lng: number },
-        opts: { reverse: boolean; recenter: boolean },
+        opts: { reverse: boolean; recenter: boolean; userInitiated?: boolean },
       ) => void)
     | null
   >(null);
@@ -101,6 +102,11 @@ export function LocationPickerModal({
   const [components, setComponents] = useState<ParsedAddressComponents | null>(
     null,
   );
+  /* True assim que o organizador (re)posiciona o pino nesta sessão (clique,
+   * arraste, busca ou "usar minha localização"). Distingue uma SELEÇÃO NOVA — que
+   * precisa render endereço completo — do simples reabrir/reconfirmar coords já
+   * salvas (aí confiamos no endereço persistido e não revalidamos). */
+  const [pinTouched, setPinTouched] = useState(false);
 
   // ── Reset do estado ao (re)abrir: parte do que já estava salvo ──────────────
   useEffect(() => {
@@ -114,6 +120,7 @@ export function LocationPickerModal({
     setAddress(initialName?.trim() || "");
     setGeocoding(false);
     setComponents(null);
+    setPinTouched(false);
   }, [isOpen, initialLat, initialLng, initialName]);
 
   // ── Inicialização imperativa do mapa (só quando o SDK está pronto) ──────────
@@ -148,17 +155,23 @@ export function LocationPickerModal({
       opts: {
         reverse: boolean;
         recenter: boolean;
+        userInitiated?: boolean;
         presetName?: string;
         presetAddress?: string;
         presetComponents?: ParsedAddressComponents;
       },
     ) => {
+      // Marca seleção nova (habilita a validação de endereço completo). Só as
+      // chamadas do usuário passam `userInitiated`; a restauração das coords
+      // salvas na abertura não passa — assim reconfirmar não é bloqueado.
+      if (opts.userInitiated) setPinTouched(true);
+
       if (!markerRef.current) {
         markerRef.current = new gm.Marker({ map, position: pos, draggable: true });
         markerRef.current.addListener("dragend", (e: any) => {
           applyPosition(
             { lat: e.latLng.lat(), lng: e.latLng.lng() },
-            { reverse: true, recenter: false },
+            { reverse: true, recenter: false, userInitiated: true },
           );
         });
       } else {
@@ -256,6 +269,7 @@ export function LocationPickerModal({
           applyPosition(coords, {
             reverse: false,
             recenter: false,
+            userInitiated: true,
             presetName: displayName,
             presetAddress: poi.formattedAddress,
             presetComponents: parseGoogleAddressComponents(
@@ -270,7 +284,7 @@ export function LocationPickerModal({
       if (!e.latLng) return;
       applyPosition(
         { lat: e.latLng.lat(), lng: e.latLng.lng() },
-        { reverse: true, recenter: false },
+        { reverse: true, recenter: false, userInitiated: true },
       );
     });
 
@@ -319,6 +333,7 @@ export function LocationPickerModal({
       applyPosition(coords, {
         reverse: false,
         recenter: true,
+        userInitiated: true,
         presetName: displayName || predictionMainText,
         presetAddress: place.formattedAddress,
         presetComponents: parseGoogleAddressComponents(place.addressComponents),
@@ -514,7 +529,14 @@ export function LocationPickerModal({
 
   if (!isOpen) return null;
 
-  const canConfirm = pin !== null;
+  // Endereço completo (rua + cidade + estado) exigido pelo backend p/ publicar.
+  const addressIdentified = isAddressIdentified(components);
+  /* Barra a confirmação SÓ quando houve seleção nova nesta sessão E o geocode já
+   * terminou sem endereço completo. Reabrir/reconfirmar coords salvas (pino não
+   * tocado) segue liberado — confiamos no endereço já persistido. */
+  const selectionUnidentified = pinTouched && !geocoding && !addressIdentified;
+  const canConfirm =
+    pin !== null && !geocoding && (!pinTouched || addressIdentified);
   const showMap = status === "ready" || status === "loading" || status === "idle";
 
   // "Usar minha localização": puxa a posição PRECISA do navegador (com permissão)
@@ -531,7 +553,7 @@ export function LocationPickerModal({
         setLocating(false);
         applyPositionRef.current?.(
           { lat: position.coords.latitude, lng: position.coords.longitude },
-          { reverse: true, recenter: true },
+          { reverse: true, recenter: true, userInitiated: true },
         );
       },
       () => {
@@ -546,6 +568,8 @@ export function LocationPickerModal({
 
   const handleConfirm = () => {
     if (!pin) return;
+    // Seleção nova sem endereço completo → não confirma (o aviso já é exibido).
+    if (pinTouched && !addressIdentified) return;
     const label = name.trim() || address.trim() || formatCoordinatesLabel(pin.lat, pin.lng);
     onConfirm({
       lat: roundCoordinate(pin.lat),
@@ -622,7 +646,9 @@ export function LocationPickerModal({
 
               {/* Local selecionado */}
               <div className="flex items-start gap-2 shrink-0 min-h-[44px]">
-                <MapPin className="size-5 text-primary-11 shrink-0 mt-0.5" />
+                <MapPin
+                  className={`size-5 shrink-0 mt-0.5 ${selectionUnidentified ? "text-red-10" : "text-primary-11"}`}
+                />
                 {pin ? (
                   <div className="flex flex-col min-w-0">
                     <p className="text-gray-12 text-sm md:text-base font-medium font-family-dm-sans leading-[1.3] break-words">
@@ -631,6 +657,16 @@ export function LocationPickerModal({
                     <p className="text-gray-11 text-xs md:text-sm font-family-dm-sans">
                       {formatCoordinatesLabel(pin.lat, pin.lng)}
                     </p>
+                    {selectionUnidentified && (
+                      <p className="text-red-10 text-xs md:text-sm font-family-dm-sans leading-[1.35] mt-1 flex items-start gap-1.5">
+                        <AlertTriangle className="size-4 shrink-0 mt-0.5" strokeWidth={2} />
+                        <span>
+                          Endereço não identificado. Escolha um ponto que traga
+                          cidade e estado — busque pelo nome/endereço ou ajuste o
+                          marcador sobre o local.
+                        </span>
+                      </p>
+                    )}
                   </div>
                 ) : (
                   <p className="text-gray-11 text-sm md:text-base font-family-dm-sans leading-[1.3]">
