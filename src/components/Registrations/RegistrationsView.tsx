@@ -150,6 +150,12 @@ export function RegistrationsView({
   openPaymentDetailsModal,
   openExportDataModal,
 }: RegistrationsViewProps) {
+  // Registros exibidos na página ATUAL (página cheia, exceto a última).
+  const registrosShown = Math.max(
+    0,
+    Math.min(pagination.page * pagination.limit, pagination.total) -
+      (pagination.page - 1) * pagination.limit
+  );
   return (
     <div className="min-h-screen bg-gray-2">
       {header}
@@ -563,7 +569,7 @@ export function RegistrationsView({
                 {pagination.totalPages > 1 && (
                   <div className="flex items-center justify-center gap-2 flex-wrap">
                     <p className="shrink-0 text-sm text-gray-11 font-family-dm-sans whitespace-nowrap">
-                      Mostrando {pagination.total.toLocaleString("pt-BR")} registros
+                      Exibindo {registrosShown.toLocaleString("pt-BR")} de {pagination.total.toLocaleString("pt-BR")} registros
                     </p>
                     <button
                       type="button"
@@ -723,7 +729,7 @@ export function RegistrationsView({
                     </button>
 
                     <p className="shrink-0 text-sm text-gray-11 font-family-dm-sans whitespace-nowrap mr-auto">
-                      Mostrando {pagination.total.toLocaleString("pt-BR")} registros
+                      Exibindo {registrosShown.toLocaleString("pt-BR")} de {pagination.total.toLocaleString("pt-BR")} registros
                     </p>
                   </div>
 

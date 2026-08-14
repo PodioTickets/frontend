@@ -69,6 +69,8 @@ interface FinancialDetailsMobileProps {
   currentPage: number;
   totalPages: number;
   onPageChange: (page: number) => void;
+  /** Itens por página — usado para exibir "Exibindo {N} de {total}". */
+  pageSize?: number;
 
   /* Search (server-side; sem onSearchChange o input fica readOnly) */
   searchPlaceholder?: string;
@@ -104,6 +106,7 @@ export function FinancialDetailsMobile({
   currentPage,
   totalPages,
   onPageChange,
+  pageSize,
   searchPlaceholder = "Nome, CPF, IDs..",
   searchValue,
   onSearchChange,
@@ -284,6 +287,7 @@ export function FinancialDetailsMobile({
               totalPages={totalPages}
               onPageChange={onPageChange}
               totalItems={count}
+              pageSize={pageSize}
               className="p-4"
             />
           )}

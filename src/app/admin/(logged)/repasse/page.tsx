@@ -157,15 +157,25 @@ function PaginationBar({
   onPageChange,
   variant,
   totalItems,
+  pageSize,
 }: {
   totalPages: number;
   page: number;
   onPageChange: (p: number) => void;
   variant: "desktop" | "mobile";
   totalItems?: number;
+  pageSize?: number;
 }) {
   if (totalPages <= 1) return null;
   const safePage = Math.min(page, totalPages);
+  // Registros exibidos na página ATUAL (página cheia, exceto a última).
+  const shown =
+    totalItems != null && pageSize != null
+      ? Math.max(
+          0,
+          Math.min(safePage * pageSize, totalItems) - (safePage - 1) * pageSize
+        )
+      : null;
   const isMobile = variant === "mobile";
 
   const navBtn = isMobile
@@ -199,7 +209,9 @@ function PaginationBar({
             !isMobile && "mr-auto"
           )}
         >
-          Mostrando {totalItems.toLocaleString("pt-BR")} registros
+          {shown != null
+            ? `Exibindo ${shown.toLocaleString("pt-BR")} de ${totalItems!.toLocaleString("pt-BR")} registros`
+            : `Exibindo ${totalItems!.toLocaleString("pt-BR")} registros`}
         </p>
       )}
       <button
@@ -500,6 +512,7 @@ export default function AdminRepassePage() {
               page={pagination.page}
               onPageChange={setPage}
               totalItems={pagination.total}
+              pageSize={pagination.limit}
               variant="mobile"
             />
           )}
@@ -645,6 +658,7 @@ export default function AdminRepassePage() {
               page={pagination.page}
               onPageChange={setPage}
               totalItems={pagination.total}
+              pageSize={pagination.limit}
               variant="desktop"
             />
           )}

@@ -854,6 +854,7 @@ export function AdminAuditLogTab() {
             currentPage={page}
             onPageChange={setPage}
             totalItems={total}
+            pageSize={ITEMS_PER_PAGE}
           />
         )}
       </div>
@@ -865,6 +866,7 @@ export function AdminAuditLogTab() {
             currentPage={page}
             onPageChange={setPage}
             totalItems={total}
+            pageSize={ITEMS_PER_PAGE}
           />
         </div>
       )}

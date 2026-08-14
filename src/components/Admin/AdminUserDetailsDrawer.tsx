@@ -535,6 +535,7 @@ export function AdminUserDetailsDrawer({ userId, fallback, onClose }: AdminUserD
                     totalPages={regTotalPages}
                     onPageChange={setRegPage}
                     totalItems={regTotal}
+                    pageSize={REG_PAGE_SIZE}
                     className="w-auto justify-start"
                   />
                 ) : (
