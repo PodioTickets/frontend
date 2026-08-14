@@ -11,6 +11,7 @@ import { ImageCarouselModal } from "./ImageCarouselModal";
 import { ImageWithInitialFallback } from "@/components/ImageWithInitialFallback";
 import { getCheckoutModalityInfo } from "@/utils/checkoutModalityDisplay";
 import { formatBRL as formatPriceCurrency } from "@/lib/money";
+import { useHidePricing } from "@/contexts/HidePricingContext";
 import {
   getTicketProductCarouselItems,
   getCategoryKitCarouselItems,
@@ -175,6 +176,7 @@ const TicketItemMobile = memo(({
 }) => {
   const [isImageModalOpen, setIsImageModalOpen] = useState(false);
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
+  const hidePricing = useHidePricing();
 
   const price = getTicketPrice(ticket);
   const distanceKm = getDistanceKm(ticket);
@@ -445,6 +447,7 @@ const TicketItemMobile = memo(({
       ) : null}
 
       <div className="flex items-center justify-between">
+        {hidePricing ? <span /> : (
         <div className="flex items-baseline gap-2">
           <p className="text-xl font-bold text-gray-12 font-manrope leading-[1.1]">
             {formatDisplayPrice(priceBreakdown)}
@@ -455,6 +458,7 @@ const TicketItemMobile = memo(({
             </p>
           )}
         </div>
+        )}
         {isBatchSoldOut ? (
           // Lote esgotado: badge cinza no lugar do stepper (não dá pra adicionar).
           // `h-11` = mesma altura do stepper (mobile) pra o card não encolher.
@@ -548,6 +552,7 @@ const TicketItemDesktop = memo(({
   /** Condições globais do cupom de link atendidas (suprime strike se false). */
   couponConditionsMet?: boolean;
 }) => {
+  const hidePricing = useHidePricing();
   const [isImageModalOpen, setIsImageModalOpen] = useState(false);
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
   const [currentMainImageIndex, setCurrentMainImageIndex] = useState(0);
@@ -762,6 +767,7 @@ const TicketItemDesktop = memo(({
           ) : null}
 
           <div className="flex items-end justify-between">
+            {hidePricing ? <span /> : (
             <div className="flex items-baseline gap-2">
               <p className="text-xl font-bold text-gray-12">{formatDisplayPrice(priceBreakdown)}</p>
               {priceBreakdown.hasDiscount && (
@@ -770,6 +776,7 @@ const TicketItemDesktop = memo(({
                 </p>
               )}
             </div>
+            )}
             {isBatchSoldOut ? (
               // Lote esgotado: badge cinza no lugar do stepper (não dá pra adicionar).
               // `h-10` = mesma altura do stepper (size-6 + py-2) pra o card não encolher.
@@ -861,6 +868,7 @@ export function TicketCategoryCard({
   const kitSelectionDisplay = kitSelectionDisplayProp ?? defaultEventKitSelectionDisplay();
   const [isExpanded, setIsExpanded] = useState(expandedByDefault ?? index === 0);
   const { raceQuantities, updateRaceQuantity } = useCheckout();
+  const hidePricing = useHidePricing();
   // Preview do cupom da URL pra renderizar preço descontado com strike-through.
   // Backend reconcilia no PaymentStep; aqui é só feedback visual no /ingressos.
   const pendingCoupon = usePendingCouponSnapshot();
@@ -1029,7 +1037,7 @@ export function TicketCategoryCard({
                 <h1 className="text-lg font-bold text-gray-12 font-manrope break-normal line-clamp-2">
                   {categoryName}
                 </h1>
-                {!expanded ? (
+                {!expanded && !hidePricing ? (
                   <div className="flex flex-wrap items-center gap-1 text-base">
                     <p className="text-gray-11 font-family-dm-sans leading-[1.3]">A partir de:</p>
                     <span className="text-gray-12 font-bold font-manrope">
@@ -1115,7 +1123,7 @@ export function TicketCategoryCard({
                 <h1 className="text-xl font-bold font-manrope text-gray-12 truncate max-w-[600px]">
                   {categoryName}
                 </h1>
-                {!expanded ? (
+                {!expanded && !hidePricing ? (
                   <div className="flex items-center gap-1 text-base">
                     <p className="text-gray-11 font-family-dm-sans leading-[1.3]">A partir de:</p>
                     <span className="text-gray-12 font-bold font-manrope leading-[1.1]">

@@ -8,6 +8,7 @@ import { organizerService } from "@/services";
 import toast from "react-hot-toast";
 import { useOrganizerNavigate } from "@/hooks/useOrganizerNavigate";
 import { clearAllCreateEventClientStorage } from "@/lib/createEventWizardPersistence";
+import { getFriendlyBackendError } from "@/lib/backendErrorMessage";
 
 export function PublishEventModal() {
   const { isOpen, closePublishEventModal, data } = usePublishEventModal();
@@ -31,9 +32,9 @@ export function PublishEventModal() {
 
       // Redirecionar para a página de eventos após publicar
       orgNav.push("/organizer/events");
-    } catch (error: any) {
+    } catch (error) {
       console.error("Error publishing event:", error);
-      toast.error(error.response?.data?.message || "Erro ao publicar evento");
+      toast.error(getFriendlyBackendError(error, "Erro ao publicar evento"));
     } finally {
       setIsPublishing(false);
     }

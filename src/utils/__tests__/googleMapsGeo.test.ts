@@ -8,8 +8,43 @@ import {
   buildGoogleMapsLinkFromCoordinates,
   formatCoordinatesLabel,
   parseGoogleAddressComponents,
+  isAddressIdentified,
 } from "@/utils/googleMapsGeo";
 import { googleMapsLinkToEmbedUrl } from "@/utils/googleMapsEmbed";
+
+describe("isAddressIdentified", () => {
+  const base = { cep: "", street: "", neighborhood: "", city: "", state: "" };
+
+  it("true quando cidade + estado estão presentes (rua opcional)", () => {
+    expect(isAddressIdentified({ ...base, city: "São Paulo", state: "SP" })).toBe(true);
+    // POI/praça sem logradouro: ainda identificado (city+state).
+    expect(
+      isAddressIdentified({
+        ...base,
+        street: "",
+        neighborhood: "Centro",
+        city: "Campinas",
+        state: "SP",
+      }),
+    ).toBe(true);
+  });
+
+  it("false quando falta cidade ou estado", () => {
+    expect(isAddressIdentified({ ...base, state: "SP" })).toBe(false); // sem cidade
+    expect(isAddressIdentified({ ...base, city: "São Paulo" })).toBe(false); // sem estado
+    expect(isAddressIdentified({ ...base, street: "Avenida Paulista, 1578" })).toBe(false);
+  });
+
+  it("trata só-espaços como vazio", () => {
+    expect(isAddressIdentified({ ...base, city: "  ", state: "SP" })).toBe(false);
+    expect(isAddressIdentified({ ...base, city: "São Paulo", state: "  " })).toBe(false);
+  });
+
+  it("false para null/undefined", () => {
+    expect(isAddressIdentified(null)).toBe(false);
+    expect(isAddressIdentified(undefined)).toBe(false);
+  });
+});
 
 describe("parseCoordinate", () => {
   it("aceita número finito e string numérica", () => {

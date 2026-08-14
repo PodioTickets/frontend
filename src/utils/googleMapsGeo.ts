@@ -189,6 +189,25 @@ export function parseGoogleAddressComponents(
   };
 }
 
+/**
+ * O local escolhido no mapa está "identificado" quando o geocode devolveu, no
+ * mínimo, CIDADE e ESTADO — a mesma validação que a publicação do evento exige
+ * (`events.service.submitForReview` barra sem `city`/`state`; `country` é sempre
+ * "BR" e `location` é garantido no build a partir do nome/endereço do local).
+ *
+ * NÃO exigimos logradouro (`street`): muitos locais legítimos (POIs, praças,
+ * ginásios, áreas rurais) não retornam rua no geocode, e cobrar isso disparava
+ * "endereço não identificado" quase sempre. Cidade+estado é o sinal geográfico
+ * que praticamente todo ponto em terra traz; pontos sem eles (mar, área sem
+ * município) continuam corretamente barrados.
+ */
+export function isAddressIdentified(
+  components: ParsedAddressComponents | null | undefined,
+): boolean {
+  if (!components) return false;
+  return !!components.city.trim() && !!components.state.trim();
+}
+
 /** Rótulo curto "lat, lng" (5 casas ~1 m) para exibir no preview do local. */
 export function formatCoordinatesLabel(
   lat: string | number | null | undefined,

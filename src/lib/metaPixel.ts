@@ -17,10 +17,13 @@
  */
 
 export type MetaStandardEvent =
+  | "PageView"
   | "ViewContent"
   | "AddToCart"
   | "InitiateCheckout"
   | "AddPaymentInfo"
+  | "Lead"
+  | "CompleteRegistration"
   | "Purchase";
 
 type Fbq = ((...args: unknown[]) => void) & {
@@ -114,4 +117,37 @@ export function trackMetaPixel(
   }
   initMetaPixel(pixelId);
   window.fbq?.("trackSingle", pixelId, event, params ?? {});
+}
+
+/* ────────────────────────────────────────────────────────────────────────────
+ * Pixel de AQUISIÇÃO da plataforma (global) — DISTINTO dos pixels por-evento.
+ *
+ * Os pixels por-evento acima miram `event.tracking.metaPixelId` (trackSingle).
+ * Este é o pixel PRÓPRIO da PódioTicket, usado no funil de captação de
+ * organizadores (landing → clicar "Criar meu evento" → concluir cadastro).
+ * Vive em domínios diferentes (marketing → app), mas o Meta consolida pelo mesmo
+ * pixel id, então inicializamos/disparamos em ambos.
+ *
+ * ID configurável por env (`NEXT_PUBLIC_META_PIXEL_ID`) com fallback para o id
+ * atual — assim trocar de conta não exige mudar código.
+ * ──────────────────────────────────────────────────────────────────────────── */
+const PLATFORM_PIXEL_ID =
+  process.env.NEXT_PUBLIC_META_PIXEL_ID || "4668633066757382";
+
+/** Garante script + init do pixel da plataforma (idempotente). */
+export function initPlatformMetaPixel(): void {
+  initMetaPixel(PLATFORM_PIXEL_ID);
+}
+
+/**
+ * Dispara um evento standard no pixel GLOBAL da plataforma.
+ * Ex.: `PageView` (acesso à landing), `Lead` (clique em "Criar meu evento"),
+ * `CompleteRegistration` (cadastro de organizador concluído).
+ */
+export function trackPlatformMetaPixel(
+  event: MetaStandardEvent,
+  params?: Record<string, unknown>,
+  options?: TrackOptions,
+): void {
+  trackMetaPixel(PLATFORM_PIXEL_ID, event, params, options);
 }

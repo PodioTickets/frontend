@@ -21,6 +21,7 @@ import { useOrganizerPermissions } from "@/contexts/OrganizerPermissionsContext"
 import { useOrganizerAppSurface } from "@/contexts/OrganizerAppSurfaceContext";
 import { organizerExternalHref } from "@/lib/organizerPathPresentation";
 import { wouldRegistrationEndBeforeStart, REGISTRATION_END_BEFORE_START_TOAST, isRegistrationStartNotBeforeEvent, REGISTRATION_START_NOT_BEFORE_EVENT_TOAST } from "@/utils/registrationPeriod";
+import { getFriendlyBackendError } from "@/lib/backendErrorMessage";
 
 export default function InformacoesPage() {
   const orgNav = useOrganizerNavigate();
@@ -129,16 +130,8 @@ export default function InformacoesPage() {
       clearRegulationPdfDraft();
       toast.success("Rascunho salvo!");
       orgNav.push("/organizer/events/new/banner");
-    } catch (error: any) {
-      let errorMessage = "Erro ao salvar evento";
-      if (error.response?.data?.message) {
-        errorMessage = error.response.data.message;
-      } else if (error.response?.data?.errors?.length) {
-        errorMessage = error.response.data.errors.map((e: any) => e.message || e).join(", ");
-      } else if (error.message) {
-        errorMessage = error.message;
-      }
-      toast.error(errorMessage);
+    } catch (error) {
+      toast.error(getFriendlyBackendError(error, "Erro ao salvar evento"));
     } finally {
       setLoading(false);
     }

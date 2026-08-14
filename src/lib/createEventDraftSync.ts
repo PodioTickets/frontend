@@ -107,7 +107,12 @@ export function buildCreateEventBodyFromForm(
     name: formData.name.trim(),
     eventDate: formData.eventDate,
     country: "BR",
-    location: (formData.street ?? "").trim(),
+    // `location` (endereço cru legado) exigido não-vazio pela publicação. Como o
+    // logradouro pode faltar em POIs/praças/áreas sem número, caímos no nome/
+    // endereço do local (locationName) — assim a publicação não falha por falta
+    // de rua e o card/e-mail/PDF (que usam locationName) seguem inalterados.
+    location:
+      (formData.street ?? "").trim() || (formData.locationName ?? "").trim(),
     city: (formData.city ?? "").trim(),
     state: (formData.state ?? "").trim(),
   };
