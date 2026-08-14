@@ -253,6 +253,7 @@ export default function AdminUsersPage() {
               currentPage={pagination.page}
               totalPages={pagination.totalPages}
               onPageChange={setPage}
+              totalItems={pagination.total}
               className="py-4"
             />
           )}
@@ -351,6 +352,7 @@ export default function AdminUsersPage() {
               currentPage={pagination.page}
               totalPages={pagination.totalPages}
               onPageChange={setPage}
+              totalItems={pagination.total}
               className="border-t border-gray-6 px-4 py-4"
             />
           )}

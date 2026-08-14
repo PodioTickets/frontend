@@ -324,6 +324,7 @@ export function PaymentItemDetailsDrawer({
           transactionIp={payment.transactionIp ?? undefined}
           couponCode={coupon?.code ?? undefined}
           participants={mobileParticipants}
+          totalParticipants={participants.length}
           onViewParticipant={(p) =>
             openViewRegistrationModal({
               registrationId: p.id,
@@ -673,6 +674,7 @@ export function PaymentItemDetailsDrawer({
                   currentPage={safeTicketsPage}
                   totalPages={totalTicketPages}
                   onPageChange={setTicketsPage}
+                  totalItems={participants.length}
                 />
               </div>
             )}

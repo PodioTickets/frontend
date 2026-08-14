@@ -69,6 +69,8 @@ interface PaymentDetailsMobileProps {
   currentPage: number;
   totalPages: number;
   onPageChange: (page: number) => void;
+  /** Total REAL de participantes (o `participants` recebido é só a página atual). */
+  totalParticipants?: number;
 
   /* Copy state (managed pelo caller pra unificar entre mobile/desktop) */
   copied: boolean;
@@ -156,6 +158,7 @@ export function PaymentDetailsMobile({
   currentPage,
   totalPages,
   onPageChange,
+  totalParticipants,
   copied,
   onCopy,
   onViewParticipant,
@@ -425,6 +428,7 @@ export function PaymentDetailsMobile({
                   currentPage={currentPage}
                   totalPages={totalPages}
                   onPageChange={onPageChange}
+                  totalItems={totalParticipants ?? participants.length}
                   className="bg-gray-2 border-t border-gray-6 px-4 py-5"
                 />
               )}

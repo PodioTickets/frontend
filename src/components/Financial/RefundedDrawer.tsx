@@ -447,6 +447,7 @@ export function RefundedDrawer({
                     currentPage={currentPage}
                     totalPages={totalPages}
                     onPageChange={setCurrentPage}
+                    totalItems={pagination.total}
                     className="border-t border-gray-6 px-5 py-4"
                   />
                 )}

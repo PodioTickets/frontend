@@ -156,11 +156,13 @@ function PaginationBar({
   page,
   onPageChange,
   variant,
+  totalItems,
 }: {
   totalPages: number;
   page: number;
   onPageChange: (p: number) => void;
   variant: "desktop" | "mobile";
+  totalItems?: number;
 }) {
   if (totalPages <= 1) return null;
   const safePage = Math.min(page, totalPages);
@@ -190,6 +192,16 @@ function PaginationBar({
           : "justify-end px-4 py-5 border-t border-gray-6"
       )}
     >
+      {totalItems != null && (
+        <p
+          className={cn(
+            "shrink-0 text-sm text-gray-11 font-family-dm-sans whitespace-nowrap",
+            !isMobile && "mr-auto"
+          )}
+        >
+          Mostrando {totalItems.toLocaleString("pt-BR")} registros
+        </p>
+      )}
       <button
         type="button"
         onClick={() => onPageChange(Math.max(1, safePage - 1))}
@@ -487,6 +499,7 @@ export default function AdminRepassePage() {
               totalPages={pagination.totalPages}
               page={pagination.page}
               onPageChange={setPage}
+              totalItems={pagination.total}
               variant="mobile"
             />
           )}
@@ -631,6 +644,7 @@ export default function AdminRepassePage() {
               totalPages={pagination.totalPages}
               page={pagination.page}
               onPageChange={setPage}
+              totalItems={pagination.total}
               variant="desktop"
             />
           )}

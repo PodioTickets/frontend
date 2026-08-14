@@ -448,6 +448,7 @@ export function ViewVoucherModal() {
                           currentPage={currentPage}
                           totalPages={voucherData.pagination.totalPages}
                           onPageChange={setCurrentPage}
+                          totalItems={voucherData.pagination.total}
                           disabled={loading}
                           className="md:justify-end"
                         />

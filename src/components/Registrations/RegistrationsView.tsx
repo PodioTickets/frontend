@@ -561,7 +561,10 @@ export function RegistrationsView({
                   })}
                 </div>
                 {pagination.totalPages > 1 && (
-                  <div className="flex items-center justify-center gap-2">
+                  <div className="flex items-center justify-center gap-2 flex-wrap">
+                    <p className="shrink-0 text-sm text-gray-11 font-family-dm-sans whitespace-nowrap">
+                      Mostrando {pagination.total.toLocaleString("pt-BR")} registros
+                    </p>
                     <button
                       type="button"
                       onClick={() => setPagination((p) => ({ ...p, page: Math.max(1, p.page - 1) }))}
@@ -677,6 +680,7 @@ export function RegistrationsView({
                 {/* Pagination */}
                 {pagination.totalPages > 1 && (
                   <div className="flex items-center justify-center gap-2 py-4 px-5 border-t border-gray-6">
+
                     <button
                       onClick={() =>
                         setPagination((prev) => ({
@@ -717,7 +721,12 @@ export function RegistrationsView({
                     >
                       <ChevronRight className="size-4" />
                     </button>
+
+                    <p className="shrink-0 text-sm text-gray-11 font-family-dm-sans whitespace-nowrap mr-auto">
+                      Mostrando {pagination.total.toLocaleString("pt-BR")} registros
+                    </p>
                   </div>
+
                 )}
               </div>
 
