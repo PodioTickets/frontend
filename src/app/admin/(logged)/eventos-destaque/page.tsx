@@ -370,6 +370,7 @@ export default function AdminFeaturedEventsPage() {
               totalPages={pickerPagination.totalPages}
               onPageChange={setPage}
               totalItems={pickerPagination.total}
+              pageSize={ITEMS_PER_PAGE}
               className="pt-6"
             />
           </div>

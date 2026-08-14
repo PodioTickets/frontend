@@ -123,15 +123,22 @@ function PaginationBar({
   onPageChange,
   variant,
   totalItems,
+  pageSize,
 }: {
   totalPages: number;
   page: number;
   onPageChange: (p: number) => void;
   variant: "desktop" | "mobile";
   totalItems?: number;
+  pageSize?: number;
 }) {
   if (totalPages <= 1) return null;
   const isMobile = variant === "mobile";
+  // Registros exibidos na página ATUAL (página cheia, exceto a última).
+  const shown =
+    totalItems != null && pageSize != null
+      ? Math.max(0, Math.min(page * pageSize, totalItems) - (page - 1) * pageSize)
+      : null;
 
   const navBtn = isMobile
     ? "size-8 shrink-0 rounded-lg border border-gray-6 bg-gray-4/80 hover:bg-gray-4 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center transition-colors"
@@ -157,7 +164,9 @@ function PaginationBar({
             !isMobile && "mr-auto"
           )}
         >
-          Mostrando {totalItems.toLocaleString("pt-BR")} registros
+          {shown != null
+            ? `Exibindo ${shown.toLocaleString("pt-BR")} de ${totalItems!.toLocaleString("pt-BR")} registros`
+            : `Exibindo ${totalItems!.toLocaleString("pt-BR")} registros`}
         </p>
       )}
       <button type="button" onClick={() => onPageChange(Math.max(1, page - 1))} disabled={page <= 1} className={navBtn}>
@@ -773,7 +782,7 @@ export default function AdminEventsPage() {
           </div>
 
           {!loading && (
-            <PaginationBar totalPages={pagination.totalPages} page={pagination.page} onPageChange={setPage} totalItems={pagination.total} variant="desktop" />
+            <PaginationBar totalPages={pagination.totalPages} page={pagination.page} onPageChange={setPage} totalItems={pagination.total} pageSize={pagination.limit} variant="desktop" />
           )}
         </div>
 

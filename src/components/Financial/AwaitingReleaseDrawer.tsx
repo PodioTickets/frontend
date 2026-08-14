@@ -522,6 +522,7 @@ export function AwaitingReleaseDrawer({
                 totalPages={tabTotalPages}
                 onPageChange={onTabPageChange}
                 totalItems={tabTotalCount}
+                pageSize={itemsPerPage}
                 disabled={isLoading}
                 className="pt-2"
               />
@@ -707,7 +708,7 @@ export function AwaitingReleaseDrawer({
 
               {/* Footer: paginação (esquerda) + Exportar CSV (direita) */}
               <div className="mt-4 flex items-center justify-between gap-4">
-                <Pagination className="w-max" onPageChange={onTabPageChange} currentPage={tabCurrentPage} totalPages={tabTotalPages} totalItems={tabTotalCount} disabled={isLoading} />
+                <Pagination className="w-max" onPageChange={onTabPageChange} currentPage={tabCurrentPage} totalPages={tabTotalPages} totalItems={tabTotalCount} pageSize={itemsPerPage} disabled={isLoading} />
                 <Button
                   type="button"
                   onClick={() => setIsExportModalOpen(true)}

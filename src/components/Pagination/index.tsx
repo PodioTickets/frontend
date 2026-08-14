@@ -11,11 +11,17 @@ interface PaginationProps {
   className?: string;
   /**
    * Total de registros (não de páginas). Quando informado, exibe
-   * "Mostrando N registros" ao lado dos controles (à esquerda no desktop,
-   * empilhado no mobile). Ausente = só os controles, centralizados (comportamento
-   * anterior — retrocompatível).
+   * "Exibindo {N} de {total} registros" ao lado dos controles (à esquerda no
+   * desktop, empilhado no mobile). Ausente = só os controles, centralizados
+   * (comportamento anterior — retrocompatível).
    */
   totalItems?: number;
+  /**
+   * Itens por página (o `limit`/`ITEMS_PER_PAGE` da lista). Usado para calcular
+   * quantos registros a página ATUAL exibe ("Exibindo {N} de {total}"). Ausente →
+   * cai para "Exibindo {total} registros" (sem o "N de").
+   */
+  pageSize?: number;
   /**
    * Rótulo do total (default: "registro"/"registros"). Ex.: "inscrições",
    * "eventos". Aceita string única (usada no singular e plural).
@@ -47,12 +53,23 @@ export function Pagination({
   disabled,
   className,
   totalItems,
+  pageSize,
   totalItemsLabel,
 }: PaginationProps) {
   const pages = getPageRange(currentPage, totalPages);
   const showCount = typeof totalItems === "number";
   const countLabel =
     totalItemsLabel ?? (totalItems === 1 ? "registro" : "registros");
+  // Quantidade exibida na página ATUAL (paginação uniforme: página cheia, exceto
+  // a última). Sem `pageSize` não dá pra saber → mostra só o total.
+  const shownOnPage =
+    showCount && typeof pageSize === "number" && pageSize > 0
+      ? Math.max(
+          0,
+          Math.min(currentPage * pageSize, totalItems!) -
+            (currentPage - 1) * pageSize,
+        )
+      : null;
 
   return (
     <div
@@ -64,7 +81,9 @@ export function Pagination({
     >
       {showCount && (
         <p className="shrink-0 text-sm text-gray-11 font-family-dm-sans whitespace-nowrap">
-          Mostrando {totalItems!.toLocaleString("pt-BR")} {countLabel}
+          {shownOnPage != null
+            ? `Exibindo ${shownOnPage.toLocaleString("pt-BR")} de ${totalItems!.toLocaleString("pt-BR")} ${countLabel}`
+            : `Exibindo ${totalItems!.toLocaleString("pt-BR")} ${countLabel}`}
         </p>
       )}
 

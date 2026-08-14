@@ -597,6 +597,7 @@ export function AdminUserActivityTab() {
             currentPage={page}
             onPageChange={setPage}
             totalItems={total}
+            pageSize={ITEMS_PER_PAGE}
           />
         )}
       </div>
@@ -608,6 +609,7 @@ export function AdminUserActivityTab() {
             currentPage={page}
             onPageChange={setPage}
             totalItems={total}
+            pageSize={ITEMS_PER_PAGE}
           />
         </div>
       )}
