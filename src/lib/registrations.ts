@@ -48,6 +48,10 @@ export type RegistrationListRow = Omit<Registration, "user"> & {
   order?: {
     id?: string;
     finalAmount: number;
+    /** Pedido criado pelo painel "adicionar inscrição" (cortesia). */
+    isCourtesy?: boolean;
+    /** Id do voucher usado no pedido (null quando não usou). */
+    voucherId?: string | null;
     payment?: {
       status?: string;
       metadata?: unknown;
@@ -132,6 +136,26 @@ export function getFinalStatus(registration: RegistrationListRow): string {
       : registrationStatus;
 }
 
+/**
+ * Deriva se a inscrição deve exibir o status "Voucher".
+ *
+ * Regra de produto:
+ * - É "voucher" quando o pedido foi criado pelo painel "adicionar inscrição"
+ *   (cortesia → `order.isCourtesy`) OU quando usou voucher e ficou TOTALMENTE
+ *   grátis (`order.voucherId` presente E `order.finalAmount === 0`).
+ * - Se usou voucher mas teve algum valor debitado (ex.: produtos adicionais pagos
+ *   → `finalAmount > 0`), NÃO é voucher: é "Pago".
+ *
+ * Precedência: substitui apenas o estado "Pago"/grátis. Cancelado/estornado/
+ * chargeback têm prioridade e são resolvidos pelos chamadores ANTES de checar isto.
+ */
+export function isVoucherRegistration(registration: RegistrationListRow): boolean {
+  const order = registration.order;
+  if (!order) return false;
+  if (order.isCourtesy) return true;
+  return order.voucherId != null && (order.finalAmount ?? 0) === 0;
+}
+
 export interface RegistrationStatusBadge {
   label: string;
   className: string;
@@ -154,6 +178,11 @@ export function getRegistrationStatusBadge(status: string): RegistrationStatusBa
     COMPLETED: {
       label: "Pago",
       className: "bg-blue-10/20 text-blue-11",
+      icon: CheckCircle,
+    },
+    VOUCHER: {
+      label: "Voucher",
+      className: "bg-green-10/20 text-green-11",
       icon: CheckCircle,
     },
     CHARGEBACK: {

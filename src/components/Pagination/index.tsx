@@ -10,22 +10,14 @@ interface PaginationProps {
   disabled?: boolean;
   className?: string;
   /**
-   * Total de registros (não de páginas). Quando informado, exibe
-   * "Exibindo {N} de {total} registros" ao lado dos controles (à esquerda no
-   * desktop, empilhado no mobile). Ausente = só os controles, centralizados
-   * (comportamento anterior — retrocompatível).
+   * @deprecated Aceito por compatibilidade com os chamadores, mas não renderiza
+   * mais nada. A contagem "Exibindo {N} de {total}" foi removida de todas as
+   * telas (a lista de inscritos mantém contagem inline própria em RegistrationsView).
    */
   totalItems?: number;
-  /**
-   * Itens por página (o `limit`/`ITEMS_PER_PAGE` da lista). Usado para calcular
-   * quantos registros a página ATUAL exibe ("Exibindo {N} de {total}"). Ausente →
-   * cai para "Exibindo {total} registros" (sem o "N de").
-   */
+  /** @deprecated Sem efeito — ver `totalItems`. */
   pageSize?: number;
-  /**
-   * Rótulo do total (default: "registro"/"registros"). Ex.: "inscrições",
-   * "eventos". Aceita string única (usada no singular e plural).
-   */
+  /** @deprecated Sem efeito — ver `totalItems`. */
   totalItemsLabel?: string;
 }
 
@@ -52,41 +44,20 @@ export function Pagination({
   onPageChange,
   disabled,
   className,
-  totalItems,
-  pageSize,
-  totalItemsLabel,
 }: PaginationProps) {
+  // `totalItems`/`pageSize`/`totalItemsLabel` continuam na interface por
+  // compatibilidade com os chamadores, mas NÃO são mais renderizados: o texto
+  // "Exibindo N de X" foi removido de todas as telas (exceto a lista de
+  // inscritos, que tem contagem inline própria em RegistrationsView).
   const pages = getPageRange(currentPage, totalPages);
-  const showCount = typeof totalItems === "number";
-  const countLabel =
-    totalItemsLabel ?? (totalItems === 1 ? "registro" : "registros");
-  // Quantidade exibida na página ATUAL (paginação uniforme: página cheia, exceto
-  // a última). Sem `pageSize` não dá pra saber → mostra só o total.
-  const shownOnPage =
-    showCount && typeof pageSize === "number" && pageSize > 0
-      ? Math.max(
-          0,
-          Math.min(currentPage * pageSize, totalItems!) -
-            (currentPage - 1) * pageSize,
-        )
-      : null;
 
   return (
     <div
       className={cn(
-        "flex flex-col-reverse items-center gap-2 w-full py-2 sm:flex-row",
-        showCount ? "sm:justify-between" : "sm:justify-center",
+        "flex items-center justify-center gap-2 w-full py-2",
         className
       )}
     >
-      {showCount && (
-        <p className="shrink-0 text-sm text-gray-11 font-family-dm-sans whitespace-nowrap">
-          {shownOnPage != null
-            ? `Exibindo ${shownOnPage.toLocaleString("pt-BR")} de ${totalItems!.toLocaleString("pt-BR")} ${countLabel}`
-            : `Exibindo ${totalItems!.toLocaleString("pt-BR")} ${countLabel}`}
-        </p>
-      )}
-
       {/* Controles — mantêm o scroll horizontal sem barra em telas estreitas. */}
       <div
         className="flex items-center justify-center gap-2 min-w-0 max-w-full overflow-x-auto [&::-webkit-scrollbar]:hidden"

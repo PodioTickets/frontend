@@ -1759,6 +1759,9 @@ export function InformationStep({
                 {question.description ?? ""}
               </label>
             )}
+            {/* Largura ~= a do placeholder "Digite um número" (16 chars): 16ch de
+                conteúdo + o px-3 (2rem de folga cobre padding+buffer da fonte
+                proporcional). `max-w-full` evita estouro em telas estreitas. */}
             <input
               type="number"
               value={typeof answer === "string" ? answer : ""}
@@ -1766,7 +1769,7 @@ export function InformationStep({
                 clearParticipantFieldError(participantIndex, `question_${question.id}`);
                 updateQuestionAnswer(participantIndex, question.id, e.target.value);
               }}
-              className={`w-full md:w-1/2 h-12 px-3 rounded-lg border bg-transparent text-gray-12 focus:outline-none focus:bg-gray-3 transition-colors font-family-dm-sans text-base placeholder:text-gray-11 ${questionError ? "border-red-6 focus:border-red-10" : "border-gray-6 focus:border-primary-10"}`}
+              className={`w-[calc(16ch_+_2rem)] max-w-full h-12 px-3 rounded-lg border bg-transparent text-gray-12 focus:outline-none focus:bg-gray-3 transition-colors font-family-dm-sans text-base placeholder:text-gray-11 ${questionError ? "border-red-6 focus:border-red-10" : "border-gray-6 focus:border-primary-10"}`}
               placeholder="Digite um número"
             />
             {questionError && <p className="text-sm text-red-11">{questionError}</p>}

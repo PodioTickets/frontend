@@ -70,6 +70,13 @@ function CourtesyFlow() {
     if (!hasPermission("edit_event")) orgNav.replace(registrationsHref);
   }, [permissionsLoading, hasPermission, orgNav, registrationsHref]);
 
+  // Ao trocar de etapa, volta ao topo — cada etapa deve começar visível no topo
+  // (sem herdar o scroll da etapa anterior, que era mais longa). Scroll é da window,
+  // igual aos passos do checkout (InformationStep/PaymentStep usam window.scrollTo).
+  useEffect(() => {
+    window.scrollTo({ top: 0 });
+  }, [step]);
+
   const finalize = async (): Promise<boolean> => {
     if (!orderId) return false;
     const res = await finalizeCourtesy(orderId);
@@ -167,6 +174,9 @@ function CourtesyFlow() {
     return <div className="min-h-screen bg-gray-2 flex items-center justify-center pt-16 md:pt-0 text-gray-11">Evento não encontrado.</div>;
   }
 
+  // Nº de inscrições criadas = total de ingressos selecionados (1 inscrição/ingresso).
+  // Usado na tela de conclusão para concordância singular/plural.
+  const totalRegistrations = Object.values(raceQuantities).reduce((s, q) => s + (q > 0 ? q : 0), 0);
   const activeStepId = step === "tickets" ? 1 : step === "info" ? 2 : step === "products" ? 3 : 4;
   const stepLabel = step === "tickets" ? "Ingressos" : step === "info" ? "Informações" : step === "products" ? "Produtos" : "Conclusão";
   const back = () => {
@@ -181,7 +191,7 @@ function CourtesyFlow() {
 
       {step === "done" ? (
         <div className="w-full max-w-[1280px] mx-auto px-4">
-          <DoneStep onSee={() => orgNav.push(registrationsHref)} />
+          <DoneStep count={totalRegistrations} onSee={() => orgNav.push(registrationsHref)} />
         </div>
       ) : (
         <HidePricingProvider>
@@ -235,7 +245,9 @@ function CourtesyStepper({ activeStep, currentLabel, onBack, showBack }: { activ
 }
 
 /* ── Conclusão (Figma 6410:130364) ───────────────────────────────────────── */
-function DoneStep({ onSee }: { onSee: () => void }) {
+function DoneStep({ count, onSee }: { count: number; onSee: () => void }) {
+  // Concordância singular/plural conforme a quantidade de inscrições criadas.
+  const isSingle = count === 1;
   return (
     <div className="w-full flex flex-col items-center text-center">
       <div className="flex flex-col items-center gap-2">
@@ -246,10 +258,12 @@ function DoneStep({ onSee }: { onSee: () => void }) {
         </div>
         <div className="flex flex-col items-center gap-4">
           <h2 className="text-[32px] font-extrabold font-manrope text-gray-12 leading-[1.1]">
-            Inscrições criadas!
+            {isSingle ? "Inscrição criada!" : "Inscrições criadas!"}
           </h2>
           <p className="text-lg font-medium font-family-dm-sans text-gray-12 leading-[1.3]">
-            Cada participante recebeu o próprio ingresso por e-mail.
+            {isSingle
+              ? "O participante recebeu o ingresso por e-mail."
+              : "Cada participante recebeu o próprio ingresso por e-mail."}
           </p>
         </div>
       </div>

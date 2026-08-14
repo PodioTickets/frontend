@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useOrganizerNavigate } from "@/hooks/useOrganizerNavigate";
 import { useAuth } from "@/hooks/useAuth";
 import { organizerService } from "@/services";
@@ -21,7 +21,7 @@ import { useOrganizerPermissions } from "@/contexts/OrganizerPermissionsContext"
 import { useOrganizerAppSurface } from "@/contexts/OrganizerAppSurfaceContext";
 import { organizerExternalHref } from "@/lib/organizerPathPresentation";
 import { wouldRegistrationEndBeforeStart, REGISTRATION_END_BEFORE_START_TOAST, isRegistrationStartNotBeforeEvent, REGISTRATION_START_NOT_BEFORE_EVENT_TOAST } from "@/utils/registrationPeriod";
-import { getFriendlyBackendError } from "@/lib/backendErrorMessage";
+import { getFriendlyBackendError, isDuplicateEventNameError, DUPLICATE_EVENT_NAME_MESSAGE } from "@/lib/backendErrorMessage";
 
 export default function InformacoesPage() {
   const orgNav = useOrganizerNavigate();
@@ -32,6 +32,8 @@ export default function InformacoesPage() {
   const { authChecked } = useWizardAuth();
   const [loading, setLoading] = useState(false);
   const [hasLocalRegulationDraft, setHasLocalRegulationDraft] = useState(false);
+  // Single-flight da checagem de nome: respostas obsoletas são descartadas.
+  const nameCheckSeq = useRef(0);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -98,9 +100,45 @@ export default function InformacoesPage() {
     return Object.keys(newErrors).length === 0;
   };
 
+  /**
+   * Checagem AO VIVO de "nome já usado" (regra name-only por organização). Seta
+   * `errors.name` quando indisponível e limpa APENAS o erro de duplicado quando
+   * volta a ficar livre (não pisa em "obrigatório" etc.). Na edição, exclui o
+   * próprio evento. Falha de rede/indisponibilidade → assume disponível (o submit
+   * revalida no backend). Retorna se o nome está disponível.
+   */
+  const ensureEventNameAvailable = async (rawName: string): Promise<boolean> => {
+    const name = rawName.trim();
+    if (!name) return true; // vazio → tratado pela validação de obrigatório
+    const seq = ++nameCheckSeq.current;
+    const available = await organizerService.checkEventNameAvailability(
+      name,
+      formData.createdEventId || undefined,
+    );
+    if (seq !== nameCheckSeq.current) return available; // resposta obsoleta
+    setErrors((prev) =>
+      !available
+        ? { ...prev, name: DUPLICATE_EVENT_NAME_MESSAGE }
+        : prev.name === DUPLICATE_EVENT_NAME_MESSAGE
+          ? { ...prev, name: "" }
+          : prev,
+    );
+    return available;
+  };
+
+  const handleNameBlur = (name: string) => {
+    void ensureEventNameAvailable(name);
+  };
+
   const handleSubmit = async (_e: React.FormEvent, resolvedPdfUrl: string | null) => {
     if (!validateForm()) {
       toast.error("Por favor, corrija os erros no formulário");
+      return;
+    }
+    // Gate final antes de gravar (o backend também enforce; isto evita ida à API
+    // e já mostra o erro no input do nome).
+    if (!(await ensureEventNameAvailable(formData.name))) {
+      toast.error(DUPLICATE_EVENT_NAME_MESSAGE);
       return;
     }
     setLoading(true);
@@ -131,7 +169,13 @@ export default function InformacoesPage() {
       toast.success("Rascunho salvo!");
       orgNav.push("/organizer/events/new/banner");
     } catch (error) {
-      toast.error(getFriendlyBackendError(error, "Erro ao salvar evento"));
+      const friendly = getFriendlyBackendError(error, "Erro ao salvar evento");
+      // Nome+data duplicados: além do toast, destaca o erro no input do nome
+      // (mesmo padrão `errors.name` das validações client-side; limpa on change).
+      if (isDuplicateEventNameError(error)) {
+        setErrors((prev) => ({ ...prev, name: friendly }));
+      }
+      toast.error(friendly);
     } finally {
       setLoading(false);
     }
@@ -178,6 +222,7 @@ export default function InformacoesPage() {
         onChange={updateFormData}
         errors={errors}
         onErrorsChange={setErrors}
+        onNameBlur={handleNameBlur}
         onSubmit={handleSubmit}
         loading={loading}
         enableIpLocationDefault

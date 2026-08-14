@@ -9,6 +9,7 @@ import { getAvatarUrl } from "@/utils/avatar";
 import { formatDateBRTShort, formatTimeBRT } from "@/utils/datetimeBR";
 import {
   getFinalStatus,
+  isVoucherRegistration,
   type RegistrationListRow,
   type RegistrationStatusBadge,
 } from "@/lib/registrations";
@@ -53,6 +54,12 @@ export function RegistrationRow({
     (finalStatus === "CONFIRMED" ||
       finalStatus === "COMPLETED" ||
       paymentStatus === "PAID");
+  // "Voucher" só substitui o estado "Pago"/grátis (cortesia do painel ou voucher
+  // totalmente grátis). Cancelado/estornado/chargeback têm prioridade → gate por isPaid.
+  const isVoucher = isPaid && isVoucherRegistration(registration);
+  // Cortesia (criada pelo organizador via painel "adicionar inscrição") não tem
+  // pedido/pagamento real → esconde o atalho "Ver pedido".
+  const isCourtesy = registration.order?.isCourtesy === true;
 
   // Avatar com fallback para primeira letra
   const fullName = `${registration.user?.firstName || ""} ${registration.user?.lastName || ""}`.trim();
@@ -138,26 +145,30 @@ export function RegistrationRow({
       {/* Status */}
       <div className="flex h-full items-center justify-center text-center p-4 w-[120px]">
         <span
-          className={`inline-flex items-center justify-center gap-1 px-3 py-1 rounded text-xs font-medium ${isPaid
+          className={`inline-flex items-center justify-center gap-1 px-3 py-1 rounded text-xs font-medium ${isVoucher
             ? "bg-primary-11 text-white"
-            : isCancelled
-              ? "bg-red-11 text-white"
-              : isChargeback
+            : isPaid
+              ? "bg-primary-11 text-white"
+              : isCancelled
                 ? "bg-red-11 text-white"
-                : isRefunded
+                : isChargeback
                   ? "bg-red-11 text-white"
-                  : statusBadge?.className || "bg-gray-10/20 text-gray-11"
+                  : isRefunded
+                    ? "bg-red-11 text-white"
+                    : statusBadge?.className || "bg-gray-10/20 text-gray-11"
             }`}
         >
-          {isPaid
-            ? "Pago"
-            : isCancelled
-              ? "Cancelado"
-              : isChargeback
-                ? "ChargeBack"
-                : isRefunded
-                  ? "Estornado"
-                  : statusBadge?.label || "Desconhecido"}
+          {isVoucher
+            ? "Voucher"
+            : isPaid
+              ? "Pago"
+              : isCancelled
+                ? "Cancelado"
+                : isChargeback
+                  ? "ChargeBack"
+                  : isRefunded
+                    ? "Estornado"
+                    : statusBadge?.label || "Desconhecido"}
         </span>
       </div>
 
@@ -165,15 +176,17 @@ export function RegistrationRow({
       <div className="flex gap-1 h-full items-center justify-center px-4 py-2 w-[112px]">
         {!isCancelled && (
           <>
-            <button
-              onClick={onViewPaymentDetails}
-              name="view-payment-details"
-              aria-label="Ver pedido"
-              title="Ver pedido"
-              className="bg-gray-2 border border-gray-6 rounded-lg size-8 flex items-center justify-center hover:bg-gray-3 transition-colors cursor-pointer"
-            >
-              <FileText className="size-4 text-gray-11" />
-            </button>
+            {!isCourtesy && (
+              <button
+                onClick={onViewPaymentDetails}
+                name="view-payment-details"
+                aria-label="Ver pedido"
+                title="Ver pedido"
+                className="bg-gray-2 border border-gray-6 rounded-lg size-8 flex items-center justify-center hover:bg-gray-3 transition-colors cursor-pointer"
+              >
+                <FileText className="size-4 text-gray-11" />
+              </button>
+            )}
             <button
               onClick={onViewRegistration}
               name="view-registration"

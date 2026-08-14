@@ -63,26 +63,14 @@ function PaginationBar({
   page,
   onPageChange,
   variant,
-  totalItems,
-  pageSize,
 }: {
   totalPages: number;
   page: number;
   onPageChange: (p: number) => void;
   variant: "desktop" | "mobile";
-  totalItems?: number;
-  pageSize?: number;
 }) {
   if (totalPages <= 1) return null;
   const safePage = Math.min(page, totalPages);
-  // Registros exibidos na página ATUAL (página cheia, exceto a última).
-  const shown =
-    totalItems != null && pageSize != null
-      ? Math.max(
-          0,
-          Math.min(safePage * pageSize, totalItems) - (safePage - 1) * pageSize
-        )
-      : null;
   const isMobile = variant === "mobile";
 
   const navBtn = isMobile
@@ -107,18 +95,6 @@ function PaginationBar({
         isMobile ? "justify-center w-full py-4 flex-wrap" : "justify-end px-4 py-5 border-t border-gray-6",
       )}
     >
-      {totalItems != null && (
-        <p
-          className={cn(
-            "shrink-0 text-sm text-gray-11 font-family-dm-sans whitespace-nowrap",
-            !isMobile && "mr-auto"
-          )}
-        >
-          {shown != null
-            ? `Exibindo ${shown.toLocaleString("pt-BR")} de ${totalItems!.toLocaleString("pt-BR")} registros`
-            : `Exibindo ${totalItems!.toLocaleString("pt-BR")} registros`}
-        </p>
-      )}
       <button type="button" onClick={() => onPageChange(Math.max(1, safePage - 1))} disabled={safePage <= 1} className={navBtn} aria-label="Página anterior">
         <ChevronLeft className={cn("size-4", isMobile ? "text-gray-12" : "text-gray-11")} />
       </button>
@@ -304,7 +280,7 @@ export default function AdminOrgMembersPage() {
               );
             })
           )}
-          <PaginationBar totalPages={totalPages} page={safePage} onPageChange={setPage} totalItems={filtered.length} pageSize={ITEMS_PER_PAGE} variant="mobile" />
+          <PaginationBar totalPages={totalPages} page={safePage} onPageChange={setPage} variant="mobile" />
         </div>
 
         {/* Desktop: table */}
@@ -381,7 +357,7 @@ export default function AdminOrgMembersPage() {
               </tbody>
             </table>
           </div>
-          <PaginationBar totalPages={totalPages} page={safePage} onPageChange={setPage} totalItems={filtered.length} pageSize={ITEMS_PER_PAGE} variant="desktop" />
+          <PaginationBar totalPages={totalPages} page={safePage} onPageChange={setPage} variant="desktop" />
         </div>
 
       </div>

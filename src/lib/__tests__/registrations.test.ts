@@ -9,6 +9,7 @@ import {
   registrationsWeekOverWeekPercent,
   getFinalStatus,
   getRegistrationStatusBadge,
+  isVoucherRegistration,
   type RegistrationListRow,
 } from "../registrations";
 
@@ -121,6 +122,39 @@ describe("getFinalStatus", () => {
   it("sem metadata, paymentStatus REFUNDED/CHARGEBACK prevalece", () => {
     const r = base({ order: { finalAmount: 0, payment: { status: "REFUNDED" } } });
     expect(getFinalStatus(r)).toBe("REFUNDED");
+  });
+});
+
+describe("isVoucherRegistration", () => {
+  const base = (over: Partial<RegistrationListRow>): RegistrationListRow =>
+    ({ id: "1", status: "CONFIRMED", user: {}, ...over } as RegistrationListRow);
+
+  it("cortesia (criada pelo painel) → voucher, independente do valor", () => {
+    expect(
+      isVoucherRegistration(base({ order: { finalAmount: 0, isCourtesy: true } })),
+    ).toBe(true);
+  });
+
+  it("voucher totalmente grátis (voucherId + finalAmount 0) → voucher", () => {
+    expect(
+      isVoucherRegistration(base({ order: { finalAmount: 0, voucherId: "v1" } })),
+    ).toBe(true);
+  });
+
+  it("voucher com valor pago (adicionais → finalAmount > 0) → NÃO é voucher", () => {
+    expect(
+      isVoucherRegistration(base({ order: { finalAmount: 1500, voucherId: "v1" } })),
+    ).toBe(false);
+  });
+
+  it("grátis sem voucher e sem cortesia (ingresso gratuito comum) → NÃO é voucher", () => {
+    expect(
+      isVoucherRegistration(base({ order: { finalAmount: 0 } })),
+    ).toBe(false);
+  });
+
+  it("sem pedido → NÃO é voucher", () => {
+    expect(isVoucherRegistration(base({}))).toBe(false);
   });
 });
 

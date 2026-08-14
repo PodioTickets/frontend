@@ -19,13 +19,25 @@
  */
 
 /**
+ * Mensagem PT do erro "já existe evento com esse nome" (backend
+ * `events.service.create`, regra name-only por organização). Exportada para
+ * permitir DETECTAR esse caso após a tradução (ex.: destacar o input do nome no
+ * wizard de criar evento), sem duplicar a string. Ver `isDuplicateEventNameError`.
+ */
+export const DUPLICATE_EVENT_NAME_MESSAGE =
+  "Você já tem um evento com esse nome. Escolha outro.";
+
+/**
  * Mapa de mensagens EXATAS do backend (chave normalizada em minúsculas) → PT.
  * Chaves sempre em minúsculas/trim para lookup case-insensitive.
  */
 const EXACT_TRANSLATIONS: Record<string, string> = {
-  // Criação de evento (events.service.create)
+  // Criação de evento (events.service.create) — regra name-only por organização.
+  // A chave antiga (name+date) fica mapeada durante a transição de deploy do back.
+  "an event with the same name already exists for this organization":
+    DUPLICATE_EVENT_NAME_MESSAGE,
   "an event with the same name and date already exists for this organization":
-    "Já existe um evento com o mesmo nome e data nesta organização. Altere o nome ou a data.",
+    DUPLICATE_EVENT_NAME_MESSAGE,
 
   // Exclusão de evento
   "only the organization owner can delete events":
@@ -132,4 +144,13 @@ export function getFriendlyBackendError(
   }
 
   return fallback;
+}
+
+/**
+ * Detecta se o erro capturado é o caso "já existe evento com esse nome".
+ * Compara a mensagem JÁ traduzida com `DUPLICATE_EVENT_NAME_MESSAGE`, cobrindo
+ * tanto as mensagens inglesas do backend (traduzidas) quanto o texto PT direto.
+ */
+export function isDuplicateEventNameError(error: unknown): boolean {
+  return getFriendlyBackendError(error, "") === DUPLICATE_EVENT_NAME_MESSAGE;
 }
