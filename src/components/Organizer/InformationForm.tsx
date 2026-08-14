@@ -113,6 +113,12 @@ interface InformationFormProps {
   errors: Record<string, string>;
   onErrorsChange: React.Dispatch<React.SetStateAction<Record<string, string>>>;
   /**
+   * Chamado no `blur` do campo Nome — checagem AO VIVO de nome já usado na
+   * organização (o pai faz a chamada ao backend e seta `errors.name`). Opcional:
+   * fluxos que não checam nome (ex.: edição sem regra) simplesmente não passam.
+   */
+  onNameBlur?: (name: string) => void;
+  /**
    * Called after internal PDF upload (if any).
    * Receives the resolved regulation URL (uploaded or already set) or null.
    */
@@ -145,6 +151,7 @@ export function InformationForm({
   onChange,
   errors,
   onErrorsChange,
+  onNameBlur,
   onSubmit,
   loading = false,
   hasLocalRegulationDraft = false,
@@ -499,6 +506,7 @@ export function InformationForm({
                 name="name"
                 value={values.name}
                 onChange={handleInputChange}
+                onBlur={() => onNameBlur?.(values.name)}
                 placeholder="Ex: Corrida Pena Nubas 2025"
                 className={`h-12 shadow-none ${errors.name ? "border-red-10" : ""}`}
                 maxLength={EVENT_NAME_MAX_LENGTH}

@@ -2,25 +2,33 @@ import { describe, it, expect } from "vitest";
 import {
   translateBackendMessage,
   getFriendlyBackendError,
+  isDuplicateEventNameError,
+  DUPLICATE_EVENT_NAME_MESSAGE,
 } from "@/lib/backendErrorMessage";
 
 describe("translateBackendMessage", () => {
-  it("traduz a mensagem de nome/data de evento duplicado", () => {
+  it("traduz a mensagem de nome de evento duplicado (name-only)", () => {
+    expect(
+      translateBackendMessage(
+        "An event with the same name already exists for this organization",
+      ),
+    ).toBe(DUPLICATE_EVENT_NAME_MESSAGE);
+  });
+
+  it("mantém a mensagem antiga (name+date) mapeada durante a transição de deploy", () => {
     expect(
       translateBackendMessage(
         "An event with the same name and date already exists for this organization",
       ),
-    ).toBe(
-      "Já existe um evento com o mesmo nome e data nesta organização. Altere o nome ou a data.",
-    );
+    ).toBe(DUPLICATE_EVENT_NAME_MESSAGE);
   });
 
   it("é case-insensitive e ignora espaços nas bordas", () => {
     expect(
       translateBackendMessage(
-        "  AN EVENT WITH THE SAME NAME AND DATE ALREADY EXISTS FOR THIS ORGANIZATION  ",
+        "  AN EVENT WITH THE SAME NAME ALREADY EXISTS FOR THIS ORGANIZATION  ",
       ),
-    ).toContain("Já existe um evento");
+    ).toBe(DUPLICATE_EVENT_NAME_MESSAGE);
   });
 
   it("traduz mensagens de publicação/análise", () => {
@@ -63,11 +71,11 @@ describe("getFriendlyBackendError", () => {
       response: {
         data: {
           message:
-            "An event with the same name and date already exists for this organization",
+            "An event with the same name already exists for this organization",
         },
       },
     };
-    expect(getFriendlyBackendError(err)).toContain("Já existe um evento");
+    expect(getFriendlyBackendError(err)).toBe(DUPLICATE_EVENT_NAME_MESSAGE);
   });
 
   it("junta e traduz array de mensagens (class-validator)", () => {
@@ -99,5 +107,27 @@ describe("getFriendlyBackendError", () => {
     expect(getFriendlyBackendError(null, "Erro ao salvar evento")).toBe(
       "Erro ao salvar evento",
     );
+  });
+});
+
+describe("isDuplicateEventNameError", () => {
+  it("detecta a partir da mensagem inglesa do backend (name-only e a antiga name+date)", () => {
+    for (const message of [
+      "An event with the same name already exists for this organization",
+      "An event with the same name and date already exists for this organization",
+    ]) {
+      expect(isDuplicateEventNameError({ response: { data: { message } } })).toBe(true);
+    }
+  });
+
+  it("detecta quando o backend já manda o texto PT", () => {
+    const err = { response: { data: { message: DUPLICATE_EVENT_NAME_MESSAGE } } };
+    expect(isDuplicateEventNameError(err)).toBe(true);
+  });
+
+  it("é false para outros erros e para erro vazio", () => {
+    expect(isDuplicateEventNameError({ message: "Network Error" })).toBe(false);
+    expect(isDuplicateEventNameError({})).toBe(false);
+    expect(isDuplicateEventNameError(null)).toBe(false);
   });
 });

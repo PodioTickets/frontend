@@ -99,6 +99,33 @@ export class OrganizerService extends OrganizerOrganizationService {
     return response.data.event;
   }
 
+  /**
+   * Disponibilidade do NOME do evento na organização do usuário (regra name-only,
+   * case-insensitive). Usado pelo wizard de criar evento para checar AO VIVO
+   * (onBlur) se o nome já existe. `excludeEventId` ignora o próprio evento na
+   * edição. Rota autenticada; retorna só `{ available }`. Em falha de rede assume
+   * `true` (não trava o preenchimento; o submit ainda revalida no backend).
+   */
+  async checkEventNameAvailability(
+    name: string,
+    excludeEventId?: string,
+  ): Promise<boolean> {
+    const normalized = name.trim();
+    if (!normalized) return true;
+    try {
+      const { data } = await this.apiClient.get<{
+        data?: { available?: boolean };
+        available?: boolean;
+      }>("/api/v1/events/name-availability", {
+        params: { name: normalized, excludeEventId },
+      });
+      const available = data?.data?.available ?? data?.available;
+      return available !== false;
+    } catch {
+      return true;
+    }
+  }
+
   async getMyEvents(params?: {
     page?: number;
     limit?: number;
