@@ -96,7 +96,9 @@ function CourtesyFlow() {
     busyRef.current = true;
     setBusy(true);
     try {
-      const order = await reserveOrder({ eventId, tickets });
+      // Cortesia: libera janela encerrada + lote esgotado + teto do evento
+      // (backend revalida a permissão do organizador).
+      const order = await reserveOrder({ eventId, tickets, isCourtesy: true });
       bindOrder(order.orderId);
       startTimer(order, registrationsHref);
       setStep("info");
