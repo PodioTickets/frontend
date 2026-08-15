@@ -170,17 +170,17 @@ export function RegistrationsView({
               Acompanhe todas as inscrições do evento e gerencie pedidos, pagamentos e status.
             </p>
           </div>
-          {addRegistrantHref && (
+         {/*  {addRegistrantHref && (
             <Button asChild variant={"outline"} className="h-11 border-gray-6 text-gray-12 shrink-0 gap-2 font-manrope font-bold">
               <Link href={addRegistrantHref}>
                 Adicionar inscrito
               </Link>
             </Button>
-          )}
+          )} */}
         </div>
 
         {/* Mobile: botão "Adicionar inscrito" (full-width, quando permitido) */}
-        {addRegistrantHref && (
+       {/*  {addRegistrantHref && (
           <div className="md:hidden mt-4">
             <Button variant={"outline"} asChild className="h-11 border-gray-6 text-gray-12 w-full gap-2 font-manrope font-bold">
               <Link href={addRegistrantHref}>
@@ -188,7 +188,7 @@ export function RegistrationsView({
               </Link>
             </Button>
           </div>
-        )}
+        )} */}
 
         {/* Mobile: Search + Limpar + Filtros row */}
         <div className="md:hidden flex flex-col gap-2 items-center my-4">
