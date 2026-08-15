@@ -181,23 +181,12 @@ export function RevenueChart({ data }: RevenueChartProps) {
     );
   }, [data]);
 
-  // No mobile com muitos pontos, amostrar para no máximo MAX_LABELS_MOBILE (gráfico legível)
-  const displayData = useMemo(() => {
-    if (!isMobile || !chartData.labels?.length || chartData.labels.length <= MAX_LABELS_MOBILE) {
-      return chartData;
-    }
-    const n = chartData.labels.length;
-    const indices = Array.from({ length: MAX_LABELS_MOBILE }, (_, i) =>
-      i === MAX_LABELS_MOBILE - 1 ? n - 1 : Math.round((i * (n - 1)) / (MAX_LABELS_MOBILE - 1)),
-    );
-    const labels = indices.map((i) => chartData.labels[i]);
-    const revenue = indices.map((i) => chartData.revenue[i]);
-    const dailyData =
-      Array.isArray(chartData.dailyData) && chartData.dailyData.length > 0
-        ? indices.map((i) => chartData.dailyData![i])
-        : undefined;
-    return { labels, revenue, dailyData };
-  }, [chartData, isMobile]);
+  // Plota TODOS os pontos (sem amostrar os DADOS) — assim o espaçamento no eixo X
+  // é PROPORCIONAL ao tempo. Amostrar os dados (antes, no mobile) fazia horas com
+  // gaps diferentes (ex.: 00h→08h vs 08h→15h) aparecerem à MESMA distância, e
+  // colapsava um dia de 24h em 4 pontos. A densidade de RÓTULOS continua controlada
+  // à parte (shownIndices) para manter o gráfico legível no mobile.
+  const displayData = chartData;
 
   // Calcular valores dinâmicos para o eixo Y (usa displayData para mobile com poucos pontos)
   const yAxisScale = useMemo(() => {
@@ -478,13 +467,29 @@ export function RevenueChart({ data }: RevenueChartProps) {
         <div className="absolute -bottom-5 md:-bottom- left-0 right-0 flex justify-between px-0">
           {(() => {
             const totalLabels = displayData.labels.length;
-            const maxLabels = isMobile ? MAX_LABELS_MOBILE : MAX_LABELS_DESKTOP;
-            const count = Math.min(maxLabels, totalLabels);
-            const shownIndices = new Set(
-              Array.from({ length: count }, (_, k) =>
-                count === 1 ? 0 : Math.round((k * (totalLabels - 1)) / (count - 1))
-              )
-            );
+            // "Hoje" (rótulos de hora "HHh"): mostra de 4 EM 4 HORAS (00h,04h,…,20h)
+            // — espaçamento uniforme. `index === hora` (chaves 00h→23h contíguas),
+            // mas parseamos a hora do rótulo para ser robusto a dias parciais.
+            const isHourly =
+              totalLabels > 0 &&
+              displayData.labels.every((l) => /^\d{1,2}h$/.test(String(l).trim()));
+            let shownIndices: Set<number>;
+            if (isHourly) {
+              const HOUR_STEP = 4;
+              shownIndices = new Set(
+                displayData.labels
+                  .map((l, i) => (parseInt(String(l), 10) % HOUR_STEP === 0 ? i : -1))
+                  .filter((i) => i >= 0),
+              );
+            } else {
+              const maxLabels = isMobile ? MAX_LABELS_MOBILE : MAX_LABELS_DESKTOP;
+              const count = Math.min(maxLabels, totalLabels);
+              shownIndices = new Set(
+                Array.from({ length: count }, (_, k) =>
+                  count === 1 ? 0 : Math.round((k * (totalLabels - 1)) / (count - 1)),
+                ),
+              );
+            }
             const shouldShow = (i: number) => shownIndices.has(i);
 
             return displayData.labels.map((label, index) => {
