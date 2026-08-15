@@ -501,8 +501,10 @@ export default function TicketDetailsPage() {
                     </div>
                   </div>
 
-                  {/* Tabs */}
-                  {isExpanded && (
+                  {/* Tabs — só quando há mais de "Informações" (produtos e/ou
+                      questionário). Sem outras abas, o botão "Informações" seria
+                      redundante: escondemos a faixa e o corpo de info renderiza direto. */}
+                  {isExpanded && (hasProducts || hasQuestions) && (
                     <div className="flex flex-wrap gap-3 items-start px-4 pt-5">
                       <button
                         onClick={() => setActiveTab((prev) => ({ ...prev, [index]: "info" }))}

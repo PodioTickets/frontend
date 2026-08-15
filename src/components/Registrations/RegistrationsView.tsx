@@ -21,6 +21,7 @@ import type { Event } from "@/interfaces/event";
 import type { RegistrationStats } from "@/services/organizer/OrganizerService";
 import {
   getFinalStatus,
+  isVoucherRegistration,
   type RegistrationListRow,
   type RegistrationStatusBadge,
 } from "@/lib/registrations";
@@ -179,7 +180,7 @@ export function RegistrationsView({
         </div>
 
         {/* Mobile: botão "Adicionar inscrito" (full-width, quando permitido) */}
-        {/* {addRegistrantHref && (
+       {/*  {addRegistrantHref && (
           <div className="md:hidden mt-4">
             <Button variant={"outline"} asChild className="h-11 border-gray-6 text-gray-12 w-full gap-2 font-manrope font-bold">
               <Link href={addRegistrantHref}>
@@ -473,8 +474,13 @@ export function RegistrationsView({
                       (finalStatus === "CONFIRMED" ||
                         finalStatus === "COMPLETED" ||
                         paymentStatus === "PAID");
-                    const statusLabel = isPaid ? "Pago" : isCancelled ? "Cancelado" : isRefunded ? "Estornado" : isChargeback ? "ChargeBack" : "Pendente";
-                    const statusClass = isPaid ? "bg-[#21835d] text-primary-1" : isCancelled || isRefunded || isChargeback ? "bg-red-11 text-white" : "bg-yellow-11 text-yellow-1";
+                    // "Voucher" só substitui o "Pago"/grátis (cortesia do painel ou
+                    // voucher totalmente grátis) — gate por isPaid mantém a precedência.
+                    const isVoucher = isPaid && isVoucherRegistration(registration);
+                    // Cortesia (criada pelo organizador) não tem pedido real → sem "Ver pedido".
+                    const isCourtesy = registration.order?.isCourtesy === true;
+                    const statusLabel = isVoucher ? "Voucher" : isPaid ? "Pago" : isCancelled ? "Cancelado" : isRefunded ? "Estornado" : isChargeback ? "ChargeBack" : "Pendente";
+                    const statusClass = isVoucher ? "bg-[#21835d] text-primary-1" : isPaid ? "bg-[#21835d] text-primary-1" : isCancelled || isRefunded || isChargeback ? "bg-red-11 text-white" : "bg-yellow-11 text-yellow-1";
                     const fullName = `${registration.user?.firstName || ""} ${registration.user?.lastName || ""}`.trim();
                     const createdDate = registration.createdAt ? new Date(registration.createdAt) : null;
                     // registration.createdAt é INSTANTE real → BRT (America/Sao_Paulo).
@@ -552,13 +558,15 @@ export function RegistrationsView({
                               >
                                 Ver ingresso
                               </button>
-                              <button
-                                type="button"
-                                onClick={() => openPaymentDetailsModal({ registrationId: registration.id, eventId, eventName: event?.name })}
-                                className="flex-1 h-11 flex items-center justify-center rounded-lg border border-gray-6 font-manrope font-bold text-base text-gray-12 hover:bg-gray-3 transition-colors"
-                              >
-                                Ver pedido
-                              </button>
+                              {!isCourtesy && (
+                                <button
+                                  type="button"
+                                  onClick={() => openPaymentDetailsModal({ registrationId: registration.id, eventId, eventName: event?.name })}
+                                  className="flex-1 h-11 flex items-center justify-center rounded-lg border border-gray-6 font-manrope font-bold text-base text-gray-12 hover:bg-gray-3 transition-colors"
+                                >
+                                  Ver pedido
+                                </button>
+                              )}
                             </div>
                           </>
                         )}
@@ -567,10 +575,7 @@ export function RegistrationsView({
                   })}
                 </div>
                 {pagination.totalPages > 1 && (
-                  <div className="flex items-center justify-center gap-2 flex-wrap">
-                    <p className="shrink-0 text-sm text-gray-11 font-family-dm-sans whitespace-nowrap">
-                      Exibindo {registrosShown.toLocaleString("pt-BR")} de {pagination.total.toLocaleString("pt-BR")} registros
-                    </p>
+                  <div className="flex items-center justify-start gap-2 flex-wrap">
                     <button
                       type="button"
                       onClick={() => setPagination((p) => ({ ...p, page: Math.max(1, p.page - 1) }))}
@@ -601,6 +606,9 @@ export function RegistrationsView({
                     >
                       <ChevronRight className="size-4" />
                     </button>
+                    <p className="shrink-0 text-sm text-gray-11 font-family-dm-sans whitespace-nowrap ml-auto">
+                      Exibindo {registrosShown.toLocaleString("pt-BR")} de {pagination.total.toLocaleString("pt-BR")} registros
+                    </p>
                   </div>
                 )}
                 <Button
@@ -685,7 +693,7 @@ export function RegistrationsView({
 
                 {/* Pagination */}
                 {pagination.totalPages > 1 && (
-                  <div className="flex items-center justify-center gap-2 py-4 px-5 border-t border-gray-6">
+                  <div className="flex items-center justify-start gap-2 py-4 px-5 border-t border-gray-6">
 
                     <button
                       onClick={() =>
@@ -728,7 +736,7 @@ export function RegistrationsView({
                       <ChevronRight className="size-4" />
                     </button>
 
-                    <p className="shrink-0 text-sm text-gray-11 font-family-dm-sans whitespace-nowrap mr-auto">
+                    <p className="shrink-0 text-sm text-gray-11 font-family-dm-sans whitespace-nowrap ml-auto">
                       Exibindo {registrosShown.toLocaleString("pt-BR")} de {pagination.total.toLocaleString("pt-BR")} registros
                     </p>
                   </div>

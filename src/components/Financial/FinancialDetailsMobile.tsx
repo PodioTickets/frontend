@@ -69,7 +69,7 @@ interface FinancialDetailsMobileProps {
   currentPage: number;
   totalPages: number;
   onPageChange: (page: number) => void;
-  /** Itens por página — usado para exibir "Exibindo {N} de {total}". */
+  /** Itens por página (repassado ao Pagination; a contagem "Exibindo …" foi removida). */
   pageSize?: number;
 
   /* Search (server-side; sem onSearchChange o input fica readOnly) */

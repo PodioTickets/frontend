@@ -71,7 +71,7 @@ interface PaymentDetailsMobileProps {
   onPageChange: (page: number) => void;
   /** Total REAL de participantes (o `participants` recebido é só a página atual). */
   totalParticipants?: number;
-  /** Itens por página — usado para exibir "Exibindo {N} de {total}". */
+  /** Itens por página (repassado ao Pagination; a contagem "Exibindo …" foi removida). */
   pageSize?: number;
 
   /* Copy state (managed pelo caller pra unificar entre mobile/desktop) */

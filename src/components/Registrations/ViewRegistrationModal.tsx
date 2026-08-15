@@ -1394,23 +1394,27 @@ export function ViewRegistrationModal() {
   const content = (
     <div className="flex flex-col">
       {ingressoHeader}
-      <div className="flex flex-wrap gap-2 pt-5">
-        {tabs.map((t) => (
-          <button
-            key={t.key}
-            type="button"
-            onClick={() => setActiveTab(t.key)}
-            className={cn(
-              "px-4 py-2.5 rounded-[32px] font-manrope font-semibold text-base leading-[1.1] transition-colors cursor-pointer",
-              activeTab === t.key
-                ? "bg-primary-11 text-primary-2"
-                : "bg-gray-5 text-gray-11 hover:bg-gray-6",
-            )}
-          >
-            {t.label}
-          </button>
-        ))}
-      </div>
+      {/* Só há "Informações" (sem produtos nem questionário) → esconde a faixa de
+          abas: um único botão é redundante. O corpo de info renderiza direto. */}
+      {tabs.length > 1 && (
+        <div className="flex flex-wrap gap-2 pt-5">
+          {tabs.map((t) => (
+            <button
+              key={t.key}
+              type="button"
+              onClick={() => setActiveTab(t.key)}
+              className={cn(
+                "px-4 py-2.5 rounded-[32px] font-manrope font-semibold text-base leading-[1.1] transition-colors cursor-pointer",
+                activeTab === t.key
+                  ? "bg-primary-11 text-primary-2"
+                  : "bg-gray-5 text-gray-11 hover:bg-gray-6",
+              )}
+            >
+              {t.label}
+            </button>
+          ))}
+        </div>
+      )}
       <div className="pt-6">
         {activeTab === "info" && participantSection}
         {activeTab === "products" && produtosSection}

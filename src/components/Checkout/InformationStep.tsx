@@ -756,80 +756,70 @@ export function InformationStep({
     const willClose = isCurrentlyExpanded;
     setExpandedParticipants(willClose ? {} : { [index]: true });
 
-    // Depois de salvar (fechar) um participante, rola para o proximo pendente
-    // em vez de deixar o usuario perdido fora do viewport. Vale pra mobile e
-    // desktop — cards stack vertical em ambos no checkout, mesmo bug em ambos.
+    // Ao salvar (fechar) um participante, ajusta o scroll (decisão do usuário):
+    // - DESKTOP: reseta TUDO pro topo.
+    // - MOBILE: rola pro PRÓXIMO participante pendente (cards empilhados; sem isso
+    //   o usuário fica perdido fora do viewport após o colapso).
+    // Scroll é da window nos dois fluxos (checkout e "adicionar inscrito" do organizador).
     if (willClose && typeof window !== "undefined") {
-      // Usa total real de participantes visiveis (raceQuantities) — array
+      const isDesktop = window.matchMedia("(min-width: 768px)").matches;
+      if (isDesktop) {
+        requestAnimationFrame(() => {
+          window.scrollTo({ top: 0, behavior: "smooth" });
+        });
+        return;
+      }
+
+      // Mobile: total real de participantes visíveis (raceQuantities) — o array
       // `participants` pode ter slots stale de quantidades anteriores.
       const totalVisible = Object.values(raceQuantities).reduce(
         (sum, q) => sum + (q > 0 ? q : 0),
         0,
       );
+      // Próximo pendente a partir do índice atual (wrap-around). O `savedParticipants`
+      // ainda não reflete o save deste click (state assíncrono), mas o `continue`
+      // no próprio índice o ignora.
       const findNextPending = () => {
-        // Procura a partir do indice atual (wrap-around). Considera saved
-        // como "true" pro indice que acabou de ser salvo — state ainda nao
-        // reflete o `setSavedParticipants` do click que disparou esse toggle.
         for (let step = 1; step <= totalVisible; step++) {
           const i = (index + step) % totalVisible;
           if (i === index) continue;
-          const isThisOne = i === index;
-          const incomplete = !isThisOne && (!savedParticipants[i] || !!participantDirtyMap[i]);
-          if (incomplete) return i;
+          if (!savedParticipants[i] || !!participantDirtyMap[i]) return i;
         }
         return null;
       };
-      // Sem proximo pendente (ex: unico participante ou ultimo a salvar) cai
-      // de volta pro proprio indice — sem isso o colapso encurta o body e o
-      // navegador deixa o usuario perto do rodape, parecendo "perdido".
-      // Desktop com 1 participante: rola pro topo "Informacoes basicas" pra
-      // dar contexto do form todo visivel apos o save.
+
       const headerEl = document.querySelector("header");
       const headerH = headerEl?.getBoundingClientRect().height ?? 64;
       const HEADER_OFFSET = headerH + 12;
 
-      // Scroll suave SEM o "desce e sobe": em vez de esperar a transicao do
-      // colapso (que desloca o layout e exige um segundo scroll por cima),
-      // calculamos a posicao FINAL do alvo descontando a altura que o card
-      // recem-salvo vai perder ao colapsar, e disparamos UM unico scroll suave
-      // concorrente com a animacao. O alvo "assenta" exatamente onde paramos.
+      // Scroll suave SEM o "desce e sobe": calcula a posição FINAL do alvo já
+      // descontando a altura que o card recém-salvo perde ao colapsar, e dispara
+      // UM único scroll concorrente com a animação (o alvo "assenta" no lugar).
       const savedEl = document.querySelector<HTMLElement>(
         `[data-participant-index="${index}"]`,
       );
-      // Altura aproximada de um card colapsado (so o cabecalho). Usada pra
-      // estimar o quanto o conteudo abaixo sobe quando o card colapsa.
-      const COLLAPSED_CARD_H = 88;
+      const COLLAPSED_CARD_H = 88; // altura aprox. de um card colapsado (só o cabeçalho)
       const collapseDelta = savedEl
         ? Math.max(0, savedEl.getBoundingClientRect().height - COLLAPSED_CARD_H)
         : 0;
-
       const smoothTo = (el: HTMLElement | null, subtractDelta: boolean) => {
         if (!el) return;
         const rect = el.getBoundingClientRect();
-        // Alvo abaixo do card que colapsa sobe por `collapseDelta`; alvo acima
-        // (wrap-around / ancora) nao se move, entao delta = 0.
         const top =
           window.scrollY + rect.top - HEADER_OFFSET - (subtractDelta ? collapseDelta : 0);
-        // rAF: dispara no mesmo quadro do colapso → uma glide unica e fluida.
         requestAnimationFrame(() => {
           window.scrollTo({ top: Math.max(0, top), behavior: "smooth" });
         });
       };
 
-      const isDesktop = window.matchMedia("(min-width: 768px)").matches;
-      if (isDesktop && totalVisible === 1) {
-        // Ancora "Informacoes basicas" fica ACIMA do card — colapso nao a move.
-        smoothTo(document.querySelector<HTMLElement>('[data-info-anchor="true"]'), false);
-        return;
-      }
+      // Sem próximo pendente (último a salvar) volta pro próprio índice — evita
+      // deixar o usuário perto do rodapé após o colapso encurtar o body.
       const next = findNextPending() ?? index;
-      if (next !== null) {
-        const nextEl = document.querySelector<HTMLElement>(
-          `[data-participant-index="${next}"]`,
-        );
-        // Desconta o delta so quando o proximo esta ABAIXO do que colapsou.
-        smoothTo(nextEl, next > index);
-      }
+      const nextEl = document.querySelector<HTMLElement>(
+        `[data-participant-index="${next}"]`,
+      );
+      // Desconta o delta só quando o próximo está ABAIXO do que colapsou.
+      smoothTo(nextEl, next > index);
     }
   };
 
@@ -1759,16 +1749,28 @@ export function InformationStep({
                 {question.description ?? ""}
               </label>
             )}
-            <input
-              type="number"
-              value={typeof answer === "string" ? answer : ""}
-              onChange={(e) => {
-                clearParticipantFieldError(participantIndex, `question_${question.id}`);
-                updateQuestionAnswer(participantIndex, question.id, e.target.value);
-              }}
-              className={`w-full md:w-1/2 h-12 px-3 rounded-lg border bg-transparent text-gray-12 focus:outline-none focus:bg-gray-3 transition-colors font-family-dm-sans text-base placeholder:text-gray-11 ${questionError ? "border-red-6 focus:border-red-10" : "border-gray-6 focus:border-primary-10"}`}
-              placeholder="Digite um número"
-            />
+            {/* Largura EXATA do placeholder ("grid sizing"): um sizer invisível com
+                o MESMO texto/estilo/padding/borda define a largura da célula; o
+                input (`min-w-0` + `w-full`) apenas a preenche. Determinístico e
+                cross-browser (usa a fonte real), sem depender de `ch`/`field-sizing`. */}
+            <div className="inline-grid max-w-[3rem]">
+              <input
+                type="number"
+                value={typeof answer === "string" ? answer : ""}
+                onChange={(e) => {
+                  clearParticipantFieldError(participantIndex, `question_${question.id}`);
+                  updateQuestionAnswer(participantIndex, question.id, e.target.value);
+                }}
+                className={`[grid-area:1/1] w-full min-w-0 h-12 px-3 rounded-lg border bg-transparent text-gray-12 focus:outline-none focus:bg-gray-3 transition-colors font-family-dm-sans text-base placeholder:text-gray-11 ${questionError ? "border-red-6 focus:border-red-10" : "border-gray-6 focus:border-primary-10"}`}
+                placeholder="Digite um número"
+              />
+              <span
+                aria-hidden
+                className="[grid-area:1/1] pointer-events-none invisible h-12 px-3 border border-transparent whitespace-pre font-family-dm-sans text-base"
+              >
+                Digite um número
+              </span>
+            </div>
             {questionError && <p className="text-sm text-red-11">{questionError}</p>}
           </div>
         );
