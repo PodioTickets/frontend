@@ -1759,19 +1759,28 @@ export function InformationStep({
                 {question.description ?? ""}
               </label>
             )}
-            {/* Largura ~= a do placeholder "Digite um número" (16 chars): 16ch de
-                conteúdo + o px-3 (2rem de folga cobre padding+buffer da fonte
-                proporcional). `max-w-full` evita estouro em telas estreitas. */}
-            <input
-              type="number"
-              value={typeof answer === "string" ? answer : ""}
-              onChange={(e) => {
-                clearParticipantFieldError(participantIndex, `question_${question.id}`);
-                updateQuestionAnswer(participantIndex, question.id, e.target.value);
-              }}
-              className={`w-[calc(16ch_+_2rem)] max-w-full h-12 px-3 rounded-lg border bg-transparent text-gray-12 focus:outline-none focus:bg-gray-3 transition-colors font-family-dm-sans text-base placeholder:text-gray-11 ${questionError ? "border-red-6 focus:border-red-10" : "border-gray-6 focus:border-primary-10"}`}
-              placeholder="Digite um número"
-            />
+            {/* Largura EXATA do placeholder ("grid sizing"): um sizer invisível com
+                o MESMO texto/estilo/padding/borda define a largura da célula; o
+                input (`min-w-0` + `w-full`) apenas a preenche. Determinístico e
+                cross-browser (usa a fonte real), sem depender de `ch`/`field-sizing`. */}
+            <div className="inline-grid max-w-[3rem]">
+              <input
+                type="number"
+                value={typeof answer === "string" ? answer : ""}
+                onChange={(e) => {
+                  clearParticipantFieldError(participantIndex, `question_${question.id}`);
+                  updateQuestionAnswer(participantIndex, question.id, e.target.value);
+                }}
+                className={`[grid-area:1/1] w-full min-w-0 h-12 px-3 rounded-lg border bg-transparent text-gray-12 focus:outline-none focus:bg-gray-3 transition-colors font-family-dm-sans text-base placeholder:text-gray-11 ${questionError ? "border-red-6 focus:border-red-10" : "border-gray-6 focus:border-primary-10"}`}
+                placeholder="Digite um número"
+              />
+              <span
+                aria-hidden
+                className="[grid-area:1/1] pointer-events-none invisible h-12 px-3 border border-transparent whitespace-pre font-family-dm-sans text-base"
+              >
+                Digite um número
+              </span>
+            </div>
             {questionError && <p className="text-sm text-red-11">{questionError}</p>}
           </div>
         );
