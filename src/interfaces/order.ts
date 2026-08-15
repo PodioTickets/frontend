@@ -130,6 +130,12 @@ export interface ReserveOrderRequest {
     ticketId: string;
     quantity: number;
   }>;
+  /**
+   * Reserva de CORTESIA (organizador "adicionar inscrito"): libera janela
+   * encerrada + lote esgotado + teto do evento. O backend revalida a autorização
+   * (admin/`edit_event`); só o fluxo de cortesia envia isto.
+   */
+  isCourtesy?: boolean;
 }
 
 export interface PatchParticipantsRequest {
