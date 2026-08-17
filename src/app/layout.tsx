@@ -13,6 +13,7 @@ import { Loading } from "@/components/Loading";
 import { ContentWrapper } from "@/components/ContentWrapper";
 import { OrganizerAppSurfaceProvider } from "@/contexts/OrganizerAppSurfaceContext";
 import { AdminAppSurfaceProvider } from "@/contexts/AdminAppSurfaceContext";
+import { isTrackingEnabled, TRACKING_META } from "@/lib/trackingEnabled";
 
 const manrope = Manrope({
   variable: "--font-manrope",
@@ -94,6 +95,12 @@ export default async function RootLayout({
       ? "organizer"
       : "";
 
+  // Scripts de tracking (Google Ads + Meta Pixel) só em PRODUÇÃO real.
+  // Fonte única da decisão em `isTrackingEnabled` (mesmo flag do pixel per-evento
+  // em lib/metaPixel.ts). Aqui roda no SERVER → lê o env `ENABLE_TRACKING_SCRIPTS`.
+  // A decisão é publicada na `<meta name="pt-tracking">` abaixo p/ o client ler.
+  const trackingEnabled = isTrackingEnabled();
+
   return (
     <html lang="pt-BR" className={`${manrope.variable} ${dmSans.variable}`}>
       <head>
@@ -101,57 +108,67 @@ export default async function RootLayout({
         {appSurfaceForClient ? (
           <meta name="pt-app-surface" content={appSurfaceForClient} />
         ) : null}
+        {/* Decisão de tracking (server → client). Presente só em produção real;
+            o pixel per-evento (lib/metaPixel.ts) lê esta meta no browser. */}
+        {trackingEnabled ? <meta name={TRACKING_META} content="1" /> : null}
       </head>
 
-      {/* Google tag (gtag.js) — Google Ads AW-18266397975. `afterInteractive`
-          carrega após a hidratação (não bloqueia o first paint) e roda em todas
-          as rotas por estar no root layout. */}
-      <Script
-        id="gtag-js"
-        src="https://www.googletagmanager.com/gtag/js?id=AW-18266397975"
-        strategy="afterInteractive"
-      />
-      <Script id="gtag-init" strategy="afterInteractive">
-        {`
-          window.dataLayer = window.dataLayer || [];
-          function gtag(){dataLayer.push(arguments);}
-          gtag('js', new Date());
-          gtag('config', 'AW-18266397975');
-        `}
-      </Script>
+      {/* Scripts de tracking — SOMENTE em produção real (ver `trackingEnabled`). */}
+      {trackingEnabled && (
+        <>
+          {/* Google tag (gtag.js) — Google Ads AW-18266397975. `afterInteractive`
+              carrega após a hidratação (não bloqueia o first paint) e roda em todas
+              as rotas por estar no root layout. */}
+          <Script
+            id="gtag-js"
+            src="https://www.googletagmanager.com/gtag/js?id=AW-18266397975"
+            strategy="afterInteractive"
+          />
+          <Script id="gtag-init" strategy="afterInteractive">
+            {`
+              window.dataLayer = window.dataLayer || [];
+              function gtag(){dataLayer.push(arguments);}
+              gtag('js', new Date());
+              gtag('config', 'AW-18266397975');
+            `}
+          </Script>
 
-      {/* Meta Pixel (Facebook) — pixel GLOBAL do site (id 1004789278922764).
-          `afterInteractive` (igual o gtag): roda em TODAS as rotas por estar no
-          root layout. Coexiste com o pixel POR-EVENTO (lib/metaPixel.ts via
-          `trackSingle`): o snippet base é idempotente (`if(f.fbq)return`), então
-          não recria o `fbq` se o per-evento já tiver injetado. */}
-      <Script id="fb-pixel" strategy="afterInteractive">
-        {`
-          !function(f,b,e,v,n,t,s)
-          {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
-          n.callMethod.apply(n,arguments):n.queue.push(arguments)};
-          if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
-          n.queue=[];t=b.createElement(e);t.async=!0;
-          t.src=v;s=b.getElementsByTagName(e)[0];
-          s.parentNode.insertBefore(t,s)}(window, document,'script',
-          'https://connect.facebook.net/en_US/fbevents.js');
-          fbq('init', '1004789278922764');
-          fbq('track', 'PageView');
-        `}
-      </Script>
+          {/* Meta Pixel (Facebook) — pixel GLOBAL do site (id 1004789278922764).
+              `afterInteractive` (igual o gtag): roda em TODAS as rotas por estar no
+              root layout. Coexiste com o pixel POR-EVENTO (lib/metaPixel.ts via
+              `trackSingle`): o snippet base é idempotente (`if(f.fbq)return`), então
+              não recria o `fbq` se o per-evento já tiver injetado. */}
+          <Script id="fb-pixel" strategy="afterInteractive">
+            {`
+              !function(f,b,e,v,n,t,s)
+              {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+              n.callMethod.apply(n,arguments):n.queue.push(arguments)};
+              if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
+              n.queue=[];t=b.createElement(e);t.async=!0;
+              t.src=v;s=b.getElementsByTagName(e)[0];
+              s.parentNode.insertBefore(t,s)}(window, document,'script',
+              'https://connect.facebook.net/en_US/fbevents.js');
+              fbq('init', '1004789278922764');
+              fbq('track', 'PageView');
+            `}
+          </Script>
+        </>
+      )}
 
       <body suppressHydrationWarning className="scroll-smooth antialiased">
-        {/* Meta Pixel — fallback sem JavaScript */}
-        <noscript>
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            height="1"
-            width="1"
-            style={{ display: "none" }}
-            src="https://www.facebook.com/tr?id=1004789278922764&ev=PageView&noscript=1"
-            alt=""
-          />
-        </noscript>
+        {/* Meta Pixel — fallback sem JavaScript (só em produção). */}
+        {trackingEnabled && (
+          <noscript>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              height="1"
+              width="1"
+              style={{ display: "none" }}
+              src="https://www.facebook.com/tr?id=1004789278922764&ev=PageView&noscript=1"
+              alt=""
+            />
+          </noscript>
+        )}
         <AdminAppSurfaceProvider value={isAdminSurface}>
           <OrganizerAppSurfaceProvider value={isAppOrganizerSurface}>
             <ToasterWrapper />

@@ -16,6 +16,8 @@
  *    Usado no Purchase: a conversão precisa contar UMA vez por pedido.
  */
 
+import { isTrackingEnabled } from "@/lib/trackingEnabled";
+
 export type MetaStandardEvent =
   | "PageView"
   | "ViewContent"
@@ -70,6 +72,8 @@ function ensurePixelScript(): void {
 
 /** Garante script carregado + `init` do pixel (uma vez por `pixelId`). */
 export function initMetaPixel(pixelId?: string | null): void {
+  // Gate de produção: fora de prod NÃO injeta o script nem inicializa pixel.
+  if (!isTrackingEnabled()) return;
   if (!pixelId || typeof window === "undefined") return;
   ensurePixelScript();
   if (initedPixels.has(pixelId)) return;
@@ -109,6 +113,11 @@ export function trackMetaPixel(
   params?: Record<string, unknown>,
   options?: TrackOptions,
 ): void {
+  // Gate de produção: fora de prod nenhum evento é disparado (nem consome a
+  // `onceKey` de dedup, preservando a 1ª conversão real quando ligado em prod).
+  if (!isTrackingEnabled()) {
+    return;
+  }
   if (!pixelId || typeof window === "undefined") {
     return;
   }
