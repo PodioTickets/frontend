@@ -1755,11 +1755,18 @@ export function InformationStep({
                 cross-browser (usa a fonte real), sem depender de `ch`/`field-sizing`. */}
             <div className="inline-grid max-w-[3rem]">
               <input
-                type="number"
+                // Inteiro: `type="text"` + `inputMode="numeric"` dá o teclado
+                // numérico no mobile SEM aceitar `e`/`+`/`-`/`.` (que o
+                // `type="number"` deixa passar); o onChange remove qualquer
+                // não-dígito (campo numérico — `\D` é seguro aqui, não é documento).
+                type="text"
+                inputMode="numeric"
+                pattern="[0-9]*"
                 value={typeof answer === "string" ? answer : ""}
                 onChange={(e) => {
                   clearParticipantFieldError(participantIndex, `question_${question.id}`);
-                  updateQuestionAnswer(participantIndex, question.id, e.target.value);
+                  const digits = e.target.value.replace(/\D/g, "");
+                  updateQuestionAnswer(participantIndex, question.id, digits);
                 }}
                 className={`[grid-area:1/1] w-full min-w-0 h-12 px-3 rounded-lg border bg-transparent text-gray-12 focus:outline-none focus:bg-gray-3 transition-colors font-family-dm-sans text-base placeholder:text-gray-11 ${questionError ? "border-red-6 focus:border-red-10" : "border-gray-6 focus:border-primary-10"}`}
                 placeholder="Digite um número"
