@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
+import { isSearchIndexingEnabled } from "@/lib/searchIndexing";
 /**
  * Host do painel (ex.: app.podioticket.com.br). Sem protocolo; porta opcional em dev
  * (ex.: app.localhost:3000).
@@ -423,6 +424,13 @@ export async function proxy(request: NextRequest) {
     "Permissions-Policy",
     "camera=(), microphone=(), geolocation=(self), payment=(), xr-spatial-tracking=(self \"https://challenges.cloudflare.com\")"
   );
+
+  // Fora da produção real (homologação/staging) o site NÃO deve ser indexado.
+  // `X-Robots-Tag` é autoritativo e sobrepõe qualquer `<meta robots>` de página.
+  // Mesmo flag do tracking (ENABLE_TRACKING_SCRIPTS) — ver lib/searchIndexing.ts.
+  if (!isSearchIndexingEnabled()) {
+    response.headers.set("X-Robots-Tag", "noindex, nofollow");
+  }
 
   if (pathname.startsWith("/api/")) {
     if (isValidOrigin(origin, host)) {

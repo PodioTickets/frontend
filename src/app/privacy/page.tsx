@@ -6,7 +6,7 @@ export const metadata: Metadata = {
   title: "Política de Privacidade | PódioTicket",
   description:
     "Política de Privacidade e Política de Cookies da PódioTicket — como coletamos, usamos, compartilhamos e protegemos seus dados pessoais (LGPD).",
-  robots: "index, follow",
+  // `robots` é decidido em runtime no RootLayout (homologação → noindex).
 };
 
 export default function PrivacyPage() {
