@@ -96,8 +96,9 @@ function CourtesyFlow() {
     busyRef.current = true;
     setBusy(true);
     try {
-      // Cortesia: libera janela encerrada + lote esgotado + teto do evento
-      // (backend revalida a permissão do organizador).
+      // Cortesia: libera janela encerrada + teto do evento (backend revalida a
+      // permissão do organizador). Lote ESGOTADO e estoque de produto NÃO são
+      // liberados — valida igual ao comprador.
       const order = await reserveOrder({ eventId, tickets, isCourtesy: true });
       bindOrder(order.orderId);
       startTimer(order, registrationsHref);
@@ -199,7 +200,7 @@ function CourtesyFlow() {
         <HidePricingProvider>
           <div className="w-full max-w-[1280px] mx-auto flex flex-col min-h-screen items-start justify-start gap-4 py-4 md:py-11 px-4">
             {step === "tickets" && (
-              <ModalitiesStep event={event} onNext={handleTicketsNext} onBack={() => orgNav.push(registrationsHref)} isSubmitting={busy} allowSoldOut />
+              <ModalitiesStep event={event} onNext={handleTicketsNext} onBack={() => orgNav.push(registrationsHref)} isSubmitting={busy} />
             )}
             {step === "info" && (
               <InformationStep event={event} onNext={handleInfoNext} onBack={() => setStep("tickets")} isSubmitting={busy} />
@@ -256,7 +257,9 @@ function DoneStep({ count, onSee }: { count: number; onSee: () => void }) {
         {/* Badge verde (selo + check) com shine suave atrás */}
         <div className="relative flex items-center justify-center p-6">
           <div className="absolute inset-2 rounded-full bg-primary-5/50 blur-2xl" aria-hidden />
-          <Image src="/images/success-badge.svg" alt="" width={87} height={84} className="relative" priority />
+          {/* SVG: serve direto (otimizador de raster retornaria 400 sem
+              `dangerouslyAllowSVG`, mantido OFF por segurança). */}
+          <Image src="/images/success-badge.svg" alt="" width={87} height={84} className="relative" priority unoptimized />
         </div>
         <div className="flex flex-col items-center gap-4">
           <h2 className="text-[32px] font-extrabold font-manrope text-gray-12 leading-[1.1]">

@@ -117,6 +117,9 @@ export function KitCard({ kit, index }: KitCardProps) {
                               src={raceImages[0]}
                               alt={race.name}
                               fill
+                              // Metade do card (~≤300px). Sem `sizes`, `fill`
+                              // assume 100vw e baixa a variante grande à toa.
+                              sizes="(max-width: 768px) 45vw, 300px"
                               className="object-cover"
                             />
                           </div>
@@ -135,6 +138,7 @@ export function KitCard({ kit, index }: KitCardProps) {
                                       src={image}
                                       alt={`${race.name} ${index + 2}`}
                                       fill
+                                      sizes="64px"
                                       className="object-cover"
                                     />
                                   </div>
@@ -151,6 +155,7 @@ export function KitCard({ kit, index }: KitCardProps) {
                                       src={image}
                                       alt={`${race.name} ${index + 4}`}
                                       fill
+                                      sizes="64px"
                                       className="object-cover"
                                     />
                                   </div>
@@ -163,6 +168,7 @@ export function KitCard({ kit, index }: KitCardProps) {
                                         src={raceImages[4]}
                                         alt={`${race.name} 5`}
                                         fill
+                                        sizes="64px"
                                         className="object-cover"
                                       />
                                     )}
@@ -181,6 +187,7 @@ export function KitCard({ kit, index }: KitCardProps) {
                                       src={raceImages[3]}
                                       alt={`${race.name} 4`}
                                       fill
+                                      sizes="64px"
                                       className="object-cover"
                                     />
                                   </div>
@@ -316,6 +323,7 @@ export function KitCard({ kit, index }: KitCardProps) {
                                 src={race.images[0]}
                                 alt={race.name}
                                 fill
+                                sizes="136px"
                                 className="object-cover"
                               />
                             </div>
@@ -339,6 +347,7 @@ export function KitCard({ kit, index }: KitCardProps) {
                                       src={image}
                                       alt={`${race.name} ${index + 2}`}
                                       fill
+                                      sizes="36px"
                                       className="object-cover"
                                     />
                                   </div>

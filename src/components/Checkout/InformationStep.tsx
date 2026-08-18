@@ -756,21 +756,13 @@ export function InformationStep({
     const willClose = isCurrentlyExpanded;
     setExpandedParticipants(willClose ? {} : { [index]: true });
 
-    // Ao salvar (fechar) um participante, ajusta o scroll (decisão do usuário):
-    // - DESKTOP: reseta TUDO pro topo.
-    // - MOBILE: rola pro PRÓXIMO participante pendente (cards empilhados; sem isso
-    //   o usuário fica perdido fora do viewport após o colapso).
+    // Ao salvar (fechar) um participante, rola pro PRÓXIMO participante pendente
+    // (mobile E desktop — cards empilham na vertical em ambos no checkout; sem isso
+    // o usuário fica perdido fora do viewport após o colapso). O avanço de ETAPA
+    // reseta pro topo à parte — aqui é só o "salvar participante".
     // Scroll é da window nos dois fluxos (checkout e "adicionar inscrito" do organizador).
     if (willClose && typeof window !== "undefined") {
-      const isDesktop = window.matchMedia("(min-width: 768px)").matches;
-      if (isDesktop) {
-        requestAnimationFrame(() => {
-          window.scrollTo({ top: 0, behavior: "smooth" });
-        });
-        return;
-      }
-
-      // Mobile: total real de participantes visíveis (raceQuantities) — o array
+      // Total real de participantes visíveis (raceQuantities) — o array
       // `participants` pode ter slots stale de quantidades anteriores.
       const totalVisible = Object.values(raceQuantities).reduce(
         (sum, q) => sum + (q > 0 ? q : 0),

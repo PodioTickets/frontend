@@ -200,6 +200,9 @@ export function PixModal({
                   alt="QR Code PIX"
                   width={192}
                   height={192}
+                  // QR já vem como data-URI PNG: serve como está (não passa pelo
+                  // otimizador). Caminho crítico de pagamento — sem margem de dúvida.
+                  unoptimized
                   className="w-48 h-48 mx-auto"
                 />
               ) : (

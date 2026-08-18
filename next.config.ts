@@ -75,7 +75,18 @@ const nextConfig: NextConfig = {
     ];
   },
   images: {
-    unoptimized: true,
+    // Otimização ON (antes `unoptimized: true`): o next/image agora serve variantes
+    // redimensionadas por `sizes` e em AVIF/WebP via /_next/image (mesma origem — o
+    // Cloudflare na frente cacheia o resultado na borda, então o custo de encode é
+    // pago 1× por variante, não a cada request). Ganho maior no CHECKOUT: thumbs de
+    // 100px deixam de baixar o upload original inteiro.
+    // Ordem dos formatos = preferência: AVIF (menor arquivo) → WebP (fallback). Se o
+    // container do Next sofrer com CPU de encode AVIF sob pico, reduzir para
+    // ["image/webp"] corta ~metade do custo de encode mantendo ganho relevante.
+    formats: ["image/avif", "image/webp"],
+    // Next 16 exige declarar as qualidades usadas na prop `quality` (default 75).
+    // Valores em uso hoje: 75 (default), 90 (EventCardContent), 100 (LandingPage).
+    qualities: [75, 90, 100],
     remotePatterns: [
       { protocol: "https", hostname: "*.podioticket.com.br" },
       { protocol: "https", hostname: "cdn.podioticket.com.br" },
