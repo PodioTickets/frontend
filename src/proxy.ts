@@ -485,7 +485,8 @@ export async function proxy(request: NextRequest) {
   // puxa recursos de VÁRIOS subdomínios das famílias MP/ML — liberamos as
   // famílias inteiras pra não morrer um subdomínio por vez.
   const mercadoPagoCsp =
-    "https://mercadopago.com https://*.mercadopago.com https://mercadolibre.com https://*.mercadolibre.com https://*.mlstatic.com";
+    "https://mercadopago.com https://*.mercadopago.com https://mercadopago.com.br https://*.mercadopago.com.br " +
+    "https://mercadolibre.com https://*.mercadolibre.com https://mercadolivre.com.br https://*.mercadolivre.com.br https://*.mlstatic.com";
   const mercadoPagoScriptCsp = mercadoPagoCsp;
   const mercadoPagoConnectCsp = mercadoPagoCsp;
 
