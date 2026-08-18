@@ -37,6 +37,7 @@ import { getEnabledTopicsSorted } from "@/lib/eventTopicSections";
 import { normalizeTopicHtmlAnchorHrefs } from "@/lib/normalizeTopicHtmlLinks";
 import { TopicRichContent } from "@/components/TopicRichContent";
 import { trackMetaPixel } from "@/lib/metaPixel";
+import { initEventGoogleTags } from "@/lib/googleTag";
 import { trackEventPageView } from "@/lib/activityTelemetry";
 
 const sanitizeUrl = (url: string | null | undefined): string | null => {
@@ -119,6 +120,14 @@ export default function EventPage() {
       { onceKey: `vc:${event.id}` },
     );
   }, [event?.id, event?.tracking?.metaPixelId, event?.name]);
+
+  // Google tag (gtag.js) por-evento — carrega/config os IDs que o organizador
+  // cadastrou (Ads `AW-…` e Analytics `G-…`). `config` já emite o page_view do
+  // ID. Gate de produção + idempotência ficam no próprio `initEventGoogleTags`.
+  useEffect(() => {
+    if (!event?.id) return;
+    initEventGoogleTags(event.tracking);
+  }, [event?.id, event?.tracking]);
 
   // Resetar estado da imagem quando o evento mudar
   useEffect(() => {
