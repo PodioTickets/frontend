@@ -479,13 +479,15 @@ export async function proxy(request: NextRequest) {
   // Telemetria/log do SDK Braspag (API Gateway AWS dinâmico). Apenas connect-src.
   const braspag3DSConnectExtras = "https://*.execute-api.us-east-1.amazonaws.com";
 
-  // Mercado Pago (débito tokenizado): o MercadoPago.js vem de sdk.mercadopago.com;
-  // assets/fingerprint de http2.mlstatic.com e mercadolibre; a tokenização do cartão
-  // e os eventos de device batem em api.mercadopago.com / events / api.mercadolibre.
-  const mercadoPagoScriptCsp =
-    "https://sdk.mercadopago.com https://http2.mlstatic.com https://www.mercadolibre.com";
-  const mercadoPagoConnectCsp =
-    "https://api.mercadopago.com https://events.mercadopago.com https://api.mercadolibre.com https://www.mercadolibre.com";
+  // Mercado Pago (débito tokenizado): SDK (sdk.mercadopago.com), security.js
+  // (www.mercadopago.com), assets/fingerprint (*.mlstatic.com), tokenização e
+  // eventos de device (api/events.mercadopago.com, api.mercadolibre.com). O SDK
+  // puxa recursos de VÁRIOS subdomínios das famílias MP/ML — liberamos as
+  // famílias inteiras pra não morrer um subdomínio por vez.
+  const mercadoPagoCsp =
+    "https://mercadopago.com https://*.mercadopago.com https://mercadolibre.com https://*.mercadolibre.com https://*.mlstatic.com";
+  const mercadoPagoScriptCsp = mercadoPagoCsp;
+  const mercadoPagoConnectCsp = mercadoPagoCsp;
 
   // Google tag (gtag.js) / Google Ads (AW-18266397975): o loader vem de
   // googletagmanager.com e dispara scripts/beacons/pixels de conversão e
@@ -519,7 +521,7 @@ export async function proxy(request: NextRequest) {
     // ACS do banco — domínio imprevisível por emissor. Por isso `https:` genérico aqui
     // e no form-action (iframe cross-origin não lê a página; frame-ancestors segue 'none').
     `frame-src 'self' https: https://www.youtube.com https://*.google.com https://*.googleapis.com https://www.strava.com https://*.strava.com https://strava-embeds.com https://challenges.cloudflare.com https://www.instagram.com https://www.facebook.com https://platform.twitter.com https://www.tiktok.com ${braspag3DSCsp} https://www.googletagmanager.com https://*.doubleclick.net`,
-    `img-src ${trustedDomains.join(" ")} data: blob: https://cdn.podioticket.com.br https://*.google.com https://*.googleapis.com https://*.gstatic.com https://*.googleusercontent.com https://www.instagram.com https://*.cdninstagram.com https://*.fbcdn.net https://www.facebook.com https://*.strava.com https://strava-embeds.com https://apata.io https://*.apata.io https://http2.mlstatic.com ${googleTagCsp}`,
+    `img-src ${trustedDomains.join(" ")} data: blob: https://cdn.podioticket.com.br https://*.google.com https://*.googleapis.com https://*.gstatic.com https://*.googleusercontent.com https://www.instagram.com https://*.cdninstagram.com https://*.fbcdn.net https://www.facebook.com https://*.strava.com https://strava-embeds.com https://apata.io https://*.apata.io ${mercadoPagoCsp} ${googleTagCsp}`,
     `media-src ${trustedDomains.join(" ")} data: blob:`,
     // worker-src e child-src: workers internos do Turnstile usam blob URLs
     `worker-src 'self' blob: https://challenges.cloudflare.com`,
