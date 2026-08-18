@@ -246,6 +246,8 @@ export interface PayOrderMpDebitRequest {
     paymentMethodId: string;
     deviceId?: string;
     holderName?: string;
+    /** CPF do TITULAR do cartão (só dígitos) — vai no payer.identification do MP. */
+    holderCpf?: string;
   };
   couponCode?: string;
   voucherCode?: string;

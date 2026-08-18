@@ -147,6 +147,9 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
   const [debitCardNumber, setDebitCardNumber] = useState("");
   const [debitCardExpiry, setDebitCardExpiry] = useState("");
   const [debitCardCVV, setDebitCardCVV] = useState("");
+  // CPF do TITULAR do cartão (≠ CPF do participante) — exigido no débito MP:
+  // sem payer.identification o MP recusa por risco (cc_rejected_high_risk).
+  const [debitCardCpf, setDebitCardCpf] = useState("");
   const [debitCardErrors, setDebitCardErrors] = useState<CardErrors>({});
   const threeDS = useThreeDS();
   const [debitLoading, setDebitLoading] = useState(false);
@@ -164,6 +167,13 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
     setDebitCardErrors((p) => {
       if (!p.cardNumber) return p;
       const n = { ...p }; delete n.cardNumber; return n;
+    });
+  }, []);
+  const handleSetDebitCardCpf = useCallback((v: string) => {
+    setDebitCardCpf(v);
+    setDebitCardErrors((p) => {
+      if (!p.cardCpf) return p;
+      const n = { ...p }; delete n.cardCpf; return n;
     });
   }, []);
   const handleSetDebitCardExpiry = useCallback((v: string) => {
@@ -1311,6 +1321,15 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
     } else if (!validateCVV(debitCardCVV)) {
       newErrors.cardCVV = "CVV inválido.";
     }
+    // CPF do titular só é exigido no fluxo MP (o legado Cielo não o utiliza).
+    if (isMpDebitEnabled()) {
+      const cpfDigits = debitCardCpf.replace(/\D/g, "");
+      if (!cpfDigits) {
+        newErrors.cardCpf = "Informe o CPF do titular do cartão.";
+      } else if (!isValidCPF(cpfDigits)) {
+        newErrors.cardCpf = "CPF inválido.";
+      }
+    }
 
     if (Object.keys(newErrors).length > 0) {
       setDebitCardErrors(newErrors);
@@ -1341,12 +1360,15 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
     if (isMpDebitEnabled()) {
       try {
         const paymentMethodId = await getDebitPaymentMethodId(debitCardNumber);
+        // CPF do TITULAR do cartão no token E no payer — doc ausente/divergente
+        // era recusado pelo risco do MP (cc_rejected_high_risk, payer_doc null).
+        const holderCpf = debitCardCpf.replace(/\D/g, "");
         const token = await createDebitCardToken({
           number: debitCardNumber,
           name: debitCardName,
           expiry: debitCardExpiry,
           cvv: debitCardCVV,
-          cpf: participants[0]?.cpf || undefined,
+          cpf: holderCpf || undefined,
         });
 
         const payload: PayOrderMpDebitRequest = {
@@ -1356,6 +1378,7 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
             paymentMethodId,
             deviceId: getMpDeviceId(),
             holderName: debitCardName.toUpperCase().trim(),
+            holderCpf: holderCpf || undefined,
           },
           couponCode: isCouponApplied && couponCode ? couponCode : undefined,
         };
@@ -1979,6 +2002,8 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
                           setCardExpiry={handleSetDebitCardExpiry}
                           cardCVV={debitCardCVV}
                           setCardCVV={handleSetDebitCardCVV}
+                          cardCpf={debitCardCpf}
+                          setCardCpf={handleSetDebitCardCpf}
                           isMobile={true}
                           errors={debitCardErrors}
                         />
@@ -2215,6 +2240,8 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
                             setCardExpiry={handleSetDebitCardExpiry}
                             cardCVV={debitCardCVV}
                             setCardCVV={handleSetDebitCardCVV}
+                            cardCpf={debitCardCpf}
+                            setCardCpf={handleSetDebitCardCpf}
                             isMobile={false}
                             errors={debitCardErrors}
                           />
