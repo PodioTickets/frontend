@@ -6,7 +6,7 @@ export const metadata: Metadata = {
   title: "Termos de Uso | PódioTicket",
   description:
     "Termos de Uso do Comprador da PódioTicket — condições de uso da plataforma, compra de ingressos, cancelamento, reembolso e responsabilidades.",
-  robots: "index, follow",
+  // `robots` é decidido em runtime no RootLayout (homologação → noindex).
 };
 
 export default function TermsPage() {

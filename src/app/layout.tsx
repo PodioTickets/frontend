@@ -14,6 +14,7 @@ import { ContentWrapper } from "@/components/ContentWrapper";
 import { OrganizerAppSurfaceProvider } from "@/contexts/OrganizerAppSurfaceContext";
 import { AdminAppSurfaceProvider } from "@/contexts/AdminAppSurfaceContext";
 import { isTrackingEnabled, TRACKING_META } from "@/lib/trackingEnabled";
+import { robotsDirective } from "@/lib/searchIndexing";
 
 const manrope = Manrope({
   variable: "--font-manrope",
@@ -42,7 +43,8 @@ export const metadata: Metadata = {
   authors: [{ name: "PódioTicket Team" }],
   creator: "PódioTicket",
   publisher: "PódioTicket",
-  robots: "index, follow",
+  // `robots` NÃO fica aqui (estático): é decidido em RUNTIME no RootLayout via
+  // `robotsDirective()` (homologação → noindex). Ver lib/searchIndexing.ts.
   openGraph: {
     title: "PódioTicket",
     description:
@@ -101,10 +103,17 @@ export default async function RootLayout({
   // A decisão é publicada na `<meta name="pt-tracking">` abaixo p/ o client ler.
   const trackingEnabled = isTrackingEnabled();
 
+  // Indexação no Google decidida em RUNTIME (mesmo flag do tracking): produção
+  // real → "index, follow"; homologação/staging → "noindex, nofollow". Emitida
+  // como <meta> aqui (cobre todas as páginas via layout) e reforçada pelo header
+  // X-Robots-Tag no proxy. Ver lib/searchIndexing.ts.
+  const robots = robotsDirective();
+
   return (
     <html lang="pt-BR" className={`${manrope.variable} ${dmSans.variable}`}>
       <head>
         <link rel="icon" href="/images/logo.png" />
+        <meta name="robots" content={robots} />
         {appSurfaceForClient ? (
           <meta name="pt-app-surface" content={appSurfaceForClient} />
         ) : null}

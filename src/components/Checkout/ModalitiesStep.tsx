@@ -46,9 +46,12 @@ interface ModalitiesStepProps {
   isSubmitting?: boolean;
   /** Preview do organizador: desabilita o botão "Próximo" (não há fluxo real). */
   disableNext?: boolean;
+  /** Cortesia do organizador: libera lote esgotado / sem estoque na seleção
+   *  (backend revalida a permissão). Default `false` = checkout público trava. */
+  allowSoldOut?: boolean;
 }
 
-export function ModalitiesStep({ event, onNext, onBack, isSubmitting = false, disableNext = false }: ModalitiesStepProps) {
+export function ModalitiesStep({ event, onNext, onBack, isSubmitting = false, disableNext = false, allowSoldOut = false }: ModalitiesStepProps) {
   const { raceQuantities } = useCheckout();
   const { isAuthenticated } = useAuth();
   const { openLoginModal } = useLoginModal();
@@ -512,6 +515,7 @@ export function ModalitiesStep({ event, onNext, onBack, isSubmitting = false, di
                   couponPreviewOverride={ageCouponPreview}
                   voucherFreeTicketId={voucherFreeTicketId}
                   couponConditionsMet={linkCouponConditionsMet}
+                  allowSoldOut={allowSoldOut}
                 />
               ))}
               {categorizedTickets.map((category, index) => (
@@ -530,6 +534,7 @@ export function ModalitiesStep({ event, onNext, onBack, isSubmitting = false, di
                   couponPreviewOverride={ageCouponPreview}
                   voucherFreeTicketId={voucherFreeTicketId}
                   couponConditionsMet={linkCouponConditionsMet}
+                  allowSoldOut={allowSoldOut}
                 />
               ))}
             </>
@@ -612,6 +617,7 @@ export function ModalitiesStep({ event, onNext, onBack, isSubmitting = false, di
                         couponPreviewOverride={ageCouponPreview}
                         voucherFreeTicketId={voucherFreeTicketId}
                         couponConditionsMet={linkCouponConditionsMet}
+                        allowSoldOut={allowSoldOut}
                       />
                       {!isLast && <div className="w-full h-px bg-gray-6" />}
                     </Fragment>
@@ -636,6 +642,7 @@ export function ModalitiesStep({ event, onNext, onBack, isSubmitting = false, di
                         couponPreviewOverride={ageCouponPreview}
                         voucherFreeTicketId={voucherFreeTicketId}
                         couponConditionsMet={linkCouponConditionsMet}
+                        allowSoldOut={allowSoldOut}
                       />
                       {!isLastCategory && (
                         <div className="w-full h-px bg-gray-6" />
