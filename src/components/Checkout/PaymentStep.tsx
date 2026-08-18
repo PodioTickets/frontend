@@ -48,7 +48,16 @@ import {
   type PatchBillingAddressRequest,
   type PayOrderRequest,
   type PayOrderDebitCardRequest,
+  type PayOrderMpDebitRequest,
 } from "@/interfaces/order";
+import {
+  isMpDebitEnabled,
+  getDebitPaymentMethodId,
+  createDebitCardToken,
+  getMpDeviceId,
+  MpTokenizeError,
+} from "@/lib/mercadopago";
+import { MpChallengeModal } from "./MpChallengeModal";
 
 const COUPON_ERROR_MESSAGES: Record<string, string> = {
   COUPON_NOT_FOUND: "Cupom inválido ou não encontrado.",
@@ -194,7 +203,15 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
     patchBillingAddress,
     patchCoupon,
     payOrder,
+    getMpDebitStatus,
   } = useCheckoutReservation();
+
+  // Desafio 3DS do Mercado Pago (débito): quando o /pay devolve
+  // payment.challenge, o iframe do banco abre neste modal.
+  const [mpChallenge, setMpChallenge] = useState<{
+    externalResourceUrl: string;
+    creq: string;
+  } | null>(null);
 
   /**
    * Pré-preenche o endereço de cobrança a partir da conta logada quando o
@@ -1315,6 +1332,72 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
     checkoutLoadingRef.current = true;
     setDebitLoading(true);
     setCheckoutLoading(true);
+
+    // ── Fluxo ATUAL: débito via MERCADO PAGO ─────────────────────────────────
+    // Tokeniza o cartão no browser (o PAN não vai pro nosso backend) e envia
+    // token + payment_method_id. 3DS: se o MP exigir challenge, o /pay devolve
+    // payment.challenge e o MpChallengeModal assume. Sem NEXT_PUBLIC_MP_PUBLIC_KEY
+    // cai no fluxo legado (Braspag 3DS + Cielo) abaixo — mesmo fallback do backend.
+    if (isMpDebitEnabled()) {
+      try {
+        const paymentMethodId = await getDebitPaymentMethodId(debitCardNumber);
+        const token = await createDebitCardToken({
+          number: debitCardNumber,
+          name: debitCardName,
+          expiry: debitCardExpiry,
+          cvv: debitCardCVV,
+          cpf: participants[0]?.cpf || undefined,
+        });
+
+        const payload: PayOrderMpDebitRequest = {
+          method: "DEBIT_CARD",
+          mpDebit: {
+            token,
+            paymentMethodId,
+            deviceId: getMpDeviceId(),
+            holderName: debitCardName.toUpperCase().trim(),
+          },
+          couponCode: isCouponApplied && couponCode ? couponCode : undefined,
+        };
+        const result = await payOrder(orderId, payload, idempotencyKeyRef.current);
+
+        if (result.status === "PAID") {
+          clearTimer();
+          toast.success("Pagamento aprovado!");
+          onSuccess?.(result.orderId);
+          return;
+        }
+        if (result.payment?.challenge) {
+          // Banco pediu autenticação — abre o iframe do challenge; a confirmação
+          // chega por polling/webhook (MpChallengeModal cuida do ciclo).
+          pauseVisibilityRefresh();
+          setMpChallenge(result.payment.challenge);
+          return;
+        }
+        // PENDING sem challenge (análise assíncrona) ou recusa síncrona.
+        syncFromOrder(result);
+        toast.error("Pagamento não aprovado. Tente novamente.");
+        regenerateIdempotencyKey();
+      } catch (err) {
+        if (err instanceof MpTokenizeError) {
+          // Erro de tokenização/bandeira (ex.: cartão sem função débito) —
+          // problema no dado digitado, não na adquirente: toast direto.
+          toast.error(err.message);
+          regenerateIdempotencyKey();
+          return;
+        }
+        // Recusa direta do MP (sem challenge) — mesmo tratamento do crédito
+        // (modal "Pagamento não aprovado" via handlePayError).
+        handlePayError(err);
+      } finally {
+        checkoutLoadingRef.current = false;
+        setDebitLoading(false);
+        setCheckoutLoading(false);
+      }
+      return;
+    }
+
+    // ── Fluxo LEGADO: Braspag 3DS + Cielo (fallback sem public key do MP) ────
     try {
       const auth = await threeDS.authenticate({
         orderId,
@@ -1691,6 +1774,33 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
         onConfirm={() => {
           setCardErrorModalOpen(false);
           resumeVisibilityRefresh();
+        }}
+      />
+
+      {/* Desafio 3DS do débito via Mercado Pago (iframe do banco). A confirmação
+          real vem do backend (polling mp-debit-status / webhook MP). */}
+      <MpChallengeModal
+        isOpen={!!mpChallenge}
+        challenge={mpChallenge}
+        pollStatus={() => getMpDebitStatus(orderId!)}
+        onSuccess={() => {
+          setMpChallenge(null);
+          resumeVisibilityRefresh();
+          clearTimer();
+          toast.success("Pagamento aprovado!");
+          if (orderId) onSuccess?.(orderId);
+        }}
+        onFailure={(reason) => {
+          setMpChallenge(null);
+          regenerateIdempotencyKey();
+          if (reason === "TIMEOUT") {
+            resumeVisibilityRefresh();
+            toast.error("Tempo esgotado na autenticação do banco. Tente novamente.");
+            return;
+          }
+          // REFUSED/CANCELLED → modal "Pagamento não aprovado" (o onConfirm dele
+          // retoma o visibility refresh — mantém pausado até lá).
+          setCardErrorModalOpen(true);
         }}
       />
 
