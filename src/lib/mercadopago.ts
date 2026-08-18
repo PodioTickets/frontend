@@ -99,12 +99,20 @@ export class MpTokenizeError extends Error {
  * Descobre o payment_method_id de DÉBITO pelo BIN (6+ dígitos). Lança
  * MpTokenizeError se a bandeira não tiver método de débito no MP (ex.: o
  * usuário digitou um cartão só-crédito na aba débito).
+ *
+ * PRÉ-PAGO conta como débito: o MP classifica cartões como o Elo Débito
+ * Virtual (Caixa) — e os próprios cartões de teste de débito do MP — como
+ * `prepaid_card` (id `elo`/`visa`/`master`), que processa à vista igual
+ * débito. Sem aceitar prepaid, esses cartões caíam em "bandeira não
+ * reconhecida". Preferimos o método debit_card quando o BIN tem os dois.
  */
 export async function getDebitPaymentMethodId(cardNumber: string): Promise<string> {
   const mp = await loadMercadoPago();
   const bin = cardNumber.replace(/\D/g, "").slice(0, 8);
   const { results } = await mp.getPaymentMethods({ bin });
-  const debit = results?.find((m) => m.payment_type_id === "debit_card");
+  const debit =
+    results?.find((m) => m.payment_type_id === "debit_card") ??
+    results?.find((m) => m.payment_type_id === "prepaid_card");
   if (!debit) {
     const hasCredit = results?.some((m) => m.payment_type_id === "credit_card");
     throw new MpTokenizeError(
