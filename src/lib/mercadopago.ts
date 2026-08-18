@@ -95,17 +95,21 @@ export class MpTokenizeError extends Error {
   }
 }
 
+export interface MpDebitMethod {
+  id: string;
+  /** payment_type_id COMO VEIO do BIN lookup — o backend repassa à Orders API. */
+  type: "debit_card" | "prepaid_card";
+}
+
 /**
- * Descobre o payment_method_id de DÉBITO pelo BIN.
- *
- * REALIDADE do MP Brasil (validação da própria Orders API: "value must be
- * 'debelo'"): débito via API só existe para cartões ELO DÉBITO (`debelo`) e
- * pré-pagos. Cartão MÚLTIPLO Visa/Master tem o BIN registrado como CRÉDITO e
- * NÃO possui método de débito no MP — barramos aqui com mensagem clara em vez
- * de deixar o backend levar um 400 genérico. O id vai como veio (sem strip):
- * a Orders API espera exatamente o id do método da conta (ex.: debelo).
+ * Descobre o método de DÉBITO pelo BIN e devolve id + payment_type_id COMO
+ * VIERAM do MP (o backend envia ambos à Orders API — ela valida contra a
+ * conta). Preferência: debit_card > prepaid_card (pré-pago processa à vista
+ * igual débito, ex.: Visa/Elo Prepaid dos cartões de teste). Sem nenhum dos
+ * dois (cartão múltiplo Visa/Master, cujo BIN é registrado como crédito no
+ * MP), recusa com mensagem clara — crédito nunca é enviado como débito.
  */
-export async function getDebitPaymentMethodId(cardNumber: string): Promise<string> {
+export async function getDebitPaymentMethod(cardNumber: string): Promise<MpDebitMethod> {
   const mp = await loadMercadoPago();
   const bin = cardNumber.replace(/\D/g, "").slice(0, 8);
   const { results } = await mp.getPaymentMethods({ bin });
@@ -116,11 +120,11 @@ export async function getDebitPaymentMethodId(cardNumber: string): Promise<strin
     const hasCredit = results?.some((m) => m.payment_type_id === "credit_card");
     throw new MpTokenizeError(
       hasCredit
-        ? "No débito, aceitamos apenas cartões com função débito Elo (ex.: Caixa). Para este cartão, use PIX (aprovação na hora) ou a opção de crédito."
+        ? "Este cartão não tem função débito no Mercado Pago. Use PIX (aprovação na hora) ou a opção de crédito."
         : "Não reconhecemos a bandeira deste cartão para débito. Use PIX ou crédito.",
     );
   }
-  return debit.id;
+  return { id: debit.id, type: debit.payment_type_id as MpDebitMethod["type"] };
 }
 
 /**
