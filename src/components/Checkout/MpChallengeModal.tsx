@@ -51,12 +51,18 @@ export function MpChallengeModal({
     };
   }, [isOpen]);
 
+  // Orders API: challenge SEM creq — a URL é autocontida e vai direto no src
+  // do iframe. Legado (/v1/payments): URL + creq via form POST no iframe.
+  const isUrlOnly = !!challenge && !challenge.creq;
+
   useEffect(() => {
     if (!isOpen || !challenge) return;
     settledRef.current = false;
 
-    // Submete o form do desafio para dentro do iframe assim que montar.
-    const submitTimer = setTimeout(() => formRef.current?.submit(), 50);
+    // Fluxo legado (creq): submete o form do desafio para dentro do iframe.
+    const submitTimer = isUrlOnly
+      ? null
+      : setTimeout(() => formRef.current?.submit(), 50);
 
     const settle = (fn: () => void) => {
       if (settledRef.current) return;
@@ -87,12 +93,12 @@ export function MpChallengeModal({
     const timeoutTimer = setTimeout(() => settle(() => onFailure("TIMEOUT")), CHALLENGE_TIMEOUT_MS);
 
     return () => {
-      clearTimeout(submitTimer);
+      if (submitTimer) clearTimeout(submitTimer);
       clearTimeout(timeoutTimer);
       if (pollTimer) clearInterval(pollTimer);
       window.removeEventListener("message", onMessage);
     };
-  }, [isOpen, challenge, pollStatus, onSuccess, onFailure]);
+  }, [isOpen, challenge, isUrlOnly, pollStatus, onSuccess, onFailure]);
 
   const handleCancel = () => {
     if (settledRef.current) return;
@@ -142,17 +148,20 @@ export function MpChallengeModal({
                 name="mp-3ds-challenge"
                 title="Autenticação 3DS do banco"
                 className="w-full h-full border-0"
+                {...(isUrlOnly ? { src: challenge.externalResourceUrl } : {})}
               />
-              {/* Form POST oficial do desafio (creq) — target no iframe acima. */}
-              <form
-                ref={formRef}
-                method="post"
-                action={challenge.externalResourceUrl}
-                target="mp-3ds-challenge"
-                className="hidden"
-              >
-                <input type="hidden" name="creq" value={challenge.creq} />
-              </form>
+              {/* Fluxo legado (creq): form POST oficial do desafio — target no iframe. */}
+              {!isUrlOnly && (
+                <form
+                  ref={formRef}
+                  method="post"
+                  action={challenge.externalResourceUrl}
+                  target="mp-3ds-challenge"
+                  className="hidden"
+                >
+                  <input type="hidden" name="creq" value={challenge.creq} />
+                </form>
+              )}
             </div>
           </motion.div>
         </motion.div>
