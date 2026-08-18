@@ -52,7 +52,7 @@ import {
 } from "@/interfaces/order";
 import {
   isMpDebitEnabled,
-  getDebitPaymentMethodId,
+  getDebitPaymentMethod,
   createDebitCardToken,
   getMpDeviceId,
   MpTokenizeError,
@@ -1359,7 +1359,8 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
     // cai no fluxo legado (Braspag 3DS + Cielo) abaixo — mesmo fallback do backend.
     if (isMpDebitEnabled()) {
       try {
-        const paymentMethodId = await getDebitPaymentMethodId(debitCardNumber);
+        const { id: paymentMethodId, type: paymentMethodType } =
+          await getDebitPaymentMethod(debitCardNumber);
         // CPF do TITULAR do cartão no token E no payer — doc ausente/divergente
         // era recusado pelo risco do MP (cc_rejected_high_risk, payer_doc null).
         const holderCpf = debitCardCpf.replace(/\D/g, "");
@@ -1376,6 +1377,7 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
           mpDebit: {
             token,
             paymentMethodId,
+            paymentMethodType,
             deviceId: getMpDeviceId(),
             holderName: debitCardName.toUpperCase().trim(),
             holderCpf: holderCpf || undefined,

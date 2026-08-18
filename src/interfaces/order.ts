@@ -244,6 +244,8 @@ export interface PayOrderMpDebitRequest {
   mpDebit: {
     token: string;
     paymentMethodId: string;
+    /** payment_type_id do BIN lookup (debit_card | prepaid_card) — repassado à Orders API. */
+    paymentMethodType?: "debit_card" | "prepaid_card";
     deviceId?: string;
     holderName?: string;
     /** CPF do TITULAR do cartão (só dígitos) — vai no payer.identification do MP. */
