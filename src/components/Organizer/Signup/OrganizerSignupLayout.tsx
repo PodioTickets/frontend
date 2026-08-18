@@ -87,6 +87,9 @@ export function OrganizerSignupLayout({
           width={196}
           height={52}
           priority
+          // SVG não passa pelo otimizador de raster (retornaria 400 sem
+          // `dangerouslyAllowSVG`, que mantemos OFF por segurança). Serve direto.
+          unoptimized
           className="h-10 w-auto md:h-13"
         />
       </div>

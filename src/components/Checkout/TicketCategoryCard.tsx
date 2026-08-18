@@ -106,10 +106,6 @@ interface TicketCategoryCardProps {
    *  `false` suprime o strike-through nos cards — o appliesTo (quais ingressos)
    *  já vem no próprio preview. Default `true` (sem cupom de link gated). */
   couponConditionsMet?: boolean;
-  /** Libera seleção mesmo com lote ESGOTADO / sem estoque — exclusivo do fluxo
-   *  de cortesia do organizador (backend revalida a permissão). No checkout
-   *  público segue `false`: lote esgotado exibe o badge e trava o stepper. */
-  allowSoldOut?: boolean;
 }
 
 const formatPrice = (price: number) => {
@@ -163,7 +159,6 @@ const TicketItemMobile = memo(({
   userAge,
   voucherFreeTicketId,
   couponConditionsMet,
-  allowSoldOut = false,
 }: {
   ticket: Ticket;
   event: Event;
@@ -178,8 +173,6 @@ const TicketItemMobile = memo(({
   voucherFreeTicketId?: string | null;
   /** Condições globais do cupom de link atendidas (suprime strike se false). */
   couponConditionsMet?: boolean;
-  /** Libera lote esgotado / sem estoque (cortesia do organizador). */
-  allowSoldOut?: boolean;
 }) => {
   const [isImageModalOpen, setIsImageModalOpen] = useState(false);
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
@@ -225,15 +218,13 @@ const TicketItemMobile = memo(({
   const thumbnails = productItems.slice(1, 1 + VISIBLE_THUMB_COUNT);
   const remainingCount = Math.max(0, productItems.length - (1 + VISIBLE_THUMB_COUNT));
 
-  // Cortesia do organizador ignora o teto de estoque (backend revalida); no
-  // checkout público o "+" continua limitado à quantidade disponível.
-  const maxQuantity = allowSoldOut ? Infinity : (ticket.availableQuantity ?? Infinity);
+  // "+" limitado à quantidade disponível do lote (teto total 20 no stepper).
+  const maxQuantity = ticket.availableQuantity ?? Infinity;
   const isAtMax = quantity >= maxQuantity || totalQuantity >= 20;
 
   const isBatchSoldOut =
-    !allowSoldOut &&
-    (ticket.activeBatch?.status === "SOLD_OUT" ||
-      ticket.activeBatchStatus === "SOLD_OUT");
+    ticket.activeBatch?.status === "SOLD_OUT" ||
+    ticket.activeBatchStatus === "SOLD_OUT";
 
   const showLowStock =
     !isBatchSoldOut &&
@@ -547,7 +538,6 @@ const TicketItemDesktop = memo(({
   userAge,
   voucherFreeTicketId,
   couponConditionsMet,
-  allowSoldOut = false,
 }: {
   ticket: Ticket;
   event: Event;
@@ -562,8 +552,6 @@ const TicketItemDesktop = memo(({
   voucherFreeTicketId?: string | null;
   /** Condições globais do cupom de link atendidas (suprime strike se false). */
   couponConditionsMet?: boolean;
-  /** Libera lote esgotado / sem estoque (cortesia do organizador). */
-  allowSoldOut?: boolean;
 }) => {
   const hidePricing = useHidePricing();
   const [isImageModalOpen, setIsImageModalOpen] = useState(false);
@@ -623,12 +611,11 @@ const TicketItemDesktop = memo(({
     return result;
   }, [productItems, currentMainImageIndex]);
 
-  // Cortesia do organizador ignora o teto de estoque (backend revalida); no
-  // checkout público o "+" continua limitado à quantidade disponível.
-  const maxQuantity = allowSoldOut ? Infinity : (ticket.availableQuantity ?? Infinity);
+  // "+" limitado à quantidade disponível do lote (teto total 20 no stepper).
+  const maxQuantity = ticket.availableQuantity ?? Infinity;
   const isAtMax = quantity >= maxQuantity || totalQuantity >= 20;
 
-  const isBatchSoldOut = !allowSoldOut && ticket.activeBatch?.status === "SOLD_OUT";
+  const isBatchSoldOut = ticket.activeBatch?.status === "SOLD_OUT";
 
   const showLowStock =
     !isBatchSoldOut &&
@@ -879,7 +866,6 @@ export function TicketCategoryCard({
   couponPreviewOverride,
   voucherFreeTicketId,
   couponConditionsMet = true,
-  allowSoldOut = false,
 }: TicketCategoryCardProps) {
   const kitSelectionDisplay = kitSelectionDisplayProp ?? defaultEventKitSelectionDisplay();
   const [isExpanded, setIsExpanded] = useState(expandedByDefault ?? index === 0);
@@ -999,7 +985,6 @@ export function TicketCategoryCard({
               userAge={userAge}
               voucherFreeTicketId={voucherFreeTicketId}
               couponConditionsMet={couponConditionsMet}
-              allowSoldOut={allowSoldOut}
             />
           ))}
         </div>
@@ -1019,7 +1004,6 @@ export function TicketCategoryCard({
               userAge={userAge}
               voucherFreeTicketId={voucherFreeTicketId}
               couponConditionsMet={couponConditionsMet}
-              allowSoldOut={allowSoldOut}
             />
           ))}
         </div>
@@ -1107,7 +1091,6 @@ export function TicketCategoryCard({
                     userAge={userAge}
                     voucherFreeTicketId={voucherFreeTicketId}
                     couponConditionsMet={couponConditionsMet}
-                    allowSoldOut={allowSoldOut}
                   />
                 ))}
               </div>
@@ -1194,7 +1177,6 @@ export function TicketCategoryCard({
                     userAge={userAge}
                     voucherFreeTicketId={voucherFreeTicketId}
                     couponConditionsMet={couponConditionsMet}
-                    allowSoldOut={allowSoldOut}
                   />
                 ))}
               </div>
