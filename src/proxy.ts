@@ -479,6 +479,14 @@ export async function proxy(request: NextRequest) {
   // Telemetria/log do SDK Braspag (API Gateway AWS dinâmico). Apenas connect-src.
   const braspag3DSConnectExtras = "https://*.execute-api.us-east-1.amazonaws.com";
 
+  // Mercado Pago (débito tokenizado): o MercadoPago.js vem de sdk.mercadopago.com;
+  // assets/fingerprint de http2.mlstatic.com e mercadolibre; a tokenização do cartão
+  // e os eventos de device batem em api.mercadopago.com / events / api.mercadolibre.
+  const mercadoPagoScriptCsp =
+    "https://sdk.mercadopago.com https://http2.mlstatic.com https://www.mercadolibre.com";
+  const mercadoPagoConnectCsp =
+    "https://api.mercadopago.com https://events.mercadopago.com https://api.mercadolibre.com https://www.mercadolibre.com";
+
   // Google tag (gtag.js) / Google Ads (AW-18266397975): o loader vem de
   // googletagmanager.com e dispara scripts/beacons/pixels de conversão e
   // remarketing em googleadservices.com e (td|googleads).doubleclick.net.
@@ -497,26 +505,30 @@ export async function proxy(request: NextRequest) {
   const cspDirectives = [
     `default-src ${trustedDomains.join(" ")}`,
     /* TODO: migrar para nonce */ `script-src ${trustedDomains.join(" ")} ${isDev ? "'unsafe-eval'" : ""
-    } 'unsafe-inline' blob: https://*.googleapis.com https://*.google.com https://challenges.cloudflare.com https://www.instagram.com https://connect.facebook.net https://platform.twitter.com https://www.tiktok.com https://strava-embeds.com ${braspag3DSCsp} ${googleTagCsp}`,
+    } 'unsafe-inline' blob: https://*.googleapis.com https://*.google.com https://challenges.cloudflare.com https://www.instagram.com https://connect.facebook.net https://platform.twitter.com https://www.tiktok.com https://strava-embeds.com ${braspag3DSCsp} ${googleTagCsp} ${mercadoPagoScriptCsp}`,
     `style-src ${trustedDomains.join(
       " "
     )} 'unsafe-inline' https://fonts.googleapis.com https://*.googleapis.com`,
     `font-src ${trustedDomains.join(" ")} data: https://fonts.gstatic.com https://*.google.com`,
     `connect-src ${trustedDomains.join(
       " "
-    )} wss: ws: https://*.googleapis.com https://*.google.com https://*.google-analytics.com https://*.analytics.google.com https://challenges.cloudflare.com https://www.facebook.com https://connect.facebook.net ${braspag3DSCsp} ${braspag3DSConnectExtras} ${googleTagCsp}`,
+    )} wss: ws: https://*.googleapis.com https://*.google.com https://*.google-analytics.com https://*.analytics.google.com https://challenges.cloudflare.com https://www.facebook.com https://connect.facebook.net ${braspag3DSCsp} ${braspag3DSConnectExtras} ${googleTagCsp} ${mercadoPagoConnectCsp}`,
     // 3DS challenge abre iframe do ACS do banco emissor (Itaú, Bradesco, Nubank, etc).
-    // Cada banco usa seu próprio domínio — domínios Braspag/Cardinal cobrem o fluxo 3DS;
-    // origens adicionais de embeds listadas explicitamente (sem https: genérico).
-    `frame-src 'self' https://www.youtube.com https://*.google.com https://*.googleapis.com https://www.strava.com https://*.strava.com https://strava-embeds.com https://challenges.cloudflare.com https://www.instagram.com https://www.facebook.com https://platform.twitter.com https://www.tiktok.com ${braspag3DSCsp} https://www.googletagmanager.com https://*.doubleclick.net`,
-    `img-src ${trustedDomains.join(" ")} data: blob: https://cdn.podioticket.com.br https://*.google.com https://*.googleapis.com https://*.gstatic.com https://*.googleusercontent.com https://www.instagram.com https://*.cdninstagram.com https://*.fbcdn.net https://www.facebook.com https://*.strava.com https://strava-embeds.com https://apata.io https://*.apata.io ${googleTagCsp}`,
+    // No fluxo Braspag/Cardinal o ACS fica ANINHADO no iframe do Cardinal (domínio fixo);
+    // no fluxo Mercado Pago (MpChallengeModal) o form POST navega o iframe DIRETO pro
+    // ACS do banco — domínio imprevisível por emissor. Por isso `https:` genérico aqui
+    // e no form-action (iframe cross-origin não lê a página; frame-ancestors segue 'none').
+    `frame-src 'self' https: https://www.youtube.com https://*.google.com https://*.googleapis.com https://www.strava.com https://*.strava.com https://strava-embeds.com https://challenges.cloudflare.com https://www.instagram.com https://www.facebook.com https://platform.twitter.com https://www.tiktok.com ${braspag3DSCsp} https://www.googletagmanager.com https://*.doubleclick.net`,
+    `img-src ${trustedDomains.join(" ")} data: blob: https://cdn.podioticket.com.br https://*.google.com https://*.googleapis.com https://*.gstatic.com https://*.googleusercontent.com https://www.instagram.com https://*.cdninstagram.com https://*.fbcdn.net https://www.facebook.com https://*.strava.com https://strava-embeds.com https://apata.io https://*.apata.io https://http2.mlstatic.com ${googleTagCsp}`,
     `media-src ${trustedDomains.join(" ")} data: blob:`,
     // worker-src e child-src: workers internos do Turnstile usam blob URLs
     `worker-src 'self' blob: https://challenges.cloudflare.com`,
     `child-src 'self' blob: https://challenges.cloudflare.com`,
     `object-src 'none'`,
     `base-uri 'self'`,
-    `form-action 'self' https://challenges.cloudflare.com ${braspag3DSCsp}`,
+    // `https:` genérico por causa do challenge do Mercado Pago: o form do
+    // MpChallengeModal submete o creq DIRETO pro ACS do banco (domínio por emissor).
+    `form-action 'self' https: https://challenges.cloudflare.com ${braspag3DSCsp}`,
     `frame-ancestors 'none'`,
     `upgrade-insecure-requests`,
   ];
