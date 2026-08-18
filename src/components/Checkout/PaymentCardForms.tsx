@@ -173,6 +173,15 @@ export const CreditCardForm = memo(function CreditCardForm({
   );
 });
 
+/** Máscara de CPF: 000.000.000-00 (só dígitos, até 11). */
+function formatCpfMask(value: string): string {
+  const d = value.replace(/\D/g, "").slice(0, 11);
+  return d
+    .replace(/^(\d{3})(\d)/, "$1.$2")
+    .replace(/^(\d{3})\.(\d{3})(\d)/, "$1.$2.$3")
+    .replace(/^(\d{3})\.(\d{3})\.(\d{3})(\d)/, "$1.$2.$3-$4");
+}
+
 export const DebitCardForm = memo(function DebitCardForm({
   cardName,
   setCardName,
@@ -182,6 +191,8 @@ export const DebitCardForm = memo(function DebitCardForm({
   setCardExpiry,
   cardCVV,
   setCardCVV,
+  cardCpf,
+  setCardCpf,
   isMobile = false,
   errors,
 }: {
@@ -193,6 +204,8 @@ export const DebitCardForm = memo(function DebitCardForm({
   setCardExpiry?: (value: string) => void;
   cardCVV?: string;
   setCardCVV?: (value: string) => void;
+  cardCpf?: string;
+  setCardCpf?: (value: string) => void;
   isMobile?: boolean;
   errors?: CardErrors;
 }) {
@@ -214,6 +227,26 @@ export const DebitCardForm = memo(function DebitCardForm({
           aria-invalid={!!errors?.cardName}
         />
         {errors?.cardName && <p className="text-sm text-red-11">{errors.cardName}</p>}
+      </div>
+
+      {/* CPF do TITULAR do cartão — vai pro antifraude do Mercado Pago (token +
+          payer.identification). Não é o CPF do participante do ingresso: doc
+          divergente/ausente derruba a aprovação (cc_rejected_high_risk). */}
+      <div className="flex flex-col gap-2 w-full">
+        <label className="text-base text-gray-12 font-family-dm-sans">
+          CPF do titular do cartão
+        </label>
+        <Input
+          type="text"
+          inputMode="numeric"
+          value={cardCpf || ""}
+          onChange={(e) => setCardCpf && setCardCpf(formatCpfMask(e.target.value))}
+          className="bg-gray-2"
+          maxLength={14}
+          placeholder="000.000.000-00"
+          aria-invalid={!!errors?.cardCpf}
+        />
+        {errors?.cardCpf && <p className="text-sm text-red-11">{errors.cardCpf}</p>}
       </div>
 
       <div className="flex flex-col gap-2 w-full">
