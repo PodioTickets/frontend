@@ -237,26 +237,6 @@ export function useCheckoutReservation() {
     [],
   );
 
-  /**
-   * `GET /payments/order/{id}/mp-debit-status` — polling ATIVO do débito via
-   * Mercado Pago (após o challenge 3DS). Mesmo contrato do pix-status: o
-   * backend reconsulta o MP em tempo real e, se aprovado, confirma+finaliza o
-   * pedido (fallback do webhook MP). Retorna `{ status, paid }`.
-   */
-  const getMpDebitStatus = useCallback(
-    async (orderId: string): Promise<PixPollStatusResponse> => {
-      const res = await fetch(
-        `${API_BASE_URL}/api/v1/payments/order/${orderId}/mp-debit-status`,
-        {
-          method: "GET",
-          credentials: "include", headers: authHeaders(),
-        },
-      );
-      return handleResponse<PixPollStatusResponse>(res);
-    },
-    [],
-  );
-
   /** `PATCH /orders/{id}/coupon` — aplica/remove cupom ou voucher. Enviar `{}` para remover. */
   const patchCoupon = useCallback(
     async (orderId: string, payload: PatchCouponRequest): Promise<OrderResponse> => {
@@ -292,7 +272,6 @@ export function useCheckoutReservation() {
     patchCoupon,
     payOrder,
     getPaymentStatus,
-    getMpDebitStatus,
     cancelOrder,
   };
 }

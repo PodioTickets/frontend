@@ -81,12 +81,6 @@ export interface OrderPaymentInfo {
   pix?: OrderPixInfo;
   redirectUrl?: string;
   paidAt?: string;
-  /**
-   * Desafio 3DS do Mercado Pago (débito): o front renderiza um iframe com form
-   * POST para `externalResourceUrl` levando `creq`; a confirmação chega por
-   * webhook/polling (`GET /payments/order/:id/mp-debit-status`).
-   */
-  challenge?: { externalResourceUrl: string; creq: string };
 }
 
 export interface OrderRegistration {
@@ -233,28 +227,6 @@ export interface PayOrderDebitCardRequest {
   voucherCode?: string;
 }
 
-/**
- * Débito via MERCADO PAGO (fluxo atual): o cartão é tokenizado no browser
- * (MercadoPago.js) — vai token + payment_method_id, nunca o PAN.
- * `PayOrderDebitCardRequest` (card+threeDs Braspag/Cielo) fica como legado
- * enquanto o fallback sem NEXT_PUBLIC_MP_PUBLIC_KEY existir.
- */
-export interface PayOrderMpDebitRequest {
-  method: "DEBIT_CARD";
-  mpDebit: {
-    token: string;
-    paymentMethodId: string;
-    /** payment_type_id do BIN lookup (debit_card | prepaid_card) — repassado à Orders API. */
-    paymentMethodType?: "debit_card" | "prepaid_card";
-    deviceId?: string;
-    holderName?: string;
-    /** CPF do TITULAR do cartão (só dígitos) — vai no payer.identification do MP. */
-    holderCpf?: string;
-  };
-  couponCode?: string;
-  voucherCode?: string;
-}
-
 export interface PayOrderPixRequest {
   method: "PIX";
   couponCode?: string;
@@ -264,7 +236,6 @@ export interface PayOrderPixRequest {
 export type PayOrderRequest =
   | PayOrderCardRequest
   | PayOrderDebitCardRequest
-  | PayOrderMpDebitRequest
   | PayOrderPixRequest;
 
 export interface OrderPaymentStatusResponse {
@@ -307,8 +278,6 @@ export type OrderErrorCode =
   | "BILLING_ADDRESS_REQUIRED"
   | "PARTICIPANTS_REQUIRED"
   | "PAYMENT_REFUSED"
-  // Hard stop pós cc_rejected_high_risk no débito MP (cooldown progressivo)
-  | "PAYMENT_RETRY_COOLDOWN"
   | "IDEMPOTENCY_KEY_MISMATCH"
   | "COUPON_NOT_FOUND"
   | "COUPON_EXPIRED"
