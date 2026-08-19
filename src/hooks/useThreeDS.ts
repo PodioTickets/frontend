@@ -238,13 +238,13 @@ export function useThreeDS() {
         let challengeIframe: HTMLIFrameElement | null = null;
         const CHALLENGE_MIN_SIZE = 200; // px; descarta o collector invisível.
         // Grace generoso: no sucesso, o SDK remove o iframe do banco ANTES de
-        // rodar a validação interna no Cardinal e disparar `onSuccess`. Esse
-        // intervalo entre "iframe sumiu" e "onSuccess fired" passou de 600ms
-        // em produção e gerava falso-positivo de cancelamento (usuário via
-        // tela de aprovado e na sequência o modal "Pagamento não aprovado").
-        // 8s é folga suficiente pro round-trip mais lento; se o usuário
-        // realmente cancelou, esperar 8s pelo modal é UX aceitável.
-        const CANCEL_GRACE_MS = 8000;
+        // rodar a validação interna no Cardinal e disparar `onSuccess`. Na
+        // plataforma NOVA da Cardinal (cardinaltrusted, ago/2026) esse round-trip
+        // pós-challenge ficou mais lento e estourava os 8s antigos: autenticação
+        // Eci 05 APROVADA era descartada como USER_CANCEL e o /pay nunca rodava.
+        // 25s dá folga real; quem cancelou de verdade espera o modal — UX
+        // aceitável em troca de nunca matar um pagamento aprovado.
+        const CANCEL_GRACE_MS = 25000;
 
         const cancelObserver = new MutationObserver((mutations) => {
           if (settled) return;
@@ -273,7 +273,12 @@ export function useThreeDS() {
                 if (challengeIframe) break;
               }
             }
-            // Detecta remoção do challenge iframe → trata como cancelamento.
+            // Detecta remoção do challenge iframe → CANDIDATO a cancelamento.
+            // O Songbird v2 pode REMOVER e RECRIAR o iframe no meio do fluxo
+            // (troca collection→challenge, re-render) — por isso a remoção
+            // não rejeita direto: zera o rastreio (permitindo detectar um
+            // novo iframe) e só rejeita no fim do grace se NENHUM iframe novo
+            // apareceu e nenhum callback do SDK chegou.
             if (challengeIframe) {
               for (const node of Array.from(mut.removedNodes)) {
                 const removed =
@@ -282,10 +287,12 @@ export function useThreeDS() {
                     node.contains(challengeIframe));
                 if (!removed) continue;
                 if (!IS_PROD) console.warn("[3DS] challenge iframe removido");
-                // Grace pra esperar onFailure/onError do SDK; se não vier,
-                // rejeita como cancelamento do usuário.
+                challengeIframe = null;
                 setTimeout(() => {
                   if (settled) return;
+                  // Um novo iframe de challenge apareceu no intervalo: era
+                  // re-render do SDK, não cancelamento — segue o fluxo.
+                  if (challengeIframe) return;
                   finish(() =>
                     reject(
                       new ThreeDSError(
