@@ -203,8 +203,14 @@ export function useThreeDS() {
       setBpmpiField("bpmpi_currency", "986");
       setBpmpiField("bpmpi_totalamount", String(params.totalAmountCents));
       setBpmpiField("bpmpi_installments", "1");
-      // Doc Cielo exige lowercase: "credit" ou "debit". Default: "debit".
-      setBpmpiField("bpmpi_paymentmethod", params.paymentMethod ?? "debit");
+      // Manual EMV3DS (tabela oficial): valores "Credit" | "Debit" (Title Case).
+      // Campo OBRIGATÓRIO — em cartão múltiplo define QUAL função é autenticada;
+      // valor não reconhecido pode autenticar como crédito e invalidar o CAVV
+      // na autorização DebitCard. Default: "Debit".
+      setBpmpiField(
+        "bpmpi_paymentmethod",
+        (params.paymentMethod ?? "debit") === "credit" ? "Credit" : "Debit",
+      );
       setBpmpiField("bpmpi_cardnumber", params.card.number.replace(/\D/g, ""));
       setBpmpiField("bpmpi_cardexpirationmonth", month);
       setBpmpiField("bpmpi_cardexpirationyear", year);
