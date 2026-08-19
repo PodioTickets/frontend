@@ -471,6 +471,9 @@ export async function proxy(request: NextRequest) {
     "https://mpi.braspag.com.br",
     "https://mpisandbox.braspag.com.br",
     "https://*.cardinalcommerce.com",
+    // Domínio NOVO da Cardinal em produção: o Songbird (motor 3DS) carrega de
+    // static.client.cardinaltrusted.com e fala com outros subdomínios da família.
+    "https://*.cardinaltrusted.com",
     "https://apata.io",
     "https://*.apata.io",
   ];
