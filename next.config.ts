@@ -84,6 +84,12 @@ const nextConfig: NextConfig = {
     // container do Next sofrer com CPU de encode AVIF sob pico, reduzir para
     // ["image/webp"] corta ~metade do custo de encode mantendo ganho relevante.
     formats: ["image/avif", "image/webp"],
+    // O otimizador do Next 16 recusa buscar imagens cujo host resolve para IP
+    // privado/loopback (defesa contra SSRF). Em DEV o backend serve os uploads
+    // em http://localhost:3333/... → cai nessa regra e a imagem quebra. Em
+    // produção as imagens vêm do GCS/CDN (IP público), então a proteção deve
+    // permanecer LIGADA lá. Liberamos o IP privado SOMENTE fora de produção.
+    dangerouslyAllowLocalIP: process.env.NODE_ENV !== "production",
     // Next 16 exige declarar as qualidades usadas na prop `quality` (default 75).
     // Valores em uso hoje: 75 (default), 90 (EventCardContent), 100 (LandingPage).
     qualities: [75, 90, 100],
@@ -93,6 +99,17 @@ const nextConfig: NextConfig = {
       { protocol: "https", hostname: "*.amazonaws.com" },
       { protocol: "https", hostname: "*.googleusercontent.com" },
       { protocol: "https", hostname: "*.cdninstagram.com" },
+      // Uploads do app no Google Cloud Storage. O backend carimba a URL do
+      // objeto e o bucket muda por ambiente (podio-homologacao-uploads,
+      // podio-producao-uploads, ...). Com o otimizador ligado, os remotePatterns
+      // passam a ser enforced (antes, com unoptimized:true, eram ignorados) —
+      // sem esta entrada o next/image derruba a imagem com "hostname not configured".
+      // path-style: https://storage.googleapis.com/<bucket>/<objeto>. O pathname
+      // fica restrito ao prefixo `podio-` (menor privilégio: cobre todos os
+      // ambientes do projeto sem liberar qualquer bucket público do GCS).
+      { protocol: "https", hostname: "storage.googleapis.com", pathname: "/podio-*/**" },
+      // virtual-hosted style: https://<bucket>.storage.googleapis.com/<objeto>.
+      { protocol: "https", hostname: "*.storage.googleapis.com" },
       // Desenvolvimento local (HTTP apenas para localhost)
       { protocol: "http", hostname: "localhost" },
     ],

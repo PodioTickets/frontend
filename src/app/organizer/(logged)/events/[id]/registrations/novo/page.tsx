@@ -14,6 +14,7 @@ import { CheckoutTimerProvider, useCheckoutTimer } from "@/contexts/CheckoutTime
 import { ModalitiesStep } from "@/components/Checkout/ModalitiesStep";
 import { InformationStep } from "@/components/Checkout/InformationStep";
 import { SubscriptionStep } from "@/components/Checkout/SubscriptionStep";
+import { CheckoutTimer } from "@/components/Checkout/CheckoutTimer";
 import { useCheckoutReservation } from "@/hooks/useCheckoutReservation";
 import { useCheckoutProductStep } from "@/hooks/useCheckoutProductStep";
 import { useCourtesyRegistration } from "@/hooks/useCourtesyRegistration";
@@ -23,6 +24,7 @@ import { useOrganizerPermissions } from "@/contexts/OrganizerPermissionsContext"
 import { useOrganizerNavigate } from "@/hooks/useOrganizerNavigate";
 import { OrderApiError } from "@/interfaces/order";
 import { HidePricingProvider } from "@/contexts/HidePricingContext";
+import { IgnoreAgeLimitProvider } from "@/contexts/IgnoreAgeLimitContext";
 
 /**
  * Inscrição de CORTESIA do organizador — REUSA o fluxo/design do checkout:
@@ -36,7 +38,7 @@ type Step = "tickets" | "info" | "products" | "done";
 
 export default function NewCourtesyRegistrationPage() {
   return (
-    <Suspense fallback={<div className="min-h-screen bg-gray-2 flex items-center justify-center pt-16 md:pt-0"><Loading /></div>}>
+    <Suspense fallback={<div className="min-h-screen bg-gray-2 flex items-center justify-center"><Loading /></div>}>
       <CheckoutProvider>
         <CheckoutTimerProvider>
           <CourtesyFlow />
@@ -171,10 +173,10 @@ function CourtesyFlow() {
   };
 
   if (permissionsLoading || eventLoading) {
-    return <div className="min-h-screen bg-gray-2 flex items-center justify-center pt-16 md:pt-0"><Loading /></div>;
+    return <div className="min-h-screen bg-gray-2 flex items-center justify-center"><Loading /></div>;
   }
   if (!event) {
-    return <div className="min-h-screen bg-gray-2 flex items-center justify-center pt-16 md:pt-0 text-gray-11">Evento não encontrado.</div>;
+    return <div className="min-h-screen bg-gray-2 flex items-center justify-center text-gray-11">Evento não encontrado.</div>;
   }
 
   // Nº de inscrições criadas = total de ingressos selecionados (1 inscrição/ingresso).
@@ -189,7 +191,7 @@ function CourtesyFlow() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-2 pt-16 md:pt-0">
+    <div className="min-h-screen bg-gray-2">
       <CourtesyStepper activeStep={activeStepId} currentLabel={stepLabel} onBack={back} showBack={step !== "done"} />
 
       {step === "done" ? (
@@ -198,17 +200,22 @@ function CourtesyFlow() {
         </div>
       ) : (
         <HidePricingProvider>
-          <div className="w-full max-w-[1280px] mx-auto flex flex-col min-h-screen items-start justify-start gap-4 py-4 md:py-11 px-4">
-            {step === "tickets" && (
-              <ModalitiesStep event={event} onNext={handleTicketsNext} onBack={() => orgNav.push(registrationsHref)} isSubmitting={busy} />
-            )}
-            {step === "info" && (
-              <InformationStep event={event} onNext={handleInfoNext} onBack={() => setStep("tickets")} isSubmitting={busy} />
-            )}
-            {step === "products" && (
-              <SubscriptionStep event={event} onNext={handleProductsNext} onBack={() => setStep("info")} isSubmitting={busy} />
-            )}
-          </div>
+          {/* Cortesia: além de esconder preços, IGNORA a restrição de idade
+              (badge + validação) — o organizador inscreve manualmente e não deve
+              ser barrado por faixa etária. */}
+          <IgnoreAgeLimitProvider>
+            <div className="w-full max-w-[1280px] mx-auto flex flex-col min-h-screen items-start justify-start gap-4 py-4 md:py-11 px-4">
+              {step === "tickets" && (
+                <ModalitiesStep event={event} onNext={handleTicketsNext} onBack={() => orgNav.push(registrationsHref)} isSubmitting={busy} />
+              )}
+              {step === "info" && (
+                <InformationStep event={event} onNext={handleInfoNext} onBack={() => setStep("tickets")} isSubmitting={busy} />
+              )}
+              {step === "products" && (
+                <SubscriptionStep event={event} onNext={handleProductsNext} onBack={() => setStep("info")} isSubmitting={busy} />
+              )}
+            </div>
+          </IgnoreAgeLimitProvider>
         </HidePricingProvider>
       )}
     </div>
@@ -231,17 +238,28 @@ function CourtesyStepper({ activeStep, currentLabel, onBack, showBack }: { activ
             </button>
           )}
           <h1 className="text-base font-bold text-gray-12">{currentLabel}</h1>
+          {/* Timer da reserva — só nas etapas com pedido ativo (Informações/Produtos),
+              igual ao checkout do comprador. `tickets` ainda não reservou; `done` já consumiu. */}
+          {activeStep > 1 && activeStep < 4 && (
+            <div className="absolute right-4">
+              <CheckoutTimer compact />
+            </div>
+          )}
         </div>
       </div>
-      <div className="hidden md:flex w-full items-center max-w-7xl mx-auto gap-3 px-4 py-6 border-b border-gray-6">
-        {options.map((option, index) => (
-          <Fragment key={option.id}>
-            {index > 0 && <ArrowButton isOpen={false} />}
-            <div className={cn("flex items-center gap-2 rounded-4xl px-4 py-2 transition-all", activeStep >= option.id ? "text-primary-2 bg-primary-11" : "text-gray-11 bg-gray-5")}>
-              <span className="font-medium">{option.label}</span>
-            </div>
-          </Fragment>
-        ))}
+      <div className="hidden md:flex w-full items-center justify-between max-w-7xl mx-auto gap-3 px-4 py-6 border-b border-gray-6">
+        <div className="flex items-center gap-3">
+          {options.map((option, index) => (
+            <Fragment key={option.id}>
+              {index > 0 && <ArrowButton isOpen={false} />}
+              <div className={cn("flex items-center gap-2 rounded-4xl px-4 py-2 transition-all", activeStep >= option.id ? "text-primary-2 bg-primary-11" : "text-gray-11 bg-gray-5")}>
+                <span className="font-medium">{option.label}</span>
+              </div>
+            </Fragment>
+          ))}
+        </div>
+        {/* Timer da reserva (Informações/Produtos) — mesmo componente do checkout do comprador. */}
+        {activeStep > 1 && activeStep < 4 && <CheckoutTimer className="ml-2" />}
       </div>
     </>
   );

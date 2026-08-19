@@ -11,6 +11,7 @@ import { Counter } from "./Counter";
 import type { Kit } from "@/constants/kits";
 import { formatBRL as formatPrice } from "@/lib/money";
 import { useCheckout } from "@/contexts/CheckoutContext";
+import { useIgnoreAgeLimit } from "@/contexts/IgnoreAgeLimitContext";
 import { formatDateBR } from "@/utils/datetimeBR";
 import { Minus, Plus, ChevronDown, ChevronUp } from "lucide-react";
 
@@ -23,6 +24,8 @@ export function KitCard({ kit, index }: KitCardProps) {
   const [isExpanded, setIsExpanded] = useState(index === 0 ? true : false);
   const [selectedKitImageIndex, setSelectedKitImageIndex] = useState(0);
   const { raceQuantities, updateRaceQuantity } = useCheckout();
+  // Cortesia: ignora o badge de limite de idade. Ver IgnoreAgeLimitContext.
+  const ignoreAgeLimit = useIgnoreAgeLimit();
 
   const formatDate = (date: Date) => {
     return formatDateBR(date, {
@@ -99,7 +102,7 @@ export function KitCard({ kit, index }: KitCardProps) {
               {/* Race Cards */}
               <div className="flex flex-col gap-4">
                 {kit.races.map((race) => {
-                  const ageLimitText = formatAgeLimit(race.ageLimit);
+                  const ageLimitText = ignoreAgeLimit ? null : formatAgeLimit(race.ageLimit);
                   const raceImages = race.images || kit.images || [];
                   const remainingImages = Math.max(0, raceImages.length - 5);
 
@@ -310,7 +313,7 @@ export function KitCard({ kit, index }: KitCardProps) {
             {/* Cards das races */}
             <div className="flex flex-col gap-6">
               {kit.races.map((race) => {
-                const ageLimitText = formatAgeLimit(race.ageLimit);
+                const ageLimitText = ignoreAgeLimit ? null : formatAgeLimit(race.ageLimit);
                 return (
                   <div key={race.id} className="flex gap-4 w-full">
                     {/* Galeria de imagens da race à esquerda */}

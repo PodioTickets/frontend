@@ -12,6 +12,7 @@ import { ImageWithInitialFallback } from "@/components/ImageWithInitialFallback"
 import { getCheckoutModalityInfo } from "@/utils/checkoutModalityDisplay";
 import { formatBRL as formatPriceCurrency } from "@/lib/money";
 import { useHidePricing } from "@/contexts/HidePricingContext";
+import { useIgnoreAgeLimit } from "@/contexts/IgnoreAgeLimitContext";
 import {
   getTicketProductCarouselItems,
   getCategoryKitCarouselItems,
@@ -181,11 +182,13 @@ const TicketItemMobile = memo(({
   const price = getTicketPrice(ticket);
   const distanceKm = getDistanceKm(ticket);
   const distanceUnit = ticket?.distanceUnit === "KM" || ticket?.distanceUnit === "Km" ? "km" : "m"
+  const ignoreAgeLimit = useIgnoreAgeLimit();
   const ageLimitText = formatAgeLimit(ticket.ageLimit);
   // Badge de limite de idade: `userAge` undefined (prop ausente, ex.: preview do
   // organizador) → comportamento antigo (sempre mostra); null (anônimo / sem
   // nascimento) → esconde; número → mostra só se a idade estiver FORA do limite.
   const showAgeLimit =
+    !ignoreAgeLimit &&
     !!ageLimitText &&
     (userAge === undefined
       ? true
@@ -561,11 +564,13 @@ const TicketItemDesktop = memo(({
   const price = getTicketPrice(ticket);
   const distanceKm = getDistanceKm(ticket);
   const distanceUnit = ticket?.distanceUnit === "KM" || ticket?.distanceUnit === "Km" ? "km" : "m"
+  const ignoreAgeLimit = useIgnoreAgeLimit();
   const ageLimitText = formatAgeLimit(ticket.ageLimit);
   // Badge de limite de idade: `userAge` undefined (prop ausente, ex.: preview do
   // organizador) → comportamento antigo (sempre mostra); null (anônimo / sem
   // nascimento) → esconde; número → mostra só se a idade estiver FORA do limite.
   const showAgeLimit =
+    !ignoreAgeLimit &&
     !!ageLimitText &&
     (userAge === undefined
       ? true
@@ -758,16 +763,6 @@ const TicketItemDesktop = memo(({
             </div>
           </div>
 
-          {/* Limite de idade em fluxo normal, alinhado à esquerda (sem
-              `absolute` — que fazia o badge flutuar no canto e parecer padding). */}
-          {showAgeLimit ? (
-            <div className="bg-yellow-3 text-yellow-12 rounded-full px-3 py-1 self-start max-w-full">
-              <p className="text-xs font-medium font-family-dm-sans whitespace-nowrap">
-                Limite de idade: {ageLimitText}
-              </p>
-            </div>
-          ) : null}
-
           <div className="flex items-end justify-between">
             {hidePricing ? <span /> : (
             <div className="flex items-baseline gap-2">
@@ -779,6 +774,16 @@ const TicketItemDesktop = memo(({
               )}
             </div>
             )}
+            {/* Coluna direita (desktop): badge "Limite de idade" ACIMA do stepper
+                (+/-), alinhado à direita sobre o botão de adicionar/remover. */}
+            <div className="flex flex-col items-end gap-2">
+              {showAgeLimit ? (
+                <div className="bg-yellow-3 text-yellow-12 rounded-full px-3 py-1 max-w-full">
+                  <p className="text-xs font-medium font-family-dm-sans whitespace-nowrap">
+                    Limite de idade: {ageLimitText}
+                  </p>
+                </div>
+              ) : null}
             {isBatchSoldOut ? (
               // Lote esgotado: badge cinza no lugar do stepper (não dá pra adicionar).
               // `h-10` = mesma altura do stepper (size-6 + py-2) pra o card não encolher.
@@ -786,15 +791,16 @@ const TicketItemDesktop = memo(({
                 Lote esgotado
               </span>
             ) : (
-              <div className="flex flex-col items-center gap-2 relative">
-                <div className="absolute bottom-full right-0 pb-1">
-                  {showLowStock ? (
-                    <p className="text-xs font-medium text-red-11 whitespace-nowrap">
-                      Restam apenas {ticket.availableQuantity}{" "}
-                      {ticket.availableQuantity === 1 ? "vaga" : "vagas"}!
-                    </p>
-                  ) : null}
-                </div>
+              // Aviso de estoque baixo IN-FLOW (não `absolute`), entre o badge de
+              // idade (acima) e o stepper — assim o badge fica por cima do aviso e
+              // eles não se sobrepõem. Alinhado à direita pela coluna (`items-end`).
+              <>
+                {showLowStock ? (
+                  <p className="text-xs font-medium text-red-11 whitespace-nowrap">
+                    Restam apenas {ticket.availableQuantity}{" "}
+                    {ticket.availableQuantity === 1 ? "vaga" : "vagas"}!
+                  </p>
+                ) : null}
                 <div className="flex items-center justify-center w-max gap-2 bg-primary-4 rounded-full px-2 py-2">
                   <button
                     type="button"
@@ -818,8 +824,9 @@ const TicketItemDesktop = memo(({
                     <Plus className="size-4" />
                   </button>
                 </div>
-              </div>
+              </>
             )}
+            </div>
           </div>
         </div>
       </div>
