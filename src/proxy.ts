@@ -476,8 +476,25 @@ export async function proxy(request: NextRequest) {
     "https://*.cardinaltrusted.com",
     "https://apata.io",
     "https://*.apata.io",
+    // Device fingerprint do 3DS: ThreatMetrix + coletas das próprias bandeiras
+    // (VCDI da Visa em secure-devicefp.visa.com, equivalente da Mastercard).
+    // Só as famílias que injetam <script>/<iframe>; beacons imprevisíveis de
+    // emissor são cobertos pelo `https:` de connect/img na rota do checkout.
+    "https://*.online-metrix.net",
+    "https://*.visa.com",
+    "https://*.mastercard.com",
   ];
   const braspag3DSCsp = braspag3DSDomains.join(" ");
+
+  // O fingerprint/challenge do 3DS dispara requests para domínios de BANDEIRA e
+  // EMISSOR que mudam sem aviso (secure-devicefp.visa.com hoje, outro amanhã) —
+  // enumerá-los um a um derruba pagamento a cada novidade. SÓ na rota do
+  // checkout, connect-src e img-src aceitam `https:` genérico — mesmo racional
+  // já aplicado ao frame-src/form-action. O resto do site segue estrito, e
+  // script-src continua estrito em TODAS as rotas (XSS é o risco real; as
+  // famílias de DF que injetam script estão listadas acima).
+  const isCheckoutRoute = pathname === "/checkout" || pathname.startsWith("/checkout/");
+  const checkoutNetExtra = isCheckoutRoute ? " https:" : "";
 
   // Telemetria/log do SDK Braspag (API Gateway AWS dinâmico). Apenas connect-src.
   const braspag3DSConnectExtras = "https://*.execute-api.us-east-1.amazonaws.com";
@@ -507,14 +524,14 @@ export async function proxy(request: NextRequest) {
     `font-src ${trustedDomains.join(" ")} data: https://fonts.gstatic.com https://*.google.com`,
     `connect-src ${trustedDomains.join(
       " "
-    )} wss: ws: https://*.googleapis.com https://*.google.com https://*.google-analytics.com https://*.analytics.google.com https://challenges.cloudflare.com https://www.facebook.com https://connect.facebook.net ${braspag3DSCsp} ${braspag3DSConnectExtras} ${googleTagCsp}`,
+    )} wss: ws: https://*.googleapis.com https://*.google.com https://*.google-analytics.com https://*.analytics.google.com https://challenges.cloudflare.com https://www.facebook.com https://connect.facebook.net ${braspag3DSCsp} ${braspag3DSConnectExtras} ${googleTagCsp}${checkoutNetExtra}`,
     // 3DS challenge abre iframe do ACS do banco emissor (Itaú, Bradesco, Nubank, etc).
     // No fluxo Braspag/Cardinal o ACS fica ANINHADO no iframe do Cardinal (domínio fixo),
     // mas o fallback AuthenticationUrl da Cielo (débito sem MPI) navega DIRETO pro ACS
     // do banco — domínio imprevisível por emissor. Por isso `https:` genérico aqui e no
     // form-action (iframe cross-origin não lê a página; frame-ancestors segue 'none').
     `frame-src 'self' https: https://www.youtube.com https://*.google.com https://*.googleapis.com https://www.strava.com https://*.strava.com https://strava-embeds.com https://challenges.cloudflare.com https://www.instagram.com https://www.facebook.com https://platform.twitter.com https://www.tiktok.com ${braspag3DSCsp} https://www.googletagmanager.com https://*.doubleclick.net`,
-    `img-src ${trustedDomains.join(" ")} data: blob: https://cdn.podioticket.com.br https://*.google.com https://*.googleapis.com https://*.gstatic.com https://*.googleusercontent.com https://www.instagram.com https://*.cdninstagram.com https://*.fbcdn.net https://www.facebook.com https://*.strava.com https://strava-embeds.com https://apata.io https://*.apata.io ${googleTagCsp}`,
+    `img-src ${trustedDomains.join(" ")} data: blob: https://cdn.podioticket.com.br https://*.google.com https://*.googleapis.com https://*.gstatic.com https://*.googleusercontent.com https://www.instagram.com https://*.cdninstagram.com https://*.fbcdn.net https://www.facebook.com https://*.strava.com https://strava-embeds.com https://apata.io https://*.apata.io ${googleTagCsp}${checkoutNetExtra}`,
     `media-src ${trustedDomains.join(" ")} data: blob:`,
     // worker-src e child-src: workers internos do Turnstile usam blob URLs
     `worker-src 'self' blob: https://challenges.cloudflare.com`,
