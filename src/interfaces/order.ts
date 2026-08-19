@@ -307,6 +307,8 @@ export type OrderErrorCode =
   | "BILLING_ADDRESS_REQUIRED"
   | "PARTICIPANTS_REQUIRED"
   | "PAYMENT_REFUSED"
+  // Hard stop pós cc_rejected_high_risk no débito MP (cooldown progressivo)
+  | "PAYMENT_RETRY_COOLDOWN"
   | "IDEMPOTENCY_KEY_MISMATCH"
   | "COUPON_NOT_FOUND"
   | "COUPON_EXPIRED"
