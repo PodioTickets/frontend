@@ -228,23 +228,23 @@ export function useThreeDS() {
         // tentativa o Cardinal já está em memória.
         let cardinalRetried = false;
 
-        // Detector de cancelamento por remoção do iframe do challenge.
-        // Por que: BP MPI (especialmente no sandbox) nem sempre dispara
-        // onFailure/onError quando o usuário clica em "Cancelar" no popup
-        // do banco — o iframe é removido do DOM sem callback, então a
-        // Promise ficaria pendurada até o timeout de 5min ("loading
-        // infinito"). Aqui rastreamos o iframe visível criado pelo SDK e,
-        // ao ser removido sem que tenhamos settled, tratamos como cancel.
+        // Detector de "iframe do challenge sumiu sem callback".
+        // Por que existe: BP MPI nem sempre dispara onFailure/onError quando o
+        // usuário clica em "Cancelar" no popup do banco — o iframe some do DOM
+        // sem callback e a Promise ficaria pendurada até o timeout de 5min.
+        //
+        // Por que NÃO rejeita mais (ago/2026, Songbird v2/cardinaltrusted): o
+        // SDK novo cria e remove overlays GRANDES também no fluxo frictionless
+        // e demora >25s pós-remoção pra disparar onSuccess — rejeitar como
+        // USER_CANCEL matou autenticações Eci 05 APROVADAS (o /pay nunca
+        // rodava). Pagamento em curso NUNCA é descartado por heurística de DOM:
+        // a remoção do iframe apenas ENCURTA o teto global pra WATCHDOG_TIMEOUT
+        // — se o SDK ainda responder (falso-cancel), segue o fluxo normal; se
+        // era cancel real sem callback, o usuário recebe o toast neutro de
+        // tempo esgotado (retry limpo), não o modal de "não autorizado".
         let challengeIframe: HTMLIFrameElement | null = null;
         const CHALLENGE_MIN_SIZE = 200; // px; descarta o collector invisível.
-        // Grace generoso: no sucesso, o SDK remove o iframe do banco ANTES de
-        // rodar a validação interna no Cardinal e disparar `onSuccess`. Na
-        // plataforma NOVA da Cardinal (cardinaltrusted, ago/2026) esse round-trip
-        // pós-challenge ficou mais lento e estourava os 8s antigos: autenticação
-        // Eci 05 APROVADA era descartada como USER_CANCEL e o /pay nunca rodava.
-        // 25s dá folga real; quem cancelou de verdade espera o modal — UX
-        // aceitável em troca de nunca matar um pagamento aprovado.
-        const CANCEL_GRACE_MS = 25000;
+        const WATCHDOG_TIMEOUT_MS = 60_000;
 
         const cancelObserver = new MutationObserver((mutations) => {
           if (settled) return;
@@ -273,12 +273,8 @@ export function useThreeDS() {
                 if (challengeIframe) break;
               }
             }
-            // Detecta remoção do challenge iframe → CANDIDATO a cancelamento.
-            // O Songbird v2 pode REMOVER e RECRIAR o iframe no meio do fluxo
-            // (troca collection→challenge, re-render) — por isso a remoção
-            // não rejeita direto: zera o rastreio (permitindo detectar um
-            // novo iframe) e só rejeita no fim do grace se NENHUM iframe novo
-            // apareceu e nenhum callback do SDK chegou.
+            // Remoção do iframe rastreado: encurta o teto global (uma vez) e
+            // volta a rastrear — NUNCA rejeita por conta própria.
             if (challengeIframe) {
               for (const node of Array.from(mut.removedNodes)) {
                 const removed =
@@ -286,23 +282,9 @@ export function useThreeDS() {
                   (node instanceof Element &&
                     node.contains(challengeIframe));
                 if (!removed) continue;
-                if (!IS_PROD) console.warn("[3DS] challenge iframe removido");
+                if (!IS_PROD) console.warn("[3DS] challenge iframe removido — teto encurtado");
                 challengeIframe = null;
-                setTimeout(() => {
-                  if (settled) return;
-                  // Um novo iframe de challenge apareceu no intervalo: era
-                  // re-render do SDK, não cancelamento — segue o fluxo.
-                  if (challengeIframe) return;
-                  finish(() =>
-                    reject(
-                      new ThreeDSError(
-                        "FAILURE",
-                        "Pagamento cancelado pelo usuário",
-                        "USER_CANCEL",
-                      ),
-                    ),
-                  );
-                }, CANCEL_GRACE_MS);
+                shortenTimeout(WATCHDOG_TIMEOUT_MS);
                 return;
               }
             }
@@ -320,7 +302,7 @@ export function useThreeDS() {
           cancelObserver.disconnect();
           cb();
         };
-        const timeoutId = setTimeout(() => {
+        const onGlobalTimeout = () => {
           finish(() =>
             reject(
               new ThreeDSError(
@@ -329,7 +311,19 @@ export function useThreeDS() {
               ),
             ),
           );
-        }, 5 * 60_000);
+        };
+        let timeoutId = setTimeout(onGlobalTimeout, 5 * 60_000);
+        // Chamado quando o iframe do challenge some sem callback: dá até
+        // WATCHDOG_TIMEOUT_MS pro SDK concluir (falso-cancel resolve normal);
+        // cancel real sem callback cai no toast de tempo esgotado. Encurta uma
+        // única vez — remoções subsequentes de overlay não re-encurtam.
+        let timeoutShortened = false;
+        const shortenTimeout = (ms: number) => {
+          if (settled || timeoutShortened) return;
+          timeoutShortened = true;
+          clearTimeout(timeoutId);
+          timeoutId = setTimeout(onGlobalTimeout, ms);
+        };
 
         // BP MPI exige que bpmpi_config seja uma FUNÇÃO que retorna a config.
         // O SDK invoca bpmpi_config() internamente — passar objeto literal
