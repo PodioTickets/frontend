@@ -37,6 +37,7 @@ import { getCpfValidationMessage, isValidCPF } from "@/utils/cpf";
 import { isBrazilianCountry } from "@/validators/Auth.validator";
 import { formatBRL as formatPrice } from "@/lib/money";
 import { useHidePricing } from "@/contexts/HidePricingContext";
+import { useIgnoreAgeLimit } from "@/contexts/IgnoreAgeLimitContext";
 import { formatDateBR } from "@/utils/datetimeBR";
 import { OrderApiError } from "@/interfaces/order";
 import {
@@ -93,6 +94,8 @@ export function InformationStep({
 
   const eventId = event?.id;
   const hidePricing = useHidePricing();
+  // Cortesia: ignora a restrição de idade (badge + validação). Ver IgnoreAgeLimitContext.
+  const ignoreAgeLimit = useIgnoreAgeLimit();
   const { clearTimer, orderId, currentOrder: timerCurrentOrder, syncFromOrder } = useCheckoutTimer();
   const { patchParticipants, removeReservedSlot, getOrder } = useCheckoutReservation();
   const queryClient = useQueryClient();
@@ -1214,7 +1217,7 @@ export function InformationStep({
 
     if (!birthDate) {
       errors.birthDate = "Data de nascimento é obrigatória";
-    } else if (ageLimit && (ageLimit.min || ageLimit.max)) {
+    } else if (!ignoreAgeLimit && ageLimit && (ageLimit.min || ageLimit.max)) {
       // Idade exigida é a que o participante terá NO DIA DO EVENTO, não hoje.
       // Ex.: ingresso 18+ e evento em 2026-12-15 → nascido em 2008-12-15 está
       // OK (faz 18 no dia), mesmo que hoje ainda tenha 17.
@@ -1936,6 +1939,7 @@ export function InformationStep({
               const participantFits =
                 participantAge !== null && isAgeWithinTicketLimit(participantAge, ticket.ageLimit);
               const showAgeBadge =
+                !ignoreAgeLimit &&
                 !!ageLimitText && (participantAge !== null ? !participantFits : !buyerFits);
               const priceBreakdown =
                 ticketPriceBreakdownByCard[index] ?? {
