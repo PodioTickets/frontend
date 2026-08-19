@@ -11,8 +11,6 @@ services:
         NEXT_PUBLIC_BRASPAG_3DS_ENV: ${NEXT_PUBLIC_BRASPAG_3DS_ENV:-SDB}
         NEXT_PUBLIC_TURNSTILE_SITE_KEY: ${NEXT_PUBLIC_TURNSTILE_SITE_KEY}
         NEXT_PUBLIC_GOOGLE_MAPS_API_KEY: ${NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}
-        # Public key do Mercado Pago (tokenizacao de debito no browser) — inlined no bundle
-        NEXT_PUBLIC_MP_PUBLIC_KEY: ${NEXT_PUBLIC_MP_PUBLIC_KEY:-}
         # Gate de produção real (tracking/indexação): precisa em BUILD-time porque o
         # layout.tsx (server component) é renderizado no build p/ páginas estáticas.
         ENABLE_TRACKING_SCRIPTS: ${ENABLE_TRACKING_SCRIPTS:-}

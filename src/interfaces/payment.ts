@@ -18,6 +18,4 @@ export type CardErrors = {
   cardNumber?: string;
   cardExpiry?: string;
   cardCVV?: string;
-  /** CPF do TITULAR do cartão (débito MP) — não confundir com o CPF do participante. */
-  cardCpf?: string;
 };
