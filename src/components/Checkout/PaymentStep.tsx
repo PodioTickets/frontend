@@ -1028,6 +1028,16 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
         toast.error("Tente novamente.");
         return;
       }
+      if (err.code === "PAYMENT_RETRY_COOLDOWN") {
+        // Hard stop pós-recusa de risco do MP: o backend diz quanto esperar.
+        // NÃO é "tente novamente" — mostra a orientação real (aguardar/PIX/crédito).
+        regenerateIdempotencyKey();
+        toast.error(
+          err.message ||
+            "Não conseguimos aprovar com este cartão agora. Aguarde alguns minutos ou use PIX/crédito.",
+        );
+        return;
+      }
       showFailure("Erro ao processar pagamento. Tente novamente.");
       return;
     }
