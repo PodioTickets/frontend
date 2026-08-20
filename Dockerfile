@@ -69,6 +69,21 @@ COPY --chown=nextjs:nodejs --from=builder /app/public           ./public
 COPY --chown=nextjs:nodejs --from=builder /app/.next/standalone ./
 COPY --chown=nextjs:nodejs --from=builder /app/.next/static     ./.next/static
 
+# ---------------------------------------------------------------------------
+# sharp — binário nativo do otimizador de imagem do Next (/_next/image).
+# O output `standalone` + store SIMLINKADO do pnpm NÃO empacota de forma
+# confiável os pacotes nativos `@img/sharp-*` no node_modules traçado → em
+# runtime o otimizador estoura 500 (e o Cloudflare à frente devolve 520/525).
+# Solução: instalar o sharp AQUI, no runner, que é a MESMA plataforma do
+# runtime (node:20-alpine → musl) — o npm resolve automaticamente o binário
+# `@img/sharp-linuxmusl-<arch>`. O `require('sharp')` logo em seguida FALHA O
+# BUILD se o binário não carregar, transformando um erro silencioso de runtime
+# em erro explícito de build. Versão fixada = a mesma do package.json (manter
+# em sincronia). `--no-save` não toca o package.json do standalone.
+RUN npm install --no-save --omit=dev sharp@0.35.3 \
+ && node -e "const s=require('sharp');console.log('sharp OK',s.versions)" \
+ && chown -R nextjs:nodejs node_modules/sharp node_modules/@img
+
 USER nextjs
 EXPOSE 3000
 ENV PORT=3000

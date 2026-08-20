@@ -75,15 +75,19 @@ const nextConfig: NextConfig = {
     ];
   },
   images: {
-    // Otimização ON (antes `unoptimized: true`): o next/image agora serve variantes
-    // redimensionadas por `sizes` e em AVIF/WebP via /_next/image (mesma origem — o
-    // Cloudflare na frente cacheia o resultado na borda, então o custo de encode é
-    // pago 1× por variante, não a cada request). Ganho maior no CHECKOUT: thumbs de
-    // 100px deixam de baixar o upload original inteiro.
-    // Ordem dos formatos = preferência: AVIF (menor arquivo) → WebP (fallback). Se o
-    // container do Next sofrer com CPU de encode AVIF sob pico, reduzir para
-    // ["image/webp"] corta ~metade do custo de encode mantendo ganho relevante.
-    formats: ["image/avif", "image/webp"],
+    // Otimização ON: o next/image serve variantes redimensionadas por `sizes` via
+    // /_next/image (mesma origem — o Cloudflare à frente cacheia o resultado na
+    // borda). Ganho maior no CHECKOUT: thumbs de 100px deixam de baixar o upload
+    // inteiro. PRÉ-REQUISITO: o `sharp` DEVE existir no container — garantido no
+    // Dockerfile (runner instala + valida `require('sharp')`, falhando o build se
+    // faltar). Sem isso o /_next/image estoura 500 (histórico 2026-08-19).
+    // Só WebP (sem AVIF): o encode AVIF é MUITO mais caro em CPU e, sob pico,
+    // satura o container e derruba o SSR junto — só reintroduzir com CDN
+    // comprovadamente cacheando a borda.
+    formats: ["image/webp"],
+    // Variante encodada em cache por 31 dias (era 60s default): corta o RE-encode
+    // do mesmo asset. URLs de upload são imutáveis (timestamp no nome) → sem stale.
+    minimumCacheTTL: 60 * 60 * 24 * 31,
     // O otimizador do Next 16 recusa buscar imagens cujo host resolve para IP
     // privado/loopback (defesa contra SSRF). Em DEV o backend serve os uploads
     // em http://localhost:3333/... → cai nessa regra e a imagem quebra. Em
