@@ -75,23 +75,30 @@ COPY --chown=nextjs:nodejs --from=builder /app/.next/static     ./.next/static
 # confiável os pacotes nativos `@img/sharp-*` no node_modules traçado → em
 # runtime o otimizador estoura 500 (e o Cloudflare à frente devolve 520/525).
 #
-# Instalamos o sharp num diretório ISOLADO (/tmp/sharp): rodar `npm install`
-# direto em /app quebra com "Cannot read properties of null (reading 'matches')"
-# porque o node_modules parcial do standalone (traçado, sem lockfile) confunde o
-# resolvedor do npm. No dir isolado o contexto é limpo → npm resolve o binário
-# musl da própria plataforma (node:20-alpine, a MESMA do runtime). Em seguida
-# MESCLAMOS a árvore completa do sharp em /app/node_modules (idioma `src/.` =
-# copia CONTEÚDO, sem aninhar dirs já existentes) e validamos `require('sharp')`
-# a partir de /app — o build FALHA aqui se o binário não carregar, virando um
-# erro explícito de build em vez de 500 silencioso em runtime.
+# Estratégia (à prova de versão):
+#  1) Instala o sharp num diretório PRÓPRIO (/app/node_modules_native). Instalar
+#     direto em /app não funciona: rodar `npm install` lá quebra ("...reading
+#     'matches'") por causa do node_modules parcial do standalone, e mesclar por
+#     cima falha porque as entradas do standalone são SYMLINKS (pnpm) — `cp` de
+#     um dir sobre um symlink dá "is not a directory". Um dir próprio e limpo
+#     evita os dois problemas. Base node:20-alpine = MESMA plataforma do runtime
+#     (musl) → o npm baixa o binário `@img/sharp-linuxmusl-<arch>` correto.
+#  2) Remove os symlinks `sharp`/`@img` do standalone p/ não sombrearem a versão
+#     nativa recém-instalada.
+#  3) Aponta NODE_PATH p/ o dir próprio: o `require('sharp')` do otimizador (e o
+#     `require('@img/...')` interno do sharp) resolvem por ali. O ENV persiste no
+#     runtime. O `require('sharp')` a seguir FALHA O BUILD se o binário não
+#     carregar — erro explícito de build em vez de 500 silencioso em runtime.
 # Versão fixada = a mesma do package.json (manter em sincronia).
+ENV NODE_PATH=/app/node_modules_native
 RUN mkdir -p /tmp/sharp && cd /tmp/sharp \
  && npm init -y >/dev/null 2>&1 \
  && npm install --omit=dev --no-audit --no-fund --loglevel=error sharp@0.35.3 \
- && cp -a node_modules/. /app/node_modules/ \
- && cd /app && rm -rf /tmp/sharp \
+ && mkdir -p /app/node_modules_native \
+ && cp -a node_modules/. /app/node_modules_native/ \
+ && cd /app && rm -rf /tmp/sharp node_modules/sharp node_modules/@img \
  && node -e "const s=require('sharp');console.log('sharp OK',s.versions)" \
- && chown -R nextjs:nodejs node_modules/sharp node_modules/@img
+ && chown -R nextjs:nodejs /app/node_modules_native
 
 USER nextjs
 EXPOSE 3000
