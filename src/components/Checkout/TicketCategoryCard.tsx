@@ -735,7 +735,7 @@ const TicketItemDesktop = memo(({
               {ticket.name}
             </h2>
 
-            <div className="flex items-center gap-8 flex-wrap min-w-0">
+            <div className="flex items-center gap-8 flex-wrap min-w-0 w-full">
               {modalityInfo && distanceKm > 0 && (
                 <div className="flex items-center gap-2">
                   {modalityInfo.icon ? (
@@ -760,6 +760,17 @@ const TicketItemDesktop = memo(({
                   </p>
                 </div>
               )}
+              {/* Badge "Limite de idade" na MESMA linha da modalidade, empurrado
+                  para a DIREITA (`ml-auto`). Como a row renderiza sempre e o badge
+                  só depende de `showAgeLimit`, ele permanece à direita mesmo quando
+                  a modalidade/distância não aparece (distância 0). */}
+              {showAgeLimit ? (
+                <div className="ml-auto shrink-0 bg-yellow-3 text-yellow-12 rounded-full px-3 py-1 max-w-full">
+                  <p className="text-xs font-medium font-family-dm-sans whitespace-nowrap">
+                    Limite de idade: {ageLimitText}
+                  </p>
+                </div>
+              ) : null}
             </div>
           </div>
 
@@ -774,16 +785,9 @@ const TicketItemDesktop = memo(({
               )}
             </div>
             )}
-            {/* Coluna direita (desktop): badge "Limite de idade" ACIMA do stepper
-                (+/-), alinhado à direita sobre o botão de adicionar/remover. */}
+            {/* Coluna direita (desktop): aviso de estoque baixo + stepper. O badge
+                "Limite de idade" fica na linha da modalidade (acima), à direita. */}
             <div className="flex flex-col items-end gap-2">
-              {showAgeLimit ? (
-                <div className="bg-yellow-3 text-yellow-12 rounded-full px-3 py-1 max-w-full">
-                  <p className="text-xs font-medium font-family-dm-sans whitespace-nowrap">
-                    Limite de idade: {ageLimitText}
-                  </p>
-                </div>
-              ) : null}
             {isBatchSoldOut ? (
               // Lote esgotado: badge cinza no lugar do stepper (não dá pra adicionar).
               // `h-10` = mesma altura do stepper (size-6 + py-2) pra o card não encolher.
@@ -791,9 +795,8 @@ const TicketItemDesktop = memo(({
                 Lote esgotado
               </span>
             ) : (
-              // Aviso de estoque baixo IN-FLOW (não `absolute`), entre o badge de
-              // idade (acima) e o stepper — assim o badge fica por cima do aviso e
-              // eles não se sobrepõem. Alinhado à direita pela coluna (`items-end`).
+              // Aviso de estoque baixo IN-FLOW (não `absolute`), logo acima do
+              // stepper e alinhado à direita pela coluna (`items-end`).
               <>
                 {showLowStock ? (
                   <p className="text-xs font-medium text-red-11 whitespace-nowrap">
