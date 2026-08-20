@@ -74,13 +74,22 @@ COPY --chown=nextjs:nodejs --from=builder /app/.next/static     ./.next/static
 # O output `standalone` + store SIMLINKADO do pnpm NÃO empacota de forma
 # confiável os pacotes nativos `@img/sharp-*` no node_modules traçado → em
 # runtime o otimizador estoura 500 (e o Cloudflare à frente devolve 520/525).
-# Solução: instalar o sharp AQUI, no runner, que é a MESMA plataforma do
-# runtime (node:20-alpine → musl) — o npm resolve automaticamente o binário
-# `@img/sharp-linuxmusl-<arch>`. O `require('sharp')` logo em seguida FALHA O
-# BUILD se o binário não carregar, transformando um erro silencioso de runtime
-# em erro explícito de build. Versão fixada = a mesma do package.json (manter
-# em sincronia). `--no-save` não toca o package.json do standalone.
-RUN npm install --no-save --omit=dev sharp@0.35.3 \
+#
+# Instalamos o sharp num diretório ISOLADO (/tmp/sharp): rodar `npm install`
+# direto em /app quebra com "Cannot read properties of null (reading 'matches')"
+# porque o node_modules parcial do standalone (traçado, sem lockfile) confunde o
+# resolvedor do npm. No dir isolado o contexto é limpo → npm resolve o binário
+# musl da própria plataforma (node:20-alpine, a MESMA do runtime). Em seguida
+# MESCLAMOS a árvore completa do sharp em /app/node_modules (idioma `src/.` =
+# copia CONTEÚDO, sem aninhar dirs já existentes) e validamos `require('sharp')`
+# a partir de /app — o build FALHA aqui se o binário não carregar, virando um
+# erro explícito de build em vez de 500 silencioso em runtime.
+# Versão fixada = a mesma do package.json (manter em sincronia).
+RUN mkdir -p /tmp/sharp && cd /tmp/sharp \
+ && npm init -y >/dev/null 2>&1 \
+ && npm install --omit=dev --no-audit --no-fund --loglevel=error sharp@0.35.3 \
+ && cp -a node_modules/. /app/node_modules/ \
+ && cd /app && rm -rf /tmp/sharp \
  && node -e "const s=require('sharp');console.log('sharp OK',s.versions)" \
  && chown -R nextjs:nodejs node_modules/sharp node_modules/@img
 
