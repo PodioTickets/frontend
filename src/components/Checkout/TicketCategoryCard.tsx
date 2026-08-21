@@ -451,7 +451,11 @@ const TicketItemMobile = memo(({
         ) : null}
 
         <div className="flex items-center justify-between">
-          {hidePricing ? <span /> : (
+          {hidePricing ? (
+            <p className="text-xl font-bold text-gray-11 font-manrope leading-[1.1]">
+              Voucher
+            </p>
+          ) : (
             <div className="flex items-baseline gap-2">
               <p className="text-xl font-bold text-gray-12 font-manrope leading-[1.1]">
                 {formatDisplayPrice(priceBreakdown)}
@@ -656,6 +660,60 @@ const TicketItemDesktop = memo(({
 
   const hasDescription = !!ticket.description?.trim();
 
+  // Há modalidade/distância a exibir? Controla o alinhamento do badge de idade
+  // (à direita quando há modalidade; à esquerda quando não há — senão o `ml-auto`
+  // jogaria o badge pro canto direito sozinho, com a esquerda vazia).
+  const hasModality = !!(modalityInfo && distanceKm > 0);
+
+  // Controle de quantidade (esgotado OU aviso de estoque + stepper). Extraído pra
+  // ser reusado em DOIS lugares: na linha de preço (checkout normal) ou, no modo
+  // sem preço (cortesia/`hidePricing`), na PRÓPRIA linha da modalidade — assim a
+  // linha de preço não fica vazia (evita o espaço em branco).
+  const quantityControl = (
+    <div className="flex flex-col items-end gap-2">
+      {isBatchSoldOut ? (
+        // Lote esgotado: badge cinza no lugar do stepper (não dá pra adicionar).
+        // `h-10` = mesma altura do stepper (size-6 + py-2) pra o card não encolher.
+        <span className="shrink-0 inline-flex items-center h-10 rounded-full bg-gray-4 px-4 text-sm font-semibold text-gray-11 font-manrope leading-[1.1] whitespace-nowrap">
+          Lote esgotado
+        </span>
+      ) : (
+        // Aviso de estoque baixo IN-FLOW (não `absolute`), logo acima do stepper.
+        <>
+          {showLowStock ? (
+            <p className="text-xs font-medium text-red-11 whitespace-nowrap">
+              Restam apenas {ticket.availableQuantity}{" "}
+              {ticket.availableQuantity === 1 ? "vaga" : "vagas"}!
+            </p>
+          ) : null}
+          <div className="flex items-center justify-center w-max gap-2 bg-primary-4 rounded-full px-2 py-2">
+            <button
+              type="button"
+              onClick={() => onDecrease(ticket.id)}
+              disabled={quantity === 0}
+              className="size-6 cursor-pointer rounded-full flex items-center justify-center bg-gray-12 hover:bg-gray-11 text-gray-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
+              aria-label="Diminuir quantidade"
+            >
+              <Minus className="size-4" />
+            </button>
+            <span className="text-center text-lg font-semibold px-4 text-gray-12">
+              {quantity}
+            </span>
+            <button
+              type="button"
+              onClick={() => onIncrease(ticket.id)}
+              disabled={isAtMax}
+              className="size-6 cursor-pointer rounded-full flex items-center justify-center bg-gray-12 hover:bg-gray-11 text-gray-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
+              aria-label="Aumentar quantidade"
+            >
+              <Plus className="size-4" />
+            </button>
+          </div>
+        </>
+      )}
+    </div>
+  );
+
   return (
     // Coluna [linha (imagens + card), descrição]. A linha centraliza o card
     // menor contra a faixa de imagens mais alta (3+ imagens) via `items-center`,
@@ -760,13 +818,13 @@ const TicketItemDesktop = memo(({
                     </p>
                   </div>
                 )}
-                {/* Badge "Limite de idade" na MESMA linha da modalidade, empurrado
-                  para a DIREITA (`ml-auto`) — posição PADRÃO. Só quando NÃO há o
-                  aviso "Restam apenas N vagas": com o aviso, o badge desce pra
-                  baixo da modalidade (abaixo), pra não competir com o aviso na
-                  coluna direita (que fica acima do stepper). */}
+                {/* Badge "Limite de idade" na linha da modalidade: à DIREITA quando
+                  há modalidade (`ml-auto`), à ESQUERDA quando não há (senão o
+                  `ml-auto` jogaria o badge sozinho pro canto direito). Só quando NÃO
+                  há aviso de estoque (com aviso, o badge vira o absoluto na linha de
+                  preço). No modo cortesia (hidePricing) o badge some via ignoreAgeLimit. */}
                 {showAgeLimit && !showLowStock ? (
-                  <div className="ml-auto shrink-0 bg-yellow-3 text-yellow-12 rounded-full px-3 py-1 max-w-full">
+                  <div className={cn("shrink-0 bg-yellow-3 text-yellow-12 rounded-full px-3 py-1 max-w-full", hasModality && "ml-auto")}>
                     <p className="text-xs font-medium font-family-dm-sans whitespace-nowrap">
                       Limite de idade: {ageLimitText}
                     </p>
@@ -776,12 +834,16 @@ const TicketItemDesktop = memo(({
 
             </div>
 
+            {/* Linha de preço + controle. No checkout com preço mostra o valor;
+                no modo cortesia (hidePricing) mostra o texto "Voucher" no lugar do
+                preço — o controle de quantidade permanece à direita, mantendo a
+                modalidade colada ao título (não vai mais pra linha da modalidade). */}
             <div className="relative flex items-end justify-between">
               {/* Badge "Limite de idade" quando HÁ aviso de estoque baixo: ABSOLUTO
                 no topo-esquerdo (fora do fluxo) — ocupa o espaço vazio ACIMA do preço
                 (a coluna direita, mais alta por causa do aviso + stepper, já define a
-                altura da linha), então NÃO cresce o card. `pr-2` reserva folga pra não
-                encostar no aviso "Restam apenas N vagas" à direita. */}
+                altura da linha), então NÃO cresce o card. `truncate`/`max-w-[60%]`
+                evitam encostar no aviso "Restam apenas N vagas" à direita. */}
               {showAgeLimit && showLowStock ? (
                 <div className="absolute left-0 top-0 max-w-[60%] pointer-events-none">
                   <div className="inline-block bg-yellow-3 text-yellow-12 rounded-full px-3 py-1 max-w-full">
@@ -791,7 +853,11 @@ const TicketItemDesktop = memo(({
                   </div>
                 </div>
               ) : null}
-              {hidePricing ? <span /> : (
+              {hidePricing ? (
+                <p className="text-xl font-bold text-gray-11 font-manrope leading-[1.1]">
+                  Voucher
+                </p>
+              ) : (
                 <div className="flex items-baseline gap-2">
                   <p className="text-xl font-bold text-gray-12">{formatDisplayPrice(priceBreakdown)}</p>
                   {priceBreakdown.hasDiscount && (
@@ -801,51 +867,7 @@ const TicketItemDesktop = memo(({
                   )}
                 </div>
               )}
-              {/* Coluna direita (desktop): aviso de estoque baixo + stepper. O badge
-                "Limite de idade" fica na linha da modalidade (acima), à direita. */}
-              <div className="flex flex-col items-end gap-2">
-                {isBatchSoldOut ? (
-                  // Lote esgotado: badge cinza no lugar do stepper (não dá pra adicionar).
-                  // `h-10` = mesma altura do stepper (size-6 + py-2) pra o card não encolher.
-                  <span className="shrink-0 inline-flex items-center h-10 rounded-full bg-gray-4 px-4 text-sm font-semibold text-gray-11 font-manrope leading-[1.1] whitespace-nowrap">
-                    Lote esgotado
-                  </span>
-                ) : (
-                  // Aviso de estoque baixo IN-FLOW (não `absolute`), logo acima do
-                  // stepper e alinhado à direita pela coluna (`items-end`).
-                  <>
-                    {showLowStock ? (
-                      <p className="text-xs font-medium text-red-11 whitespace-nowrap">
-                        Restam apenas {ticket.availableQuantity}{" "}
-                        {ticket.availableQuantity === 1 ? "vaga" : "vagas"}!
-                      </p>
-                    ) : null}
-                    <div className="flex items-center justify-center w-max gap-2 bg-primary-4 rounded-full px-2 py-2">
-                      <button
-                        type="button"
-                        onClick={() => onDecrease(ticket.id)}
-                        disabled={quantity === 0}
-                        className="size-6 cursor-pointer rounded-full flex items-center justify-center bg-gray-12 hover:bg-gray-11 text-gray-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
-                        aria-label="Diminuir quantidade"
-                      >
-                        <Minus className="size-4" />
-                      </button>
-                      <span className="text-center text-lg font-semibold px-4 text-gray-12">
-                        {quantity}
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() => onIncrease(ticket.id)}
-                        disabled={isAtMax}
-                        className="size-6 cursor-pointer rounded-full flex items-center justify-center bg-gray-12 hover:bg-gray-11 text-gray-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
-                        aria-label="Aumentar quantidade"
-                      >
-                        <Plus className="size-4" />
-                      </button>
-                    </div>
-                  </>
-                )}
-              </div>
+              {quantityControl}
             </div>
           </div>
         </div>
