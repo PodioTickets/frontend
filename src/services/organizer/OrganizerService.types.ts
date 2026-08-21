@@ -713,6 +713,10 @@ export interface PurchaseLocation {
   state?: string;
   /** 1 por PEDIDO pago. */
   purchases: number;
+  /** Coordenadas resolvidas pelo geocoding do BACKEND (cache global). Ausentes
+   *  enquanto o local está PENDENTE de geocoding — aparecem na carga seguinte. */
+  lat?: number;
+  lng?: number;
 }
 
 export interface LotNearDepletionBatch {
@@ -843,8 +847,11 @@ export interface DashboardSecondaryData {
   topCities: TopCity[];
   salesHeatmap: SalesHeatmapData[];
   mostAnsweredQuestions: MostAnsweredQuestion[];
-  /** Compras por cidade/UF (billing) — mapa de calor geográfico. */
+  /** Compras por bairro/cidade/UF (billing) — mapa de calor geográfico. */
   purchaseLocations: PurchaseLocation[];
+  /** Bairros ainda aguardando geocoding no backend (0 = mapa completo). Guia o
+   *  WebSocket do dashboard (assina updates enquanto > 0). */
+  geocodingPending?: number;
 }
 
 // Financial interfaces
