@@ -90,3 +90,16 @@ primeira parcela: 10 dias (30 reais)
 Nesse caso, daria, 55.9. Como ele pediu 50 reais, se ele insistir em 50 reais, a taxa de antecipação fica de 16.67%, mas se ele aceitar o valor recomendado de 55.9, vai ficar de 6.83%.
 
 \*obs: a taxa de 10% vai ser salva por organizacao, ou seja, podemos customizar uma taxa de antecipacao pra cada organizador.
+
+---
+
+## Seleção ÓTIMA das unidades (menor taxa possível)
+
+O custo POR REAL de um recebível é `taxa × dias/30` — depende só dos DIAS, não do valor. Logo, "mais perto de vencer primeiro" é o critério correto ENTRE dias. Mas como consumimos unidades INTEIRAS, um "pega o menor primeiro" ingênuo pode ESTOURAR o pedido à toa (ex.: pegar uma parcela pequena e depois somar uma grande, quando a grande sozinha já cobria).
+
+Objetivo: para receber X, **minimizar o gross total consumido** com `líquido ≥ X` (o gross que sobra acima de X vira taxa). Algoritmo:
+
+1. Agrupar por dia de liberação e consumir GRUPOS INTEIROS do menor dia pro maior (dias menores dominam — nunca compensa trocar por um dia maior).
+2. No grupo em que o líquido CRUZA X (fronteira), escolher o subconjunto de MENOR gross que cobre o residual (subset-sum exato; DP 0/1). Grupos gigantes usam um fallback guloso.
+
+Isso dá a menor taxa efetiva possível para o valor pedido. Implementado em `server/src/app/repasse/anticipation-engine.ts` (verdade) e espelhado em `frontend/src/utils/anticipation.ts` (prévia).

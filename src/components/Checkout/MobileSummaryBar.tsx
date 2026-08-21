@@ -181,25 +181,12 @@ export function MobileSummaryBar({
       <SummaryRow label="Taxa de serviço" value={formatPrice(serviceFee)} />
     ) : null;
 
-  // Cortesia: nenhuma linha de valor — só o CTA numa barra fixa mínima.
-  if (hidePricing) {
-    if (!cta) return null;
-    return (
-      <div data-mobile-summary-bar="true" className="fixed bottom-0 left-0 right-0 z-50 md:hidden">
-        <div className="bg-gray-2 border-t border-gray-6 shadow-lg px-4 py-3 pb-5">
-          <Button
-            onClick={cta.onClick}
-            disabled={cta.disabled}
-            isLoading={cta.loading}
-            className="w-full font-bold font-manrope disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {cta.label}
-          </Button>
-        </div>
-      </div>
-    );
-  }
-
+  // Cortesia (hidePricing): NÃO troca as barras por versões mínimas — renderiza as
+  // MESMAS barras/sheet do comprador (full em /ingressos, compact nas demais, com a
+  // aba "Ver detalhes"), apenas OCULTANDO os VALORES monetários (desconto, taxa,
+  // subtotal, total e preço por ingresso). Assim a cortesia fica idêntica ao fluxo
+  // do comprador, sem exibir preços de um pedido R$0. Toda a diferença é feita por
+  // `{!hidePricing && ...}` abaixo → o comprador (hidePricing=false) não muda.
   return (
     <>
       {/* Barra minimizada COMPLETA — só em /ingressos (variant="full"):
@@ -225,16 +212,16 @@ export function MobileSummaryBar({
                 </h3>
               </div>
               <SummaryRow label="Participantes" value={totalParticipants} />
-              {discountRow}
-              {feeRow}
+              {!hidePricing && discountRow}
+              {!hidePricing && feeRow}
               <div className="flex items-center justify-between gap-3">
-                <SummaryRow label="Total" value={formatPrice(total)} emphasize />
+                {!hidePricing && <SummaryRow label="Total" value={formatPrice(total)} emphasize />}
                 {cta && (
                   <Button
                     onClick={cta.onClick}
                     disabled={cta.disabled}
                     isLoading={cta.loading}
-                    className="font-bold font-manrope disabled:opacity-50 disabled:cursor-not-allowed"
+                    className={`font-bold font-manrope disabled:opacity-50 disabled:cursor-not-allowed${hidePricing ? " w-full" : ""}`}
                   >
                     {cta.label}
                   </Button>
@@ -351,12 +338,15 @@ export function MobileSummaryBar({
                                 contentClassName="!w-auto max-w-[calc(100vw-32px)] text-left text-sm text-gray-12 font-family-dm-sans !py-2 !px-3"
                               >
                                 <p className="text-sm font-semibold text-gray-12 truncate min-w-0 cursor-pointer font-family-dm-sans">
-                                  ({ticket.quantity}x) {ticket.name}:
+                                  ({ticket.quantity}x) {ticket.name}{hidePricing ? "" : ":"}
                                 </p>
                               </Tooltip>
-                              <p className="text-sm font-semibold text-gray-12 shrink-0 font-family-dm-sans">
-                                {formatPrice(ticket.total)}
-                              </p>
+                              {/* Cortesia: sem preço por ingresso (pedido R$0). */}
+                              {!hidePricing && (
+                                <p className="text-sm font-semibold text-gray-12 shrink-0 font-family-dm-sans">
+                                  {formatPrice(ticket.total)}
+                                </p>
+                              )}
                             </div>
                           </div>
                         ))}
@@ -364,13 +354,15 @@ export function MobileSummaryBar({
                     )
                   )}
 
-                  {/* Breakdown completo */}
-                  <div className="flex flex-col gap-2 border-t border-gray-6 pt-4">
-                    <SummaryRow label="Subtotal" value={formatPrice(subtotal)} />
-                    {discountRow}
-                    {feeRow}
-                    <SummaryRow label="Total" value={formatPrice(total)} emphasize />
-                  </div>
+                  {/* Breakdown completo — oculto na cortesia (pedido R$0). */}
+                  {!hidePricing && (
+                    <div className="flex flex-col gap-2 border-t border-gray-6 pt-4">
+                      <SummaryRow label="Subtotal" value={formatPrice(subtotal)} />
+                      {discountRow}
+                      {feeRow}
+                      <SummaryRow label="Total" value={formatPrice(total)} emphasize />
+                    </div>
+                  )}
                 </div>
 
 

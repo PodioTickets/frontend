@@ -95,7 +95,7 @@ export function OrganizerSupportWidget() {
   return (
     <div
       ref={rootRef}
-      className="fixed bottom-4 right-4 md:bottom-8 md:right-8 z-50 flex flex-col gap-3 items-end print:hidden"
+      className="fixed bottom-12 right-4 md:bottom-8 md:right-8 z-50 flex flex-col gap-3 items-end print:hidden"
     >
       <AnimatePresence>
         {open && (

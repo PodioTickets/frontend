@@ -8,6 +8,7 @@ import { Loading } from "@/components/Loading";
 import { useCheckout } from "@/contexts/CheckoutContext";
 import { userService } from "@/services";
 import { trackMetaPixel } from "@/lib/metaPixel";
+import { trackGooglePurchase } from "@/lib/googleTag";
 
 function CheckoutSucessoContent() {
   const searchParams = useSearchParams();
@@ -55,6 +56,22 @@ function CheckoutSucessoContent() {
       { onceKey: `purchase:${orderNumber}`, persist: true },
     );
   }, [orderDetails, event?.tracking?.metaPixelId]);
+
+  // Google — conversão `purchase` para Ads/GA4 do evento. Espelha o Meta:
+  // browser-only, dedup PERSISTENTE por pedido (conta no máximo 1×).
+  useEffect(() => {
+    const orderNumber = orderDetails?.order?.id;
+    if (!orderNumber) return;
+    trackGooglePurchase(
+      event?.tracking,
+      {
+        transactionId: orderNumber,
+        value: (orderDetails?.order?.pricing?.total ?? 0) / 100,
+        currency: "BRL",
+      },
+      { onceKey: `purchase:${orderNumber}` },
+    );
+  }, [orderDetails, event?.tracking]);
 
   return (
     <div className="flex min-h-screen w-full flex-col items-center bg-gray-2">

@@ -216,6 +216,11 @@ export function useEventDashboard(
         activeBatch: l.activeBatch ?? null,
       })),
       salesHeatmap: secondary?.salesHeatmap ?? [],
+      purchaseLocations: (secondary?.purchaseLocations ?? []).map((l) => ({
+        city: l.city,
+        state: l.state,
+        purchases: l.purchases,
+      })),
       dailyData: [],
       topProductVariations: (rankings?.topProductVariations ?? []).map((p) => ({
         productId: p.productId,

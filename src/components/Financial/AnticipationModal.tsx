@@ -9,6 +9,7 @@ import { Loading } from "../Loading";
 import { organizerService } from "@/services";
 import {
   computeAnticipation,
+  unitCost,
   type AnticipationQuote,
 } from "@/utils/anticipation";
 import { AnticipationLockedModal } from "./AnticipationLockedModal";
@@ -137,6 +138,30 @@ export function AnticipationModal({ eventId, onClose, eventName, onSuccess }: An
   const receiveCents = result.receive; // "Você recebe hoje"
   const recommendedNet = result.recommendedNet; // valor recomendado (fronteira)
   const effectiveRatePct = result.effectiveRatePct;
+
+  // Detalhamento por recebível: mostra EXATAMENTE o que o motor usou em cada
+  // unidade (valor bruto, dias até liberar, custo pela fórmula, líquido) e marca
+  // quais entraram no valor pedido. Ordenado do que libera mais cedo (mais barato)
+  // pro mais tarde — a mesma ordem de consumo.
+  const monthlyRatePct = monthlyRate * 100;
+  const unitRows = useMemo(() => {
+    const consumed = new Set(result.consumedUnitIds);
+    return units
+      .map((u) => {
+        const cost = unitCost(u.gross, u.daysUntilRelease, monthlyRate);
+        return {
+          unitId: u.unitId,
+          orderId: u.orderId,
+          installmentNumber: u.installmentNumber,
+          gross: u.gross,
+          days: u.daysUntilRelease,
+          cost,
+          net: u.gross - cost,
+          isConsumed: consumed.has(u.unitId),
+        };
+      })
+      .sort((a, b) => a.days - b.days);
+  }, [units, monthlyRate, result.consumedUnitIds]);
 
   // Só revela o "Valor recomendado" e o resumo depois que há um valor informado
   // (digitado ou via "Antecipar tudo"). Antes disso o modal fica "limpo".
@@ -308,6 +333,90 @@ export function AnticipationModal({ eventId, onClose, eventName, onSuccess }: An
                       R$ {formatBRL(receiveCents)}
                     </span>
                   </div>
+                </div>
+              )}
+
+              {/* Detalhamento por recebível (diagnóstico/transparência): mostra o
+                  que o motor usou em CADA unidade — valor, dias até liberar, custo e
+                  líquido — e marca as consumidas no valor pedido. */}
+              {unitRows.length > 0 && (
+                <div className="border border-gray-6 rounded-lg p-4 px-5 flex flex-col gap-3">
+                  <div className="flex flex-col gap-0.5">
+                    <span className="font-family-dm-sans font-semibold text-gray-12">
+                      Detalhamento por recebível
+                    </span>
+                    <span className="font-family-dm-sans text-xs text-gray-11 leading-[1.35]">
+                      Custo de cada unidade = valor × {monthlyRatePct.toLocaleString("pt-BR", { maximumFractionDigits: 2 })}% (taxa mensal) × (dias até liberar ÷ 30).
+                      Consumimos primeiro as que liberam mais cedo (mais baratas).
+                    </span>
+                  </div>
+
+                  <div className="flex flex-col divide-y divide-gray-6">
+                    {unitRows.map((u, i) => (
+                      <div key={u.unitId} className="flex items-start justify-between gap-3 py-2 first:pt-0 last:pb-0">
+                        <div className="flex flex-col min-w-0">
+                          <span className="font-family-dm-sans text-sm text-gray-12">
+                            {i + 1}.{" "}
+                            {u.installmentNumber == null
+                              ? "Pedido à vista"
+                              : `Parcela ${u.installmentNumber}`}
+                            {hasAmount && (
+                              <span
+                                className={
+                                  u.isConsumed
+                                    ? "ml-2 text-xs font-medium text-primary-11"
+                                    : "ml-2 text-xs font-medium text-gray-10"
+                                }
+                              >
+                                {u.isConsumed ? "• usado" : "• não usado"}
+                              </span>
+                            )}
+                          </span>
+                          <span className="font-family-dm-sans text-xs text-gray-11">
+                            Pedido {u.orderId.slice(0, 8)} · libera em {u.days}{" "}
+                            {u.days === 1 ? "dia" : "dias"}
+                          </span>
+                          <span className="font-family-dm-sans text-xs text-gray-11">
+                            Custo: R$ {formatBRL(u.gross)} × {monthlyRatePct.toLocaleString("pt-BR", { maximumFractionDigits: 2 })}% × ({u.days}÷30) = <span className="font-medium text-gray-12">− R$ {formatBRL(u.cost)}</span>
+                          </span>
+                        </div>
+                        <div className="flex flex-col items-end shrink-0">
+                          <span className="font-family-dm-sans text-sm text-gray-12">
+                            R$ {formatBRL(u.gross)}
+                          </span>
+                          <span className="font-family-dm-sans text-xs text-gray-11">
+                            líquido R$ {formatBRL(u.net)}
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {hasAmount && (
+                    <>
+                      <div className="h-px w-full bg-gray-6" />
+                      <div className="flex flex-col gap-1 text-xs font-family-dm-sans text-gray-11">
+                        <div className="flex items-center justify-between">
+                          <span>Bruto consumido (unidades usadas):</span>
+                          <span className="text-gray-12">R$ {formatBRL(consumedGross)}</span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span>Custo real (soma dos custos):</span>
+                          <span className="text-gray-12">− R$ {formatBRL(result.realCost)}</span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span>Valor recomendado (bruto − custo real):</span>
+                          <span className="font-semibold text-gray-12">R$ {formatBRL(recommendedNet)}</span>
+                        </div>
+                        {receiveCents < recommendedNet && (
+                          <div className="flex items-center justify-between">
+                            <span>Sobra (recomendado − pedido) vira taxa:</span>
+                            <span className="text-gray-12">− R$ {formatBRL(recommendedNet - receiveCents)}</span>
+                          </div>
+                        )}
+                      </div>
+                    </>
+                  )}
                 </div>
               )}
             </>

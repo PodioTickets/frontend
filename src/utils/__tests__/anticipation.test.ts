@@ -39,7 +39,9 @@ describe("computeAnticipation (frontend mirror)", () => {
     expect(r.effectiveRatePct).toBeCloseTo(16.666, 2);
   });
 
-  it("mistura parcela(10d)+à vista(31d) mais baratas; pede 50 → recomendado 55,90", () => {
+  it("mistura, pede 50: min gross (par) e desempate = recomendado + perto de 50", () => {
+    // 4 unidades de R$30 → qualquer par consome 6000 (taxa 16,67% p/ 50). Desempate
+    // (recomendado + perto de 50): a1(31d,26,90)+p2(40d,26,00) = 52,90 (o menor ≥ 50).
     const units = [
       u({ unitId: "a1", gross: 3000, daysUntilRelease: 31 }),
       u({ unitId: "a2", gross: 3000, daysUntilRelease: 31 }),
@@ -47,9 +49,11 @@ describe("computeAnticipation (frontend mirror)", () => {
       u({ unitId: "p2", gross: 3000, daysUntilRelease: 40, installmentNumber: 2 }),
     ];
     const r = computeAnticipation(units, 5000, RATE);
-    expect(r.consumedUnitIds).toEqual(["p1", "a1"]);
-    expect(r.recommendedNet).toBe(5590);
+    expect(r.consumedUnitIds).toEqual(["a1", "p2"]);
+    expect(r.recommendedNet).toBe(5290); // 52,90
+    // Pedindo exatamente 55,90 → par com líquido ≥ 5590 (p1+a1) → taxa 6,83%.
     const rec = computeAnticipation(units, 5590, RATE);
+    expect(rec.recommendedNet).toBe(5590);
     expect(rec.effectiveRatePct).toBeCloseTo(6.833, 2);
   });
 
@@ -58,5 +62,29 @@ describe("computeAnticipation (frontend mirror)", () => {
     expect(computeAnticipation(units, 0, RATE).consumedGross).toBe(0);
     const r = computeAnticipation(units, 999999, RATE);
     expect(r.receive).toBe(2690);
+  });
+
+  it("seleção ótima: mesmo dia, prefere a unidade grande sozinha (menor gross)", () => {
+    // A=R$10, B=R$100 (31d). Pede R$15 → só B cobre (gross 100), não A+B (110).
+    const units = [
+      u({ unitId: "a", gross: 1000, daysUntilRelease: 31 }),
+      u({ unitId: "b", gross: 10000, daysUntilRelease: 31 }),
+    ];
+    const r = computeAnticipation(units, 1500, RATE);
+    expect(r.consumedUnitIds).toEqual(["b"]);
+    expect(r.consumedGross).toBe(10000);
+    expect(r.effectiveFee).toBe(8500);
+  });
+
+  it("seleção ótima: subset-sum (0d) escolhe {3,8}=11, não a soma gulosa 16", () => {
+    const units = [
+      u({ unitId: "u3", gross: 300, daysUntilRelease: 0 }),
+      u({ unitId: "u5", gross: 500, daysUntilRelease: 0 }),
+      u({ unitId: "u8", gross: 800, daysUntilRelease: 0 }),
+    ];
+    const r = computeAnticipation(units, 900, RATE);
+    expect(r.consumedUnitIds).toEqual(["u3", "u8"]);
+    expect(r.consumedGross).toBe(1100);
+    expect(r.receive).toBe(900);
   });
 });

@@ -233,7 +233,10 @@ export interface PayOrderPixRequest {
   voucherCode?: string;
 }
 
-export type PayOrderRequest = PayOrderCardRequest | PayOrderDebitCardRequest | PayOrderPixRequest;
+export type PayOrderRequest =
+  | PayOrderCardRequest
+  | PayOrderDebitCardRequest
+  | PayOrderPixRequest;
 
 export interface OrderPaymentStatusResponse {
   orderId: string;

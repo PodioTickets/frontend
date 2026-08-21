@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
+import { isSearchIndexingEnabled } from "@/lib/searchIndexing";
 /**
  * Host do painel (ex.: app.podioticket.com.br). Sem protocolo; porta opcional em dev
  * (ex.: app.localhost:3000).
@@ -424,6 +425,13 @@ export async function proxy(request: NextRequest) {
     "camera=(), microphone=(), geolocation=(self), payment=(), xr-spatial-tracking=(self \"https://challenges.cloudflare.com\")"
   );
 
+  // Fora da produção real (homologação/staging) o site NÃO deve ser indexado.
+  // `X-Robots-Tag` é autoritativo e sobrepõe qualquer `<meta robots>` de página.
+  // Mesmo flag do tracking (ENABLE_TRACKING_SCRIPTS) — ver lib/searchIndexing.ts.
+  if (!isSearchIndexingEnabled()) {
+    response.headers.set("X-Robots-Tag", "noindex, nofollow");
+  }
+
   if (pathname.startsWith("/api/")) {
     if (isValidOrigin(origin, host)) {
       response.headers.set("Access-Control-Allow-Origin", origin!);
@@ -463,10 +471,30 @@ export async function proxy(request: NextRequest) {
     "https://mpi.braspag.com.br",
     "https://mpisandbox.braspag.com.br",
     "https://*.cardinalcommerce.com",
+    // Domínio NOVO da Cardinal em produção: o Songbird (motor 3DS) carrega de
+    // static.client.cardinaltrusted.com e fala com outros subdomínios da família.
+    "https://*.cardinaltrusted.com",
     "https://apata.io",
     "https://*.apata.io",
+    // Device fingerprint do 3DS: ThreatMetrix + coletas das próprias bandeiras
+    // (VCDI da Visa em secure-devicefp.visa.com, equivalente da Mastercard).
+    // Só as famílias que injetam <script>/<iframe>; beacons imprevisíveis de
+    // emissor são cobertos pelo `https:` de connect/img na rota do checkout.
+    "https://*.online-metrix.net",
+    "https://*.visa.com",
+    "https://*.mastercard.com",
   ];
   const braspag3DSCsp = braspag3DSDomains.join(" ");
+
+  // O fingerprint/challenge do 3DS dispara requests para domínios de BANDEIRA e
+  // EMISSOR que mudam sem aviso (secure-devicefp.visa.com hoje, outro amanhã) —
+  // enumerá-los um a um derruba pagamento a cada novidade. SÓ na rota do
+  // checkout, connect-src e img-src aceitam `https:` genérico — mesmo racional
+  // já aplicado ao frame-src/form-action. O resto do site segue estrito, e
+  // script-src continua estrito em TODAS as rotas (XSS é o risco real; as
+  // famílias de DF que injetam script estão listadas acima).
+  const isCheckoutRoute = pathname === "/checkout" || pathname.startsWith("/checkout/");
+  const checkoutNetExtra = isCheckoutRoute ? " https:" : "";
 
   // Telemetria/log do SDK Braspag (API Gateway AWS dinâmico). Apenas connect-src.
   const braspag3DSConnectExtras = "https://*.execute-api.us-east-1.amazonaws.com";
@@ -496,19 +524,23 @@ export async function proxy(request: NextRequest) {
     `font-src ${trustedDomains.join(" ")} data: https://fonts.gstatic.com https://*.google.com`,
     `connect-src ${trustedDomains.join(
       " "
-    )} wss: ws: https://*.googleapis.com https://*.google.com https://*.google-analytics.com https://*.analytics.google.com https://challenges.cloudflare.com https://www.facebook.com https://connect.facebook.net ${braspag3DSCsp} ${braspag3DSConnectExtras} ${googleTagCsp}`,
+    )} wss: ws: https://*.googleapis.com https://*.google.com https://*.google-analytics.com https://*.analytics.google.com https://challenges.cloudflare.com https://www.facebook.com https://connect.facebook.net ${braspag3DSCsp} ${braspag3DSConnectExtras} ${googleTagCsp}${checkoutNetExtra}`,
     // 3DS challenge abre iframe do ACS do banco emissor (Itaú, Bradesco, Nubank, etc).
-    // Cada banco usa seu próprio domínio — domínios Braspag/Cardinal cobrem o fluxo 3DS;
-    // origens adicionais de embeds listadas explicitamente (sem https: genérico).
-    `frame-src 'self' https://www.youtube.com https://*.google.com https://*.googleapis.com https://www.strava.com https://*.strava.com https://strava-embeds.com https://challenges.cloudflare.com https://www.instagram.com https://www.facebook.com https://platform.twitter.com https://www.tiktok.com ${braspag3DSCsp} https://www.googletagmanager.com https://*.doubleclick.net`,
-    `img-src ${trustedDomains.join(" ")} data: blob: https://cdn.podioticket.com.br https://*.google.com https://*.googleapis.com https://*.gstatic.com https://*.googleusercontent.com https://www.instagram.com https://*.cdninstagram.com https://*.fbcdn.net https://www.facebook.com https://*.strava.com https://strava-embeds.com https://apata.io https://*.apata.io ${googleTagCsp}`,
+    // No fluxo Braspag/Cardinal o ACS fica ANINHADO no iframe do Cardinal (domínio fixo),
+    // mas o fallback AuthenticationUrl da Cielo (débito sem MPI) navega DIRETO pro ACS
+    // do banco — domínio imprevisível por emissor. Por isso `https:` genérico aqui e no
+    // form-action (iframe cross-origin não lê a página; frame-ancestors segue 'none').
+    `frame-src 'self' https: https://www.youtube.com https://*.google.com https://*.googleapis.com https://www.strava.com https://*.strava.com https://strava-embeds.com https://challenges.cloudflare.com https://www.instagram.com https://www.facebook.com https://platform.twitter.com https://www.tiktok.com ${braspag3DSCsp} https://www.googletagmanager.com https://*.doubleclick.net`,
+    `img-src ${trustedDomains.join(" ")} data: blob: https://cdn.podioticket.com.br https://*.google.com https://*.googleapis.com https://*.gstatic.com https://*.googleusercontent.com https://www.instagram.com https://*.cdninstagram.com https://*.fbcdn.net https://www.facebook.com https://*.strava.com https://strava-embeds.com https://apata.io https://*.apata.io ${googleTagCsp}${checkoutNetExtra}`,
     `media-src ${trustedDomains.join(" ")} data: blob:`,
     // worker-src e child-src: workers internos do Turnstile usam blob URLs
     `worker-src 'self' blob: https://challenges.cloudflare.com`,
     `child-src 'self' blob: https://challenges.cloudflare.com`,
     `object-src 'none'`,
     `base-uri 'self'`,
-    `form-action 'self' https://challenges.cloudflare.com ${braspag3DSCsp}`,
+    // `https:` genérico: o challenge 3DS pode submeter forms pro ACS do banco
+    // emissor (domínio imprevisível por emissor).
+    `form-action 'self' https: https://challenges.cloudflare.com ${braspag3DSCsp}`,
     `frame-ancestors 'none'`,
     `upgrade-insecure-requests`,
   ];

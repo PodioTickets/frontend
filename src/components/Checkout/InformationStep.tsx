@@ -37,6 +37,7 @@ import { getCpfValidationMessage, isValidCPF } from "@/utils/cpf";
 import { isBrazilianCountry } from "@/validators/Auth.validator";
 import { formatBRL as formatPrice } from "@/lib/money";
 import { useHidePricing } from "@/contexts/HidePricingContext";
+import { useIgnoreAgeLimit } from "@/contexts/IgnoreAgeLimitContext";
 import { formatDateBR } from "@/utils/datetimeBR";
 import { OrderApiError } from "@/interfaces/order";
 import {
@@ -62,6 +63,12 @@ interface InformationStepProps {
   isSubmitting?: boolean;
   previewQuestions?: Question[];
   previewMode?: boolean;
+  /**
+   * Rótulo do CTA final que dispara `onNext` (desktop + barra mobile). Default
+   * "Confirmar dados" (checkout público). O fluxo de cortesia sobrescreve para
+   * "Concluir inscrição" quando esta é a última etapa antes da conclusão.
+   */
+  nextLabel?: string;
 }
 
 interface ParticipantWithTicket {
@@ -82,6 +89,7 @@ export function InformationStep({
   isSubmitting = false,
   previewQuestions,
   previewMode = false,
+  nextLabel = "Confirmar dados",
 }: InformationStepProps) {
   const {
     raceQuantities,
@@ -93,6 +101,9 @@ export function InformationStep({
 
   const eventId = event?.id;
   const hidePricing = useHidePricing();
+  // Cortesia: esconde apenas o BADGE de limite de idade. A REGRA de validação de idade
+  // (erro no input de data de nascimento) continua valendo. Ver IgnoreAgeLimitContext.
+  const ignoreAgeLimit = useIgnoreAgeLimit();
   const { clearTimer, orderId, currentOrder: timerCurrentOrder, syncFromOrder } = useCheckoutTimer();
   const { patchParticipants, removeReservedSlot, getOrder } = useCheckoutReservation();
   const queryClient = useQueryClient();
@@ -756,21 +767,13 @@ export function InformationStep({
     const willClose = isCurrentlyExpanded;
     setExpandedParticipants(willClose ? {} : { [index]: true });
 
-    // Ao salvar (fechar) um participante, ajusta o scroll (decisão do usuário):
-    // - DESKTOP: reseta TUDO pro topo.
-    // - MOBILE: rola pro PRÓXIMO participante pendente (cards empilhados; sem isso
-    //   o usuário fica perdido fora do viewport após o colapso).
+    // Ao salvar (fechar) um participante, rola pro PRÓXIMO participante pendente
+    // (mobile E desktop — cards empilham na vertical em ambos no checkout; sem isso
+    // o usuário fica perdido fora do viewport após o colapso). O avanço de ETAPA
+    // reseta pro topo à parte — aqui é só o "salvar participante".
     // Scroll é da window nos dois fluxos (checkout e "adicionar inscrito" do organizador).
     if (willClose && typeof window !== "undefined") {
-      const isDesktop = window.matchMedia("(min-width: 768px)").matches;
-      if (isDesktop) {
-        requestAnimationFrame(() => {
-          window.scrollTo({ top: 0, behavior: "smooth" });
-        });
-        return;
-      }
-
-      // Mobile: total real de participantes visíveis (raceQuantities) — o array
+      // Total real de participantes visíveis (raceQuantities) — o array
       // `participants` pode ter slots stale de quantidades anteriores.
       const totalVisible = Object.values(raceQuantities).reduce(
         (sum, q) => sum + (q > 0 ? q : 0),
@@ -1223,6 +1226,9 @@ export function InformationStep({
     if (!birthDate) {
       errors.birthDate = "Data de nascimento é obrigatória";
     } else if (ageLimit && (ageLimit.min || ageLimit.max)) {
+      // A REGRA de idade vale SEMPRE (inclusive na cortesia/adicionar inscrito): o erro
+      // aparece no input de data de nascimento. `ignoreAgeLimit` esconde apenas o BADGE
+      // visual (abaixo), não a validação.
       // Idade exigida é a que o participante terá NO DIA DO EVENTO, não hoje.
       // Ex.: ingresso 18+ e evento em 2026-12-15 → nascido em 2008-12-15 está
       // OK (faz 18 no dia), mesmo que hoje ainda tenha 17.
@@ -1755,11 +1761,18 @@ export function InformationStep({
                 cross-browser (usa a fonte real), sem depender de `ch`/`field-sizing`. */}
             <div className="inline-grid max-w-[3rem]">
               <input
-                type="number"
+                // Inteiro: `type="text"` + `inputMode="numeric"` dá o teclado
+                // numérico no mobile SEM aceitar `e`/`+`/`-`/`.` (que o
+                // `type="number"` deixa passar); o onChange remove qualquer
+                // não-dígito (campo numérico — `\D` é seguro aqui, não é documento).
+                type="text"
+                inputMode="numeric"
+                pattern="[0-9]*"
                 value={typeof answer === "string" ? answer : ""}
                 onChange={(e) => {
                   clearParticipantFieldError(participantIndex, `question_${question.id}`);
-                  updateQuestionAnswer(participantIndex, question.id, e.target.value);
+                  const digits = e.target.value.replace(/\D/g, "");
+                  updateQuestionAnswer(participantIndex, question.id, digits);
                 }}
                 className={`[grid-area:1/1] w-full min-w-0 h-12 px-3 rounded-lg border bg-transparent text-gray-12 focus:outline-none focus:bg-gray-3 transition-colors font-family-dm-sans text-base placeholder:text-gray-11 ${questionError ? "border-red-6 focus:border-red-10" : "border-gray-6 focus:border-primary-10"}`}
                 placeholder="Digite um número"
@@ -1937,6 +1950,7 @@ export function InformationStep({
               const participantFits =
                 participantAge !== null && isAgeWithinTicketLimit(participantAge, ticket.ageLimit);
               const showAgeBadge =
+                !ignoreAgeLimit &&
                 !!ageLimitText && (participantAge !== null ? !participantFits : !buyerFits);
               const priceBreakdown =
                 ticketPriceBreakdownByCard[index] ?? {
@@ -2269,35 +2283,6 @@ export function InformationStep({
                           </div>
                           <div className="flex flex-col gap-2">
                             <label className="text-sm font-medium text-gray-12">
-                              Email
-                            </label>
-                            <input
-                              type="email"
-                              name="email"
-                              value={participant.email}
-                              disabled={previewMode}
-                              onChange={(e) =>
-                                handleInputChange(participantIndex, e)
-                              }
-                              className={`w-full px-4 py-3 rounded-lg border bg-gray-2 text-gray-12 focus:outline-none transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${fieldErrors[participantIndex]?.email ? "border-red-6 focus:border-red-10" : "border-gray-6 focus:border-primary-10"}`}
-                              placeholder="Digite seu email"
-                            />
-                            {fieldErrors[participantIndex]?.email && (
-                              <p className="text-sm text-red-11">{fieldErrors[participantIndex].email}</p>
-                            )}
-                          </div>
-                          <div className="flex flex-col gap-2">
-                            <label className="text-sm font-medium text-gray-12">
-                              Nacionalidade
-                            </label>
-                            <NationalitySelect
-                              value={participant.nationality || "Brasil"}
-                              disabled={previewMode}
-                              onChange={(country) => handleNationalityChange(participantIndex, country)}
-                            />
-                          </div>
-                          <div className="flex flex-col gap-2">
-                            <label className="text-sm font-medium text-gray-12">
                               {docLabel}
                             </label>
                             <input
@@ -2342,30 +2327,6 @@ export function InformationStep({
                           </div>
                           <div className="flex flex-col gap-2">
                             <label className="text-sm font-medium text-gray-12">
-                              Telefone
-                            </label>
-                            <input
-                              type="tel"
-                              name="phone"
-                              value={participant.phone}
-                              disabled={previewMode}
-                              onChange={(e) =>
-                                handlePhoneChange(
-                                  participantIndex,
-                                  "phone",
-                                  e.target.value
-                                )
-                              }
-                              maxLength={getPhoneMaxLengthForCountry(participant.nationality)}
-                              className={`w-full px-4 py-3 rounded-lg border bg-gray-2 text-gray-12 focus:outline-none transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${fieldErrors[participantIndex]?.phone ? "border-red-6 focus:border-red-10" : "border-gray-6 focus:border-primary-10"}`}
-                              placeholder={getPhonePlaceholderForCountry(participant.nationality)}
-                            />
-                            {fieldErrors[participantIndex]?.phone && (
-                              <p className="text-sm text-red-11">{fieldErrors[participantIndex].phone}</p>
-                            )}
-                          </div>
-                          <div className="flex flex-col gap-2">
-                            <label className="text-sm font-medium text-gray-12">
                               Sexo
                             </label>
                             <div className={`w-full ${previewMode ? "opacity-50 pointer-events-none" : ""}`}>
@@ -2395,6 +2356,59 @@ export function InformationStep({
                             </div>
                             {fieldErrors[participantIndex]?.gender && (
                               <p className="text-sm text-red-11">{fieldErrors[participantIndex].gender}</p>
+                            )}
+                          </div>
+                          <div className="flex flex-col gap-2">
+                            <label className="text-sm font-medium text-gray-12">
+                              Email
+                            </label>
+                            <input
+                              type="email"
+                              name="email"
+                              value={participant.email}
+                              disabled={previewMode}
+                              onChange={(e) =>
+                                handleInputChange(participantIndex, e)
+                              }
+                              className={`w-full px-4 py-3 rounded-lg border bg-gray-2 text-gray-12 focus:outline-none transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${fieldErrors[participantIndex]?.email ? "border-red-6 focus:border-red-10" : "border-gray-6 focus:border-primary-10"}`}
+                              placeholder="Digite seu email"
+                            />
+                            {fieldErrors[participantIndex]?.email && (
+                              <p className="text-sm text-red-11">{fieldErrors[participantIndex].email}</p>
+                            )}
+                          </div>
+                          <div className="flex flex-col gap-2">
+                            <label className="text-sm font-medium text-gray-12">
+                              Nacionalidade
+                            </label>
+                            <NationalitySelect
+                              value={participant.nationality || "Brasil"}
+                              disabled={previewMode}
+                              onChange={(country) => handleNationalityChange(participantIndex, country)}
+                            />
+                          </div>
+                          <div className="flex flex-col gap-2">
+                            <label className="text-sm font-medium text-gray-12">
+                              Telefone
+                            </label>
+                            <input
+                              type="tel"
+                              name="phone"
+                              value={participant.phone}
+                              disabled={previewMode}
+                              onChange={(e) =>
+                                handlePhoneChange(
+                                  participantIndex,
+                                  "phone",
+                                  e.target.value
+                                )
+                              }
+                              maxLength={getPhoneMaxLengthForCountry(participant.nationality)}
+                              className={`w-full px-4 py-3 rounded-lg border bg-gray-2 text-gray-12 focus:outline-none transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${fieldErrors[participantIndex]?.phone ? "border-red-6 focus:border-red-10" : "border-gray-6 focus:border-primary-10"}`}
+                              placeholder={getPhonePlaceholderForCountry(participant.nationality)}
+                            />
+                            {fieldErrors[participantIndex]?.phone && (
+                              <p className="text-sm text-red-11">{fieldErrors[participantIndex].phone}</p>
                             )}
                           </div>
                         </div>
@@ -2676,7 +2690,7 @@ export function InformationStep({
               variant="default"
               className="w-full md:w-1/4 font-bold"
             >
-              Confirmar dados
+              {nextLabel}
             </Button>
           </div>
         </div>
@@ -2703,7 +2717,7 @@ export function InformationStep({
         serviceFee={displayedServiceFee}
         total={totalAmountWithAge}
         cta={(allParticipantsSaved && !anyExpanded) ? {
-          label: "Confirmar dados",
+          label: nextLabel,
           loading: isSubmitting,
           disabled: isSubmitting,
           onClick: () => {

@@ -60,7 +60,6 @@ const COUPON_ERROR_MESSAGES: Record<string, string> = {
   DISCOUNT_CONFLICT: "Cupom e voucher não podem ser usados juntos.",
 };
 import { validateCardNumber, validateExpiry, validateCVV } from "@/utils/cardValidation";
-import { isValidCPF } from "@/utils/cpf";
 import { getPendingCoupon, getPendingCouponKind } from "@/hooks/usePendingCoupon";
 import { isSemInteresseVariation } from "@/utils/semInteresseVariation";
 import toast from "react-hot-toast";
@@ -1294,7 +1293,6 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
     } else if (!validateCVV(debitCardCVV)) {
       newErrors.cardCVV = "CVV inválido.";
     }
-
     if (Object.keys(newErrors).length > 0) {
       setDebitCardErrors(newErrors);
       toast.error("Por favor, corrija os campos do cartão.");
@@ -1315,10 +1313,17 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
     checkoutLoadingRef.current = true;
     setDebitLoading(true);
     setCheckoutLoading(true);
+
+    // ── Débito: Braspag 3DS (MPI client-side) + autorização Cielo ────────────
     try {
       const auth = await threeDS.authenticate({
         orderId,
-        totalAmountCents: Math.round(totalValue * 100),
+        // Total AUTENTICADO tem que ser IDÊNTICO ao Payment.Amount autorizado no
+        // backend — divergência invalida o CAVV no emissor. pricing.total é o
+        // inteiro em centavos do servidor (mesma fonte do finalTotal do /pay).
+        totalAmountCents: currentOrder
+          ? currentOrder.pricing.total
+          : Math.round(totalValue * 100),
         card: {
           number: debitCardNumber,
           name: debitCardName,
@@ -1349,6 +1354,14 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
         clearTimer();
         toast.success("Pagamento aprovado!");
         onSuccess?.(result.orderId);
+        return;
+      }
+
+      // Cartão fora do MPI (unenrolled → CAVV vazio): a Cielo devolve a URL de
+      // autenticação do próprio banco. Navegação top-level; o banco redireciona
+      // de volta pro /3ds-callback do backend, que confirma e retorna ao checkout.
+      if (result.payment?.redirectUrl) {
+        window.location.href = result.payment.redirectUrl;
         return;
       }
 

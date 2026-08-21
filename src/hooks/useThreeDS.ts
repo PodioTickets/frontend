@@ -203,8 +203,14 @@ export function useThreeDS() {
       setBpmpiField("bpmpi_currency", "986");
       setBpmpiField("bpmpi_totalamount", String(params.totalAmountCents));
       setBpmpiField("bpmpi_installments", "1");
-      // Doc Cielo exige lowercase: "credit" ou "debit". Default: "debit".
-      setBpmpiField("bpmpi_paymentmethod", params.paymentMethod ?? "debit");
+      // Manual EMV3DS (tabela oficial): valores "Credit" | "Debit" (Title Case).
+      // Campo OBRIGATÓRIO — em cartão múltiplo define QUAL função é autenticada;
+      // valor não reconhecido pode autenticar como crédito e invalidar o CAVV
+      // na autorização DebitCard. Default: "Debit".
+      setBpmpiField(
+        "bpmpi_paymentmethod",
+        (params.paymentMethod ?? "debit") === "credit" ? "Credit" : "Debit",
+      );
       setBpmpiField("bpmpi_cardnumber", params.card.number.replace(/\D/g, ""));
       setBpmpiField("bpmpi_cardexpirationmonth", month);
       setBpmpiField("bpmpi_cardexpirationyear", year);
@@ -222,23 +228,23 @@ export function useThreeDS() {
         // tentativa o Cardinal já está em memória.
         let cardinalRetried = false;
 
-        // Detector de cancelamento por remoção do iframe do challenge.
-        // Por que: BP MPI (especialmente no sandbox) nem sempre dispara
-        // onFailure/onError quando o usuário clica em "Cancelar" no popup
-        // do banco — o iframe é removido do DOM sem callback, então a
-        // Promise ficaria pendurada até o timeout de 5min ("loading
-        // infinito"). Aqui rastreamos o iframe visível criado pelo SDK e,
-        // ao ser removido sem que tenhamos settled, tratamos como cancel.
+        // Detector de "iframe do challenge sumiu sem callback".
+        // Por que existe: BP MPI nem sempre dispara onFailure/onError quando o
+        // usuário clica em "Cancelar" no popup do banco — o iframe some do DOM
+        // sem callback e a Promise ficaria pendurada até o timeout de 5min.
+        //
+        // Por que NÃO rejeita mais (ago/2026, Songbird v2/cardinaltrusted): o
+        // SDK novo cria e remove overlays GRANDES também no fluxo frictionless
+        // e demora >25s pós-remoção pra disparar onSuccess — rejeitar como
+        // USER_CANCEL matou autenticações Eci 05 APROVADAS (o /pay nunca
+        // rodava). Pagamento em curso NUNCA é descartado por heurística de DOM:
+        // a remoção do iframe apenas ENCURTA o teto global pra WATCHDOG_TIMEOUT
+        // — se o SDK ainda responder (falso-cancel), segue o fluxo normal; se
+        // era cancel real sem callback, o usuário recebe o toast neutro de
+        // tempo esgotado (retry limpo), não o modal de "não autorizado".
         let challengeIframe: HTMLIFrameElement | null = null;
         const CHALLENGE_MIN_SIZE = 200; // px; descarta o collector invisível.
-        // Grace generoso: no sucesso, o SDK remove o iframe do banco ANTES de
-        // rodar a validação interna no Cardinal e disparar `onSuccess`. Esse
-        // intervalo entre "iframe sumiu" e "onSuccess fired" passou de 600ms
-        // em produção e gerava falso-positivo de cancelamento (usuário via
-        // tela de aprovado e na sequência o modal "Pagamento não aprovado").
-        // 8s é folga suficiente pro round-trip mais lento; se o usuário
-        // realmente cancelou, esperar 8s pelo modal é UX aceitável.
-        const CANCEL_GRACE_MS = 8000;
+        const WATCHDOG_TIMEOUT_MS = 60_000;
 
         const cancelObserver = new MutationObserver((mutations) => {
           if (settled) return;
@@ -267,7 +273,8 @@ export function useThreeDS() {
                 if (challengeIframe) break;
               }
             }
-            // Detecta remoção do challenge iframe → trata como cancelamento.
+            // Remoção do iframe rastreado: encurta o teto global (uma vez) e
+            // volta a rastrear — NUNCA rejeita por conta própria.
             if (challengeIframe) {
               for (const node of Array.from(mut.removedNodes)) {
                 const removed =
@@ -275,21 +282,9 @@ export function useThreeDS() {
                   (node instanceof Element &&
                     node.contains(challengeIframe));
                 if (!removed) continue;
-                if (!IS_PROD) console.warn("[3DS] challenge iframe removido");
-                // Grace pra esperar onFailure/onError do SDK; se não vier,
-                // rejeita como cancelamento do usuário.
-                setTimeout(() => {
-                  if (settled) return;
-                  finish(() =>
-                    reject(
-                      new ThreeDSError(
-                        "FAILURE",
-                        "Pagamento cancelado pelo usuário",
-                        "USER_CANCEL",
-                      ),
-                    ),
-                  );
-                }, CANCEL_GRACE_MS);
+                if (!IS_PROD) console.warn("[3DS] challenge iframe removido — teto encurtado");
+                challengeIframe = null;
+                shortenTimeout(WATCHDOG_TIMEOUT_MS);
                 return;
               }
             }
@@ -307,7 +302,7 @@ export function useThreeDS() {
           cancelObserver.disconnect();
           cb();
         };
-        const timeoutId = setTimeout(() => {
+        const onGlobalTimeout = () => {
           finish(() =>
             reject(
               new ThreeDSError(
@@ -316,7 +311,19 @@ export function useThreeDS() {
               ),
             ),
           );
-        }, 5 * 60_000);
+        };
+        let timeoutId = setTimeout(onGlobalTimeout, 5 * 60_000);
+        // Chamado quando o iframe do challenge some sem callback: dá até
+        // WATCHDOG_TIMEOUT_MS pro SDK concluir (falso-cancel resolve normal);
+        // cancel real sem callback cai no toast de tempo esgotado. Encurta uma
+        // única vez — remoções subsequentes de overlay não re-encurtam.
+        let timeoutShortened = false;
+        const shortenTimeout = (ms: number) => {
+          if (settled || timeoutShortened) return;
+          timeoutShortened = true;
+          clearTimeout(timeoutId);
+          timeoutId = setTimeout(onGlobalTimeout, ms);
+        };
 
         // BP MPI exige que bpmpi_config seja uma FUNÇÃO que retorna a config.
         // O SDK invoca bpmpi_config() internamente — passar objeto literal

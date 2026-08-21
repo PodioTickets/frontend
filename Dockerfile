@@ -31,6 +31,7 @@ ARG NEXT_PUBLIC_ROOT_SITE_URL
 ARG NEXT_PUBLIC_BRASPAG_3DS_ENV
 ARG NEXT_PUBLIC_TURNSTILE_SITE_KEY
 ARG NEXT_PUBLIC_GOOGLE_MAPS_API_KEY
+ARG ENABLE_TRACKING_SCRIPTS
 
 # Em VPS pequena (1 GB RAM) reduza para 768. Ajuste no .env ou compose.
 ARG NODE_MAX_OLD_SPACE_SIZE=1024
@@ -41,6 +42,7 @@ ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL \
     NEXT_PUBLIC_BRASPAG_3DS_ENV=$NEXT_PUBLIC_BRASPAG_3DS_ENV \
     NEXT_PUBLIC_TURNSTILE_SITE_KEY=$NEXT_PUBLIC_TURNSTILE_SITE_KEY \
     NEXT_PUBLIC_GOOGLE_MAPS_API_KEY=$NEXT_PUBLIC_GOOGLE_MAPS_API_KEY \
+    ENABLE_TRACKING_SCRIPTS=$ENABLE_TRACKING_SCRIPTS \
     NODE_OPTIONS=--max-old-space-size=${NODE_MAX_OLD_SPACE_SIZE}
 
 COPY . .
@@ -66,6 +68,37 @@ WORKDIR /app
 COPY --chown=nextjs:nodejs --from=builder /app/public           ./public
 COPY --chown=nextjs:nodejs --from=builder /app/.next/standalone ./
 COPY --chown=nextjs:nodejs --from=builder /app/.next/static     ./.next/static
+
+# ---------------------------------------------------------------------------
+# sharp — binário nativo do otimizador de imagem do Next (/_next/image).
+# O output `standalone` + store SIMLINKADO do pnpm NÃO empacota de forma
+# confiável os pacotes nativos `@img/sharp-*` no node_modules traçado → em
+# runtime o otimizador estoura 500 (e o Cloudflare à frente devolve 520/525).
+#
+# Estratégia (à prova de versão):
+#  1) Instala o sharp num diretório PRÓPRIO (/app/node_modules_native). Instalar
+#     direto em /app não funciona: rodar `npm install` lá quebra ("...reading
+#     'matches'") por causa do node_modules parcial do standalone, e mesclar por
+#     cima falha porque as entradas do standalone são SYMLINKS (pnpm) — `cp` de
+#     um dir sobre um symlink dá "is not a directory". Um dir próprio e limpo
+#     evita os dois problemas. Base node:20-alpine = MESMA plataforma do runtime
+#     (musl) → o npm baixa o binário `@img/sharp-linuxmusl-<arch>` correto.
+#  2) Remove os symlinks `sharp`/`@img` do standalone p/ não sombrearem a versão
+#     nativa recém-instalada.
+#  3) Aponta NODE_PATH p/ o dir próprio: o `require('sharp')` do otimizador (e o
+#     `require('@img/...')` interno do sharp) resolvem por ali. O ENV persiste no
+#     runtime. O `require('sharp')` a seguir FALHA O BUILD se o binário não
+#     carregar — erro explícito de build em vez de 500 silencioso em runtime.
+# Versão fixada = a mesma do package.json (manter em sincronia).
+ENV NODE_PATH=/app/node_modules_native
+RUN mkdir -p /tmp/sharp && cd /tmp/sharp \
+ && npm init -y >/dev/null 2>&1 \
+ && npm install --omit=dev --no-audit --no-fund --loglevel=error sharp@0.35.3 \
+ && mkdir -p /app/node_modules_native \
+ && cp -a node_modules/. /app/node_modules_native/ \
+ && cd /app && rm -rf /tmp/sharp node_modules/sharp node_modules/@img \
+ && node -e "const s=require('sharp');console.log('sharp OK',s.versions)" \
+ && chown -R nextjs:nodejs /app/node_modules_native
 
 USER nextjs
 EXPOSE 3000
