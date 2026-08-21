@@ -761,10 +761,11 @@ const TicketItemDesktop = memo(({
                 </div>
               )}
               {/* Badge "Limite de idade" na MESMA linha da modalidade, empurrado
-                  para a DIREITA (`ml-auto`). Como a row renderiza sempre e o badge
-                  só depende de `showAgeLimit`, ele permanece à direita mesmo quando
-                  a modalidade/distância não aparece (distância 0). */}
-              {showAgeLimit ? (
+                  para a DIREITA (`ml-auto`) — posição PADRÃO. Só quando NÃO há o
+                  aviso "Restam apenas N vagas": com o aviso, o badge desce pra
+                  baixo da modalidade (abaixo), pra não competir com o aviso na
+                  coluna direita (que fica acima do stepper). */}
+              {showAgeLimit && !showLowStock ? (
                 <div className="ml-auto shrink-0 bg-yellow-3 text-yellow-12 rounded-full px-3 py-1 max-w-full">
                   <p className="text-xs font-medium font-family-dm-sans whitespace-nowrap">
                     Limite de idade: {ageLimitText}
@@ -772,6 +773,17 @@ const TicketItemDesktop = memo(({
                 </div>
               ) : null}
             </div>
+
+            {/* Badge "Limite de idade" ABAIXO da modalidade, alinhado à esquerda —
+                usado APENAS quando há o aviso de estoque baixo ("Restam apenas N
+                vagas"), pra liberar a direita da linha da modalidade. */}
+            {showAgeLimit && showLowStock ? (
+              <div className="self-start shrink-0 bg-yellow-3 text-yellow-12 rounded-full px-3 py-1 max-w-full">
+                <p className="text-xs font-medium font-family-dm-sans whitespace-nowrap">
+                  Limite de idade: {ageLimitText}
+                </p>
+              </div>
+            ) : null}
           </div>
 
           <div className="flex items-end justify-between">

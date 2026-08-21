@@ -49,6 +49,15 @@ interface SubscriptionStepProps {
   onNext: () => void;
   onBack: () => void;
   isSubmitting?: boolean;
+  /**
+   * Rótulo do botão TERMINAL que avança/finaliza a etapa. Sobrescreve tanto o
+   * botão do último participante no desktop (que salva E dispara `onNext`)
+   * quanto o "Confirmar produtos" da barra/CTA mobile. Sem valor (checkout
+   * público) cada botão mantém seu texto atual — desktop "Salvar e próximo",
+   * mobile "Confirmar produtos". O fluxo de cortesia passa "Concluir inscrição"
+   * (Produtos é a última etapa antes da conclusão).
+   */
+  nextLabel?: string;
 }
 
 // ---------------------------------------------------------------------------
@@ -346,6 +355,7 @@ export function SubscriptionStep({
   onNext,
   onBack,
   isSubmitting = false,
+  nextLabel,
 }: SubscriptionStepProps) {
   const { raceQuantities, participants, updateParticipant } = useCheckout();
   const hidePricing = useHidePricing();
@@ -1328,7 +1338,7 @@ export function SubscriptionStep({
             disabled={!canConfirmProducts}
             isLoading={isSubmitting}
           >
-            Confirmar produtos
+            {nextLabel ?? "Confirmar produtos"}
           </Button>
         )}
       </div>
@@ -1356,7 +1366,7 @@ export function SubscriptionStep({
         serviceFee={serviceFee}
         total={totalAmount}
         cta={{
-          label: "Confirmar produtos",
+          label: nextLabel ?? "Confirmar produtos",
           onClick: onNext,
           // Mesma regra do botão "Confirmar produtos" abaixo da lista.
           disabled: !canConfirmProducts,
@@ -1620,7 +1630,13 @@ export function SubscriptionStep({
                 isLoading={isSubmitting}
                 disabled={isSubmitting || totalParticipants === 0 || !isParticipantComplete(selectedParticipant)}
               >
-                Salvar e próximo
+                {/* No último participante pendente (demais já concluídos), este
+                    botão salva E avança (handleSaveAndNext com advanceOnComplete):
+                    é o terminal do fluxo. Público mantém "Salvar e próximo"; a
+                    cortesia sobrescreve via `nextLabel` ("Concluir inscrição"). */}
+                {hasNextPendingParticipant(selectedParticipant)
+                  ? "Salvar e próximo"
+                  : nextLabel ?? "Salvar e próximo"}
               </Button>
             </div>
           </div>

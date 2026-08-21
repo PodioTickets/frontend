@@ -3,17 +3,19 @@
 import { createContext, useContext, type ReactNode } from "react";
 
 /**
- * Sinaliza que o fluxo atual deve IGNORAR a restrição de idade dos ingressos
- * reusados do checkout — tanto o BADGE "Limite de idade: …" quanto a REGRA de
- * validação (idade do participante vs. faixa do ingresso).
+ * Sinaliza que o fluxo atual deve ESCONDER o BADGE "Limite de idade: …" dos
+ * ingressos reusados do checkout. A REGRA de validação de idade (idade do
+ * participante vs. faixa do ingresso) CONTINUA valendo — o erro aparece no input
+ * de data de nascimento.
  *
  * Usado no fluxo de CORTESIA do organizador ("adicionar inscrito"): o organizador
- * inscreve manualmente e não deve ser barrado (nem ver o aviso) por faixa etária.
+ * não deve ver o aviso visual, mas a idade ainda precisa respeitar a faixa do
+ * ingresso (validação no input).
  *
- * Padrão `false`: o checkout PAGO não envolve este provider, então a idade
- * continua exibida e validada normalmente. Só o container de cortesia envolve os
- * steps com `<IgnoreAgeLimitProvider>`, e cada componente lê `useIgnoreAgeLimit()`
- * para omitir o badge / pular a checagem de idade (mantendo o resto intacto).
+ * Padrão `false`: o checkout PAGO não envolve este provider, então o badge
+ * continua exibido normalmente. Só o container de cortesia envolve os steps com
+ * `<IgnoreAgeLimitProvider>`, e cada componente lê `useIgnoreAgeLimit()` apenas
+ * para omitir o badge (a validação de idade é independente deste flag).
  *
  * Espelha o padrão de `HidePricingContext`.
  */
