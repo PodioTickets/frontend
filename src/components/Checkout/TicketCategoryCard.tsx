@@ -254,274 +254,274 @@ const TicketItemMobile = memo(({
     // Com descrição, um respiro extra embaixo (`mb-2`) separa melhor do próximo
     // ticket — sem ele, a descrição encostaria no card seguinte (lista `gap-3`).
     <div className={cn("flex flex-col gap-2", hasDescription && "mb-2")}>
-    <div className="bg-gray-2 border border-gray-6 rounded-xl p-4 flex flex-col gap-2 md:gap-6">
-      {isSingleImageLayout ? (
-        <div className="flex gap-3 items-start w-full">
-          {/* Imagem principal */}
-          <button
-            type="button"
-            onClick={() => handleImageClick(0)}
-            className="size-[136px] relative shrink-0 rounded-lg border border-gray-6 overflow-hidden cursor-pointer hover:opacity-90 transition-opacity"
-            aria-label="Ver imagem em destaque"
-          >
-            {mainImage ? (
-              <ImageWithInitialFallback
-                src={mainImage.src}
-                alt={ticket.name}
-                name={mainImage.name}
-                fallbackId={mainImage.id}
-                fill
-                sizes="136px"
-                className="size-full border-0"
-                letterClassName="text-3xl"
-              />
-            ) : null}
-          </button>
+      <div className="bg-gray-2 border border-gray-6 rounded-xl p-4 flex flex-col gap-2 md:gap-6">
+        {isSingleImageLayout ? (
+          <div className="flex gap-3 items-start w-full">
+            {/* Imagem principal */}
+            <button
+              type="button"
+              onClick={() => handleImageClick(0)}
+              className="size-[136px] relative shrink-0 rounded-lg border border-gray-6 overflow-hidden cursor-pointer hover:opacity-90 transition-opacity"
+              aria-label="Ver imagem em destaque"
+            >
+              {mainImage ? (
+                <ImageWithInitialFallback
+                  src={mainImage.src}
+                  alt={ticket.name}
+                  name={mainImage.name}
+                  fallbackId={mainImage.id}
+                  fill
+                  sizes="136px"
+                  className="size-full border-0"
+                  letterClassName="text-3xl"
+                />
+              ) : null}
+            </button>
 
-          {/* Direita: título + modalidade/distância (gap 20 = py-2 gap-5) */}
-          <div className="flex-1 min-w-0 flex flex-col gap-5 py-2">
-            <h2 className="text-base font-bold text-gray-12 font-manrope leading-[1.1] break-words">
-              {ticket.name}
-            </h2>
-            {/* Modalidade + distância só quando há distância (> 0). Distância 0 =
-                sem corrida associada → oculta o ícone + texto. */}
-            {modalityInfo && distanceKm > 0 && (
-              <div className="flex items-center gap-2">
-                {modalityInfo.icon ? (
-                  <div className="size-5 shrink-0 relative rounded overflow-hidden flex items-center justify-center">
-                    <ImageWithInitialFallback
-                      src={modalityInfo.icon}
-                      alt={modalityInfo.name}
-                      name={modalityInfo.name}
-                      width={20}
-                      height={20}
-                      className="size-5 bg-transparent border-0"
-                      imgClassName="object-contain bg-transparent border-0"
-                      letterClassName="text-[10px]"
-                      nativeImg
-                    />
-                  </div>
-                ) : (
-                  <div className="size-5 shrink-0 rounded bg-gray-4" aria-hidden />
-                )}
-                <p className="text-base font-medium text-gray-12 font-family-dm-sans leading-[1.3]">
-                  {distanceKm} {distanceUnit}
-                </p>
-              </div>
-            )}
-          </div>
-        </div>
-      ) : (
-        <>
-          {productItems.length > 0 && (
-            <div className="flex gap-3 items-start w-full">
-              {/* Imagem principal */}
-              <button
-                type="button"
-                onClick={() => handleImageClick(0)}
-                className="size-[136px] relative shrink-0 rounded-lg border border-gray-6 overflow-hidden cursor-pointer hover:opacity-90 transition-opacity"
-                aria-label="Ver imagem em destaque"
-              >
-                {mainImage ? (
-                  <ImageWithInitialFallback
-                    src={mainImage.src}
-                    alt={ticket.name}
-                    name={mainImage.name}
-                    fallbackId={mainImage.id}
-                    fill
-                    sizes="136px"
-                    className="size-full border-0"
-                    letterClassName="text-3xl"
-                  />
-                ) : null}
-              </button>
-
-              {/* 2 colunas de thumbs (até 2 cada). Cada coluna tem 136px de altura
-                  p/ alinhar com a imagem principal — 2 thumbs de 64px + gap 8. */}
-              {thumbnails.length > 0 && (
-                <div className="flex gap-3 items-start">
-                  {[0, 1].map((colIdx) => {
-                    const colItems = thumbnails.slice(colIdx * 2, colIdx * 2 + 2);
-                    if (colItems.length === 0) return null;
-                    return (
-                      <div key={colIdx} className="flex flex-col gap-2 h-[136px]">
-                        {colItems.map((item, rowIdx) => {
-                          const thumbIndex = colIdx * 2 + rowIdx;
-                          // 1-based: thumbnails[i] é productItems[i + 1].
-                          const productIndex = thumbIndex + 1;
-                          const isLastVisible =
-                            colIdx === 1 && rowIdx === colItems.length - 1;
-                          const showOverlay = isLastVisible && remainingCount > 0;
-                          return (
-                            <button
-                              key={item.id}
-                              type="button"
-                              onClick={() => handleImageClick(productIndex)}
-                              className="size-[64px] relative shrink-0 rounded-lg border border-gray-6 overflow-hidden cursor-pointer hover:opacity-90 transition-opacity"
-                              aria-label={
-                                showOverlay
-                                  ? `Ver mais ${remainingCount} imagens`
-                                  : "Ver imagem"
-                              }
-                            >
-                              <ImageWithInitialFallback
-                                src={item.src}
-                                alt={item.name}
-                                name={item.name}
-                                fallbackId={item.id}
-                                fill
-                                sizes="64px"
-                                className="size-full border-0"
-                                letterClassName="text-base"
-                              />
-                              {showOverlay && (
-                                <div className="absolute inset-0 bg-black/80 rounded-lg flex items-center justify-center gap-0.5">
-                                  <Plus className="size-5 text-white" strokeWidth={2.5} />
-                                  <span className="text-white text-lg font-extrabold font-manrope leading-[1.1]">
-                                    {remainingCount}
-                                  </span>
-                                </div>
-                              )}
-                            </button>
-                          );
-                        })}
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-          )}
-
-          <div className="flex flex-col gap-2">
-            <div className="flex flex-col gap-1">
-              <h2 className="text-lg font-bold text-gray-12 font-manrope leading-[1.1]">
+            {/* Direita: título + modalidade/distância (gap 20 = py-2 gap-5) */}
+            <div className="flex-1 min-w-0 flex flex-col gap-5 py-2">
+              <h2 className="text-base font-bold text-gray-12 font-manrope leading-[1.1] break-words">
                 {ticket.name}
               </h2>
-            </div>
-            {/* Modalidade + distância — espelha o desktop: o ícone vem da
-                modality (fallback p/ placeholder cinza) e o texto exibe a
-                distância. Sem `DistanceIcon` separado nem nome da modality. */}
-            <div className="flex items-center gap-8 flex-wrap min-w-0 w-full">
+              {/* Modalidade + distância só quando há distância (> 0). Distância 0 =
+                sem corrida associada → oculta o ícone + texto. */}
               {modalityInfo && distanceKm > 0 && (
                 <div className="flex items-center gap-2">
                   {modalityInfo.icon ? (
-                    <div className="size-6 shrink-0 relative rounded overflow-hidden flex items-center justify-center">
+                    <div className="size-5 shrink-0 relative rounded overflow-hidden flex items-center justify-center">
                       <ImageWithInitialFallback
                         src={modalityInfo.icon}
                         alt={modalityInfo.name}
                         name={modalityInfo.name}
-                        width={24}
-                        height={24}
-                        className="size-6 bg-transparent border-0"
+                        width={20}
+                        height={20}
+                        className="size-5 bg-transparent border-0"
                         imgClassName="object-contain bg-transparent border-0"
                         letterClassName="text-[10px]"
                         nativeImg
                       />
                     </div>
                   ) : (
-                    <div className="size-6 shrink-0 rounded bg-gray-4" aria-hidden />
+                    <div className="size-5 shrink-0 rounded bg-gray-4" aria-hidden />
                   )}
-                  <p className="text-lg font-medium text-gray-12 font-family-dm-sans leading-[1.3]">
+                  <p className="text-base font-medium text-gray-12 font-family-dm-sans leading-[1.3]">
                     {distanceKm} {distanceUnit}
                   </p>
                 </div>
               )}
             </div>
-            {/* Limite de idade em linha própria, alinhado à esquerda (fluxo
-                normal, sem `absolute`) — espelha o layout single-image. */}
-            {showAgeLimit ? (
-              <div className="bg-yellow-3 rounded-full px-4 py-2 self-start max-w-full max-md:mb-6">
-                <p className="text-sm font-medium text-yellow-12 font-family-dm-sans">
-                  Limite de idade: {ageLimitText}
-                </p>
-              </div>
-            ) : null}
           </div>
-        </>
-      )}
-
-      {/* Tag de idade em linha própria — só no layout single-image (Figma). */}
-      {isSingleImageLayout && showAgeLimit ? (
-        <div className="bg-yellow-3 rounded-full px-4 py-3 self-start max-w-full">
-          <p className="text-xs font-medium text-yellow-12 font-family-dm-sans leading-[1.3]">
-            Limite de idade: {ageLimitText}
-          </p>
-        </div>
-      ) : null}
-
-      <div className="flex items-center justify-between">
-        {hidePricing ? <span /> : (
-        <div className="flex items-baseline gap-2">
-          <p className="text-xl font-bold text-gray-12 font-manrope leading-[1.1]">
-            {formatDisplayPrice(priceBreakdown)}
-          </p>
-          {priceBreakdown.hasDiscount && (
-            <p className="text-sm font-medium text-gray-11 font-manrope leading-[1.1] line-through">
-              {formatPrice(priceBreakdown.original)}
-            </p>
-          )}
-        </div>
-        )}
-        {isBatchSoldOut ? (
-          // Lote esgotado: badge cinza no lugar do stepper (não dá pra adicionar).
-          // `h-11` = mesma altura do stepper (mobile) pra o card não encolher.
-          <span className="shrink-0 inline-flex items-center h-11 rounded-full bg-gray-4 px-4 text-sm font-semibold text-gray-11 font-manrope leading-[1.1] whitespace-nowrap">
-            Lote esgotado
-          </span>
         ) : (
-          <div className="relative">
-            <div className="absolute bottom-full right-0 pb-1 pointer-events-none">
-              {showLowStock ? (
-                <p className="text-xs font-medium text-red-11 whitespace-nowrap">
-                  Restam apenas {ticket.availableQuantity}{" "}
-                  {ticket.availableQuantity === 1 ? "vaga" : "vagas"}!
-                </p>
+          <>
+            {productItems.length > 0 && (
+              <div className="flex gap-3 items-start w-full">
+                {/* Imagem principal */}
+                <button
+                  type="button"
+                  onClick={() => handleImageClick(0)}
+                  className="size-[136px] relative shrink-0 rounded-lg border border-gray-6 overflow-hidden cursor-pointer hover:opacity-90 transition-opacity"
+                  aria-label="Ver imagem em destaque"
+                >
+                  {mainImage ? (
+                    <ImageWithInitialFallback
+                      src={mainImage.src}
+                      alt={ticket.name}
+                      name={mainImage.name}
+                      fallbackId={mainImage.id}
+                      fill
+                      sizes="136px"
+                      className="size-full border-0"
+                      letterClassName="text-3xl"
+                    />
+                  ) : null}
+                </button>
+
+                {/* 2 colunas de thumbs (até 2 cada). Cada coluna tem 136px de altura
+                  p/ alinhar com a imagem principal — 2 thumbs de 64px + gap 8. */}
+                {thumbnails.length > 0 && (
+                  <div className="flex gap-3 items-start">
+                    {[0, 1].map((colIdx) => {
+                      const colItems = thumbnails.slice(colIdx * 2, colIdx * 2 + 2);
+                      if (colItems.length === 0) return null;
+                      return (
+                        <div key={colIdx} className="flex flex-col gap-2 h-[136px]">
+                          {colItems.map((item, rowIdx) => {
+                            const thumbIndex = colIdx * 2 + rowIdx;
+                            // 1-based: thumbnails[i] é productItems[i + 1].
+                            const productIndex = thumbIndex + 1;
+                            const isLastVisible =
+                              colIdx === 1 && rowIdx === colItems.length - 1;
+                            const showOverlay = isLastVisible && remainingCount > 0;
+                            return (
+                              <button
+                                key={item.id}
+                                type="button"
+                                onClick={() => handleImageClick(productIndex)}
+                                className="size-[64px] relative shrink-0 rounded-lg border border-gray-6 overflow-hidden cursor-pointer hover:opacity-90 transition-opacity"
+                                aria-label={
+                                  showOverlay
+                                    ? `Ver mais ${remainingCount} imagens`
+                                    : "Ver imagem"
+                                }
+                              >
+                                <ImageWithInitialFallback
+                                  src={item.src}
+                                  alt={item.name}
+                                  name={item.name}
+                                  fallbackId={item.id}
+                                  fill
+                                  sizes="64px"
+                                  className="size-full border-0"
+                                  letterClassName="text-base"
+                                />
+                                {showOverlay && (
+                                  <div className="absolute inset-0 bg-black/80 rounded-lg flex items-center justify-center gap-0.5">
+                                    <Plus className="size-5 text-white" strokeWidth={2.5} />
+                                    <span className="text-white text-lg font-extrabold font-manrope leading-[1.1]">
+                                      {remainingCount}
+                                    </span>
+                                  </div>
+                                )}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            )}
+
+            <div className="flex flex-col gap-2">
+              <div className="flex flex-col gap-1">
+                <h2 className="text-lg font-bold text-gray-12 font-manrope leading-[1.1]">
+                  {ticket.name}
+                </h2>
+              </div>
+              {/* Modalidade + distância — espelha o desktop: o ícone vem da
+                modality (fallback p/ placeholder cinza) e o texto exibe a
+                distância. Sem `DistanceIcon` separado nem nome da modality. */}
+              <div className="flex items-center gap-8 flex-wrap min-w-0 w-full">
+                {modalityInfo && distanceKm > 0 && (
+                  <div className="flex items-center gap-2">
+                    {modalityInfo.icon ? (
+                      <div className="size-6 shrink-0 relative rounded overflow-hidden flex items-center justify-center">
+                        <ImageWithInitialFallback
+                          src={modalityInfo.icon}
+                          alt={modalityInfo.name}
+                          name={modalityInfo.name}
+                          width={24}
+                          height={24}
+                          className="size-6 bg-transparent border-0"
+                          imgClassName="object-contain bg-transparent border-0"
+                          letterClassName="text-[10px]"
+                          nativeImg
+                        />
+                      </div>
+                    ) : (
+                      <div className="size-6 shrink-0 rounded bg-gray-4" aria-hidden />
+                    )}
+                    <p className="text-lg font-medium text-gray-12 font-family-dm-sans leading-[1.3]">
+                      {distanceKm} {distanceUnit}
+                    </p>
+                  </div>
+                )}
+              </div>
+              {/* Limite de idade em linha própria, alinhado à esquerda (fluxo
+                normal, sem `absolute`) — espelha o layout single-image. */}
+              {showAgeLimit ? (
+                <div className="bg-yellow-3 rounded-full px-4 py-2 self-start max-w-full max-md:mb-6">
+                  <p className="text-sm font-medium text-yellow-12 font-family-dm-sans">
+                    Limite de idade: {ageLimitText}
+                  </p>
+                </div>
               ) : null}
             </div>
-            <div className="flex items-center bg-primary-3 rounded-full px-2 py-2 h-11">
-              <button
-                type="button"
-                onClick={() => onDecrease(ticket.id)}
-                disabled={quantity === 0}
-                className="size-6 cursor-pointer rounded-full flex items-center justify-center bg-gray-12 hover:bg-gray-11 text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed shrink-0 p-1"
-                aria-label="Diminuir quantidade"
-              >
-                <Minus className="size-4" />
-              </button>
-              <span className="min-w-[24px] text-center text-lg font-semibold text-gray-12 px-6 font-manrope leading-[1.1]">
-                {quantity}
-              </span>
-              <button
-                type="button"
-                onClick={() => onIncrease(ticket.id)}
-                disabled={isAtMax}
-                className="size-6 cursor-pointer rounded-full flex items-center justify-center bg-gray-12 hover:bg-gray-11 text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed shrink-0 p-1"
-                aria-label="Aumentar quantidade"
-              >
-                <Plus className="size-4" />
-              </button>
-            </div>
+          </>
+        )}
+
+        {/* Tag de idade em linha própria — só no layout single-image (Figma). */}
+        {isSingleImageLayout && showAgeLimit ? (
+          <div className="bg-yellow-3 rounded-full px-4 py-3 self-start max-w-full">
+            <p className="text-xs font-medium text-yellow-12 font-family-dm-sans leading-[1.3]">
+              Limite de idade: {ageLimitText}
+            </p>
           </div>
+        ) : null}
+
+        <div className="flex items-center justify-between">
+          {hidePricing ? <span /> : (
+            <div className="flex items-baseline gap-2">
+              <p className="text-xl font-bold text-gray-12 font-manrope leading-[1.1]">
+                {formatDisplayPrice(priceBreakdown)}
+              </p>
+              {priceBreakdown.hasDiscount && (
+                <p className="text-sm font-medium text-gray-11 font-manrope leading-[1.1] line-through">
+                  {formatPrice(priceBreakdown.original)}
+                </p>
+              )}
+            </div>
+          )}
+          {isBatchSoldOut ? (
+            // Lote esgotado: badge cinza no lugar do stepper (não dá pra adicionar).
+            // `h-11` = mesma altura do stepper (mobile) pra o card não encolher.
+            <span className="shrink-0 inline-flex items-center h-11 rounded-full bg-gray-4 px-4 text-sm font-semibold text-gray-11 font-manrope leading-[1.1] whitespace-nowrap">
+              Lote esgotado
+            </span>
+          ) : (
+            <div className="relative">
+              <div className="absolute bottom-full right-0 pb-1 pointer-events-none">
+                {showLowStock ? (
+                  <p className="text-xs font-medium text-red-11 whitespace-nowrap">
+                    Restam apenas {ticket.availableQuantity}{" "}
+                    {ticket.availableQuantity === 1 ? "vaga" : "vagas"}!
+                  </p>
+                ) : null}
+              </div>
+              <div className="flex items-center bg-primary-3 rounded-full px-2 py-2 h-11">
+                <button
+                  type="button"
+                  onClick={() => onDecrease(ticket.id)}
+                  disabled={quantity === 0}
+                  className="size-6 cursor-pointer rounded-full flex items-center justify-center bg-gray-12 hover:bg-gray-11 text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed shrink-0 p-1"
+                  aria-label="Diminuir quantidade"
+                >
+                  <Minus className="size-4" />
+                </button>
+                <span className="min-w-[24px] text-center text-lg font-semibold text-gray-12 px-6 font-manrope leading-[1.1]">
+                  {quantity}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => onIncrease(ticket.id)}
+                  disabled={isAtMax}
+                  className="size-6 cursor-pointer rounded-full flex items-center justify-center bg-gray-12 hover:bg-gray-11 text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed shrink-0 p-1"
+                  aria-label="Aumentar quantidade"
+                >
+                  <Plus className="size-4" />
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {productItems.length > 0 && (
+          <ImageCarouselModal
+            items={productItems}
+            initialIndex={selectedImageIndex}
+            isOpen={isImageModalOpen}
+            onClose={() => setIsImageModalOpen(false)}
+            ticketName={ticket.name}
+            preferredProductId={kitSelectionDisplay.primaryKitProductByTicketId[ticket.id]}
+          />
         )}
       </div>
-
-      {productItems.length > 0 && (
-        <ImageCarouselModal
-          items={productItems}
-          initialIndex={selectedImageIndex}
-          isOpen={isImageModalOpen}
-          onClose={() => setIsImageModalOpen(false)}
-          ticketName={ticket.name}
-          preferredProductId={kitSelectionDisplay.primaryKitProductByTicketId[ticket.id]}
-        />
-      )}
-    </div>
-    {ticket.description?.trim() ? (
-      <span className="px-1 text-sm text-gray-11 font-family-dm-sans leading-[1.3]">
-        {ticket.description.trim()}
-      </span>
-    ) : null}
+      {ticket.description?.trim() ? (
+        <span className="px-1 text-sm text-gray-11 font-family-dm-sans leading-[1.3]">
+          {ticket.description.trim()}
+        </span>
+      ) : null}
     </div>
   );
 });
@@ -665,186 +665,190 @@ const TicketItemDesktop = memo(({
     // ticket — sem ele, a descrição encostaria no card seguinte (lista `gap-3`).
     <div className={cn("w-full flex flex-col", hasDescription && "mb-2")}>
       <div className={cn(productItems.length > 0 ? "flex gap-4 items-center" : "flex flex-col")}>
-      {productItems.length > 0 && (
-        <div className="shrink-0">
-          <div className="flex items-center gap-2">
-            {currentProduct ? (
-              <button
-                onClick={() => handleImageClick(currentMainImageIndex)}
-                className="w-[136px] h-[136px] relative rounded-lg border border-gray-6 overflow-hidden shrink-0 cursor-pointer hover:opacity-90 transition-opacity"
-              >
-                <ImageWithInitialFallback
-                  src={currentProduct.src}
-                  alt={ticket.name}
-                  name={currentProduct.name}
-                  fallbackId={currentProduct.id}
-                  fill
-                  sizes="136px"
-                  className="size-full border-0"
-                  letterClassName="text-3xl"
-                />
-              </button>
-            ) : null}
-            {productItems.length > 1 && (
-              <div className="flex flex-col items-center justify-between self-stretch">
+        {productItems.length > 0 && (
+          <div className="shrink-0">
+            <div className="flex items-center gap-2">
+              {currentProduct ? (
                 <button
-                  onClick={handlePreviousImage}
-                  className="w-[18px] h-4 flex items-center justify-center shrink-0 cursor-pointer hover:opacity-70 transition-opacity"
-                  aria-label="Imagem anterior"
+                  onClick={() => handleImageClick(currentMainImageIndex)}
+                  className="w-[136px] h-[136px] relative rounded-lg border border-gray-6 overflow-hidden shrink-0 cursor-pointer hover:opacity-90 transition-opacity"
                 >
-                  <ArrowButton isOpen={false} className="-rotate-90" />
+                  <ImageWithInitialFallback
+                    src={currentProduct.src}
+                    alt={ticket.name}
+                    name={currentProduct.name}
+                    fallbackId={currentProduct.id}
+                    fill
+                    sizes="136px"
+                    className="size-full border-0"
+                    letterClassName="text-3xl"
+                  />
                 </button>
-                <div className="flex flex-col gap-1">
-                  {visibleThumbnails.map(({ item, idx: originalIndex }) => (
-                    <button
-                      key={item.id}
-                      onClick={() => handleThumbnailClick(originalIndex)}
-                      className={`w-8 h-8 relative rounded border overflow-hidden shrink-0 cursor-pointer hover:opacity-90 transition-opacity ${originalIndex === currentMainImageIndex ? "border-primary-11" : "border-gray-6"}`}
-                    >
-                      <ImageWithInitialFallback
-                        src={item.src}
-                        alt={item.name}
-                        name={item.name}
-                        fallbackId={item.id}
-                        fill
-                        sizes="36px"
-                        className="size-full border-0"
-                        letterClassName="text-sm"
-                      />
-                    </button>
-                  ))}
-                </div>
-                <button
-                  onClick={handleNextImage}
-                  className="w-[18px] h-4 flex items-center justify-center shrink-0 cursor-pointer hover:opacity-70 transition-opacity"
-                  aria-label="Próxima imagem"
-                >
-                  <ArrowButton isOpen={true} />
-                </button>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-      {/* Card: `flex-1` ocupa o resto da largura ao lado das imagens; sem
-          imagens, `w-full`. */}
-      <div className={cn("min-w-0 flex flex-col", productItems.length > 0 ? "flex-1" : "w-full")}>
-        <div className="bg-gray-2 border border-gray-6 rounded-xl p-5 flex flex-col gap-2 w-full">
-          <div className="flex flex-col justify-center gap-1">
-            <h2 className="text-xl font-bold font-manrope leading-[1.1] text-gray-12">
-              {ticket.name}
-            </h2>
-
-            <div className="flex items-center gap-8 flex-wrap min-w-0 w-full">
-              {modalityInfo && distanceKm > 0 && (
-                <div className="flex items-center gap-2">
-                  {modalityInfo.icon ? (
-                    <div className="size-6 shrink-0 relative rounded overflow-hidden flex items-center justify-center">
-                      <ImageWithInitialFallback
-                        src={modalityInfo.icon}
-                        alt={modalityInfo.name}
-                        name={modalityInfo.name}
-                        width={24}
-                        height={24}
-                        className="size-6 bg-transparent border-0"
-                        imgClassName="object-contain bg-transparent border-0"
-                        letterClassName="text-[10px]"
-                        nativeImg
-                      />
-                    </div>
-                  ) : (
-                    <div className="size-6 shrink-0 rounded bg-gray-4" aria-hidden />
-                  )}
-                  <p className="text-lg font-medium text-gray-12 font-family-dm-sans leading-[1.3]">
-                    {distanceKm} {distanceUnit}
-                  </p>
+              ) : null}
+              {productItems.length > 1 && (
+                <div className="flex flex-col items-center justify-between self-stretch">
+                  <button
+                    onClick={handlePreviousImage}
+                    className="w-[18px] h-4 flex items-center justify-center shrink-0 cursor-pointer hover:opacity-70 transition-opacity"
+                    aria-label="Imagem anterior"
+                  >
+                    <ArrowButton isOpen={false} className="-rotate-90" />
+                  </button>
+                  <div className="flex flex-col gap-1">
+                    {visibleThumbnails.map(({ item, idx: originalIndex }) => (
+                      <button
+                        key={item.id}
+                        onClick={() => handleThumbnailClick(originalIndex)}
+                        className={`w-8 h-8 relative rounded border overflow-hidden shrink-0 cursor-pointer hover:opacity-90 transition-opacity ${originalIndex === currentMainImageIndex ? "border-primary-11" : "border-gray-6"}`}
+                      >
+                        <ImageWithInitialFallback
+                          src={item.src}
+                          alt={item.name}
+                          name={item.name}
+                          fallbackId={item.id}
+                          fill
+                          sizes="36px"
+                          className="size-full border-0"
+                          letterClassName="text-sm"
+                        />
+                      </button>
+                    ))}
+                  </div>
+                  <button
+                    onClick={handleNextImage}
+                    className="w-[18px] h-4 flex items-center justify-center shrink-0 cursor-pointer hover:opacity-70 transition-opacity"
+                    aria-label="Próxima imagem"
+                  >
+                    <ArrowButton isOpen={true} />
+                  </button>
                 </div>
               )}
-              {/* Badge "Limite de idade" na MESMA linha da modalidade, empurrado
+            </div>
+          </div>
+        )}
+        {/* Card: `flex-1` ocupa o resto da largura ao lado das imagens; sem
+          imagens, `w-full`. */}
+        <div className={cn("min-w-0 flex flex-col", productItems.length > 0 ? "flex-1" : "w-full")}>
+          <div className="bg-gray-2 border border-gray-6 rounded-xl p-5 flex flex-col gap-2 w-full">
+            <div className="flex flex-col justify-center gap-1">
+              <h2 className="text-xl font-bold font-manrope leading-[1.1] text-gray-12">
+                {ticket.name}
+              </h2>
+
+              <div className="flex items-center gap-8 flex-wrap min-w-0 w-full">
+                {modalityInfo && distanceKm > 0 && (
+                  <div className="flex items-center gap-2">
+                    {modalityInfo.icon ? (
+                      <div className="size-6 shrink-0 relative rounded overflow-hidden flex items-center justify-center">
+                        <ImageWithInitialFallback
+                          src={modalityInfo.icon}
+                          alt={modalityInfo.name}
+                          name={modalityInfo.name}
+                          width={24}
+                          height={24}
+                          className="size-6 bg-transparent border-0"
+                          imgClassName="object-contain bg-transparent border-0"
+                          letterClassName="text-[10px]"
+                          nativeImg
+                        />
+                      </div>
+                    ) : (
+                      <div className="size-6 shrink-0 rounded bg-gray-4" aria-hidden />
+                    )}
+                    <p className="text-lg font-medium text-gray-12 font-family-dm-sans leading-[1.3]">
+                      {distanceKm} {distanceUnit}
+                    </p>
+                  </div>
+                )}
+                {/* Badge "Limite de idade" na MESMA linha da modalidade, empurrado
                   para a DIREITA (`ml-auto`) — posição PADRÃO. Só quando NÃO há o
                   aviso "Restam apenas N vagas": com o aviso, o badge desce pra
                   baixo da modalidade (abaixo), pra não competir com o aviso na
                   coluna direita (que fica acima do stepper). */}
-              {showAgeLimit && !showLowStock ? (
-                <div className="ml-auto shrink-0 bg-yellow-3 text-yellow-12 rounded-full px-3 py-1 max-w-full">
-                  <p className="text-xs font-medium font-family-dm-sans whitespace-nowrap">
-                    Limite de idade: {ageLimitText}
-                  </p>
+                {showAgeLimit && !showLowStock ? (
+                  <div className="ml-auto shrink-0 bg-yellow-3 text-yellow-12 rounded-full px-3 py-1 max-w-full">
+                    <p className="text-xs font-medium font-family-dm-sans whitespace-nowrap">
+                      Limite de idade: {ageLimitText}
+                    </p>
+                  </div>
+                ) : null}
+              </div>
+
+            </div>
+
+            <div className="relative flex items-end justify-between">
+              {/* Badge "Limite de idade" quando HÁ aviso de estoque baixo: ABSOLUTO
+                no topo-esquerdo (fora do fluxo) — ocupa o espaço vazio ACIMA do preço
+                (a coluna direita, mais alta por causa do aviso + stepper, já define a
+                altura da linha), então NÃO cresce o card. `pr-2` reserva folga pra não
+                encostar no aviso "Restam apenas N vagas" à direita. */}
+              {showAgeLimit && showLowStock ? (
+                <div className="absolute left-0 top-0 max-w-[60%] pointer-events-none">
+                  <div className="inline-block bg-yellow-3 text-yellow-12 rounded-full px-3 py-1 max-w-full">
+                    <p className="text-xs font-medium font-family-dm-sans truncate">
+                      Limite de idade: {ageLimitText}
+                    </p>
+                  </div>
                 </div>
               ) : null}
-            </div>
-
-            {/* Badge "Limite de idade" ABAIXO da modalidade, alinhado à esquerda —
-                usado APENAS quando há o aviso de estoque baixo ("Restam apenas N
-                vagas"), pra liberar a direita da linha da modalidade. */}
-            {showAgeLimit && showLowStock ? (
-              <div className="self-start shrink-0 bg-yellow-3 text-yellow-12 rounded-full px-3 py-1 max-w-full">
-                <p className="text-xs font-medium font-family-dm-sans whitespace-nowrap">
-                  Limite de idade: {ageLimitText}
-                </p>
-              </div>
-            ) : null}
-          </div>
-
-          <div className="flex items-end justify-between">
-            {hidePricing ? <span /> : (
-            <div className="flex items-baseline gap-2">
-              <p className="text-xl font-bold text-gray-12">{formatDisplayPrice(priceBreakdown)}</p>
-              {priceBreakdown.hasDiscount && (
-                <p className="text-sm font-medium text-gray-11 line-through">
-                  {formatPrice(priceBreakdown.original)}
-                </p>
-              )}
-            </div>
-            )}
-            {/* Coluna direita (desktop): aviso de estoque baixo + stepper. O badge
-                "Limite de idade" fica na linha da modalidade (acima), à direita. */}
-            <div className="flex flex-col items-end gap-2">
-            {isBatchSoldOut ? (
-              // Lote esgotado: badge cinza no lugar do stepper (não dá pra adicionar).
-              // `h-10` = mesma altura do stepper (size-6 + py-2) pra o card não encolher.
-              <span className="shrink-0 inline-flex items-center h-10 rounded-full bg-gray-4 px-4 text-sm font-semibold text-gray-11 font-manrope leading-[1.1] whitespace-nowrap">
-                Lote esgotado
-              </span>
-            ) : (
-              // Aviso de estoque baixo IN-FLOW (não `absolute`), logo acima do
-              // stepper e alinhado à direita pela coluna (`items-end`).
-              <>
-                {showLowStock ? (
-                  <p className="text-xs font-medium text-red-11 whitespace-nowrap">
-                    Restam apenas {ticket.availableQuantity}{" "}
-                    {ticket.availableQuantity === 1 ? "vaga" : "vagas"}!
-                  </p>
-                ) : null}
-                <div className="flex items-center justify-center w-max gap-2 bg-primary-4 rounded-full px-2 py-2">
-                  <button
-                    type="button"
-                    onClick={() => onDecrease(ticket.id)}
-                    disabled={quantity === 0}
-                    className="size-6 cursor-pointer rounded-full flex items-center justify-center bg-gray-12 hover:bg-gray-11 text-gray-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
-                    aria-label="Diminuir quantidade"
-                  >
-                    <Minus className="size-4" />
-                  </button>
-                  <span className="text-center text-lg font-semibold px-4 text-gray-12">
-                    {quantity}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => onIncrease(ticket.id)}
-                    disabled={isAtMax}
-                    className="size-6 cursor-pointer rounded-full flex items-center justify-center bg-gray-12 hover:bg-gray-11 text-gray-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
-                    aria-label="Aumentar quantidade"
-                  >
-                    <Plus className="size-4" />
-                  </button>
+              {hidePricing ? <span /> : (
+                <div className="flex items-baseline gap-2">
+                  <p className="text-xl font-bold text-gray-12">{formatDisplayPrice(priceBreakdown)}</p>
+                  {priceBreakdown.hasDiscount && (
+                    <p className="text-sm font-medium text-gray-11 line-through">
+                      {formatPrice(priceBreakdown.original)}
+                    </p>
+                  )}
                 </div>
-              </>
-            )}
+              )}
+              {/* Coluna direita (desktop): aviso de estoque baixo + stepper. O badge
+                "Limite de idade" fica na linha da modalidade (acima), à direita. */}
+              <div className="flex flex-col items-end gap-2">
+                {isBatchSoldOut ? (
+                  // Lote esgotado: badge cinza no lugar do stepper (não dá pra adicionar).
+                  // `h-10` = mesma altura do stepper (size-6 + py-2) pra o card não encolher.
+                  <span className="shrink-0 inline-flex items-center h-10 rounded-full bg-gray-4 px-4 text-sm font-semibold text-gray-11 font-manrope leading-[1.1] whitespace-nowrap">
+                    Lote esgotado
+                  </span>
+                ) : (
+                  // Aviso de estoque baixo IN-FLOW (não `absolute`), logo acima do
+                  // stepper e alinhado à direita pela coluna (`items-end`).
+                  <>
+                    {showLowStock ? (
+                      <p className="text-xs font-medium text-red-11 whitespace-nowrap">
+                        Restam apenas {ticket.availableQuantity}{" "}
+                        {ticket.availableQuantity === 1 ? "vaga" : "vagas"}!
+                      </p>
+                    ) : null}
+                    <div className="flex items-center justify-center w-max gap-2 bg-primary-4 rounded-full px-2 py-2">
+                      <button
+                        type="button"
+                        onClick={() => onDecrease(ticket.id)}
+                        disabled={quantity === 0}
+                        className="size-6 cursor-pointer rounded-full flex items-center justify-center bg-gray-12 hover:bg-gray-11 text-gray-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
+                        aria-label="Diminuir quantidade"
+                      >
+                        <Minus className="size-4" />
+                      </button>
+                      <span className="text-center text-lg font-semibold px-4 text-gray-12">
+                        {quantity}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => onIncrease(ticket.id)}
+                        disabled={isAtMax}
+                        className="size-6 cursor-pointer rounded-full flex items-center justify-center bg-gray-12 hover:bg-gray-11 text-gray-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
+                        aria-label="Aumentar quantidade"
+                      >
+                        <Plus className="size-4" />
+                      </button>
+                    </div>
+                  </>
+                )}
+              </div>
             </div>
           </div>
         </div>
-      </div>
       </div>
       {/* Descrição FORA da linha imagens+card, logo abaixo. Indentada (padding =
           largura das imagens + gap-4) pra alinhar sob o card; sem imagens, `pl-3`.
