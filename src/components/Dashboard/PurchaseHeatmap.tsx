@@ -5,12 +5,14 @@ import { useEffect, useRef, useState } from "react";
 import type { PurchaseLocation } from "@/services/organizer/OrganizerService.types";
 
 /**
- * Seção "Mapa de calor de compras" do dashboard.
+ * Seção "Mapa de calor de compras" do dashboard (Leaflet + leaflet.heat sobre
+ * OpenStreetMap; geocoding por bairro via Nominatim — ver PurchaseHeatmapImpl).
  *
- * Duas camadas de lazy-load pra não pagar o custo do Google Maps em todo acesso:
- *  1. `next/dynamic` (ssr:false) — o código do mapa fica fora do bundle inicial.
- *  2. IntersectionObserver — o impl (e o SDK pago do Google) só monta quando a
- *     seção entra na viewport. Fiel à filosofia "sob demanda" do `useGoogleMaps`.
+ * Duas camadas de lazy-load:
+ *  1. `next/dynamic` (ssr:false) — o Leaflet (que precisa de `window`) e o código
+ *     do mapa ficam fora do bundle inicial e do SSR.
+ *  2. IntersectionObserver — o impl só monta quando a seção entra na viewport
+ *     (não geocodifica nem baixa tiles até então).
  */
 
 const PurchaseHeatmapImpl = dynamic(() => import("./PurchaseHeatmapImpl"), {
@@ -52,7 +54,7 @@ export function PurchaseHeatmap({ data }: { data: PurchaseLocation[] }) {
           Mapa de calor de compras
         </h3>
         <p className="font-family-dm-sans text-sm text-gray-11">
-          Onde os compradores estão por cidade
+        Veja no mapa de onde estão vindo as compras do seu evento.
         </p>
       </div>
       {visible ? <PurchaseHeatmapImpl data={data} /> : <MapSkeleton />}

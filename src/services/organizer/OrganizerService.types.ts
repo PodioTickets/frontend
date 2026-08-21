@@ -707,6 +707,8 @@ export interface TopCity {
 
 /** Compras por local (endereço de cobrança) — alimenta o mapa de calor geográfico. */
 export interface PurchaseLocation {
+  /** Bairro do billing (quando informado) — precisão maior que só a cidade. */
+  neighborhood?: string;
   city: string;
   state?: string;
   /** 1 por PEDIDO pago. */
