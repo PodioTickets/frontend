@@ -23,7 +23,7 @@ import { TimerIcon } from "../Icons/Organizer/TimerIcon";
 import Image from "next/image";
 import { getAvatarUrl } from "@/utils/avatar";
 import { Tooltip } from "../Tooltip";
-import { formatDateBR } from "@/utils/datetimeBR";
+import { formatDateBRT } from "@/utils/datetimeBR";
 import { formatShortId } from "@/utils/shortId";
 
 interface InstallmentsDrawerProps {
@@ -93,8 +93,9 @@ export function InstallmentsDrawer({
   // parcela). Previsão = só a PRÓXIMA liberação (parcela pendente mais antiga).
   // "Parcelado" = nº dessa próxima parcela / total. Valor = total pendente.
   const groupInstallmentsByOrder = (items: Installment[]) => {
+    // Vencimento/liberação = instante real → exibir em BRT (mesma âncora do backend).
     const fmt = (d: string) =>
-      formatDateBR(d, { day: "2-digit", month: "2-digit", year: "numeric" });
+      formatDateBRT(d, { day: "2-digit", month: "2-digit", year: "numeric" });
 
     const byOrder = new Map<string, Installment[]>();
     for (const inst of items) {

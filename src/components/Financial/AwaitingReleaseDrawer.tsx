@@ -26,7 +26,7 @@ import Image from "next/image";
 import { Button } from "../Button";
 import { Tooltip } from "../Tooltip";
 import { Pagination } from "../Pagination";
-import { formatDateBR } from "@/utils/datetimeBR";
+import { formatDateBRT } from "@/utils/datetimeBR";
 import { formatShortId } from "@/utils/shortId";
 import { formatDocumentDisplay, isPersonBr } from "@/utils/documentDisplay";
 import { cn } from "@/utils/cn";
@@ -163,9 +163,11 @@ export function AwaitingReleaseDrawer({
     }
   };
 
-  // Formatar data para exibição (UTC, sem shift de fuso)
+  // Data de LIBERAÇÃO = instante real (dataPagamento + retenção). Exibir no fuso de
+  // Brasília (BRT) — a mesma âncora do `daysUntilRelease`/custo do backend. Usar UTC
+  // aqui mostrava 1 dia a mais para pagamentos feitos à noite no Brasil.
   const formatDate = (dateString: string) =>
-    formatDateBR(dateString, { day: "2-digit", month: "2-digit", year: "numeric" });
+    formatDateBRT(dateString, { day: "2-digit", month: "2-digit", year: "numeric" });
 
   // ===== À vista (pending releases, paginado no servidor) =====
   const avistaFiltered = searchQuery.trim()
