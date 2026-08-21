@@ -15,6 +15,7 @@ import { QuestionsListing } from "@/components/Organizer/QuestionsListing";
 import { QuestionDetailsDrawer } from "@/components/Organizer/QuestionDetailsDrawer";
 import { ProductDetailsDrawer } from "@/components/Organizer/ProductDetailsDrawer";
 import { TicketsWithLotsList } from "@/components/Financial/TicketsWithLotsList";
+import { PurchaseHeatmap } from "./PurchaseHeatmap";
 import { DashboardWeekTrend } from "./DashboardWeekTrend";
 import { LotsNearDepletionPaginationBar } from "./LotsNearDepletionPaginationBar";
 import {
@@ -476,6 +477,11 @@ export function DashboardView({
           })}
         </div>
 
+        {/* Mapa de calor geográfico — logo antes do último gráfico. */}
+        <div className="mt-8 w-full">
+          <PurchaseHeatmap data={dashboardData.purchaseLocations} />
+        </div>
+
         {/* Ingressos de lotes — desktop (componente compartilhado com financeiro). */}
         <div className="mt-8 w-full">
           <TicketsWithLotsList
@@ -728,6 +734,11 @@ export function DashboardView({
               </div>
             );
           })}
+        </div>
+
+        {/* Mapa de calor geográfico — logo antes do último gráfico (mobile). */}
+        <div className="mt-6">
+          <PurchaseHeatmap data={dashboardData.purchaseLocations} />
         </div>
 
         {/* Ingressos de lotes - mobile (componente compartilhado com financeiro). */}

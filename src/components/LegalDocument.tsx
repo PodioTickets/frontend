@@ -5,7 +5,26 @@ export type LegalBlock = {
   type: "h1" | "h2" | "h3" | "p" | "li" | "oli" | "kv" | "sub";
   text: string;
   label?: string;
+  /** Quando presente, o `text` do bloco vira um link externo (abre em nova aba). */
+  href?: string;
 };
+
+/** Classe do link externo dentro de um documento legal. */
+const LEGAL_LINK_CLASS =
+  "text-primary-10 underline underline-offset-2 hover:text-primary-11 transition-colors break-words";
+
+/**
+ * Conteúdo textual de um bloco: link externo quando `href` estiver setado,
+ * senão o texto puro. Centraliza a regra p/ p e itens de lista.
+ */
+function blockContent(b: LegalBlock): ReactNode {
+  if (!b.href) return b.text;
+  return (
+    <a href={b.href} target="_blank" rel="noopener noreferrer" className={LEGAL_LINK_CLASS}>
+      {b.text}
+    </a>
+  );
+}
 
 type Section = { heading: LegalBlock | null; body: LegalBlock[] };
 
@@ -41,7 +60,7 @@ function renderBody(blocks: LegalBlock[], compact: boolean): ReactNode[] {
     if (!buf.length) return;
     const items = buf.map((b, i) => (
       <li key={i} className="ms-6 leading-[1.3]">
-        {b.text}
+        {blockContent(b)}
       </li>
     ));
     out.push(
@@ -99,7 +118,7 @@ function renderBody(blocks: LegalBlock[], compact: boolean): ReactNode[] {
       default:
         out.push(
           <p key={i} className={`${bodyText} text-gray-12 leading-[1.3]`}>
-            {b.text}
+            {blockContent(b)}
           </p>,
         );
     }

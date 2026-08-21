@@ -63,6 +63,12 @@ interface InformationStepProps {
   isSubmitting?: boolean;
   previewQuestions?: Question[];
   previewMode?: boolean;
+  /**
+   * Rótulo do CTA final que dispara `onNext` (desktop + barra mobile). Default
+   * "Confirmar dados" (checkout público). O fluxo de cortesia sobrescreve para
+   * "Concluir inscrição" quando esta é a última etapa antes da conclusão.
+   */
+  nextLabel?: string;
 }
 
 interface ParticipantWithTicket {
@@ -83,6 +89,7 @@ export function InformationStep({
   isSubmitting = false,
   previewQuestions,
   previewMode = false,
+  nextLabel = "Confirmar dados",
 }: InformationStepProps) {
   const {
     raceQuantities,
@@ -94,7 +101,8 @@ export function InformationStep({
 
   const eventId = event?.id;
   const hidePricing = useHidePricing();
-  // Cortesia: ignora a restrição de idade (badge + validação). Ver IgnoreAgeLimitContext.
+  // Cortesia: esconde apenas o BADGE de limite de idade. A REGRA de validação de idade
+  // (erro no input de data de nascimento) continua valendo. Ver IgnoreAgeLimitContext.
   const ignoreAgeLimit = useIgnoreAgeLimit();
   const { clearTimer, orderId, currentOrder: timerCurrentOrder, syncFromOrder } = useCheckoutTimer();
   const { patchParticipants, removeReservedSlot, getOrder } = useCheckoutReservation();
@@ -1217,7 +1225,10 @@ export function InformationStep({
 
     if (!birthDate) {
       errors.birthDate = "Data de nascimento é obrigatória";
-    } else if (!ignoreAgeLimit && ageLimit && (ageLimit.min || ageLimit.max)) {
+    } else if (ageLimit && (ageLimit.min || ageLimit.max)) {
+      // A REGRA de idade vale SEMPRE (inclusive na cortesia/adicionar inscrito): o erro
+      // aparece no input de data de nascimento. `ignoreAgeLimit` esconde apenas o BADGE
+      // visual (abaixo), não a validação.
       // Idade exigida é a que o participante terá NO DIA DO EVENTO, não hoje.
       // Ex.: ingresso 18+ e evento em 2026-12-15 → nascido em 2008-12-15 está
       // OK (faz 18 no dia), mesmo que hoje ainda tenha 17.
@@ -2272,35 +2283,6 @@ export function InformationStep({
                           </div>
                           <div className="flex flex-col gap-2">
                             <label className="text-sm font-medium text-gray-12">
-                              Email
-                            </label>
-                            <input
-                              type="email"
-                              name="email"
-                              value={participant.email}
-                              disabled={previewMode}
-                              onChange={(e) =>
-                                handleInputChange(participantIndex, e)
-                              }
-                              className={`w-full px-4 py-3 rounded-lg border bg-gray-2 text-gray-12 focus:outline-none transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${fieldErrors[participantIndex]?.email ? "border-red-6 focus:border-red-10" : "border-gray-6 focus:border-primary-10"}`}
-                              placeholder="Digite seu email"
-                            />
-                            {fieldErrors[participantIndex]?.email && (
-                              <p className="text-sm text-red-11">{fieldErrors[participantIndex].email}</p>
-                            )}
-                          </div>
-                          <div className="flex flex-col gap-2">
-                            <label className="text-sm font-medium text-gray-12">
-                              Nacionalidade
-                            </label>
-                            <NationalitySelect
-                              value={participant.nationality || "Brasil"}
-                              disabled={previewMode}
-                              onChange={(country) => handleNationalityChange(participantIndex, country)}
-                            />
-                          </div>
-                          <div className="flex flex-col gap-2">
-                            <label className="text-sm font-medium text-gray-12">
                               {docLabel}
                             </label>
                             <input
@@ -2345,30 +2327,6 @@ export function InformationStep({
                           </div>
                           <div className="flex flex-col gap-2">
                             <label className="text-sm font-medium text-gray-12">
-                              Telefone
-                            </label>
-                            <input
-                              type="tel"
-                              name="phone"
-                              value={participant.phone}
-                              disabled={previewMode}
-                              onChange={(e) =>
-                                handlePhoneChange(
-                                  participantIndex,
-                                  "phone",
-                                  e.target.value
-                                )
-                              }
-                              maxLength={getPhoneMaxLengthForCountry(participant.nationality)}
-                              className={`w-full px-4 py-3 rounded-lg border bg-gray-2 text-gray-12 focus:outline-none transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${fieldErrors[participantIndex]?.phone ? "border-red-6 focus:border-red-10" : "border-gray-6 focus:border-primary-10"}`}
-                              placeholder={getPhonePlaceholderForCountry(participant.nationality)}
-                            />
-                            {fieldErrors[participantIndex]?.phone && (
-                              <p className="text-sm text-red-11">{fieldErrors[participantIndex].phone}</p>
-                            )}
-                          </div>
-                          <div className="flex flex-col gap-2">
-                            <label className="text-sm font-medium text-gray-12">
                               Sexo
                             </label>
                             <div className={`w-full ${previewMode ? "opacity-50 pointer-events-none" : ""}`}>
@@ -2398,6 +2356,59 @@ export function InformationStep({
                             </div>
                             {fieldErrors[participantIndex]?.gender && (
                               <p className="text-sm text-red-11">{fieldErrors[participantIndex].gender}</p>
+                            )}
+                          </div>
+                          <div className="flex flex-col gap-2">
+                            <label className="text-sm font-medium text-gray-12">
+                              Email
+                            </label>
+                            <input
+                              type="email"
+                              name="email"
+                              value={participant.email}
+                              disabled={previewMode}
+                              onChange={(e) =>
+                                handleInputChange(participantIndex, e)
+                              }
+                              className={`w-full px-4 py-3 rounded-lg border bg-gray-2 text-gray-12 focus:outline-none transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${fieldErrors[participantIndex]?.email ? "border-red-6 focus:border-red-10" : "border-gray-6 focus:border-primary-10"}`}
+                              placeholder="Digite seu email"
+                            />
+                            {fieldErrors[participantIndex]?.email && (
+                              <p className="text-sm text-red-11">{fieldErrors[participantIndex].email}</p>
+                            )}
+                          </div>
+                          <div className="flex flex-col gap-2">
+                            <label className="text-sm font-medium text-gray-12">
+                              Nacionalidade
+                            </label>
+                            <NationalitySelect
+                              value={participant.nationality || "Brasil"}
+                              disabled={previewMode}
+                              onChange={(country) => handleNationalityChange(participantIndex, country)}
+                            />
+                          </div>
+                          <div className="flex flex-col gap-2">
+                            <label className="text-sm font-medium text-gray-12">
+                              Telefone
+                            </label>
+                            <input
+                              type="tel"
+                              name="phone"
+                              value={participant.phone}
+                              disabled={previewMode}
+                              onChange={(e) =>
+                                handlePhoneChange(
+                                  participantIndex,
+                                  "phone",
+                                  e.target.value
+                                )
+                              }
+                              maxLength={getPhoneMaxLengthForCountry(participant.nationality)}
+                              className={`w-full px-4 py-3 rounded-lg border bg-gray-2 text-gray-12 focus:outline-none transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${fieldErrors[participantIndex]?.phone ? "border-red-6 focus:border-red-10" : "border-gray-6 focus:border-primary-10"}`}
+                              placeholder={getPhonePlaceholderForCountry(participant.nationality)}
+                            />
+                            {fieldErrors[participantIndex]?.phone && (
+                              <p className="text-sm text-red-11">{fieldErrors[participantIndex].phone}</p>
                             )}
                           </div>
                         </div>
@@ -2679,7 +2690,7 @@ export function InformationStep({
               variant="default"
               className="w-full md:w-1/4 font-bold"
             >
-              Confirmar dados
+              {nextLabel}
             </Button>
           </div>
         </div>
@@ -2706,7 +2717,7 @@ export function InformationStep({
         serviceFee={displayedServiceFee}
         total={totalAmountWithAge}
         cta={(allParticipantsSaved && !anyExpanded) ? {
-          label: "Confirmar dados",
+          label: nextLabel,
           loading: isSubmitting,
           disabled: isSubmitting,
           onClick: () => {

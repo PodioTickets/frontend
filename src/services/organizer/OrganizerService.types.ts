@@ -705,6 +705,14 @@ export interface TopCity {
   participants: number;
 }
 
+/** Compras por local (endereço de cobrança) — alimenta o mapa de calor geográfico. */
+export interface PurchaseLocation {
+  city: string;
+  state?: string;
+  /** 1 por PEDIDO pago. */
+  purchases: number;
+}
+
 export interface LotNearDepletionBatch {
   id: string;
   name: string;
@@ -833,6 +841,8 @@ export interface DashboardSecondaryData {
   topCities: TopCity[];
   salesHeatmap: SalesHeatmapData[];
   mostAnsweredQuestions: MostAnsweredQuestion[];
+  /** Compras por cidade/UF (billing) — mapa de calor geográfico. */
+  purchaseLocations: PurchaseLocation[];
 }
 
 // Financial interfaces

@@ -209,10 +209,25 @@ function CourtesyFlow() {
                 <ModalitiesStep event={event} onNext={handleTicketsNext} onBack={() => orgNav.push(registrationsHref)} isSubmitting={busy} />
               )}
               {step === "info" && (
-                <InformationStep event={event} onNext={handleInfoNext} onBack={() => setStep("tickets")} isSubmitting={busy} />
+                <InformationStep
+                  event={event}
+                  onNext={handleInfoNext}
+                  onBack={() => setStep("tickets")}
+                  isSubmitting={busy}
+                  // Sem produtos selecionáveis, Informações é a última etapa antes
+                  // da conclusão → o CTA finaliza a inscrição direto.
+                  nextLabel={hasSelectableProducts === false ? "Concluir inscrição" : undefined}
+                />
               )}
               {step === "products" && (
-                <SubscriptionStep event={event} onNext={handleProductsNext} onBack={() => setStep("info")} isSubmitting={busy} />
+                <SubscriptionStep
+                  event={event}
+                  onNext={handleProductsNext}
+                  onBack={() => setStep("info")}
+                  isSubmitting={busy}
+                  // Produtos é sempre a última etapa da cortesia antes da conclusão.
+                  nextLabel="Concluir inscrição"
+                />
               )}
             </div>
           </IgnoreAgeLimitProvider>

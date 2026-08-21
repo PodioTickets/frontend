@@ -661,27 +661,33 @@ export const privacyPolicy: LegalBlock[] = [
   },
   {
     "type": "p",
-    "text": "Se você usa o Internet Explorer."
+    "text": "Se você usa o Internet Explorer.",
+    "href": "https://support.microsoft.com/pt-br/windows/excluir-e-gerenciar-cookies-168dab11-0753-043d-7c16-ede5947fc64d"
   },
   {
     "type": "p",
-    "text": "Se você usa o Firefox."
+    "text": "Se você usa o Firefox.",
+    "href": "https://support.mozilla.org/pt-BR/kb/ative-e-desative-os-cookies-que-os-sites-usam"
   },
   {
     "type": "p",
-    "text": "Se você usa o Safari."
+    "text": "Se você usa o Safari.",
+    "href": "https://support.apple.com/pt-br/guide/safari/sfri11471/mac"
   },
   {
     "type": "p",
-    "text": "Se você usa o Google Chrome."
+    "text": "Se você usa o Google Chrome.",
+    "href": "https://support.google.com/chrome/answer/95647"
   },
   {
     "type": "p",
-    "text": "Se você usa o Microsoft Edge."
+    "text": "Se você usa o Microsoft Edge.",
+    "href": "https://support.microsoft.com/pt-br/microsoft-edge/excluir-cookies-no-microsoft-edge-63947406-40ac-c3b8-57b9-2a946a29ae09"
   },
   {
     "type": "p",
-    "text": "Se você usa o Opera."
+    "text": "Se você usa o Opera.",
+    "href": "https://help.opera.com/pt-br/latest/web-preferences/"
   },
   {
     "type": "h2",
