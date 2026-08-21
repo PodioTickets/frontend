@@ -514,6 +514,12 @@ export async function proxy(request: NextRequest) {
   ];
   const googleTagCsp = googleTagDomains.join(" ");
 
+  // Mapa de calor de compras do dashboard (Leaflet + leaflet.heat): tiles do
+  // OpenStreetMap (img-src) e geocoding via Nominatim (connect-src). Abertos, sem
+  // chave. Ver `components/Dashboard/PurchaseHeatmapImpl.tsx`.
+  const osmTilesCsp = "https://*.tile.openstreetmap.org";
+  const osmGeocodeCsp = "https://nominatim.openstreetmap.org";
+
   const cspDirectives = [
     `default-src ${trustedDomains.join(" ")}`,
     /* TODO: migrar para nonce */ `script-src ${trustedDomains.join(" ")} ${isDev ? "'unsafe-eval'" : ""
@@ -524,14 +530,14 @@ export async function proxy(request: NextRequest) {
     `font-src ${trustedDomains.join(" ")} data: https://fonts.gstatic.com https://*.google.com`,
     `connect-src ${trustedDomains.join(
       " "
-    )} wss: ws: https://*.googleapis.com https://*.google.com https://*.google-analytics.com https://*.analytics.google.com https://challenges.cloudflare.com https://www.facebook.com https://connect.facebook.net ${braspag3DSCsp} ${braspag3DSConnectExtras} ${googleTagCsp}${checkoutNetExtra}`,
+    )} wss: ws: https://*.googleapis.com https://*.google.com https://*.google-analytics.com https://*.analytics.google.com https://challenges.cloudflare.com https://www.facebook.com https://connect.facebook.net ${braspag3DSCsp} ${braspag3DSConnectExtras} ${googleTagCsp} ${osmGeocodeCsp}${checkoutNetExtra}`,
     // 3DS challenge abre iframe do ACS do banco emissor (Itaú, Bradesco, Nubank, etc).
     // No fluxo Braspag/Cardinal o ACS fica ANINHADO no iframe do Cardinal (domínio fixo),
     // mas o fallback AuthenticationUrl da Cielo (débito sem MPI) navega DIRETO pro ACS
     // do banco — domínio imprevisível por emissor. Por isso `https:` genérico aqui e no
     // form-action (iframe cross-origin não lê a página; frame-ancestors segue 'none').
     `frame-src 'self' https: https://www.youtube.com https://*.google.com https://*.googleapis.com https://www.strava.com https://*.strava.com https://strava-embeds.com https://challenges.cloudflare.com https://www.instagram.com https://www.facebook.com https://platform.twitter.com https://www.tiktok.com ${braspag3DSCsp} https://www.googletagmanager.com https://*.doubleclick.net`,
-    `img-src ${trustedDomains.join(" ")} data: blob: https://cdn.podioticket.com.br https://*.google.com https://*.googleapis.com https://*.gstatic.com https://*.googleusercontent.com https://www.instagram.com https://*.cdninstagram.com https://*.fbcdn.net https://www.facebook.com https://*.strava.com https://strava-embeds.com https://apata.io https://*.apata.io ${googleTagCsp}${checkoutNetExtra}`,
+    `img-src ${trustedDomains.join(" ")} data: blob: https://cdn.podioticket.com.br https://*.google.com https://*.googleapis.com https://*.gstatic.com https://*.googleusercontent.com https://www.instagram.com https://*.cdninstagram.com https://*.fbcdn.net https://www.facebook.com https://*.strava.com https://strava-embeds.com https://apata.io https://*.apata.io ${googleTagCsp} ${osmTilesCsp}${checkoutNetExtra}`,
     `media-src ${trustedDomains.join(" ")} data: blob:`,
     // worker-src e child-src: workers internos do Turnstile usam blob URLs
     `worker-src 'self' blob: https://challenges.cloudflare.com`,

@@ -217,6 +217,7 @@ export function useEventDashboard(
       })),
       salesHeatmap: secondary?.salesHeatmap ?? [],
       purchaseLocations: (secondary?.purchaseLocations ?? []).map((l) => ({
+        neighborhood: l.neighborhood,
         city: l.city,
         state: l.state,
         purchases: l.purchases,
