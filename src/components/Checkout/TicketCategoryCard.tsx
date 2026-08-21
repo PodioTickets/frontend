@@ -660,16 +660,14 @@ const TicketItemDesktop = memo(({
 
   const hasDescription = !!ticket.description?.trim();
 
-  // Há modalidade/distância a exibir? Controla o alinhamento do badge de idade
-  // (à direita quando há modalidade; à esquerda quando não há — senão o `ml-auto`
-  // jogaria o badge pro canto direito sozinho, com a esquerda vazia).
-  const hasModality = !!(modalityInfo && distanceKm > 0);
-
-  // Controle de quantidade (esgotado OU aviso de estoque + stepper). Extraído pra
-  // ser reusado em DOIS lugares: na linha de preço (checkout normal) ou, no modo
+  // Controle de quantidade (esgotado OU aviso de estoque + stepper). Função pra
+  // ser reusada em DOIS lugares: na linha de preço (checkout normal) ou, no modo
   // sem preço (cortesia/`hidePricing`), na PRÓPRIA linha da modalidade — assim a
   // linha de preço não fica vazia (evita o espaço em branco).
-  const quantityControl = (
+  // `withWarning` controla se o aviso "Restam apenas N vagas" aparece AQUI (acima
+  // do stepper). Quando NÃO há badge de idade, o aviso sobe pra linha da modalidade
+  // (ver abaixo), então o controle é renderizado SEM o aviso.
+  const renderQuantityControl = (withWarning: boolean) => (
     <div className="flex flex-col items-end gap-2">
       {isBatchSoldOut ? (
         // Lote esgotado: badge cinza no lugar do stepper (não dá pra adicionar).
@@ -680,7 +678,7 @@ const TicketItemDesktop = memo(({
       ) : (
         // Aviso de estoque baixo IN-FLOW (não `absolute`), logo acima do stepper.
         <>
-          {showLowStock ? (
+          {withWarning && showLowStock ? (
             <p className="text-xs font-medium text-red-11 whitespace-nowrap">
               Restam apenas {ticket.availableQuantity}{" "}
               {ticket.availableQuantity === 1 ? "vaga" : "vagas"}!
@@ -818,17 +816,26 @@ const TicketItemDesktop = memo(({
                     </p>
                   </div>
                 )}
-                {/* Badge "Limite de idade" na linha da modalidade: à DIREITA quando
-                  há modalidade (`ml-auto`), à ESQUERDA quando não há (senão o
-                  `ml-auto` jogaria o badge sozinho pro canto direito). Só quando NÃO
-                  há aviso de estoque (com aviso, o badge vira o absoluto na linha de
+                {/* Badge "Limite de idade" na linha da modalidade: SEMPRE à direita
+                  (`ml-auto`), com ou sem modalidade. Só aparece aqui quando NÃO há
+                  aviso de estoque (com aviso, o badge vira o absoluto na linha de
                   preço). No modo cortesia (hidePricing) o badge some via ignoreAgeLimit. */}
                 {showAgeLimit && !showLowStock ? (
-                  <div className={cn("shrink-0 bg-yellow-3 text-yellow-12 rounded-full px-3 py-1 max-w-full", hasModality && "ml-auto")}>
+                  <div className="ml-auto shrink-0 bg-yellow-3 text-yellow-12 rounded-full px-3 py-1 max-w-full">
                     <p className="text-xs font-medium font-family-dm-sans whitespace-nowrap">
                       Limite de idade: {ageLimitText}
                     </p>
                   </div>
+                ) : null}
+                {/* Aviso de estoque na linha da modalidade/distância — SÓ quando NÃO
+                    há badge de idade. Com badge, o aviso fica na coluna do stepper
+                    (via `renderQuantityControl(showAgeLimit)`), pra não colidir com o
+                    badge. SEMPRE à direita (`ml-auto`), mesmo sem modalidade. */}
+                {showLowStock && !showAgeLimit ? (
+                  <p className="ml-auto shrink-0 text-xs font-medium text-red-11 whitespace-nowrap">
+                    Restam apenas {ticket.availableQuantity}{" "}
+                    {ticket.availableQuantity === 1 ? "vaga" : "vagas"}!
+                  </p>
                 ) : null}
               </div>
 
@@ -867,7 +874,9 @@ const TicketItemDesktop = memo(({
                   )}
                 </div>
               )}
-              {quantityControl}
+              {/* Aviso "Restam apenas N vagas" fica AQUI (acima do stepper) só quando
+                  HÁ badge de idade; sem badge, ele sobe pra linha da modalidade. */}
+              {renderQuantityControl(showAgeLimit)}
             </div>
           </div>
         </div>
