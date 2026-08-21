@@ -228,64 +228,99 @@ export function useThreeDS() {
         // tentativa o Cardinal já está em memória.
         let cardinalRetried = false;
 
-        // Detector de "iframe do challenge sumiu sem callback".
-        // Por que existe: BP MPI nem sempre dispara onFailure/onError quando o
-        // usuário clica em "Cancelar" no popup do banco — o iframe some do DOM
-        // sem callback e a Promise ficaria pendurada até o timeout de 5min.
+        // Watchdogs de "iframe sumiu sem callback" — DOIS níveis, porque a
+        // remoção de iframe significa coisas diferentes no Songbird v2:
         //
-        // Por que NÃO rejeita mais (ago/2026, Songbird v2/cardinaltrusted): o
-        // SDK novo cria e remove overlays GRANDES também no fluxo frictionless
-        // e demora >25s pós-remoção pra disparar onSuccess — rejeitar como
-        // USER_CANCEL matou autenticações Eci 05 APROVADAS (o /pay nunca
-        // rodava). Pagamento em curso NUNCA é descartado por heurística de DOM:
-        // a remoção do iframe apenas ENCURTA o teto global pra WATCHDOG_TIMEOUT
-        // — se o SDK ainda responder (falso-cancel), segue o fluxo normal; se
-        // era cancel real sem callback, o usuário recebe o toast neutro de
-        // tempo esgotado (retry limpo), não o modal de "não autorizado".
+        // 1. `#Cardinal-CCA-IFrame` (id OFICIAL do iframe do DESAFIO do banco,
+        //    confirmado no bundle do Songbird v2): só existe quando o banco
+        //    abriu challenge de verdade. Cancelar/fechar dentro da página do
+        //    banco fecha o modal SEM callback em alguns emissores (o modal da
+        //    Cardinal nem tem botão próprio de fechar — overlayClose/closeButton
+        //    false por default). CCA removido + CHALLENGE_RESULT_GRACE_MS sem
+        //    callback = cancelamento → rejeita como FAILURE (recusa imediata).
+        //    No fluxo COMPLETADO o onSuccess chega segundos após a remoção —
+        //    15s de grace não alcança aprovação legítima.
+        //
+        // 2. Overlays genéricos ≥200px (processing/collection do fluxo
+        //    frictionless — SEM id CCA): rejeitar por eles matou autenticações
+        //    Eci 05 aprovadas (o SDK demora >25s pós-remoção). Remoção só
+        //    ENCURTA o teto global pra WATCHDOG_TIMEOUT_MS; se nada vier, o
+        //    usuário recebe o toast neutro de tempo esgotado (retry limpo).
         let challengeIframe: HTMLIFrameElement | null = null;
+        let ccaIframe: HTMLIFrameElement | null = null;
+        const CCA_IFRAME_ID = "Cardinal-CCA-IFrame";
         const CHALLENGE_MIN_SIZE = 200; // px; descarta o collector invisível.
         const WATCHDOG_TIMEOUT_MS = 60_000;
+        const CHALLENGE_RESULT_GRACE_MS = 15_000;
 
         const cancelObserver = new MutationObserver((mutations) => {
           if (settled) return;
           for (const mut of mutations) {
-            // Detecta o iframe do challenge sendo adicionado.
-            if (!challengeIframe) {
-              for (const node of Array.from(mut.addedNodes)) {
-                const candidates: HTMLIFrameElement[] = [];
-                if (node instanceof HTMLIFrameElement) candidates.push(node);
-                else if (node instanceof Element) {
-                  candidates.push(
-                    ...Array.from(node.querySelectorAll("iframe")),
-                  );
+            // Detecta iframes sendo adicionados (CCA do banco e overlays).
+            for (const node of Array.from(mut.addedNodes)) {
+              if (ccaIframe && challengeIframe) break;
+              const candidates: HTMLIFrameElement[] = [];
+              if (node instanceof HTMLIFrameElement) candidates.push(node);
+              else if (node instanceof Element) {
+                candidates.push(...Array.from(node.querySelectorAll("iframe")));
+              }
+              for (const iframe of candidates) {
+                if (!ccaIframe && iframe.id === CCA_IFRAME_ID) {
+                  ccaIframe = iframe;
+                  if (!IS_PROD) console.warn("[3DS] CCA iframe (desafio do banco) detectado");
+                  continue;
                 }
-                for (const iframe of candidates) {
+                if (!challengeIframe) {
                   const rect = iframe.getBoundingClientRect();
                   if (
                     rect.width >= CHALLENGE_MIN_SIZE &&
                     rect.height >= CHALLENGE_MIN_SIZE
                   ) {
                     challengeIframe = iframe;
-                    if (!IS_PROD) console.warn("[3DS] challenge iframe detectado");
-                    break;
+                    if (!IS_PROD) console.warn("[3DS] overlay iframe detectado");
                   }
                 }
-                if (challengeIframe) break;
               }
             }
-            // Remoção do iframe rastreado: encurta o teto global (uma vez) e
-            // volta a rastrear — NUNCA rejeita por conta própria.
-            if (challengeIframe) {
-              for (const node of Array.from(mut.removedNodes)) {
+            for (const node of Array.from(mut.removedNodes)) {
+              // Desafio REAL do banco removido: completou (callback chega em
+              // segundos) ou cancelou/fechou (nada chega) → grace curto e
+              // rejeição como FAILURE = recusa pro usuário.
+              if (ccaIframe) {
+                const ccaRemoved =
+                  node === ccaIframe ||
+                  (node instanceof Element && node.contains(ccaIframe));
+                if (ccaRemoved) {
+                  if (!IS_PROD) console.warn("[3DS] CCA iframe removido — grace de resultado");
+                  ccaIframe = null;
+                  setTimeout(() => {
+                    if (settled) return;
+                    // Novo CCA apareceu (re-render/segundo fator): segue vivo.
+                    if (ccaIframe) return;
+                    finish(() =>
+                      reject(
+                        new ThreeDSError(
+                          "FAILURE",
+                          "Autenticação não concluída no banco. Tente novamente.",
+                          "USER_CANCEL",
+                        ),
+                      ),
+                    );
+                  }, CHALLENGE_RESULT_GRACE_MS);
+                  return;
+                }
+              }
+              // Overlay genérico removido: só encurta o teto global.
+              if (challengeIframe) {
                 const removed =
                   node === challengeIframe ||
-                  (node instanceof Element &&
-                    node.contains(challengeIframe));
-                if (!removed) continue;
-                if (!IS_PROD) console.warn("[3DS] challenge iframe removido — teto encurtado");
-                challengeIframe = null;
-                shortenTimeout(WATCHDOG_TIMEOUT_MS);
-                return;
+                  (node instanceof Element && node.contains(challengeIframe));
+                if (removed) {
+                  if (!IS_PROD) console.warn("[3DS] overlay removido — teto encurtado");
+                  challengeIframe = null;
+                  shortenTimeout(WATCHDOG_TIMEOUT_MS);
+                  return;
+                }
               }
             }
           }
