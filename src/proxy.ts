@@ -515,10 +515,9 @@ export async function proxy(request: NextRequest) {
   const googleTagCsp = googleTagDomains.join(" ");
 
   // Mapa de calor de compras do dashboard (Leaflet + leaflet.heat): tiles do
-  // OpenStreetMap (img-src) e geocoding via Nominatim (connect-src). Abertos, sem
-  // chave. Ver `components/Dashboard/PurchaseHeatmapImpl.tsx`.
+  // OpenStreetMap (img-src). O geocoding é feito no BACKEND (GeoService) — o cliente
+  // NÃO chama o Nominatim. Ver `components/Dashboard/PurchaseHeatmapImpl.tsx`.
   const osmTilesCsp = "https://*.tile.openstreetmap.org";
-  const osmGeocodeCsp = "https://nominatim.openstreetmap.org";
 
   const cspDirectives = [
     `default-src ${trustedDomains.join(" ")}`,
@@ -530,7 +529,7 @@ export async function proxy(request: NextRequest) {
     `font-src ${trustedDomains.join(" ")} data: https://fonts.gstatic.com https://*.google.com`,
     `connect-src ${trustedDomains.join(
       " "
-    )} wss: ws: https://*.googleapis.com https://*.google.com https://*.google-analytics.com https://*.analytics.google.com https://challenges.cloudflare.com https://www.facebook.com https://connect.facebook.net ${braspag3DSCsp} ${braspag3DSConnectExtras} ${googleTagCsp} ${osmGeocodeCsp}${checkoutNetExtra}`,
+    )} wss: ws: https://*.googleapis.com https://*.google.com https://*.google-analytics.com https://*.analytics.google.com https://challenges.cloudflare.com https://www.facebook.com https://connect.facebook.net ${braspag3DSCsp} ${braspag3DSConnectExtras} ${googleTagCsp}${checkoutNetExtra}`,
     // 3DS challenge abre iframe do ACS do banco emissor (Itaú, Bradesco, Nubank, etc).
     // No fluxo Braspag/Cardinal o ACS fica ANINHADO no iframe do Cardinal (domínio fixo),
     // mas o fallback AuthenticationUrl da Cielo (débito sem MPI) navega DIRETO pro ACS

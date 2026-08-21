@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { io } from "socket.io-client";
 import { useAuth } from "@/hooks/useAuth";
 import { organizerService, userService } from "@/services";
 import toast from "react-hot-toast";
@@ -81,6 +82,36 @@ export function useEventDashboard(
     { period, ticketIds },
     dashboardEnabled,
   );
+
+  // Geocoding do mapa de calor: enquanto houver bairros pendentes no backend,
+  // assina o canal WS `/geo` e refaz o fetch do secondary quando o worker resolve
+  // um bairro — o mapa preenche em TEMPO REAL, sem polling. Sai do canal quando o
+  // mapa fica completo (pending = 0).
+  const geocodingPending = secondaryQuery.data?.geocodingPending ?? 0;
+  const refetchSecondary = secondaryQuery.refetch;
+  const hasPendingGeocoding = geocodingPending > 0;
+  useEffect(() => {
+    const API_URL = (process.env.NEXT_PUBLIC_API_URL ?? "").replace(/\/$/, "");
+    if (!hasPendingGeocoding || !API_URL) return;
+    const socket = io(`${API_URL}/geo`, {
+      withCredentials: true,
+      transports: ["websocket", "polling"],
+    });
+    socket.on("connect", () => socket.emit("subscribe:geo"));
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    socket.on("geo:resolved", () => {
+      if (timer) return; // debounce: coalesce rajadas de resolução em 1 refetch
+      timer = setTimeout(() => {
+        timer = null;
+        void refetchSecondary();
+      }, 1500);
+    });
+    return () => {
+      if (timer) clearTimeout(timer);
+      socket.disconnect();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hasPendingGeocoding]);
 
   const isFirstLoad =
     !overviewQuery.data && !rankingsQuery.data && !secondaryQuery.data;
@@ -221,7 +252,11 @@ export function useEventDashboard(
         city: l.city,
         state: l.state,
         purchases: l.purchases,
+        lat: l.lat,
+        lng: l.lng,
       })),
+      /** Bairros ainda sendo geocodificados no backend (mapa de calor). */
+      purchaseLocationsPending: secondary?.geocodingPending ?? 0,
       dailyData: [],
       topProductVariations: (rankings?.topProductVariations ?? []).map((p) => ({
         productId: p.productId,
