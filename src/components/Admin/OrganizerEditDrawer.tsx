@@ -62,6 +62,10 @@ interface OrgDetail extends AdminAuditOrganization {
   anticipationMonthlyRate?: number;
   /** Antecipação de recebíveis habilitada para esta org (default false). */
   anticipationEnabled?: boolean;
+  /** Taxa de organizador personalizada habilitada (default false). */
+  customFeeEnabled?: boolean;
+  /** Teto da taxa TOTAL (%) por evento quando customFeeEnabled (escala 0–100; default 6). */
+  maxTotalFeePercent?: number;
   pixKeys?: Array<{ key: string; keyType: string; isDefault: boolean }>;
   _count?: { events?: number; members?: number };
 }
@@ -423,6 +427,10 @@ export function OrganizerEditDrawer({ isOpen, onClose, org, onUpdated, mode = "e
   const [anticipationRatePercent, setAnticipationRatePercent] = useState("10");
   // Antecipação habilitada para a org. DESLIGADA por padrão (inclusive no create).
   const [anticipationEnabled, setAnticipationEnabled] = useState(false);
+  // Taxa de organizador PERSONALIZADA: liga/desliga + teto da taxa TOTAL (%) por
+  // evento (editado como número puro; ex.: "8" = 8%). DESLIGADA por padrão → teto 6% fixo.
+  const [customFeeEnabled, setCustomFeeEnabled] = useState(false);
+  const [maxTotalFeePercent, setMaxTotalFeePercent] = useState("6");
   const [loadingCep, setLoadingCep] = useState(false);
   // Guarda o último CEP buscado pra não disparar fetch duplicado em re-renders.
   const lastFetchedCepRef = useRef<string>("");
@@ -464,6 +472,8 @@ export function OrganizerEditDrawer({ isOpen, onClose, org, onUpdated, mode = "e
       setFiscalEmail("");
       setAnticipationRatePercent("10");
       setAnticipationEnabled(false);
+      setCustomFeeEnabled(false);
+      setMaxTotalFeePercent("6");
       setShowAddPix(false);
       setNewPix(emptyPix);
       return;
@@ -515,6 +525,10 @@ export function OrganizerEditDrawer({ isOpen, onClose, org, onUpdated, mode = "e
             : "10",
         );
         setAnticipationEnabled(d.anticipationEnabled ?? false);
+        setCustomFeeEnabled(d.customFeeEnabled ?? false);
+        setMaxTotalFeePercent(
+          d.maxTotalFeePercent != null ? String(+d.maxTotalFeePercent.toFixed(2)) : "6",
+        );
         const loadedPix: PixKey[] = Array.isArray(d.pixKeys)
           ? d.pixKeys.map((k: any, i: number) => ({ id: `loaded-${i}`, key: k.key, keyType: k.keyType, isDefault: k.isDefault, bankName: k.bankName ?? "", accountHolderName: k.accountHolderName ?? "", accountHolderDocument: k.accountHolderDocument ? formatCPFOrCNPJ(k.accountHolderDocument) : "" }))
           : [];
@@ -630,6 +644,14 @@ export function OrganizerEditDrawer({ isOpen, onClose, org, onUpdated, mode = "e
         })(),
         // Liga/desliga a antecipação da org (default desligado no create).
         anticipationEnabled,
+        // Taxa de organizador personalizada: liga/desliga + teto da taxa TOTAL (%).
+        // Só envia o teto quando válido (0–100). O cap efetivo por evento é enforçado
+        // no backend (org desligada = 6% fixo).
+        customFeeEnabled,
+        maxTotalFeePercent: (() => {
+          const p = parseFloat(maxTotalFeePercent.replace(",", "."));
+          return isNaN(p) || p < 0 || p > 100 ? undefined : p;
+        })(),
         pixKeys: pixKeys.map(({ key, keyType, bankName, accountHolderName, accountHolderDocument }, i) => ({
           key,
           keyType,
@@ -924,6 +946,49 @@ export function OrganizerEditDrawer({ isOpen, onClose, org, onUpdated, mode = "e
                   padrão (inclusive no cadastro); o admin liga aqui e define a taxa. */}
               <div className="flex flex-col gap-6">
                 <SectionTitle icon={<SlidersHorizontal className="size-5" />} label="Configurações específicas" />
+
+                {/* Checkbox — taxa de organizador personalizada. Quando ativa, o
+                    organizador define a taxa TOTAL do evento até o teto abaixo na etapa
+                    financeira (vale só p/ eventos NOVOS); desativada = 6% fixo. */}
+                <button
+                  type="button"
+                  onClick={() => setCustomFeeEnabled((v) => !v)}
+                  aria-pressed={customFeeEnabled}
+                  className="flex items-start gap-3 text-left"
+                >
+                  <span
+                    className={cn(
+                      "size-6 shrink-0 rounded-md border flex items-center justify-center transition-colors mt-0.5",
+                      customFeeEnabled ? "bg-[#C8F4CC] border-[#94CE9A] text-gray-12" : "border-gray-6 bg-gray-1",
+                    )}
+                    aria-hidden
+                  >
+                    {customFeeEnabled && <Check className="size-3.5" strokeWidth={2.5} />}
+                  </span>
+                  <span className="flex flex-col gap-0.5">
+                    <span className="text-base font-medium font-family-dm-sans text-gray-12 leading-[1.3]">
+                      Taxa de organizador personalizada
+                    </span>
+                    <span className="text-sm font-normal font-family-dm-sans text-gray-11 leading-[1.3]">
+                      Quando ativa, o organizador pode definir a taxa total do evento até o teto abaixo,
+                      na etapa financeira ao criar um evento novo. Desativada, o teto é 6% fixo.
+                    </span>
+                  </span>
+                </button>
+
+                {/* Teto da taxa total — só aparece quando a taxa personalizada está ativa. */}
+                {customFeeEnabled && (
+                  <div className="flex flex-wrap gap-x-4 gap-y-6">
+                    <FormField
+                      label="Teto da taxa total (%)"
+                      value={maxTotalFeePercent}
+                      onChange={(v) => setMaxTotalFeePercent(v.replace(/[^\d.,]/g, ""))}
+                      placeholder="6"
+                      inputMode="decimal"
+                      className="min-w-[284px]"
+                    />
+                  </div>
+                )}
 
                 {/* Checkbox — ativar/desativar antecipação */}
                 <button

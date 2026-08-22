@@ -431,8 +431,8 @@ const TicketItemMobile = memo(({
               {/* Limite de idade em linha própria, alinhado à esquerda (fluxo
                 normal, sem `absolute`) — espelha o layout single-image. */}
               {showAgeLimit ? (
-                <div className="bg-yellow-3 rounded-full px-4 py-2 self-start max-w-full max-md:mb-6">
-                  <p className="text-sm font-medium text-yellow-12 font-family-dm-sans">
+                <div className="bg-yellow-3 rounded-full px-2.5 py-0.5 self-start max-w-full max-md:mb-6">
+                  <p className="text-[11px] font-medium text-yellow-12 font-family-dm-sans">
                     Limite de idade: {ageLimitText}
                   </p>
                 </div>
@@ -443,8 +443,8 @@ const TicketItemMobile = memo(({
 
         {/* Tag de idade em linha própria — só no layout single-image (Figma). */}
         {isSingleImageLayout && showAgeLimit ? (
-          <div className="bg-yellow-3 rounded-full px-4 py-3 self-start max-w-full">
-            <p className="text-xs font-medium text-yellow-12 font-family-dm-sans leading-[1.3]">
+          <div className="bg-yellow-3 rounded-full px-2.5 py-0.5 self-start max-w-full">
+            <p className="text-[11px] font-medium text-yellow-12 font-family-dm-sans leading-[1.3]">
               Limite de idade: {ageLimitText}
             </p>
           </div>
@@ -791,7 +791,7 @@ const TicketItemDesktop = memo(({
                 {ticket.name}
               </h2>
 
-              <div className="flex items-center gap-8 flex-wrap min-w-0 w-full">
+              <div className="flex items-center gap-3 flex-wrap min-w-0 w-full">
                 {modalityInfo && distanceKm > 0 && (
                   <div className="flex items-center gap-2">
                     {modalityInfo.icon ? (
@@ -816,22 +816,17 @@ const TicketItemDesktop = memo(({
                     </p>
                   </div>
                 )}
-                {/* Badge "Limite de idade" na linha da modalidade: SEMPRE à direita
-                  (`ml-auto`), com ou sem modalidade. Só aparece aqui quando NÃO há
-                  aviso de estoque (com aviso, o badge vira o absoluto na linha de
-                  preço). No modo cortesia (hidePricing) o badge some via ignoreAgeLimit. */}
-                {showAgeLimit && !showLowStock ? (
-                  <div className="ml-auto shrink-0 bg-yellow-3 text-yellow-12 rounded-full px-3 py-1 max-w-full">
+                {/* "Limite de idade" AO LADO da modalidade/distância (não empurrado
+                    pra direita). No modo cortesia (hidePricing) some via ignoreAgeLimit. */}
+                {showAgeLimit ? (
+                  <div className="shrink-0 bg-yellow-3 text-yellow-12 rounded-full px-3 py-1 max-w-full">
                     <p className="text-xs font-medium font-family-dm-sans whitespace-nowrap">
                       Limite de idade: {ageLimitText}
                     </p>
                   </div>
                 ) : null}
-                {/* Aviso de estoque na linha da modalidade/distância — SÓ quando NÃO
-                    há badge de idade. Com badge, o aviso fica na coluna do stepper
-                    (via `renderQuantityControl(showAgeLimit)`), pra não colidir com o
-                    badge. SEMPRE à direita (`ml-auto`), mesmo sem modalidade. */}
-                {showLowStock && !showAgeLimit ? (
+                {/* "Restam apenas N vagas" na MESMA linha, empurrado pra DIREITA. */}
+                {showLowStock ? (
                   <p className="ml-auto shrink-0 text-xs font-medium text-red-11 whitespace-nowrap">
                     Restam apenas {ticket.availableQuantity}{" "}
                     {ticket.availableQuantity === 1 ? "vaga" : "vagas"}!
@@ -845,21 +840,7 @@ const TicketItemDesktop = memo(({
                 no modo cortesia (hidePricing) mostra o texto "Voucher" no lugar do
                 preço — o controle de quantidade permanece à direita, mantendo a
                 modalidade colada ao título (não vai mais pra linha da modalidade). */}
-            <div className="relative flex items-end justify-between">
-              {/* Badge "Limite de idade" quando HÁ aviso de estoque baixo: ABSOLUTO
-                no topo-esquerdo (fora do fluxo) — ocupa o espaço vazio ACIMA do preço
-                (a coluna direita, mais alta por causa do aviso + stepper, já define a
-                altura da linha), então NÃO cresce o card. `truncate`/`max-w-[60%]`
-                evitam encostar no aviso "Restam apenas N vagas" à direita. */}
-              {showAgeLimit && showLowStock ? (
-                <div className="absolute left-0 top-0 max-w-[60%] pointer-events-none">
-                  <div className="inline-block bg-yellow-3 text-yellow-12 rounded-full px-3 py-1 max-w-full">
-                    <p className="text-xs font-medium font-family-dm-sans truncate">
-                      Limite de idade: {ageLimitText}
-                    </p>
-                  </div>
-                </div>
-              ) : null}
+            <div className="flex items-end justify-between">
               {hidePricing ? (
                 <p className="text-xl font-bold text-gray-11 font-manrope leading-[1.1]">
                   Voucher
@@ -874,9 +855,9 @@ const TicketItemDesktop = memo(({
                   )}
                 </div>
               )}
-              {/* Aviso "Restam apenas N vagas" fica AQUI (acima do stepper) só quando
-                  HÁ badge de idade; sem badge, ele sobe pra linha da modalidade. */}
-              {renderQuantityControl(showAgeLimit)}
+              {/* Aviso "Restam apenas N vagas" NÃO fica no controle — está na linha
+                  da modalidade (junto de distância + limite de idade). */}
+              {renderQuantityControl(false)}
             </div>
           </div>
         </div>

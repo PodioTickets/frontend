@@ -514,6 +514,11 @@ export async function proxy(request: NextRequest) {
   ];
   const googleTagCsp = googleTagDomains.join(" ");
 
+  // Mapa de calor de compras do dashboard (Leaflet + leaflet.heat): tiles do
+  // OpenStreetMap (img-src). O geocoding é feito no BACKEND (GeoService) — o cliente
+  // NÃO chama o Nominatim. Ver `components/Dashboard/PurchaseHeatmapImpl.tsx`.
+  const osmTilesCsp = "https://*.tile.openstreetmap.org";
+
   const cspDirectives = [
     `default-src ${trustedDomains.join(" ")}`,
     /* TODO: migrar para nonce */ `script-src ${trustedDomains.join(" ")} ${isDev ? "'unsafe-eval'" : ""
@@ -531,7 +536,7 @@ export async function proxy(request: NextRequest) {
     // do banco — domínio imprevisível por emissor. Por isso `https:` genérico aqui e no
     // form-action (iframe cross-origin não lê a página; frame-ancestors segue 'none').
     `frame-src 'self' https: https://www.youtube.com https://*.google.com https://*.googleapis.com https://www.strava.com https://*.strava.com https://strava-embeds.com https://challenges.cloudflare.com https://www.instagram.com https://www.facebook.com https://platform.twitter.com https://www.tiktok.com ${braspag3DSCsp} https://www.googletagmanager.com https://*.doubleclick.net`,
-    `img-src ${trustedDomains.join(" ")} data: blob: https://cdn.podioticket.com.br https://*.google.com https://*.googleapis.com https://*.gstatic.com https://*.googleusercontent.com https://www.instagram.com https://*.cdninstagram.com https://*.fbcdn.net https://www.facebook.com https://*.strava.com https://strava-embeds.com https://apata.io https://*.apata.io ${googleTagCsp}${checkoutNetExtra}`,
+    `img-src ${trustedDomains.join(" ")} data: blob: https://cdn.podioticket.com.br https://*.google.com https://*.googleapis.com https://*.gstatic.com https://*.googleusercontent.com https://www.instagram.com https://*.cdninstagram.com https://*.fbcdn.net https://www.facebook.com https://*.strava.com https://strava-embeds.com https://apata.io https://*.apata.io ${googleTagCsp} ${osmTilesCsp}${checkoutNetExtra}`,
     `media-src ${trustedDomains.join(" ")} data: blob:`,
     // worker-src e child-src: workers internos do Turnstile usam blob URLs
     `worker-src 'self' blob: https://challenges.cloudflare.com`,

@@ -479,7 +479,7 @@ export function DashboardView({
 
         {/* Mapa de calor geográfico — logo antes do último gráfico. */}
         <div className="mt-8 w-full">
-          <PurchaseHeatmap data={dashboardData.purchaseLocations} />
+          <PurchaseHeatmap data={dashboardData.purchaseLocations} pending={dashboardData.purchaseLocationsPending} />
         </div>
 
         {/* Ingressos de lotes — desktop (componente compartilhado com financeiro). */}
@@ -738,7 +738,7 @@ export function DashboardView({
 
         {/* Mapa de calor geográfico — logo antes do último gráfico (mobile). */}
         <div className="mt-6">
-          <PurchaseHeatmap data={dashboardData.purchaseLocations} />
+          <PurchaseHeatmap data={dashboardData.purchaseLocations} pending={dashboardData.purchaseLocationsPending} />
         </div>
 
         {/* Ingressos de lotes - mobile (componente compartilhado com financeiro). */}

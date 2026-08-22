@@ -170,6 +170,12 @@ export interface Organization {
   accountType?: "CORRENTE" | "POUPANCA";
   accountHolderName?: string;
   accountHolderDocument?: string;
+  /** Taxa de organizador personalizada habilitada (default false). Quando true, o
+   *  organizador pode definir a taxa TOTAL do evento até `maxTotalFeePercent` na etapa
+   *  financeira; quando false, o teto é 6% fixo. */
+  customFeeEnabled?: boolean;
+  /** Teto da taxa TOTAL (%) por evento quando `customFeeEnabled` (escala 0–100; default 6). */
+  maxTotalFeePercent?: number;
   createdAt: string;
   updatedAt: string;
   members?: OrganizationMember[];
@@ -707,10 +713,16 @@ export interface TopCity {
 
 /** Compras por local (endereço de cobrança) — alimenta o mapa de calor geográfico. */
 export interface PurchaseLocation {
+  /** Bairro do billing (quando informado) — precisão maior que só a cidade. */
+  neighborhood?: string;
   city: string;
   state?: string;
   /** 1 por PEDIDO pago. */
   purchases: number;
+  /** Coordenadas resolvidas pelo geocoding do BACKEND (cache global). Ausentes
+   *  enquanto o local está PENDENTE de geocoding — aparecem na carga seguinte. */
+  lat?: number;
+  lng?: number;
 }
 
 export interface LotNearDepletionBatch {
@@ -841,8 +853,11 @@ export interface DashboardSecondaryData {
   topCities: TopCity[];
   salesHeatmap: SalesHeatmapData[];
   mostAnsweredQuestions: MostAnsweredQuestion[];
-  /** Compras por cidade/UF (billing) — mapa de calor geográfico. */
+  /** Compras por bairro/cidade/UF (billing) — mapa de calor geográfico. */
   purchaseLocations: PurchaseLocation[];
+  /** Bairros ainda aguardando geocoding no backend (0 = mapa completo). Guia o
+   *  WebSocket do dashboard (assina updates enquanto > 0). */
+  geocodingPending?: number;
 }
 
 // Financial interfaces
