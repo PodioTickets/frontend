@@ -170,6 +170,12 @@ export interface Organization {
   accountType?: "CORRENTE" | "POUPANCA";
   accountHolderName?: string;
   accountHolderDocument?: string;
+  /** Taxa de organizador personalizada habilitada (default false). Quando true, o
+   *  organizador pode definir a taxa TOTAL do evento até `maxTotalFeePercent` na etapa
+   *  financeira; quando false, o teto é 6% fixo. */
+  customFeeEnabled?: boolean;
+  /** Teto da taxa TOTAL (%) por evento quando `customFeeEnabled` (escala 0–100; default 6). */
+  maxTotalFeePercent?: number;
   createdAt: string;
   updatedAt: string;
   members?: OrganizationMember[];

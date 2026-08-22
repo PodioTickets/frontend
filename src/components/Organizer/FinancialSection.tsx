@@ -28,9 +28,13 @@ interface FinancialSectionProps {
    * (organizador pós-publicação).
    */
   paymentMethodsReadOnly?: boolean;
-  /** Total platform fee — editable when onTotalFeeChange is provided (admin only) */
+  /** Total platform fee — editable when onTotalFeeChange is provided (admin, ou organizador
+   *  com taxa personalizada habilitada pela org). */
   totalFee?: number;
   onTotalFeeChange?: (value: number) => void;
+  /** Teto do total editável (%). Default 100 (admin). Organizador c/ taxa personalizada
+   *  recebe o teto da org (`maxTotalFeePercent`). Trava o input e o clamp do slider. */
+  maxTotalFee?: number;
   /** Formas de pagamento aceitas no checkout (default: todas). */
   acceptedPaymentMethods?: AcceptedPaymentMethod[];
   onAcceptedPaymentMethodsChange?: (value: AcceptedPaymentMethod[]) => void;
@@ -45,6 +49,7 @@ export function FinancialSection({
   paymentMethodsReadOnly,
   totalFee,
   onTotalFeeChange,
+  maxTotalFee = 100,
   acceptedPaymentMethods,
   onAcceptedPaymentMethodsChange,
 }: FinancialSectionProps) {
@@ -102,7 +107,7 @@ export function FinancialSection({
     if (!onTotalFeeChange) return;
     const raw = parseFloat(e.target.value);
     if (isNaN(raw)) return;
-    const clamped = Math.min(100, Math.max(0, raw));
+    const clamped = Math.min(maxTotalFee, Math.max(0, raw));
     onTotalFeeChange(clamped);
     // clamp organizerPercent so it never exceeds the new total
     if (organizerPercent > clamped) {
@@ -137,7 +142,7 @@ export function FinancialSection({
                     <input
                       type="number"
                       min={0}
-                      max={100}
+                      max={maxTotalFee}
                       step={0.1}
                       value={totalFeeValue}
                       onChange={handleTotalFeeInput}
