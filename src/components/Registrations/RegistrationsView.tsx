@@ -161,7 +161,7 @@ export function RegistrationsView({
     <div className="min-h-screen bg-gray-2">
       {header}
 
-      <div className="max-w-7xl mx-auto px-4 lg:px-6 2xl:px-0">
+      <div className="max-w-7xl mx-auto px-4 lg:px-6 2xl:px-0 pb-8 md:pb-10">
         {/* Page Title - Desktop only */}
         <div className="mb-6 hidden md:flex items-start justify-between gap-4">
           <div>
