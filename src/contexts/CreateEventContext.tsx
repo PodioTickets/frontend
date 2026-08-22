@@ -37,6 +37,10 @@ export interface CreateEventFormData {
   tiktok: string;
   website: string;
   organizerFeePercent: number;
+  /** Taxa TOTAL (%) do evento (organizador + comprador). Fixa em 6 quando a org não
+   *  tem taxa personalizada; editável até o teto da org (`maxTotalFeePercent`) quando tem.
+   *  Persistida no formData p/ sobreviver ao resume de rascunho na etapa financeira. */
+  totalFeePercent?: number;
   maxInstallments: 1 | 2 | 3;
   acceptedPaymentMethods: AcceptedPaymentMethod[];
 }
