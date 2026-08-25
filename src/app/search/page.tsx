@@ -1,7 +1,7 @@
 "use client";
 
 import { useSearchParams, useRouter } from "next/navigation";
-import { useMemo, Suspense } from "react";
+import { useEffect, useMemo, Suspense } from "react";
 import { EventCard } from "@/components/Event/Card";
 import { HomeFilters } from "@/components/HomeFilters";
 import { Button } from "@/components/Button";
@@ -404,7 +404,29 @@ function SearchContent() {
     fetchNextPage();
   };
 
-  const hasMore = hasNextPage;
+  // O filtro de STATUS é aplicado no client (aberta/encerrada depende da janela
+  // de inscrição, não do campo `status` — o backend não distingue). Para que a
+  // contagem e o botão "Carregar mais" reflitam o filtro, precisamos do conjunto
+  // COMPLETO: quando o status está ativo, varremos todas as páginas do servidor.
+  // Só dispara mediante escolha explícita do usuário e o /search já é limitado
+  // pelo cutoff de 30 dias, então o custo é limitado.
+  useEffect(() => {
+    if (statusFilter && hasNextPage && !isFetchingNextPage) {
+      fetchNextPage();
+    }
+  }, [statusFilter, hasNextPage, isFetchingNextPage, fetchNextPage]);
+
+  // Enquanto varremos as páginas para o filtro client-side (ainda há páginas a
+  // buscar), a tela está "carregando" mesmo sem ser a carga inicial.
+  const isAutoLoading = !!statusFilter && (hasNextPage || isFetchingNextPage);
+
+  // Contagem = o que REALMENTE aparece na tela. Com filtro de status (client-side)
+  // isso é `filteredEvents.length`; sem ele, o total do servidor já é fiel.
+  const resultCount = statusFilter ? filteredEvents.length : pagination.total;
+
+  // Botão manual só faz sentido para os filtros server-side. Com status ativo, o
+  // acúmulo é automático (isAutoLoading), então nada de botão "fantasma".
+  const showLoadMore = !statusFilter && hasNextPage;
 
   return (
     <>
@@ -425,7 +447,7 @@ function SearchContent() {
           <div className="flex items-center justify-between mb-6 gap-4">
             <h1 className="text-[28px] font-extrabold">
               {hasFilters
-                ? `Resultados da busca (${pagination.total})`
+                ? `Resultados da busca (${resultCount})`
                 : "Todos os eventos"}
             </h1>
             <div className="flex items-center gap-3">
@@ -472,7 +494,7 @@ function SearchContent() {
             </div>
           </div>
 
-          {isLoading && filteredEvents.length === 0 ? (
+          {(isLoading || isAutoLoading) && filteredEvents.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-20">
               <p className="text-xl text-gray-11 mb-4">Carregando eventos...</p>
             </div>
@@ -498,7 +520,7 @@ function SearchContent() {
                   </div>
                 ))}
               </div>
-              {hasMore && (
+              {showLoadMore && (
                 <Button
                   onClick={handleLoadMore}
                   className="w-full mt-8 border border-gray-6 text-gray-12"
@@ -509,6 +531,13 @@ function SearchContent() {
                     ? "Carregando..."
                     : "Carregar mais eventos"}
                 </Button>
+              )}
+              {/* Filtro de status ativo: acúmulo automático. Mostra progresso
+                  em vez do botão manual, que aqui seria "fantasma". */}
+              {isAutoLoading && (
+                <p className="w-full mt-8 text-center text-sm text-gray-11">
+                  Carregando mais eventos…
+                </p>
               )}
             </>
           )}

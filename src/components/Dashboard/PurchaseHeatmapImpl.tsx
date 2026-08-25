@@ -36,6 +36,7 @@ export default function PurchaseHeatmapImpl({ data }: { data: PurchaseLocation[]
   const mapElRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<any>(null);
   const heatRef = useRef<any>(null);
+  const wheelHandlerRef = useRef<((e: WheelEvent) => void) | null>(null);
 
   // Só os locais que o backend já geocodificou (têm lat/lng).
   const located = useMemo(
@@ -55,13 +56,33 @@ export default function PurchaseHeatmapImpl({ data }: { data: PurchaseLocation[]
       mapRef.current = L.map(mapElRef.current, {
         center: BRAZIL_CENTER,
         zoom: BRAZIL_ZOOM,
+        // Zoom por scroll nativo desligado: só habilitamos via Ctrl+scroll
+        // (gesto cooperativo — ver `handleWheel` abaixo).
         scrollWheelZoom: false,
+        // Controle padrão nasce no topo-esquerdo; recriamos no canto inferior direito.
+        zoomControl: false,
         attributionControl: true,
       });
+      L.control.zoom({ position: "bottomright" }).addTo(mapRef.current);
       L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
         attribution: "&copy; OpenStreetMap",
         maxZoom: 19,
       }).addTo(mapRef.current);
+
+      // Zoom cooperativo: rola a página normalmente, mas com Ctrl pressionado
+      // (ou pinça de trackpad, que emite `ctrlKey`) faz zoom ancorado no cursor.
+      const handleWheel = (e: WheelEvent) => {
+        if (!e.ctrlKey || !mapRef.current) return;
+        e.preventDefault();
+        const delta = e.deltaY < 0 ? 1 : -1;
+        mapRef.current.setZoomAround(
+          mapRef.current.mouseEventToLatLng(e),
+          mapRef.current.getZoom() + delta,
+        );
+      };
+      // `passive: false` é obrigatório para o `preventDefault` valer no wheel.
+      mapElRef.current.addEventListener("wheel", handleWheel, { passive: false });
+      wheelHandlerRef.current = handleWheel;
     }
     // Container pode ter montado antes do layout → recalcula o tamanho.
     setTimeout(() => mapRef.current?.invalidateSize(), 60);
@@ -106,6 +127,10 @@ export default function PurchaseHeatmapImpl({ data }: { data: PurchaseLocation[]
   // Destrói o mapa ao desmontar (evita "map container already initialized").
   useEffect(
     () => () => {
+      if (wheelHandlerRef.current) {
+        mapElRef.current?.removeEventListener("wheel", wheelHandlerRef.current);
+        wheelHandlerRef.current = null;
+      }
       mapRef.current?.remove();
       mapRef.current = null;
       heatRef.current = null;
