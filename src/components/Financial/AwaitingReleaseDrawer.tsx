@@ -576,7 +576,7 @@ export function AwaitingReleaseDrawer({
                   </div>
                 </div>
                {/*  <Button
-                  type="button"
+                  type="button"l
                   variant="outline"
                   onClick={() => setIsAnticipationOpen(true)}
                   className="border-gray-6 text-gray-12 font-manrope font-bold text-base"
