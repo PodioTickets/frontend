@@ -1,7 +1,7 @@
 "use client";
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import type { PurchaseLocation } from "@/services/organizer/OrganizerService.types";
@@ -149,11 +149,43 @@ const BRAZIL_CENTER: [number, number] = [-14.235, -51.925];
 const BRAZIL_ZOOM = 4;
 const HEAT_MAX_ZOOM = 12;
 
+// Ícones (inline SVG) do botão de tela cheia — expandir / contrair.
+const ICON_EXPAND =
+  '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3M21 8V5a2 2 0 0 0-2-2h-3M16 21h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></svg>';
+const ICON_COMPRESS =
+  '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3v3a2 2 0 0 1-2 2H3M21 8h-3a2 2 0 0 1-2-2V3M3 16h3a2 2 0 0 1 2 2v3M16 21v-3a2 2 0 0 1 2-2h3"/></svg>';
+
+// Quanto tempo a dica de gesto cooperativo fica visível após o último scroll/toque.
+const HINT_VISIBLE_MS = 1400;
+
 export default function PurchaseHeatmapImpl({ data }: { data: PurchaseLocation[] }) {
   const mapElRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<any>(null);
   const heatRef = useRef<any>(null);
   const wheelHandlerRef = useRef<((e: WheelEvent) => void) | null>(null);
+  const touchHandlerRef = useRef<((e: TouchEvent) => void) | null>(null);
+  const resizeObserverRef = useRef<ResizeObserver | null>(null);
+
+  // Tela cheia (modal) — reaproveita a MESMA instância do mapa (só reestiliza o
+  // container p/ `fixed inset-0`), evitando 2º mapa/tiles/geocoding.
+  const [fullscreen, setFullscreen] = useState(false);
+  // Dica de gesto cooperativo (estilo Google Maps): "ctrl" no desktop, "touch" no
+  // mobile. `null` = escondida.
+  const [hint, setHint] = useState<"ctrl" | "touch" | null>(null);
+  const hintTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Espelha o estado atual dentro de handlers nativos registrados 1× (sem re-bind);
+  // atualizado no efeito de tela cheia, nunca durante o render.
+  const fullscreenRef = useRef(false);
+  const fsBtnRef = useRef<HTMLAnchorElement | null>(null);
+
+  // Handlers estáveis (identidade fixa) capturados 1× pelos listeners nativos.
+  // Mostra a dica e agenda o auto-ocultar (debounce: cada scroll renova o timer).
+  const flashHint = useCallback((kind: "ctrl" | "touch") => {
+    setHint(kind);
+    if (hintTimerRef.current) clearTimeout(hintTimerRef.current);
+    hintTimerRef.current = setTimeout(() => setHint(null), HINT_VISIBLE_MS);
+  }, []);
+  const toggleFs = useCallback(() => setFullscreen((v) => !v), []);
 
   // Só os locais que o backend já geocodificou (têm lat/lng).
   const located = useMemo(
@@ -181,6 +213,34 @@ export default function PurchaseHeatmapImpl({ data }: { data: PurchaseLocation[]
         attributionControl: true,
       });
       L.control.zoom({ position: "bottomright" }).addTo(mapRef.current);
+
+      // Botão "tela cheia" — controle Leaflet ancorado no MESMO canto (bottomright),
+      // adicionado DEPOIS do zoom → empilha logo ABAIXO dos botões +/−. O clique
+      // dispara o toggle do React via ref (o controle é criado 1×).
+      const FullscreenControl = L.Control.extend({
+        onAdd() {
+          const container = L.DomUtil.create("div", "leaflet-bar leaflet-control");
+          const btn = L.DomUtil.create("a", "", container) as HTMLAnchorElement;
+          btn.href = "#";
+          btn.setAttribute("role", "button");
+          btn.title = "Abrir mapa em tela cheia";
+          btn.setAttribute("aria-label", "Abrir mapa em tela cheia");
+          btn.style.display = "flex";
+          btn.style.alignItems = "center";
+          btn.style.justifyContent = "center";
+          btn.innerHTML = ICON_EXPAND;
+          fsBtnRef.current = btn;
+          // Impede que o clique/scroll no botão vaze pro mapa (pan/zoom).
+          L.DomEvent.disableClickPropagation(container);
+          L.DomEvent.on(btn, "click", (e: Event) => {
+            L.DomEvent.stop(e);
+            toggleFs();
+          });
+          return container;
+        },
+      });
+      new FullscreenControl({ position: "bottomright" }).addTo(mapRef.current);
+
       L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
         attribution: "&copy; OpenStreetMap",
         maxZoom: 19,
@@ -188,18 +248,55 @@ export default function PurchaseHeatmapImpl({ data }: { data: PurchaseLocation[]
 
       // Zoom cooperativo: rola a página normalmente, mas com Ctrl pressionado
       // (ou pinça de trackpad, que emite `ctrlKey`) faz zoom ancorado no cursor.
+      // Em tela cheia o mapa é o foco → scroll comum já dá zoom (sem exigir Ctrl).
       const handleWheel = (e: WheelEvent) => {
-        if (!e.ctrlKey || !mapRef.current) return;
-        e.preventDefault();
-        const delta = e.deltaY < 0 ? 1 : -1;
-        mapRef.current.setZoomAround(
-          mapRef.current.mouseEventToLatLng(e),
-          mapRef.current.getZoom() + delta,
-        );
+        if (!mapRef.current) return;
+        if (e.ctrlKey || fullscreenRef.current) {
+          e.preventDefault();
+          const delta = e.deltaY < 0 ? 1 : -1;
+          mapRef.current.setZoomAround(
+            mapRef.current.mouseEventToLatLng(e),
+            mapRef.current.getZoom() + delta,
+          );
+          return;
+        }
+        // Scroll sem Ctrl (fora da tela cheia): NÃO sequestra a rolagem da página;
+        // só sinaliza como usar o zoom (igual ao Google Maps).
+        flashHint("ctrl");
       };
       // `passive: false` é obrigatório para o `preventDefault` valer no wheel.
       mapElRef.current.addEventListener("wheel", handleWheel, { passive: false });
       wheelHandlerRef.current = handleWheel;
+
+      // Mobile: um dedo rola a PÁGINA e mostra a dica "use dois dedos"; a
+      // manipulação do mapa (arrastar/pinçar) exige 2 dedos. Em tela cheia o
+      // mapa ocupa tudo → um dedo já arrasta normalmente.
+      const dragging = mapRef.current.dragging;
+      const handleTouchStart = (e: TouchEvent) => {
+        if (fullscreenRef.current) {
+          dragging.enable();
+          return;
+        }
+        if (e.touches.length >= 2) {
+          dragging.enable();
+        } else {
+          dragging.disable();
+          flashHint("touch");
+        }
+      };
+      mapElRef.current.addEventListener("touchstart", handleTouchStart, { passive: true });
+      touchHandlerRef.current = handleTouchStart;
+
+      // Recalcula o tamanho do mapa SEMPRE que o container muda de dimensão
+      // (entrar/sair da tela cheia, layout tardio). Sem isso o Leaflet mantém o
+      // tamanho antigo e os tiles do novo viewport não são buscados → mapa em
+      // branco. O ResizeObserver dispara APÓS o reflow (medida já correta),
+      // eliminando o palpite de timing de um `requestAnimationFrame` avulso.
+      const ro = new ResizeObserver(() => {
+        mapRef.current?.invalidateSize({ animate: false });
+      });
+      ro.observe(mapElRef.current);
+      resizeObserverRef.current = ro;
     }
     // Container pode ter montado antes do layout → recalcula o tamanho.
     setTimeout(() => mapRef.current?.invalidateSize(), 60);
@@ -249,6 +346,37 @@ export default function PurchaseHeatmapImpl({ data }: { data: PurchaseLocation[]
     };
   }, [dataKey]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Entra/sai da tela cheia: reflete no ref (handlers nativos), atualiza o ícone
+  // do botão, trava a rolagem do body, recalcula o tamanho do mapa (o container
+  // mudou de dimensão) e libera scroll-zoom/arrastar-com-1-dedo enquanto aberto.
+  useEffect(() => {
+    fullscreenRef.current = fullscreen;
+    if (fsBtnRef.current) {
+      fsBtnRef.current.innerHTML = fullscreen ? ICON_COMPRESS : ICON_EXPAND;
+      const label = fullscreen ? "Sair da tela cheia" : "Abrir mapa em tela cheia";
+      fsBtnRef.current.title = label;
+      fsBtnRef.current.setAttribute("aria-label", label);
+    }
+    if (fullscreen) {
+      document.body.style.overflow = "hidden";
+      mapRef.current?.dragging.enable();
+    } else {
+      document.body.style.overflow = "";
+    }
+    // O reajuste de tamanho do mapa (tela cheia ↔ normal) fica a cargo do
+    // ResizeObserver do container, que dispara já com a medida correta.
+  }, [fullscreen]);
+
+  // Esc fecha a tela cheia.
+  useEffect(() => {
+    if (!fullscreen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setFullscreen(false);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [fullscreen]);
+
   // Destrói o mapa ao desmontar (evita "map container already initialized").
   useEffect(
     () => () => {
@@ -256,6 +384,14 @@ export default function PurchaseHeatmapImpl({ data }: { data: PurchaseLocation[]
         mapElRef.current?.removeEventListener("wheel", wheelHandlerRef.current);
         wheelHandlerRef.current = null;
       }
+      if (touchHandlerRef.current) {
+        mapElRef.current?.removeEventListener("touchstart", touchHandlerRef.current);
+        touchHandlerRef.current = null;
+      }
+      resizeObserverRef.current?.disconnect();
+      resizeObserverRef.current = null;
+      if (hintTimerRef.current) clearTimeout(hintTimerRef.current);
+      document.body.style.overflow = "";
       mapRef.current?.remove();
       mapRef.current = null;
       heatRef.current = null;
@@ -275,18 +411,57 @@ export default function PurchaseHeatmapImpl({ data }: { data: PurchaseLocation[]
   const pending = located.length === 0;
 
   return (
-    <div className="relative w-full">
+    <div
+      className={
+        fullscreen
+          ? "fixed inset-0 z-9999 bg-gray-1 p-3 md:p-5 flex flex-col"
+          : "relative w-full"
+      }
+    >
+      {/* Caixa de dimensionamento — o React controla estas classes (tamanho +
+          tela cheia). NÃO é o elemento do mapa: assim o Leaflet fica livre para
+          gerenciar as próprias classes no `mapElRef` sem o React sobrescrevê-las
+          num re-render (o que zerava `.leaflet-container` → mapa branco). */}
       <div
-        ref={mapElRef}
-        className="h-[320px] md:h-[420px] w-full rounded-xl overflow-hidden bg-gray-3 z-0"
-      />
-      {pending && (
-        <div className="absolute inset-0 z-[500] flex items-center justify-center rounded-xl bg-gray-1/70 px-6 text-center">
-          <span className="text-sm font-medium text-gray-11 font-family-dm-sans">
-            Localizando os bairros das compras… o mapa preenche automaticamente.
+        className={
+          fullscreen
+            ? "relative flex-1 min-h-0 w-full"
+            : "relative h-80 md:h-[420px] w-full"
+        }
+      >
+        {/* Container do Leaflet: className CONSTANTE — nunca re-renderizado pelo
+            React, preservando as classes que o Leaflet injeta. Preenche o pai. */}
+        <div
+          ref={mapElRef}
+          className="h-full w-full rounded-xl overflow-hidden bg-gray-3 z-0"
+        />
+
+      {/* Dica de gesto cooperativo (estilo Google Maps) — aparece ao rolar/tocar
+          sem o gesto correto e some sozinha. `pointer-events-none` p/ não bloquear
+          o scroll da página nem a interação com o mapa. */}
+      <div
+        className={`pointer-events-none absolute inset-0 z-600 flex items-center justify-center rounded-xl bg-gray-12/45 px-6 text-center transition-opacity duration-200 ${
+          hint ? "opacity-100" : "opacity-0"
+        }`}
+        aria-live="polite"
+      >
+        {hint && (
+          <span className="rounded-lg bg-gray-12/80 px-4 py-2 text-sm font-medium text-gray-1 font-family-dm-sans shadow-lg">
+            {hint === "ctrl"
+              ? "Use Ctrl + scroll para aplicar zoom no mapa"
+              : "Use dois dedos para mover o mapa"}
           </span>
-        </div>
-      )}
+        )}
+      </div>
+
+        {pending && (
+          <div className="absolute inset-0 z-500 flex items-center justify-center rounded-xl bg-gray-1/70 px-6 text-center">
+            <span className="text-sm font-medium text-gray-11 font-family-dm-sans">
+              Localizando os bairros das compras… o mapa preenche automaticamente.
+            </span>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
