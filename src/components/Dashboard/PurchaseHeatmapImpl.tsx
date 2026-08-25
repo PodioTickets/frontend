@@ -18,12 +18,129 @@ import type { PurchaseLocation } from "@/services/organizer/OrganizerService.typ
  * e importamos o plugin DINAMICAMENTE (imports estáticos são içados).
  */
 
+/**
+ * Padding do canvas do heatmap (fração do viewport, por lado). O `leaflet.heat`
+ * dimensiona o canvas ao tamanho EXATO do viewport e só o redesenha no `moveend`
+ * → ao arrastar, a borda que entra na tela fica fora do canvas ("corta") e o
+ * calor só reaparece ao soltar. Aqui damos margem: o canvas fica maior que o
+ * viewport, então durante o pan ele TRANSLADA junto com o mapa (sem recomputar,
+ * sem tremer) e as bordas reveladas já vêm desenhadas. Redesenho continua só no
+ * `moveend` (1×). 0.5 = meio viewport de cada lado (canvas 2× em cada eixo) —
+ * cobre pans normais; o custo (redesenho maior) só ocorre ao soltar e o nº de
+ * pontos é modesto (geocoding cacheado por bairro).
+ */
+const HEAT_PADDING = 0.5;
+
+/**
+ * Substitui `_reset`/`_redraw` do `L.HeatLayer` por versões que respeitam o
+ * padding (o plugin não expõe essa opção). Feito UMA vez sobre o prototype
+ * assim que o plugin carrega. Lógica de agregação idêntica à original, apenas
+ * deslocando os pontos para o espaço do canvas ampliado.
+ */
+function patchHeatLayerPadding(): void {
+  const proto = (L as any).HeatLayer?.prototype;
+  if (!proto || proto.__paddedPatched) return;
+  proto.__paddedPatched = true;
+
+  proto._reset = function (this: any) {
+    const size = this._map.getSize();
+    const padX = Math.round(size.x * HEAT_PADDING);
+    const padY = Math.round(size.y * HEAT_PADDING);
+    // Canto superior-esquerdo do canvas ancorado ao ponto de container (-padX,-padY).
+    const topLeft = this._map.containerPointToLayerPoint([-padX, -padY]);
+    L.DomUtil.setPosition(this._canvas, topLeft);
+
+    const w = size.x + padX * 2;
+    const h = size.y + padY * 2;
+    if (this._heat._width !== w) {
+      this._canvas.width = this._heat._width = w;
+    }
+    if (this._heat._height !== h) {
+      this._canvas.height = this._heat._height = h;
+    }
+    this._redraw();
+  };
+
+  proto._redraw = function (this: any) {
+    if (!this._map) return;
+    const heat = this._heat;
+    const r = heat._r;
+    const size = this._map.getSize();
+    const padX = Math.round(size.x * HEAT_PADDING);
+    const padY = Math.round(size.y * HEAT_PADDING);
+    // Limites (coords de container) incluindo padding + margem do raio.
+    const bounds = new L.Bounds(
+      L.point(-padX - r, -padY - r),
+      L.point(size.x + padX + r, size.y + padY + r),
+    );
+    const max = this.options.max === undefined ? 1 : this.options.max;
+    const maxZoom =
+      this.options.maxZoom === undefined ? this._map.getMaxZoom() : this.options.maxZoom;
+    const v = 1 / Math.pow(2, Math.max(0, Math.min(maxZoom - this._map.getZoom(), 12)));
+    const cellSize = r / 2;
+    const grid: any[] = [];
+    const panePos = this._map._getMapPanePos();
+    const offsetX = panePos.x % cellSize;
+    const offsetY = panePos.y % cellSize;
+
+    const latlngs = this._latlngs;
+    for (let i = 0, len = latlngs.length; i < len; i++) {
+      const p = this._map.latLngToContainerPoint(latlngs[i]);
+      if (!bounds.contains(p)) continue;
+      // Desloca para o espaço do canvas ampliado (origem em -pad).
+      const cx = p.x + padX;
+      const cy = p.y + padY;
+      const gx = Math.floor((cx - offsetX) / cellSize) + 2;
+      const gy = Math.floor((cy - offsetY) / cellSize) + 2;
+      const alt =
+        latlngs[i].alt !== undefined
+          ? latlngs[i].alt
+          : latlngs[i][2] !== undefined
+            ? +latlngs[i][2]
+            : 1;
+      const k = alt * v;
+      grid[gy] = grid[gy] || [];
+      const cell = grid[gy][gx];
+      if (cell) {
+        cell[0] = (cell[0] * cell[2] + cx * k) / (cell[2] + k);
+        cell[1] = (cell[1] * cell[2] + cy * k) / (cell[2] + k);
+        cell[2] += k;
+      } else {
+        grid[gy][gx] = [cx, cy, k];
+      }
+    }
+
+    const data: number[][] = [];
+    for (let y = 0, gh = grid.length; y < gh; y++) {
+      if (!grid[y]) continue;
+      for (let x = 0, gw = grid[y].length; x < gw; x++) {
+        const cell = grid[y][x];
+        if (cell) data.push([Math.round(cell[0]), Math.round(cell[1]), Math.min(cell[2], max)]);
+      }
+    }
+    heat.data(data).draw(this.options.minOpacity);
+    this._frame = null;
+  };
+
+  // A animação de zoom nativa do plugin (`_animateZoom`) assume o canvas do
+  // tamanho do viewport; com o canvas ampliado (padding) ela calcula a transform
+  // errada e o calor "voa" de lugar durante o zoom. Neutralizamos: o canvas é
+  // marcado como `leaflet-zoom-hide` (escondido durante a animação de zoom — ver
+  // draw()) e redesenhado correto no `moveend`/`zoomend` via `_reset`.
+  proto._animateZoom = function () {};
+}
+
 let heatPluginPromise: Promise<void> | null = null;
 async function ensureHeatPlugin(): Promise<void> {
-  if ((L as any).heatLayer) return;
+  if ((L as any).heatLayer) {
+    patchHeatLayerPadding();
+    return;
+  }
   if (!heatPluginPromise) {
     (window as any).L = L;
-    heatPluginPromise = import("leaflet.heat").then(() => undefined);
+    heatPluginPromise = import("leaflet.heat").then(() => {
+      patchHeatLayerPadding();
+    });
   }
   await heatPluginPromise;
 }
@@ -112,6 +229,14 @@ export default function PurchaseHeatmapImpl({ data }: { data: PurchaseLocation[]
           max: Math.max(1, Math.ceil(maxPurchases / 2)),
         })
         .addTo(mapRef.current);
+
+      // Canvas ampliado (padding) não pode animar no zoom (transform errada) →
+      // escondê-lo durante a animação de zoom e redesenhar no fim (`_reset`).
+      const heatCanvas = heatRef.current._canvas as HTMLElement | undefined;
+      if (heatCanvas) {
+        heatCanvas.classList.remove("leaflet-zoom-animated");
+        heatCanvas.classList.add("leaflet-zoom-hide");
+      }
 
       const bounds = L.latLngBounds(points.map((p) => L.latLng(p[0], p[1])));
       mapRef.current.fitBounds(bounds.pad(0.2), { maxZoom: HEAT_MAX_ZOOM });
