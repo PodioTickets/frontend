@@ -567,7 +567,7 @@ function ModalityTile({
   // Tile "short" (creme): imagem em object-cover preenchendo todo o quadrado.
   return (
     <div
-      className={`flex size-[104px] shrink-0 items-center justify-center overflow-hidden rounded-xl bg-[#e9dbc6] ${gradient ? "px-3 py-4" : ""}`}
+      className={`flex size-[76px] shrink-0 items-center justify-center overflow-hidden rounded-xl bg-[#e9dbc6] md:size-[104px] ${gradient ? "px-2 py-3 md:px-3 md:py-4" : ""}`}
       style={
         gradient
           ? { backgroundImage: `linear-gradient(to bottom, ${gradient.from}, ${gradient.to})` }
@@ -604,17 +604,17 @@ const MODALITY_COLUMNS: ModalityColumn[] = [
 
 function ModalitiesBand() {
   return (
-    <section className="overflow-hidden bg-gray-2 -mb-12">
-      <div className="flex h-[278px] items-start justify-center gap-10 pt-[3px]">
+    <section className="overflow-hidden bg-gray-2 mb-0 md:-mb-12">
+      <div className="flex md:h-[210px] items-start justify-center gap-4 pt-[3px] md:h-[278px] md:gap-10">
         {MODALITY_COLUMNS.map((col, c) =>
           col.kind === "tall" ? (
-            <div key={c} className="flex shrink-0 flex-col gap-5">
-              <div className="size-[104px] shrink-0" aria-hidden />
+            <div key={c} className="flex shrink-0 flex-col gap-3 md:gap-5">
+              <div className="size-[76px] shrink-0 md:size-[104px]" aria-hidden />
               <ModalityTile n={col.n} gradient={{ from: col.from, to: col.to }} />
-              <div className="size-[104px] shrink-0" aria-hidden />
+              <div className="size-[76px] shrink-0 md:size-[104px]" aria-hidden />
             </div>
           ) : (
-            <div key={c} className="mt-[62px] flex shrink-0 flex-col gap-5">
+            <div key={c} className="mt-[46px] flex shrink-0 flex-col gap-3 md:mt-[62px] md:gap-5">
               <ModalityTile n={col.imgs[0]} />
               <ModalityTile n={col.imgs[1]} />
             </div>
