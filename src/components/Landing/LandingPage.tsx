@@ -381,7 +381,141 @@ function SportsSection() {
 }
 
 /* ----------------------------------------------------------------------------
- * 7) CTA — Pronto para organizar seu próximo evento?
+ * 7) TAXA — A taxa da PódioTicket é de apenas 6% (node 5499:78303)
+ * ------------------------------------------------------------------------- */
+
+/**
+ * Card de ícone flutuante (moldura verde com gradiente escuro), como no Figma:
+ * borda `principal/11`, fundo `principal/5 → principal/3`, cantos 8px, girado.
+ */
+function TaxIconTile({
+  children,
+  className,
+  rotate,
+}: {
+  children: React.ReactNode;
+  className: string;
+  rotate: string;
+}) {
+  return (
+    <div
+      aria-hidden
+      className={`pointer-events-none absolute hidden size-[107px] items-center justify-center lg:flex ${className}`}
+    >
+      <div className={`flex-none ${rotate}`}>
+        <div className="flex size-[92px] items-center justify-center rounded-[8px] border-2 border-[#59E373] bg-gradient-to-b from-[#25482d] to-[#1b2a1e] p-2 shadow-[0px_8px_24px_0px_rgba(0,0,0,0.35)]">
+          <div className="relative size-[71px]">{children}</div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Bloco de destaque da taxa (node 5499:78303): fundo verde-escuro com um brilho
+ * elíptico (círculo de contorno `#3E7949` + elipse verde borrada) e dois cards
+ * de ícone flutuantes nas extremidades. O brilho é o SVG exportado do Figma
+ * (`tax-glow.svg`), posicionado com a mesma estrutura do design (centralizado,
+ * ancorado no topo, com a folga do blur). Os cards só aparecem no desktop (`lg`).
+ */
+function TaxHighlightSection() {
+  return (
+    <section className="relative overflow-hidden bg-gradient-to-b from-[#191919] to-[#222222] px-4 py-[68px] shadow-[0px_-4px_12px_0px_rgba(0,0,0,0.15)] md:px-20 md:py-[124px]">
+      <div className="relative">
+        <div
+          aria-hidden
+          className="pointer-events-none absolute left-1/2 top-1/2 h-[446px] w-[374px] max-w-none -translate-x-1/2 -translate-y-1/2 lg:h-[482px] lg:w-[942px]"
+        >
+          <TaxIconTile className="-left-10 top-[10%] z-10" rotate="rotate-[-10.21deg]">
+            <Image
+              src="/images/landing/tax-coin.svg"
+              alt=""
+              width={71}
+              height={71}
+              className="absolute inset-0 size-full"
+            />
+          </TaxIconTile>
+          {/* Brilho MOBILE (círculo mais vertical) — SVG próprio do Figma. */}
+          <div
+            className="absolute inset-[-49.46%_-102.83%] bg-no-repeat lg:hidden"
+            style={{
+              backgroundImage: "url('/images/landing/tax-glow-mobile.svg')",
+              backgroundSize: "100% 100%",
+            }}
+          />
+          {/* Brilho DESKTOP (elipse larga). */}
+          <div
+            className="absolute inset-[-47.72%_-29.15%] hidden bg-no-repeat lg:block"
+            style={{
+              backgroundImage: "url('/images/landing/tax-glow.svg')",
+              backgroundSize: "100% 100%",
+            }}
+          />
+          <TaxIconTile className="bottom-[64px] -right-10" rotate="rotate-[10.21deg]">
+            <div className="absolute bottom-[12.5%] left-[8.33%] right-3/4 top-[12.5%] rounded-[6px] border-4 border-[#59E373]" />
+            <div className="absolute inset-[33.33%_41.67%_12.5%_41.67%] rounded-[6px] border-4 border-[#59E373]" />
+            <div className="absolute bottom-[12.5%] left-3/4 right-[8.33%] top-[12.5%] rounded-[6px] border-4 border-[#59E373]" />
+          </TaxIconTile>
+        </div>
+
+        {/* Card flutuante superior-esquerdo — moeda (coin-dollar). */}
+
+
+        {/* Card flutuante inferior-direito — gráfico de barras (bar-chart 01),
+          reconstruído com a geometria exata do design (3 barras arredondadas). */}
+
+
+        {/* Texto dentro da MESMA div `relative`: é ele que dá altura a ela, e é
+            em relação a essa altura que o brilho se centraliza (top-1/2). */}
+        <div className="relative mx-auto flex max-w-[686px] flex-col items-center gap-5 text-center md:gap-6">
+          {/* Par de ícones (MOBILE): centralizados no topo, sobrepostos e girados
+              para fora, como no Figma mobile. No desktop os cards flutuam nas
+              extremidades (acima), então aqui é `lg:hidden`. */}
+          <div className="mb-3 flex items-start justify-center lg:hidden" aria-hidden>
+            <div className="rotate-[-10.21deg]">
+              <div className="flex size-[54px] items-center justify-center rounded-[5px] border-[1.164px] border-[#59E373] bg-gradient-to-b from-[#25482d] to-[#1b2a1e] p-[4.657px]">
+                <div className="relative size-[41px]">
+                  <Image
+                    src="/images/landing/tax-coin.svg"
+                    alt=""
+                    width={41}
+                    height={41}
+                    className="absolute inset-0 size-full"
+                  />
+                </div>
+              </div>
+            </div>
+            <div className="-ml-[8px] mt-[2px] rotate-[10.21deg]">
+              <div className="flex size-[54px] items-center justify-center rounded-[5px] border-[1.164px] border-[#59E373] bg-gradient-to-b from-[#25482d] to-[#1b2a1e] p-[4.657px]">
+                <div className="relative size-[41px] overflow-hidden">
+                  <div className="absolute bottom-[12.5%] left-[8.33%] right-3/4 top-[12.5%] rounded-[6px] border-[1.356px] border-[#59E373]" />
+                  <div className="absolute inset-[33.33%_41.67%_12.5%_41.67%] rounded-[6px] border-[1.356px] border-[#59E373]" />
+                  <div className="absolute bottom-[12.5%] left-3/4 right-[8.33%] top-[12.5%] rounded-[6px] border-[1.356px] border-[#59E373]" />
+                </div>
+              </div>
+            </div>
+          </div>
+          <Reveal className="flex flex-col items-center gap-5 md:gap-6">
+            <h2 className="font-manrope text-[16px] font-extrabold leading-[1.3] tracking-[1px] text-[#eee] md:text-[28px]">
+              A taxa da PódioTicket é de apenas
+            </h2>
+            <p className="font-manrope text-[36px] font-extrabold leading-[1.3] tracking-[1px] text-[#59E373] md:text-[72px] md:leading-[1.2]">
+              6%
+            </p>
+            <p className="font-family-dm-sans text-[14px] leading-[1.3] text-[#eee] md:text-[18px]">
+              A taxa de 6% foi pensada para oferecer o melhor equilíbrio entre custo
+              e qualidade, garantindo uma plataforma moderna, recursos completos e
+              suporte para ajudar seu evento a crescer.
+            </p>
+          </Reveal>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+/* ----------------------------------------------------------------------------
+ * 8) CTA — Pronto para organizar seu próximo evento?
  * ------------------------------------------------------------------------- */
 
 function CtaSection() {
@@ -510,6 +644,7 @@ export function LandingPage() {
       <SupportSection />
       <CommunicationSection />
       <SportsSection />
+      <TaxHighlightSection />
       <CtaSection />
       <ModalitiesBand />
     </main>

@@ -28,15 +28,15 @@ export default function FinancialPage() {
     // Rascunhos antigos (sem o campo) caem no default = todas as formas
     () => (formData.acceptedPaymentMethods?.length ? formData.acceptedPaymentMethods : [...ACCEPTED_PAYMENT_METHODS]),
   );
-  // Taxa TOTAL do evento (organizador + comprador). Fixa em 6% quando a org não tem
-  // taxa personalizada; editável até o teto da org (`maxTotalFeePercent`) quando tem.
+  // Taxa TOTAL do evento (organizador + comprador) = TETO definido pelo admin.
+  // O organizador NUNCA edita esse valor: 6% quando a org não tem taxa personalizada;
+  // `maxTotalFeePercent` quando o admin ativou a taxa personalizada. Ele apenas
+  // distribui essa fatia entre organizador e participante (slider abaixo).
   const [totalFee, setTotalFee] = useState<number>(() => formData.totalFeePercent ?? 6);
-  const [customFeeEnabled, setCustomFeeEnabled] = useState(false);
-  const [maxTotalFee, setMaxTotalFee] = useState(6);
 
-  // Busca a config de taxa da ORGANIZAÇÃO: quando personalizada (admin ligou no drawer),
-  // o organizador pode definir a taxa total do evento até o teto; senão, 6% fixo. O
-  // enforcement de fato é no backend (saveFinancialSettings) — isto é só UX.
+  // Busca a config de taxa da ORGANIZAÇÃO: define o TETO (fixo) da taxa total do evento.
+  // Personalizada (admin ligou no drawer) → teto = `maxTotalFeePercent`; senão → 6%.
+  // O enforcement autoritativo é no backend (saveFinancialSettings) — isto é só UX.
   useEffect(() => {
     if (!authChecked) return;
     let cancelled = false;
@@ -47,11 +47,12 @@ export default function FinancialPage() {
         const enabled = organization.customFeeEnabled === true;
         const ceiling =
           typeof organization.maxTotalFeePercent === "number" ? organization.maxTotalFeePercent : 6;
-        setCustomFeeEnabled(enabled);
-        setMaxTotalFee(enabled ? ceiling : 6);
-        // Sem taxa personalizada → total fixo em 6%. Com taxa personalizada e sem valor
-        // salvo no rascunho → default = teto do admin ("a taxa que o admin colocou").
-        setTotalFee(enabled ? formData.totalFeePercent ?? ceiling : 6);
+        // Total = o teto que o admin definiu (fixo). Sem taxa personalizada → 6%.
+        const nextTotal = enabled ? ceiling : 6;
+        setTotalFee(nextTotal);
+        // Edge case: rascunho antigo com fatia do organizador acima do novo teto
+        // (ex.: admin reduziu o teto depois). Clampa para não gerar participante negativo.
+        setOrganizerPercent((prev) => (prev > nextTotal ? nextTotal : prev));
       } catch {
         // Sem org acessível → mantém o comportamento fixo de 6%.
       }
@@ -167,10 +168,10 @@ export default function FinancialPage() {
         maxInstallments={maxInstallments}
         onOrganizerPercentChange={setOrganizerPercent}
         onMaxInstallmentsChange={setMaxInstallments}
+        // Total é sempre o TETO do admin (read-only). O organizador só divide essa
+        // fatia entre ele e o participante — nunca edita o total. Por isso não passamos
+        // `onTotalFeeChange`: o FinancialSection renderiza o total como texto.
         totalFee={totalFee}
-        // Só habilita a edição do total (e o teto) quando a org tem taxa personalizada;
-        // senão o total fica read-only em 6% (comportamento atual).
-        {...(customFeeEnabled && { onTotalFeeChange: setTotalFee, maxTotalFee })}
         acceptedPaymentMethods={acceptedPaymentMethods}
         onAcceptedPaymentMethodsChange={setAcceptedPaymentMethods}
       />

@@ -16,6 +16,8 @@ import type { DateRange } from "react-day-picker";
 import { LogDateRangeFilter, dateRangeToParams } from "@/components/LogDateRangeFilter";
 import { Button } from "@/components/Button";
 import { UserAvatar } from "@/components/UserAvatar";
+import { CopyIcon } from "@/components/Icons/CopyIcon";
+import { useClipboard } from "@/hooks/useClipboard";
 import { adminService } from "@/services";
 import { queryKeys } from "@/services/cache/QueryClient";
 import type {
@@ -135,6 +137,51 @@ function orgListPrimaryLine(org: AdminAuditOrganization): string {
     org.tradeName?.trim() ||
     org.email?.trim() ||
     "(Sem nome)"
+  );
+}
+
+/**
+ * Célula de IP compacta: trunca o endereço (IPv6 chega a 39 chars e alargava a
+ * tabela → scroll horizontal) mostrando o valor completo no `title`, com botão
+ * de copiar ao lado. `size="sm"` para o card mobile (fonte/ícone menores).
+ */
+function IpCell({
+  ip,
+  size = "md",
+}: {
+  ip: string | null;
+  size?: "sm" | "md";
+}) {
+  const { copyToClipboard } = useClipboard();
+  const value = ip?.trim();
+
+  if (!value) {
+    return (
+      <span className="text-sm text-gray-11 font-family-dm-sans">—</span>
+    );
+  }
+
+  return (
+    <span className="inline-flex max-w-full items-center gap-1.5 align-middle">
+      <span
+        title={value}
+        className={cn(
+          "truncate font-mono font-semibold text-gray-12",
+          size === "sm" ? "max-w-[130px] text-xs" : "max-w-[120px] text-sm",
+        )}
+      >
+        {value}
+      </span>
+      <button
+        type="button"
+        onClick={() => void copyToClipboard(value)}
+        title="Copiar IP"
+        aria-label="Copiar IP"
+        className="shrink-0 text-gray-10 transition-colors hover:text-gray-12"
+      >
+        <CopyIcon className={size === "sm" ? "size-3.5" : "size-4"} />
+      </button>
+    </span>
   );
 }
 
@@ -645,9 +692,10 @@ export function AdminAuditLogTab() {
                     </span>
                   </p>
                 ) : null}
-                <p className="text-xs text-gray-11 font-family-dm-sans mb-2">
-                  IP: {row.ip}
-                </p>
+                <div className="text-xs text-gray-11 font-family-dm-sans mb-2 flex items-center gap-1.5">
+                  <span>IP:</span>
+                  <IpCell ip={row.ip} size="sm" />
+                </div>
                 <div className="flex items-start gap-2.5">
                   <UserAvatar
                     avatarUrl={row.userAvatarUrl}
@@ -715,7 +763,7 @@ export function AdminAuditLogTab() {
 
       <div className="hidden md:block rounded-xl border border-gray-6 bg-gray-1 overflow-hidden ">
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[1100px]">
+          <table className="w-full min-w-[880px]">
             <thead>
               <tr className="bg-gray-3 border-b border-gray-6">
                 <th className="text-left py-3.5 px-4 text-xs font-semibold text-gray-11 font-family-dm-sans uppercase tracking-wide">
@@ -774,9 +822,7 @@ export function AdminAuditLogTab() {
                       className="hover:bg-gray-2/80 transition-colors"
                     >
                       <td className="py-3.5 px-4">
-                        <span className="text-sm font-semibold text-gray-12 font-family-dm-sans">
-                          {row.ip}
-                        </span>
+                        <IpCell ip={row.ip} />
                       </td>
                       <td className="py-3.5 px-4">
                         <span className="text-sm font-semibold text-gray-12 font-family-dm-sans">
