@@ -519,15 +519,21 @@ export function AwaitingReleaseDrawer({
                 )}
               </div>
 
-              <Pagination
-                currentPage={tabCurrentPage}
-                totalPages={tabTotalPages}
-                onPageChange={onTabPageChange}
-                totalItems={tabTotalCount}
-                pageSize={itemsPerPage}
-                disabled={isLoading}
-                className="pt-2"
-              />
+              <div className="flex flex-col items-center gap-1 pt-2">
+                <Pagination
+                  currentPage={tabCurrentPage}
+                  totalPages={tabTotalPages}
+                  onPageChange={onTabPageChange}
+                  totalItems={tabTotalCount}
+                  pageSize={itemsPerPage}
+                  disabled={isLoading}
+                />
+                {tabTotalCount > 0 && (
+                  <span className="font-family-dm-sans text-xs text-gray-11">
+                    {rows.length} de {tabTotalCount} {tabTotalCount === 1 ? "registro" : "registros"}
+                  </span>
+                )}
+              </div>
               <Button
                 type="button"
                 onClick={() => setIsExportModalOpen(true)}
@@ -575,7 +581,7 @@ export function AwaitingReleaseDrawer({
                     </p>
                   </div>
                 </div>
-               {/*  <Button
+                {/*  <Button
                   type="button"l
                   variant="outline"
                   onClick={() => setIsAnticipationOpen(true)}
@@ -708,9 +714,16 @@ export function AwaitingReleaseDrawer({
                 </div>
               </div>
 
-              {/* Footer: paginação (esquerda) + Exportar CSV (direita) */}
+              {/* Footer: paginação + contagem (esquerda) + Exportar CSV (direita) */}
               <div className="mt-4 flex items-center justify-between gap-4">
-                <Pagination className="w-max" onPageChange={onTabPageChange} currentPage={tabCurrentPage} totalPages={tabTotalPages} totalItems={tabTotalCount} pageSize={itemsPerPage} disabled={isLoading} />
+                <div className="flex items-center gap-3 min-w-0">
+                  <Pagination className="w-max" onPageChange={onTabPageChange} currentPage={tabCurrentPage} totalPages={tabTotalPages} totalItems={tabTotalCount} pageSize={itemsPerPage} disabled={isLoading} />
+                  {tabTotalCount > 0 && (
+                    <span className="font-family-dm-sans text-xs text-gray-11 whitespace-nowrap shrink-0">
+                      {rows.length} de {tabTotalCount} {tabTotalCount === 1 ? "registro" : "registros"}
+                    </span>
+                  )}
+                </div>
                 <Button
                   type="button"
                   onClick={() => setIsExportModalOpen(true)}
