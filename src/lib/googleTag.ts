@@ -136,3 +136,37 @@ export function trackGooglePurchase(
     });
   }
 }
+
+/* ────────────────────────────────────────────────────────────────────────────
+ * Conversão de CAPTAÇÃO da plataforma (Google Ads) — DISTINTA das conversões
+ * por-evento acima.
+ *
+ * Espelha o `trackPlatformMetaPixel("CompleteRegistration")` do Meta: dispara a
+ * conversão de "cadastro de organizador concluído" no Google Ads PRÓPRIO da
+ * PódioTicket. Reaproveita o loader/`config` do id `AW-18266397975` que o
+ * RootLayout já injeta globalmente em produção — aqui só emitimos o evento de
+ * conversão (com o LABEL específico da ação de Sign-up).
+ * ──────────────────────────────────────────────────────────────────────────── */
+
+/** `send_to` da conversão de cadastro de organizador (id Ads + label da ação). */
+const PLATFORM_SIGNUP_CONVERSION = "AW-18266397975/hEFNCIv83eccEJe6jIZE";
+
+/**
+ * Dispara a conversão de "cadastro de organizador concluído" no Google Ads da
+ * plataforma. Chamada UMA vez, no sucesso real do signup (ver
+ * `useOrganizerSignupFlow.submit`), em paralelo ao `CompleteRegistration` do
+ * Meta Pixel.
+ *
+ * No-op fora de produção real (mesmo gate dos demais scripts de tracking).
+ */
+export function trackPlatformSignupConversion(): void {
+  // Gate de produção: fora de prod nada dispara.
+  if (!isTrackingEnabled()) return;
+  if (typeof window === "undefined") return;
+  ensureGtagBase(); // garante dataLayer + stub (o loader vem do RootLayout)
+  window.gtag?.("event", "conversion", {
+    send_to: PLATFORM_SIGNUP_CONVERSION,
+    value: 1.0,
+    currency: "BRL",
+  });
+}

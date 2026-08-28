@@ -606,8 +606,8 @@ export function RegistrationsView({
                     >
                       <ChevronRight className="size-4" />
                     </button>
-                    <p className="shrink-0 text-sm text-gray-11 font-family-dm-sans whitespace-nowrap ml-auto">
-                      Exibindo {registrosShown.toLocaleString("pt-BR")} de {pagination.total.toLocaleString("pt-BR")} registros
+                    <p className="text-xs text-gray-11 font-family-dm-sans whitespace-nowrap">
+                      {registrosShown.toLocaleString("pt-BR")} de {pagination.total.toLocaleString("pt-BR")} registros
                     </p>
                   </div>
                 )}
@@ -736,8 +736,8 @@ export function RegistrationsView({
                       <ChevronRight className="size-4" />
                     </button>
 
-                    <p className="shrink-0 text-sm text-gray-11 font-family-dm-sans whitespace-nowrap ml-auto">
-                      Exibindo {registrosShown.toLocaleString("pt-BR")} de {pagination.total.toLocaleString("pt-BR")} registros
+                    <p className="text-xs text-gray-11 font-family-dm-sans whitespace-nowrap">
+                      {registrosShown.toLocaleString("pt-BR")} de {pagination.total.toLocaleString("pt-BR")} registros
                     </p>
                   </div>
 

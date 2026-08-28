@@ -12,6 +12,7 @@ import { lookupCnpjDigits } from "@/utils/lookupCnpj";
 import { onlyDigits, formatCEP, formatPhone } from "@/utils/masks";
 import { ORGANIZER_CONTRACT_IDS } from "@/data/organizerContracts";
 import { trackPlatformMetaPixel } from "@/lib/metaPixel";
+import { trackPlatformSignupConversion } from "@/lib/googleTag";
 import {
   accessStepSchema,
   personTypeStepSchema,
@@ -453,7 +454,10 @@ export function useOrganizerSignupFlow() {
       const payload = buildOrganizerSignupPayload(formData, turnstileToken);
       await signupOrganizer(payload);
       // Conversão do funil de captação: cadastro de organizador concluído.
+      // Dispara SÓ aqui (após o backend criar a conta com sucesso), no clique do
+      // último botão de finalizar o cadastro — Meta Pixel + Google Ads.
       trackPlatformMetaPixel("CompleteRegistration");
+      trackPlatformSignupConversion();
       setStepIndex(DONE_STEP_INDEX);
     } catch (err) {
       const message =

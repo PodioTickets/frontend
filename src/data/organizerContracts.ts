@@ -27,6 +27,9 @@ export interface OrganizerContract {
 }
 
 const CONTRACT_UPDATED_AT = "27/06/2026";
+// O Contrato principal foi atualizado para a versão v4 (só ele); as três
+// políticas complementares permanecem na data anterior.
+const MAIN_CONTRACT_UPDATED_AT = "27/08/2026";
 
 export const ORGANIZER_CONTRACTS: OrganizerContract[] = [
   {
@@ -34,7 +37,7 @@ export const ORGANIZER_CONTRACTS: OrganizerContract[] = [
     title: "Contrato principal",
     subtitle: "Intermediação tecnológica para eventos",
     icon: FileText,
-    updatedAt: CONTRACT_UPDATED_AT,
+    updatedAt: MAIN_CONTRACT_UPDATED_AT,
     blocks: contratoPrincipal,
   },
   {

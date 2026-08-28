@@ -520,28 +520,31 @@ function TaxHighlightSection() {
 
 function CtaSection() {
   return (
-    <section className="bg-gray-2 py-16 md:py-24">
-      <div className="mx-auto max-w-[1280px] px-4 md:px-0">
-        <Reveal className="grid grid-cols-1 overflow-hidden rounded-2xl shadow-md border border-gray-6 bg-gray-1 lg:grid-cols-[534px_1fr]">
-          <div className="flex flex-col gap-7 p-8 md:p-10">
-            <div className="flex flex-col gap-5">
-              <h2 className="font-manrope text-[24px] font-extrabold leading-[1.1] text-gray-12 md:text-[28px]">
-                Pronto para organizar seu próximo evento?
-              </h2>
-              <p className="max-w-[373px] font-family-dm-sans text-[16px] leading-[1.4] text-gray-11 md:text-[18px]">
-                Conheça a plataforma e descubra como a PódioTicket pode
-                simplificar sua operação.
-              </p>
-            </div>
-            <SpecialistButton href={SPECIALIST_HREF} className="md:w-fit" />
-          </div>
-          <div className="relative min-h-[240px] lg:min-h-[295px]">
+    <section className="bg-gray-2 px-4 pb-[124px] pt-[60px] md:px-0 md:py-24">
+      <div className="mx-auto max-w-[1280px]">
+        <Reveal className="flex flex-col overflow-hidden rounded-2xl bg-gray-1 shadow-md lg:grid lg:grid-cols-[534px_1fr] lg:border lg:border-gray-6">
+          {/* Imagem: topo no mobile, à direita no desktop. */}
+          <div className="relative h-[208px] w-full lg:order-2 lg:h-auto lg:min-h-[295px]">
             <Image
               src={IMG.ctaTeam}
               alt="Organizadores de eventos esportivos"
               fill
               className="object-cover object-top"
             />
+          </div>
+          {/* Corpo: no mobile é um painel centralizado que sobrepõe a imagem em
+              12px (mb-[-12px] do Figma); no desktop, coluna à esquerda. */}
+          <div className="relative z-10 flex flex-col items-center gap-8 rounded-t-[12px] bg-gray-1 px-5 py-8 text-center max-lg:-mt-3 lg:order-1 lg:items-start lg:gap-7 lg:rounded-none lg:p-10 lg:text-left">
+            <div className="flex flex-col gap-6 lg:gap-5">
+              <h2 className="font-manrope text-[24px] font-extrabold leading-[1.1] text-gray-12 md:text-[28px]">
+                Pronto para organizar seu próximo evento?
+              </h2>
+              <p className="font-family-dm-sans text-[16px] leading-[1.3] text-gray-11 md:text-[18px] lg:max-w-[373px]">
+                Conheça a plataforma e descubra como a PódioTicket pode
+                simplificar sua operação.
+              </p>
+            </div>
+            <SpecialistButton href={SPECIALIST_HREF} className="lg:w-fit" />
           </div>
         </Reveal>
       </div>
@@ -567,7 +570,7 @@ function ModalityTile({
   // Tile "short" (creme): imagem em object-cover preenchendo todo o quadrado.
   return (
     <div
-      className={`flex size-[104px] shrink-0 items-center justify-center overflow-hidden rounded-xl bg-[#e9dbc6] ${gradient ? "px-3 py-4" : ""}`}
+      className={`flex size-[76px] shrink-0 items-center justify-center overflow-hidden rounded-xl bg-[#e9dbc6] md:size-[104px] ${gradient ? "px-2 py-3 md:px-3 md:py-4" : ""}`}
       style={
         gradient
           ? { backgroundImage: `linear-gradient(to bottom, ${gradient.from}, ${gradient.to})` }
@@ -604,17 +607,17 @@ const MODALITY_COLUMNS: ModalityColumn[] = [
 
 function ModalitiesBand() {
   return (
-    <section className="overflow-hidden bg-gray-2 -mb-12">
-      <div className="flex h-[278px] items-start justify-center gap-10 pt-[3px]">
+    <section className="overflow-hidden bg-gray-2 mb-0 md:-mb-12">
+      <div className="flex md:h-[210px] items-start justify-center gap-4 pt-[3px] md:h-[278px] md:gap-10">
         {MODALITY_COLUMNS.map((col, c) =>
           col.kind === "tall" ? (
-            <div key={c} className="flex shrink-0 flex-col gap-5">
-              <div className="size-[104px] shrink-0" aria-hidden />
+            <div key={c} className="flex shrink-0 flex-col gap-3 md:gap-5">
+              <div className="size-[76px] shrink-0 md:size-[104px]" aria-hidden />
               <ModalityTile n={col.n} gradient={{ from: col.from, to: col.to }} />
-              <div className="size-[104px] shrink-0" aria-hidden />
+              <div className="size-[76px] shrink-0 md:size-[104px]" aria-hidden />
             </div>
           ) : (
-            <div key={c} className="mt-[62px] flex shrink-0 flex-col gap-5">
+            <div key={c} className="mt-[46px] flex shrink-0 flex-col gap-3 md:mt-[62px] md:gap-5">
               <ModalityTile n={col.imgs[0]} />
               <ModalityTile n={col.imgs[1]} />
             </div>
