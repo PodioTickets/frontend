@@ -158,10 +158,41 @@ const ICON_COMPRESS =
 // Quanto tempo a dica de gesto cooperativo fica visível após o último scroll/toque.
 const HINT_VISIBLE_MS = 1400;
 
+/** Nome do local como o organizador reconhece: "Bairro, Cidade/UF". */
+function placeLabel(d: PurchaseLocation): string {
+  const city = d.state ? `${d.city}/${d.state}` : d.city;
+  return d.neighborhood ? `${d.neighborhood}, ${city}` : city;
+}
+
+/**
+ * Etiqueta com o nº de compras, ancorada ACIMA da bola de calor do local
+ * (`translate` sobe a pílula 100% da própria altura + folga, então o calor
+ * fica visível embaixo). `iconSize` 0 e o deslocamento no filho mantêm a
+ * pílula centrada no ponto sem depender da largura (varia com os dígitos).
+ */
+function purchaseBadgeIcon(purchases: number): any {
+  const label = purchases.toLocaleString("pt-BR");
+  return L.divIcon({
+    className: "purchase-count-badge",
+    iconSize: [0, 0],
+    iconAnchor: [0, 0],
+    html:
+      `<span style="` +
+      "display:inline-block;transform:translate(-50%,calc(-100% - 14px));" +
+      "pointer-events:auto;white-space:nowrap;border-radius:9999px;" +
+      "background:#fff;color:#1a1a1a;border:1px solid rgba(0,0,0,0.12);" +
+      "box-shadow:0 1px 3px rgba(0,0,0,0.25);padding:1px 7px;" +
+      'font:600 11px/1.5 var(--font-dm-sans,system-ui,sans-serif);' +
+      `">${label}</span>`,
+  });
+}
+
 export default function PurchaseHeatmapImpl({ data }: { data: PurchaseLocation[] }) {
   const mapElRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<any>(null);
   const heatRef = useRef<any>(null);
+  // Camada das etiquetas de contagem (uma por local geocodificado).
+  const labelsRef = useRef<any>(null);
   const wheelHandlerRef = useRef<((e: WheelEvent) => void) | null>(null);
   const touchHandlerRef = useRef<((e: TouchEvent) => void) | null>(null);
   const resizeObserverRef = useRef<ResizeObserver | null>(null);
@@ -307,6 +338,10 @@ export default function PurchaseHeatmapImpl({ data }: { data: PurchaseLocation[]
           mapRef.current.removeLayer(heatRef.current);
           heatRef.current = null;
         }
+        if (labelsRef.current) {
+          mapRef.current.removeLayer(labelsRef.current);
+          labelsRef.current = null;
+        }
         return;
       }
       await ensureHeatPlugin();
@@ -334,6 +369,26 @@ export default function PurchaseHeatmapImpl({ data }: { data: PurchaseLocation[]
         heatCanvas.classList.remove("leaflet-zoom-animated");
         heatCanvas.classList.add("leaflet-zoom-hide");
       }
+
+      // Etiquetas "quantas compras neste local", por cima do calor. Locais com
+      // mais compras ficam na frente (zIndexOffset) quando as bolhas se
+      // sobrepõem em zoom baixo.
+      if (labelsRef.current) mapRef.current.removeLayer(labelsRef.current);
+      labelsRef.current = L.layerGroup(
+        located.map((d) => {
+          const place = placeLabel(d);
+          const suffix = d.purchases === 1 ? "compra" : "compras";
+          return L.marker([d.lat as number, d.lng as number], {
+            icon: purchaseBadgeIcon(d.purchases),
+            zIndexOffset: d.purchases,
+            keyboard: false,
+          }).bindTooltip(`${place} — ${d.purchases} ${suffix}`, {
+            // Acima da própria etiqueta (que já está 14px + altura acima do ponto).
+            direction: "top",
+            offset: [0, -34],
+          });
+        }),
+      ).addTo(mapRef.current);
 
       const bounds = L.latLngBounds(points.map((p) => L.latLng(p[0], p[1])));
       mapRef.current.fitBounds(bounds.pad(0.2), { maxZoom: HEAT_MAX_ZOOM });
@@ -395,6 +450,7 @@ export default function PurchaseHeatmapImpl({ data }: { data: PurchaseLocation[]
       mapRef.current?.remove();
       mapRef.current = null;
       heatRef.current = null;
+      labelsRef.current = null;
     },
     [],
   );
