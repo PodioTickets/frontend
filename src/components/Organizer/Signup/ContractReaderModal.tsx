@@ -52,14 +52,16 @@ export function ContractReaderModal({
   };
 
   const header = contract ? (
-    <div className="flex items-center justify-between gap-3 bg-linear-to-r from-[#141a15] to-[#1d3a24] px-4 py-3.5">
+    <div className="flex items-center justify-between gap-3 bg-linear-to-r from-[#141a15] to-[#1d3a24] px-4 py-3.5 pr-12 sm:pr-4">
       <div className="flex items-center gap-2 min-w-0">
         <span className="size-2.5 shrink-0 rounded-full bg-[#59E373]" />
         <p className="truncate font-manrope text-base font-semibold text-white">
           {contract.title}
         </p>
       </div>
-      <p className="shrink-0 font-family-dm-sans text-xs text-gray-8">
+      {/* No mobile o header só comporta título + botão de fechar — a data vai
+          pro fim do corpo do contrato (ver `LegalDocumentBody` abaixo). */}
+      <p className="hidden shrink-0 font-family-dm-sans text-xs text-gray-8 sm:block">
         Última atualização: {contract.updatedAt}
       </p>
     </div>
@@ -67,11 +69,16 @@ export function ContractReaderModal({
 
   const footer = contract ? (
     <div className="flex flex-col gap-3 border-t border-gray-6 bg-gray-1 px-4 py-4 sm:flex-row sm:items-center sm:justify-between">
-      <label className="flex cursor-pointer items-center gap-2 font-family-dm-sans text-sm text-gray-12">
+      {/* Texto num único <span>: como filhos diretos de flex, os pedaços
+          viravam itens separados e quebravam palavra a palavra em telas
+          estreitas. Checkbox alinhado ao topo da primeira linha. */}
+      <label className="flex cursor-pointer items-start gap-2 font-family-dm-sans text-sm text-gray-12 sm:items-center">
         <Checkbox checked={accepted} onCheckedChange={(v) => setAccepted(!!v)} />
-        Li e aceito a{" "}
-        <span className="font-semibold underline">{contract.title}</span> da
-        PódioTicket.
+        <span className="min-w-0 leading-snug">
+          Li e aceito a{" "}
+          <span className="font-semibold underline">{contract.title}</span> da
+          PódioTicket.
+        </span>
       </label>
       <Button
         type="button"
@@ -118,6 +125,9 @@ export function ContractReaderModal({
             <div className="flex-1 overflow-y-auto bg-gray-2 p-5 md:p-6">
               <div className="flex flex-col gap-6 font-family-dm-sans">
                 <LegalDocumentBody blocks={contract.blocks} compact />
+                <p className="font-family-dm-sans text-xs text-gray-11 sm:hidden">
+                  Última atualização: {contract.updatedAt}
+                </p>
               </div>
             </div>
 
