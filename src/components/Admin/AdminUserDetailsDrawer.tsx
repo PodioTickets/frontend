@@ -499,24 +499,30 @@ export function AdminUserDetailsDrawer({ userId, fallback, onClose }: AdminUserD
                             </td>
                             <td className="py-3 px-4">
                               <div className="flex items-center justify-end gap-2">
-                                <button
-                                  type="button"
-                                  onClick={() => openOrderModal(r.id)}
-                                  aria-label="Ver pedido"
-                                  title="Ver pedido"
-                                  className="flex size-9 items-center justify-center rounded-lg border border-gray-6 text-gray-12 hover:bg-gray-3 transition-colors"
-                                >
-                                  <FileText className="size-4" />
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() => openTicketModal(r.id)}
-                                  aria-label="Ver ingresso"
-                                  title="Ver ingresso"
-                                  className="flex size-9 items-center justify-center rounded-lg border border-gray-6 text-gray-12 hover:bg-gray-3 transition-colors"
-                                >
-                                  <TicketIcon className="size-4" />
-                                </button>
+                                {/* Cancelado não tem pedido nem ingresso pra abrir — mesma
+                                    regra da lista de inscrições do evento (RegistrationRow). */}
+                                {!isCancelled && (
+                                  <>
+                                    <button
+                                      type="button"
+                                      onClick={() => openOrderModal(r.id)}
+                                      aria-label="Ver pedido"
+                                      title="Ver pedido"
+                                      className="flex size-9 items-center justify-center rounded-lg border border-gray-6 text-gray-12 hover:bg-gray-3 transition-colors"
+                                    >
+                                      <FileText className="size-4" />
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => openTicketModal(r.id)}
+                                      aria-label="Ver ingresso"
+                                      title="Ver ingresso"
+                                      className="flex size-9 items-center justify-center rounded-lg border border-gray-6 text-gray-12 hover:bg-gray-3 transition-colors"
+                                    >
+                                      <TicketIcon className="size-4" />
+                                    </button>
+                                  </>
+                                )}
                               </div>
                             </td>
                           </tr>

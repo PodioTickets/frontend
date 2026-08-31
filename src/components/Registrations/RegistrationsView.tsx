@@ -575,7 +575,7 @@ export function RegistrationsView({
                   })}
                 </div>
                 {pagination.totalPages > 1 && (
-                  <div className="flex items-center justify-start gap-2 flex-wrap">
+                  <div className="flex items-center justify-center gap-2 flex-wrap">
                     <button
                       type="button"
                       onClick={() => setPagination((p) => ({ ...p, page: Math.max(1, p.page - 1) }))}

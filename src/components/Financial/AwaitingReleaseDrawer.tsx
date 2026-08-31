@@ -528,7 +528,7 @@ export function AwaitingReleaseDrawer({
                   pageSize={itemsPerPage}
                   disabled={isLoading}
                 />
-                {tabTotalCount > 0 && (
+                {tabTotalPages > 1 && (
                   <span className="font-family-dm-sans text-xs text-gray-11">
                     {rows.length} de {tabTotalCount} {tabTotalCount === 1 ? "registro" : "registros"}
                   </span>
@@ -718,7 +718,7 @@ export function AwaitingReleaseDrawer({
               <div className="mt-4 flex items-center justify-between gap-4">
                 <div className="flex items-center gap-3 min-w-0">
                   <Pagination className="w-max" onPageChange={onTabPageChange} currentPage={tabCurrentPage} totalPages={tabTotalPages} totalItems={tabTotalCount} pageSize={itemsPerPage} disabled={isLoading} />
-                  {tabTotalCount > 0 && (
+                  {tabTotalPages > 1 && (
                     <span className="font-family-dm-sans text-xs text-gray-11 whitespace-nowrap shrink-0">
                       {rows.length} de {tabTotalCount} {tabTotalCount === 1 ? "registro" : "registros"}
                     </span>
