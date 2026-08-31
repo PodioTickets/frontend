@@ -145,6 +145,88 @@ async function ensureHeatPlugin(): Promise<void> {
   await heatPluginPromise;
 }
 
+/**
+ * ---------------------------------------------------------------------------
+ * Agregação por ZOOM
+ * ---------------------------------------------------------------------------
+ * O backend devolve as compras por BAIRRO. Plotar sempre o bairro faz o zoom
+ * afastado mostrar vários pontos fracos empilhados sobre a mesma cidade (nesse
+ * zoom o mapa base só rotula a cidade) — a leitura fica errada e nenhum número
+ * corresponde ao volume real daquela cidade. Aqui o dado se junta/divide junto
+ * com o mapa: UF quando bem afastado, CIDADE no zoom médio e BAIRRO no zoom
+ * aproximado. A soma total é preservada em todos os níveis.
+ */
+type AggLevel = "state" | "city" | "neighborhood";
+
+/** Zoom mínimo de cada nível (abaixo do menor → agrupa por UF). */
+const CITY_MIN_ZOOM = 7;
+const NEIGHBORHOOD_MIN_ZOOM = 12;
+
+function levelForZoom(zoom: number): AggLevel {
+  if (zoom >= NEIGHBORHOOD_MIN_ZOOM) return "neighborhood";
+  if (zoom >= CITY_MIN_ZOOM) return "city";
+  return "state";
+}
+
+type AggPoint = {
+  /** Já formatado p/ o tooltip: "Bairro, Cidade/UF", "Cidade/UF" ou "UF". */
+  label: string;
+  lat: number;
+  lng: number;
+  purchases: number;
+};
+
+/** Mesma normalização do backend (case/acentos) p/ não duplicar "São Paulo". */
+const normalizeKey = (s?: string) =>
+  (s ?? "")
+    .normalize("NFD")
+    .replace(/\p{Diacritic}/gu, "")
+    .toLowerCase()
+    .replace(/\s+/g, " ")
+    .trim();
+
+/**
+ * Soma as compras no nível pedido e posiciona o ponto no CENTROIDE PONDERADO
+ * pelas compras (o bairro que mais vendeu puxa o ponto da cidade p/ perto de si),
+ * em vez da média simples — assim o calor continua caindo onde de fato vendeu.
+ */
+function aggregate(located: PurchaseLocation[], level: AggLevel): AggPoint[] {
+  if (level === "neighborhood") {
+    return located.map((d) => ({
+      label: placeLabel(d),
+      lat: d.lat as number,
+      lng: d.lng as number,
+      purchases: d.purchases,
+    }));
+  }
+
+  const byState = level === "state";
+  const merged = new Map<string, AggPoint>();
+  for (const d of located) {
+    // Sem UF cai pra cidade como chave (não dá pra somar num estado desconhecido).
+    const key = byState
+      ? normalizeKey(d.state) || "city:" + normalizeKey(d.city)
+      : normalizeKey(d.city) + "|" + normalizeKey(d.state);
+    const existing = merged.get(key);
+    if (existing) {
+      const total = existing.purchases + d.purchases;
+      existing.lat =
+        (existing.lat * existing.purchases + (d.lat as number) * d.purchases) / total;
+      existing.lng =
+        (existing.lng * existing.purchases + (d.lng as number) * d.purchases) / total;
+      existing.purchases = total;
+    } else {
+      merged.set(key, {
+        label: byState ? d.state || d.city : placeLabel({ ...d, neighborhood: undefined }),
+        lat: d.lat as number,
+        lng: d.lng as number,
+        purchases: d.purchases,
+      });
+    }
+  }
+  return Array.from(merged.values());
+}
+
 const BRAZIL_CENTER: [number, number] = [-14.235, -51.925];
 const BRAZIL_ZOOM = 4;
 const HEAT_MAX_ZOOM = 12;
@@ -191,11 +273,18 @@ export default function PurchaseHeatmapImpl({ data }: { data: PurchaseLocation[]
   const mapElRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<any>(null);
   const heatRef = useRef<any>(null);
-  // Camada das etiquetas de contagem (uma por local geocodificado).
+  // Camada das etiquetas de contagem (uma por local do nível agregado atual).
   const labelsRef = useRef<any>(null);
   const wheelHandlerRef = useRef<((e: WheelEvent) => void) | null>(null);
   const touchHandlerRef = useRef<((e: TouchEvent) => void) | null>(null);
   const resizeObserverRef = useRef<ResizeObserver | null>(null);
+  // Nível já desenhado, p/ só redesenhar quando o zoom cruza uma faixa
+  // (e não a cada zoomend).
+  const levelsRef = useRef<Record<AggLevel, AggPoint[]> | null>(null);
+  const renderedLevelRef = useRef<AggLevel | null>(null);
+  // Enquadra nos dados 1× por montagem: as cargas seguintes (bairros que o
+  // worker de geocoding vai resolvendo) não podem puxar o zoom do usuário.
+  const fittedRef = useRef(false);
 
   // Tela cheia (modal) — reaproveita a MESMA instância do mapa (só reestiliza o
   // container p/ `fixed inset-0`), evitando 2º mapa/tiles/geocoding.
@@ -227,6 +316,72 @@ export default function PurchaseHeatmapImpl({ data }: { data: PurchaseLocation[]
     () => located.map((d) => `${d.lat},${d.lng}:${d.purchases}`).join("|"),
     [located],
   );
+
+  // Os três níveis pré-calculados: trocar de faixa de zoom é só reusar a lista.
+  const levels = useMemo(
+    () => ({
+      state: aggregate(located, "state"),
+      city: aggregate(located, "city"),
+      neighborhood: aggregate(located, "neighborhood"),
+    }),
+    [located],
+  );
+
+  /**
+   * (Re)desenha calor + selos no nível pedido. Estável (só lê refs), então os
+   * listeners nativos do mapa capturam esta função uma única vez.
+   */
+  const renderLevel = useCallback((level: AggLevel) => {
+    const map = mapRef.current;
+    const points = levelsRef.current?.[level] ?? [];
+    if (!map || points.length === 0) return;
+    renderedLevelRef.current = level;
+
+    const maxPurchases = Math.max(...points.map((p) => p.purchases), 1);
+
+    if (heatRef.current) map.removeLayer(heatRef.current);
+    heatRef.current = (L as any)
+      .heatLayer(
+        points.map((p) => [p.lat, p.lng, p.purchases]),
+        {
+          radius: 30,
+          blur: 20,
+          minOpacity: 0.45,
+          maxZoom: HEAT_MAX_ZOOM,
+          // `max` abaixo do pico (metade) = locais de baixo volume ainda visíveis.
+          // Recalculado por nível: agrupado, o pico é maior que o de bairro.
+          max: Math.max(1, Math.ceil(maxPurchases / 2)),
+        },
+      )
+      .addTo(map);
+
+    // Canvas ampliado (padding) não pode animar no zoom (transform errada) →
+    // escondê-lo durante a animação de zoom e redesenhar no fim (`_reset`).
+    const heatCanvas = heatRef.current._canvas as HTMLElement | undefined;
+    if (heatCanvas) {
+      heatCanvas.classList.remove("leaflet-zoom-animated");
+      heatCanvas.classList.add("leaflet-zoom-hide");
+    }
+
+    // Etiquetas "quantas compras neste local", por cima do calor. Locais com
+    // mais compras ficam na frente (zIndexOffset) quando as bolhas se sobrepõem.
+    if (labelsRef.current) map.removeLayer(labelsRef.current);
+    labelsRef.current = L.layerGroup(
+      points.map((p) => {
+        const suffix = p.purchases === 1 ? "compra" : "compras";
+        return L.marker([p.lat, p.lng], {
+          icon: purchaseBadgeIcon(p.purchases),
+          zIndexOffset: p.purchases,
+          keyboard: false,
+        }).bindTooltip(`${p.label} — ${p.purchases} ${suffix}`, {
+          // Acima da própria etiqueta (que já está 14px + altura acima do ponto).
+          direction: "top",
+          offset: [0, -34],
+        });
+      }),
+    ).addTo(map);
+  }, []);
+
 
   useEffect(() => {
     if (!mapElRef.current) return;
@@ -328,11 +483,19 @@ export default function PurchaseHeatmapImpl({ data }: { data: PurchaseLocation[]
       });
       ro.observe(mapElRef.current);
       resizeObserverRef.current = ro;
+
+      // Zoom cruzou uma faixa → reagrupa (bairros viram cidade e vice-versa).
+      mapRef.current.on("zoomend", () => {
+        if (!mapRef.current) return;
+        const level = levelForZoom(mapRef.current.getZoom());
+        if (level !== renderedLevelRef.current) renderLevel(level);
+      });
     }
     // Container pode ter montado antes do layout → recalcula o tamanho.
     setTimeout(() => mapRef.current?.invalidateSize(), 60);
 
     const draw = async () => {
+      levelsRef.current = levels;
       if (located.length === 0) {
         if (heatRef.current) {
           mapRef.current.removeLayer(heatRef.current);
@@ -342,56 +505,22 @@ export default function PurchaseHeatmapImpl({ data }: { data: PurchaseLocation[]
           mapRef.current.removeLayer(labelsRef.current);
           labelsRef.current = null;
         }
+        renderedLevelRef.current = null;
         return;
       }
       await ensureHeatPlugin();
       if (!active || !mapRef.current) return;
 
-      const maxPurchases = Math.max(...located.map((d) => d.purchases), 1);
-      const points = located.map((d) => [d.lat as number, d.lng as number, d.purchases]);
-
-      if (heatRef.current) mapRef.current.removeLayer(heatRef.current);
-      heatRef.current = (L as any)
-        .heatLayer(points, {
-          radius: 30,
-          blur: 20,
-          minOpacity: 0.45,
-          maxZoom: HEAT_MAX_ZOOM,
-          // `max` abaixo do pico (metade) = bairros de baixo volume ainda visíveis.
-          max: Math.max(1, Math.ceil(maxPurchases / 2)),
-        })
-        .addTo(mapRef.current);
-
-      // Canvas ampliado (padding) não pode animar no zoom (transform errada) →
-      // escondê-lo durante a animação de zoom e redesenhar no fim (`_reset`).
-      const heatCanvas = heatRef.current._canvas as HTMLElement | undefined;
-      if (heatCanvas) {
-        heatCanvas.classList.remove("leaflet-zoom-animated");
-        heatCanvas.classList.add("leaflet-zoom-hide");
+      // Enquadra ANTES de desenhar: o zoom final é quem define o nível.
+      if (!fittedRef.current) {
+        const bounds = L.latLngBounds(
+          located.map((d) => L.latLng(d.lat as number, d.lng as number)),
+        );
+        mapRef.current.fitBounds(bounds.pad(0.2), { maxZoom: HEAT_MAX_ZOOM, animate: false });
+        fittedRef.current = true;
       }
 
-      // Etiquetas "quantas compras neste local", por cima do calor. Locais com
-      // mais compras ficam na frente (zIndexOffset) quando as bolhas se
-      // sobrepõem em zoom baixo.
-      if (labelsRef.current) mapRef.current.removeLayer(labelsRef.current);
-      labelsRef.current = L.layerGroup(
-        located.map((d) => {
-          const place = placeLabel(d);
-          const suffix = d.purchases === 1 ? "compra" : "compras";
-          return L.marker([d.lat as number, d.lng as number], {
-            icon: purchaseBadgeIcon(d.purchases),
-            zIndexOffset: d.purchases,
-            keyboard: false,
-          }).bindTooltip(`${place} — ${d.purchases} ${suffix}`, {
-            // Acima da própria etiqueta (que já está 14px + altura acima do ponto).
-            direction: "top",
-            offset: [0, -34],
-          });
-        }),
-      ).addTo(mapRef.current);
-
-      const bounds = L.latLngBounds(points.map((p) => L.latLng(p[0], p[1])));
-      mapRef.current.fitBounds(bounds.pad(0.2), { maxZoom: HEAT_MAX_ZOOM });
+      renderLevel(levelForZoom(mapRef.current.getZoom()));
     };
 
     void draw();

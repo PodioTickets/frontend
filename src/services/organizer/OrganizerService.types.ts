@@ -707,8 +707,9 @@ export interface TicketRanking {
 export interface TopCity {
   city: string;
   state?: string;
-  /** Renomeado de `buyers` no split do dashboard (2026-05). 1 por registration paga+confirmada. */
-  participants: number;
+  /** 1 por PEDIDO pago — MESMA agregação do mapa de calor (`purchaseLocations`
+   *  somado por cidade), pra card e mapa nunca divergirem. */
+  purchases: number;
 }
 
 /** Compras por local (endereço de cobrança) — alimenta o mapa de calor geográfico. */

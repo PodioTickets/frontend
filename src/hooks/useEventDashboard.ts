@@ -235,7 +235,7 @@ export function useEventDashboard(
       topCities: (secondary?.topCities ?? []).map((c) => ({
         city: c.city,
         state: c.state,
-        participants: c.participants,
+        purchases: c.purchases,
       })),
       lotsNearDepletion: (rankings?.lotsNearDepletion ?? []).map((l) => ({
         name: l.ticketName,
