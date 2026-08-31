@@ -470,7 +470,7 @@ export function DashboardView({
                 </div>
                 <p className="font-family-dm-sans font-semibold text-[16px] text-gray-12 mb-2">{city.city}</p>
                 <p className="font-family-dm-sans font-normal text-[14px] text-gray-11">
-                  QT de compradores: <span className="font-family-dm-sans font-semibold text-[14px] leading-[1.3] text-gray-12">{city.participants}</span>
+                  QT de compras: <span className="font-family-dm-sans font-semibold text-[14px] leading-[1.3] text-gray-12">{city.purchases}</span>
                 </p>
               </div>
             )
@@ -729,7 +729,7 @@ export function DashboardView({
                 </div>
                 <p className="font-family-dm-sans font-semibold text-base text-gray-12 mb-1">{city.city}</p>
                 <p className="font-family-dm-sans font-normal text-sm text-gray-11">
-                  QT de compradores: <span className="font-semibold text-gray-12">{city.participants}</span>
+                  QT de compras: <span className="font-semibold text-gray-12">{city.purchases}</span>
                 </p>
               </div>
             );
