@@ -519,21 +519,23 @@ export function AwaitingReleaseDrawer({
                 )}
               </div>
 
-              <div className="flex flex-col items-center gap-1 pt-2">
-                <Pagination
-                  currentPage={tabCurrentPage}
-                  totalPages={tabTotalPages}
-                  onPageChange={onTabPageChange}
-                  totalItems={tabTotalCount}
-                  pageSize={itemsPerPage}
-                  disabled={isLoading}
-                />
-                {tabTotalPages > 1 && (
+              {/* Uma página só = nada a navegar: esconde o bloco inteiro (o
+                  contador já seguia essa regra). */}
+              {tabTotalPages > 1 && (
+                <div className="flex flex-col items-center gap-1 pt-2">
+                  <Pagination
+                    currentPage={tabCurrentPage}
+                    totalPages={tabTotalPages}
+                    onPageChange={onTabPageChange}
+                    totalItems={tabTotalCount}
+                    pageSize={itemsPerPage}
+                    disabled={isLoading}
+                  />
                   <span className="font-family-dm-sans text-xs text-gray-11">
                     {rows.length} de {tabTotalCount} {tabTotalCount === 1 ? "registro" : "registros"}
                   </span>
-                )}
-              </div>
+                </div>
+              )}
               <Button
                 type="button"
                 onClick={() => setIsExportModalOpen(true)}
@@ -716,12 +718,16 @@ export function AwaitingReleaseDrawer({
 
               {/* Footer: paginação + contagem (esquerda) + Exportar CSV (direita) */}
               <div className="mt-4 flex items-center justify-between gap-4">
+                {/* A <div> fica mesmo vazia: é o 1º slot do `justify-between`,
+                    sem ela o botão de exportar escorrega para a esquerda. */}
                 <div className="flex items-center gap-3 min-w-0">
-                  <Pagination className="w-max" onPageChange={onTabPageChange} currentPage={tabCurrentPage} totalPages={tabTotalPages} totalItems={tabTotalCount} pageSize={itemsPerPage} disabled={isLoading} />
                   {tabTotalPages > 1 && (
-                    <span className="font-family-dm-sans text-xs text-gray-11 whitespace-nowrap shrink-0">
-                      {rows.length} de {tabTotalCount} {tabTotalCount === 1 ? "registro" : "registros"}
-                    </span>
+                    <>
+                      <Pagination className="w-max" onPageChange={onTabPageChange} currentPage={tabCurrentPage} totalPages={tabTotalPages} totalItems={tabTotalCount} pageSize={itemsPerPage} disabled={isLoading} />
+                      <span className="font-family-dm-sans text-xs text-gray-11 whitespace-nowrap shrink-0">
+                        {rows.length} de {tabTotalCount} {tabTotalCount === 1 ? "registro" : "registros"}
+                      </span>
+                    </>
                   )}
                 </div>
                 <Button

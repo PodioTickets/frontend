@@ -27,6 +27,11 @@ export interface SearchableSelectProps {
   loadingText?: string;
   emptyText?: string;
   error?: boolean;
+  /**
+   * Exibe o campo de busca dentro do painel. Desligue quando a lista for curta e
+   * fixa (ex.: filtro de status com 3 opções), onde o input só rouba um clique.
+   */
+  searchable?: boolean;
 }
 
 function normalize(s: string) {
@@ -47,6 +52,7 @@ export function SearchableSelect({
   loadingText = "Carregando...",
   emptyText = "Nenhum resultado encontrado",
   error = false,
+  searchable = true,
 }: SearchableSelectProps) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
@@ -66,13 +72,13 @@ export function SearchableSelect({
   }, [options, search]);
 
   useEffect(() => {
-    if (!open) return;
+    if (!open || !searchable) return;
     // RAF garante que o portal já foi montado no DOM antes de focar
     const id = requestAnimationFrame(() => {
       searchInputRef.current?.focus({ preventScroll: true });
     });
     return () => cancelAnimationFrame(id);
-  }, [open]);
+  }, [open, searchable]);
 
   useLayoutEffect(() => {
     if (!open || !triggerRef.current) return;
@@ -135,20 +141,22 @@ export function SearchableSelect({
           style={portalStyle}
           className="overflow-hidden rounded-lg border border-gray-6 bg-gray-1 shadow-lg"
         >
-          <div className="border-b border-gray-6 p-2">
-            <div className="relative">
-              <Search className="absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-gray-11" />
-              <input
-                ref={searchInputRef}
-                type="text"
-                placeholder={searchPlaceholder}
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                onMouseDown={(e) => e.stopPropagation()}
-                className="h-9 w-full rounded-md border border-gray-6 bg-gray-2 pl-8 pr-3 font-family-dm-sans text-sm text-gray-12 placeholder:text-gray-10 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-primary-8"
-              />
+          {searchable && (
+            <div className="border-b border-gray-6 p-2">
+              <div className="relative">
+                <Search className="absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-gray-11" />
+                <input
+                  ref={searchInputRef}
+                  type="text"
+                  placeholder={searchPlaceholder}
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  onMouseDown={(e) => e.stopPropagation()}
+                  className="h-9 w-full rounded-md border border-gray-6 bg-gray-2 pl-8 pr-3 font-family-dm-sans text-sm text-gray-12 placeholder:text-gray-10 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-primary-8"
+                />
+              </div>
             </div>
-          </div>
+          )}
           <div className="max-h-[220px] overflow-y-auto overscroll-contain [-webkit-overflow-scrolling:touch] [touch-action:pan-y] [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-gray-6 [&::-webkit-scrollbar]:w-2">
             {filtered.length === 0 ? (
               <div className="px-3 py-4 text-center font-family-dm-sans text-sm text-gray-11">

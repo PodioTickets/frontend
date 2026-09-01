@@ -239,6 +239,9 @@ const ICON_COMPRESS =
 
 // Quanto tempo a dica de gesto cooperativo fica visível após o último scroll/toque.
 const HINT_VISIBLE_MS = 1400;
+// Distância (px) que um toque de 1 dedo precisa percorrer para ser tratado como
+// tentativa de arrastar o mapa. Abaixo disso é toque/tap e a dica não aparece.
+const PAN_INTENT_PX = 12;
 
 /** Nome do local como o organizador reconhece: "Bairro, Cidade/UF". */
 function placeLabel(d: PurchaseLocation): string {
@@ -277,6 +280,11 @@ export default function PurchaseHeatmapImpl({ data }: { data: PurchaseLocation[]
   const labelsRef = useRef<any>(null);
   const wheelHandlerRef = useRef<((e: WheelEvent) => void) | null>(null);
   const touchHandlerRef = useRef<((e: TouchEvent) => void) | null>(null);
+  const touchMoveHandlerRef = useRef<((e: TouchEvent) => void) | null>(null);
+  // Origem do toque monodigital em curso (null = sem toque de 1 dedo rastreado).
+  const panStartRef = useRef<{ x: number; y: number } | null>(null);
+  // A dica já foi mostrada neste gesto? Evita re-render a cada `touchmove`.
+  const hintShownRef = useRef(false);
   const resizeObserverRef = useRef<ResizeObserver | null>(null);
   // Nível já desenhado, p/ só redesenhar quando o zoom cruza uma faixa
   // (e não a cada zoomend).
@@ -304,6 +312,14 @@ export default function PurchaseHeatmapImpl({ data }: { data: PurchaseLocation[]
     setHint(kind);
     if (hintTimerRef.current) clearTimeout(hintTimerRef.current);
     hintTimerRef.current = setTimeout(() => setHint(null), HINT_VISIBLE_MS);
+  }, []);
+  // Esconde na hora (o gesto correto começou — a dica não pode cobrir o mapa).
+  const hideHint = useCallback(() => {
+    if (hintTimerRef.current) {
+      clearTimeout(hintTimerRef.current);
+      hintTimerRef.current = null;
+    }
+    setHint(null);
   }, []);
   const toggleFs = useCallback(() => setFullscreen((v) => !v), []);
 
@@ -457,21 +473,51 @@ export default function PurchaseHeatmapImpl({ data }: { data: PurchaseLocation[]
       // Mobile: um dedo rola a PÁGINA e mostra a dica "use dois dedos"; a
       // manipulação do mapa (arrastar/pinçar) exige 2 dedos. Em tela cheia o
       // mapa ocupa tudo → um dedo já arrasta normalmente.
+      //
+      // A dica NÃO pode sair no `touchstart`: num gesto de 2 dedos o browser
+      // dispara DOIS `touchstart` (1 dedo, depois 2 — os dedos nunca encostam no
+      // mesmo instante), então o primeiro acendia o aviso e ele tapava o mapa por
+      // HINT_VISIBLE_MS mesmo com o usuário fazendo tudo certo. Um tap simples
+      // também acendia. Agora ela só aparece diante de uma tentativa REAL de
+      // arrastar com 1 dedo (`touchmove` monodigital além de PAN_INTENT_PX), e
+      // some no instante em que o segundo dedo encosta.
       const dragging = mapRef.current.dragging;
       const handleTouchStart = (e: TouchEvent) => {
+        panStartRef.current = null;
+        hintShownRef.current = false;
         if (fullscreenRef.current) {
           dragging.enable();
           return;
         }
         if (e.touches.length >= 2) {
           dragging.enable();
-        } else {
-          dragging.disable();
-          flashHint("touch");
+          hideHint();
+          return;
         }
+        dragging.disable();
+        const t = e.touches[0];
+        panStartRef.current = { x: t.clientX, y: t.clientY };
+      };
+      const handleTouchMove = (e: TouchEvent) => {
+        if (fullscreenRef.current) return;
+        if (e.touches.length >= 2) {
+          // Virou pinça/arrasto de 2 dedos → gesto correto, nada de aviso.
+          panStartRef.current = null;
+          hideHint();
+          return;
+        }
+        const start = panStartRef.current;
+        if (!start || hintShownRef.current) return;
+        const t = e.touches[0];
+        const moved = Math.hypot(t.clientX - start.x, t.clientY - start.y);
+        if (moved < PAN_INTENT_PX) return;
+        hintShownRef.current = true;
+        flashHint("touch");
       };
       mapElRef.current.addEventListener("touchstart", handleTouchStart, { passive: true });
       touchHandlerRef.current = handleTouchStart;
+      mapElRef.current.addEventListener("touchmove", handleTouchMove, { passive: true });
+      touchMoveHandlerRef.current = handleTouchMove;
 
       // Recalcula o tamanho do mapa SEMPRE que o container muda de dimensão
       // (entrar/sair da tela cheia, layout tardio). Sem isso o Leaflet mantém o
@@ -571,6 +617,10 @@ export default function PurchaseHeatmapImpl({ data }: { data: PurchaseLocation[]
       if (touchHandlerRef.current) {
         mapElRef.current?.removeEventListener("touchstart", touchHandlerRef.current);
         touchHandlerRef.current = null;
+      }
+      if (touchMoveHandlerRef.current) {
+        mapElRef.current?.removeEventListener("touchmove", touchMoveHandlerRef.current);
+        touchMoveHandlerRef.current = null;
       }
       resizeObserverRef.current?.disconnect();
       resizeObserverRef.current = null;
