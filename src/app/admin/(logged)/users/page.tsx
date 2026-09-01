@@ -186,8 +186,8 @@ export default function AdminUsersPage() {
                 value={statusFilter}
                 onChange={setStatusFilter}
                 placeholder="Status: Todos"
-                searchPlaceholder="Buscar status..."
                 emptyText="Nenhum status"
+                searchable={false}
               />
             </div>
           </div>
