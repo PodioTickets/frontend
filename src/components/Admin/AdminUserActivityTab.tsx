@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Search, X, UserRound, Network, Link2 } from "lucide-react";
+import { Search, X, UserRound, Network, Link2, Copy, Check } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { cn } from "@/utils/cn";
 import type { DateRange } from "react-day-picker";
@@ -19,6 +19,7 @@ import toast from "react-hot-toast";
 import { AdminUserActivityDetailsDrawer } from "./AdminUserActivityDetailsDrawer";
 import { Pagination } from "../Pagination";
 import { formatDateBRT, formatTimeBRT } from "@/utils/datetimeBR";
+import { useClipboard } from "@/hooks/useClipboard";
 
 const ITEMS_PER_PAGE = 20;
 
@@ -34,6 +35,44 @@ import {
   SOURCE_LABELS,
   CATEGORY_BADGE,
 } from "./userActivityLabels";
+
+/** IP truncado + botão de copiar: IPv6 estoura a largura da linha e empurra
+ *  a coluna "Ações" para fora da viewport. O valor completo fica no drawer. */
+function IpCell({ ip }: { ip?: string | null }) {
+  const { copyToClipboard, isCopied } = useClipboard();
+
+  if (!ip) {
+    return (
+      <span className="text-sm font-normal text-gray-11 font-family-dm-sans">
+        —
+      </span>
+    );
+  }
+
+  return (
+    <div className="flex items-center gap-1">
+      <span
+        title={ip}
+        className="text-sm font-normal text-gray-11 font-family-dm-sans truncate max-w-[120px]"
+      >
+        {ip}
+      </span>
+      <button
+        type="button"
+        onClick={() => void copyToClipboard(ip)}
+        aria-label="Copiar IP"
+        title="Copiar IP"
+        className="shrink-0 rounded-md p-1 text-gray-11 hover:text-gray-12 hover:bg-gray-3 transition-colors cursor-pointer"
+      >
+        {isCopied ? (
+          <Check className="w-3.5 h-3.5" />
+        ) : (
+          <Copy className="w-3.5 h-3.5" />
+        )}
+      </button>
+    </div>
+  );
+}
 
 function formatLogDateTime(iso: string) {
   const d = new Date(iso);
@@ -446,9 +485,12 @@ export function AdminUserActivityTab() {
               </div>
 
               {row.ip ? (
-                <p className="mt-2 text-xs text-gray-11 font-family-dm-sans">
-                  IP: {row.ip}
-                </p>
+                <div className="mt-2 flex items-center gap-1">
+                  <span className="text-xs text-gray-11 font-family-dm-sans">
+                    IP:
+                  </span>
+                  <IpCell ip={row.ip} />
+                </div>
               ) : null}
 
               <div className="mt-3 rounded-lg border border-gray-6 bg-gray-2 px-3 py-2 flex items-center justify-between gap-2">
@@ -479,7 +521,7 @@ export function AdminUserActivityTab() {
       {/* Tabela (desktop) */}
       <div className="hidden md:block rounded-xl border border-gray-6 bg-gray-1 overflow-hidden ">
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[1100px]">
+          <table className="w-full min-w-[980px]">
             <thead>
               <tr className="bg-gray-3 border-b border-gray-6">
                 <th className="text-left py-3.5 px-4 text-xs font-semibold text-gray-11 font-family-dm-sans uppercase tracking-wide">
@@ -500,7 +542,7 @@ export function AdminUserActivityTab() {
                 <th className="text-left py-3.5 px-4 text-xs font-semibold text-gray-11 font-family-dm-sans uppercase tracking-wide">
                   Data/Hora
                 </th>
-                <th className="text-right py-3.5 px-4 text-xs font-semibold text-gray-11 font-family-dm-sans uppercase tracking-wide">
+                <th className="text-right py-3.5 px-4 text-xs font-semibold text-gray-11 font-family-dm-sans uppercase tracking-wide whitespace-nowrap">
                   Ações
                 </th>
               </tr>
@@ -560,17 +602,15 @@ export function AdminUserActivityTab() {
                         </span>
                       ) : null}
                     </td>
-                    <td className="py-3.5 px-4">
-                      <span className="text-sm font-normal text-gray-11 font-family-dm-sans whitespace-nowrap">
-                        {row.ip ?? "—"}
-                      </span>
+                    <td className="py-3.5 px-4 w-[150px]">
+                      <IpCell ip={row.ip} />
                     </td>
                     <td className="py-3.5 px-4">
                       <span className="text-sm font-normal text-gray-11 font-family-dm-sans whitespace-nowrap">
                         {formatLogDateTime(row.occurredAt)}
                       </span>
                     </td>
-                    <td className="py-3 px-4 text-right">
+                    <td className="py-3 px-4 text-right whitespace-nowrap">
                       <Button
                         type="button"
                         variant="outline"

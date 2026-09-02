@@ -145,6 +145,88 @@ async function ensureHeatPlugin(): Promise<void> {
   await heatPluginPromise;
 }
 
+/**
+ * ---------------------------------------------------------------------------
+ * Agregação por ZOOM
+ * ---------------------------------------------------------------------------
+ * O backend devolve as compras por BAIRRO. Plotar sempre o bairro faz o zoom
+ * afastado mostrar vários pontos fracos empilhados sobre a mesma cidade (nesse
+ * zoom o mapa base só rotula a cidade) — a leitura fica errada e nenhum número
+ * corresponde ao volume real daquela cidade. Aqui o dado se junta/divide junto
+ * com o mapa: UF quando bem afastado, CIDADE no zoom médio e BAIRRO no zoom
+ * aproximado. A soma total é preservada em todos os níveis.
+ */
+type AggLevel = "state" | "city" | "neighborhood";
+
+/** Zoom mínimo de cada nível (abaixo do menor → agrupa por UF). */
+const CITY_MIN_ZOOM = 7;
+const NEIGHBORHOOD_MIN_ZOOM = 12;
+
+function levelForZoom(zoom: number): AggLevel {
+  if (zoom >= NEIGHBORHOOD_MIN_ZOOM) return "neighborhood";
+  if (zoom >= CITY_MIN_ZOOM) return "city";
+  return "state";
+}
+
+type AggPoint = {
+  /** Já formatado p/ o tooltip: "Bairro, Cidade/UF", "Cidade/UF" ou "UF". */
+  label: string;
+  lat: number;
+  lng: number;
+  purchases: number;
+};
+
+/** Mesma normalização do backend (case/acentos) p/ não duplicar "São Paulo". */
+const normalizeKey = (s?: string) =>
+  (s ?? "")
+    .normalize("NFD")
+    .replace(/\p{Diacritic}/gu, "")
+    .toLowerCase()
+    .replace(/\s+/g, " ")
+    .trim();
+
+/**
+ * Soma as compras no nível pedido e posiciona o ponto no CENTROIDE PONDERADO
+ * pelas compras (o bairro que mais vendeu puxa o ponto da cidade p/ perto de si),
+ * em vez da média simples — assim o calor continua caindo onde de fato vendeu.
+ */
+function aggregate(located: PurchaseLocation[], level: AggLevel): AggPoint[] {
+  if (level === "neighborhood") {
+    return located.map((d) => ({
+      label: placeLabel(d),
+      lat: d.lat as number,
+      lng: d.lng as number,
+      purchases: d.purchases,
+    }));
+  }
+
+  const byState = level === "state";
+  const merged = new Map<string, AggPoint>();
+  for (const d of located) {
+    // Sem UF cai pra cidade como chave (não dá pra somar num estado desconhecido).
+    const key = byState
+      ? normalizeKey(d.state) || "city:" + normalizeKey(d.city)
+      : normalizeKey(d.city) + "|" + normalizeKey(d.state);
+    const existing = merged.get(key);
+    if (existing) {
+      const total = existing.purchases + d.purchases;
+      existing.lat =
+        (existing.lat * existing.purchases + (d.lat as number) * d.purchases) / total;
+      existing.lng =
+        (existing.lng * existing.purchases + (d.lng as number) * d.purchases) / total;
+      existing.purchases = total;
+    } else {
+      merged.set(key, {
+        label: byState ? d.state || d.city : placeLabel({ ...d, neighborhood: undefined }),
+        lat: d.lat as number,
+        lng: d.lng as number,
+        purchases: d.purchases,
+      });
+    }
+  }
+  return Array.from(merged.values());
+}
+
 const BRAZIL_CENTER: [number, number] = [-14.235, -51.925];
 const BRAZIL_ZOOM = 4;
 const HEAT_MAX_ZOOM = 12;
@@ -157,14 +239,60 @@ const ICON_COMPRESS =
 
 // Quanto tempo a dica de gesto cooperativo fica visível após o último scroll/toque.
 const HINT_VISIBLE_MS = 1400;
+// Distância (px) que um toque de 1 dedo precisa percorrer para ser tratado como
+// tentativa de arrastar o mapa. Abaixo disso é toque/tap e a dica não aparece.
+const PAN_INTENT_PX = 12;
+
+/** Nome do local como o organizador reconhece: "Bairro, Cidade/UF". */
+function placeLabel(d: PurchaseLocation): string {
+  const city = d.state ? `${d.city}/${d.state}` : d.city;
+  return d.neighborhood ? `${d.neighborhood}, ${city}` : city;
+}
+
+/**
+ * Etiqueta com o nº de compras, ancorada ACIMA da bola de calor do local
+ * (`translate` sobe a pílula 100% da própria altura + folga, então o calor
+ * fica visível embaixo). `iconSize` 0 e o deslocamento no filho mantêm a
+ * pílula centrada no ponto sem depender da largura (varia com os dígitos).
+ */
+function purchaseBadgeIcon(purchases: number): any {
+  const label = purchases.toLocaleString("pt-BR");
+  return L.divIcon({
+    className: "purchase-count-badge",
+    iconSize: [0, 0],
+    iconAnchor: [0, 0],
+    html:
+      `<span style="` +
+      "display:inline-block;transform:translate(-50%,calc(-100% - 14px));" +
+      "pointer-events:auto;white-space:nowrap;border-radius:9999px;" +
+      "background:#fff;color:#1a1a1a;border:1px solid rgba(0,0,0,0.12);" +
+      "box-shadow:0 1px 3px rgba(0,0,0,0.25);padding:1px 7px;" +
+      'font:600 11px/1.5 var(--font-dm-sans,system-ui,sans-serif);' +
+      `">${label}</span>`,
+  });
+}
 
 export default function PurchaseHeatmapImpl({ data }: { data: PurchaseLocation[] }) {
   const mapElRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<any>(null);
   const heatRef = useRef<any>(null);
+  // Camada das etiquetas de contagem (uma por local do nível agregado atual).
+  const labelsRef = useRef<any>(null);
   const wheelHandlerRef = useRef<((e: WheelEvent) => void) | null>(null);
   const touchHandlerRef = useRef<((e: TouchEvent) => void) | null>(null);
+  const touchMoveHandlerRef = useRef<((e: TouchEvent) => void) | null>(null);
+  // Origem do toque monodigital em curso (null = sem toque de 1 dedo rastreado).
+  const panStartRef = useRef<{ x: number; y: number } | null>(null);
+  // A dica já foi mostrada neste gesto? Evita re-render a cada `touchmove`.
+  const hintShownRef = useRef(false);
   const resizeObserverRef = useRef<ResizeObserver | null>(null);
+  // Nível já desenhado, p/ só redesenhar quando o zoom cruza uma faixa
+  // (e não a cada zoomend).
+  const levelsRef = useRef<Record<AggLevel, AggPoint[]> | null>(null);
+  const renderedLevelRef = useRef<AggLevel | null>(null);
+  // Enquadra nos dados 1× por montagem: as cargas seguintes (bairros que o
+  // worker de geocoding vai resolvendo) não podem puxar o zoom do usuário.
+  const fittedRef = useRef(false);
 
   // Tela cheia (modal) — reaproveita a MESMA instância do mapa (só reestiliza o
   // container p/ `fixed inset-0`), evitando 2º mapa/tiles/geocoding.
@@ -185,6 +313,14 @@ export default function PurchaseHeatmapImpl({ data }: { data: PurchaseLocation[]
     if (hintTimerRef.current) clearTimeout(hintTimerRef.current);
     hintTimerRef.current = setTimeout(() => setHint(null), HINT_VISIBLE_MS);
   }, []);
+  // Esconde na hora (o gesto correto começou — a dica não pode cobrir o mapa).
+  const hideHint = useCallback(() => {
+    if (hintTimerRef.current) {
+      clearTimeout(hintTimerRef.current);
+      hintTimerRef.current = null;
+    }
+    setHint(null);
+  }, []);
   const toggleFs = useCallback(() => setFullscreen((v) => !v), []);
 
   // Só os locais que o backend já geocodificou (têm lat/lng).
@@ -196,6 +332,72 @@ export default function PurchaseHeatmapImpl({ data }: { data: PurchaseLocation[]
     () => located.map((d) => `${d.lat},${d.lng}:${d.purchases}`).join("|"),
     [located],
   );
+
+  // Os três níveis pré-calculados: trocar de faixa de zoom é só reusar a lista.
+  const levels = useMemo(
+    () => ({
+      state: aggregate(located, "state"),
+      city: aggregate(located, "city"),
+      neighborhood: aggregate(located, "neighborhood"),
+    }),
+    [located],
+  );
+
+  /**
+   * (Re)desenha calor + selos no nível pedido. Estável (só lê refs), então os
+   * listeners nativos do mapa capturam esta função uma única vez.
+   */
+  const renderLevel = useCallback((level: AggLevel) => {
+    const map = mapRef.current;
+    const points = levelsRef.current?.[level] ?? [];
+    if (!map || points.length === 0) return;
+    renderedLevelRef.current = level;
+
+    const maxPurchases = Math.max(...points.map((p) => p.purchases), 1);
+
+    if (heatRef.current) map.removeLayer(heatRef.current);
+    heatRef.current = (L as any)
+      .heatLayer(
+        points.map((p) => [p.lat, p.lng, p.purchases]),
+        {
+          radius: 30,
+          blur: 20,
+          minOpacity: 0.45,
+          maxZoom: HEAT_MAX_ZOOM,
+          // `max` abaixo do pico (metade) = locais de baixo volume ainda visíveis.
+          // Recalculado por nível: agrupado, o pico é maior que o de bairro.
+          max: Math.max(1, Math.ceil(maxPurchases / 2)),
+        },
+      )
+      .addTo(map);
+
+    // Canvas ampliado (padding) não pode animar no zoom (transform errada) →
+    // escondê-lo durante a animação de zoom e redesenhar no fim (`_reset`).
+    const heatCanvas = heatRef.current._canvas as HTMLElement | undefined;
+    if (heatCanvas) {
+      heatCanvas.classList.remove("leaflet-zoom-animated");
+      heatCanvas.classList.add("leaflet-zoom-hide");
+    }
+
+    // Etiquetas "quantas compras neste local", por cima do calor. Locais com
+    // mais compras ficam na frente (zIndexOffset) quando as bolhas se sobrepõem.
+    if (labelsRef.current) map.removeLayer(labelsRef.current);
+    labelsRef.current = L.layerGroup(
+      points.map((p) => {
+        const suffix = p.purchases === 1 ? "compra" : "compras";
+        return L.marker([p.lat, p.lng], {
+          icon: purchaseBadgeIcon(p.purchases),
+          zIndexOffset: p.purchases,
+          keyboard: false,
+        }).bindTooltip(`${p.label} — ${p.purchases} ${suffix}`, {
+          // Acima da própria etiqueta (que já está 14px + altura acima do ponto).
+          direction: "top",
+          offset: [0, -34],
+        });
+      }),
+    ).addTo(map);
+  }, []);
+
 
   useEffect(() => {
     if (!mapElRef.current) return;
@@ -271,21 +473,51 @@ export default function PurchaseHeatmapImpl({ data }: { data: PurchaseLocation[]
       // Mobile: um dedo rola a PÁGINA e mostra a dica "use dois dedos"; a
       // manipulação do mapa (arrastar/pinçar) exige 2 dedos. Em tela cheia o
       // mapa ocupa tudo → um dedo já arrasta normalmente.
+      //
+      // A dica NÃO pode sair no `touchstart`: num gesto de 2 dedos o browser
+      // dispara DOIS `touchstart` (1 dedo, depois 2 — os dedos nunca encostam no
+      // mesmo instante), então o primeiro acendia o aviso e ele tapava o mapa por
+      // HINT_VISIBLE_MS mesmo com o usuário fazendo tudo certo. Um tap simples
+      // também acendia. Agora ela só aparece diante de uma tentativa REAL de
+      // arrastar com 1 dedo (`touchmove` monodigital além de PAN_INTENT_PX), e
+      // some no instante em que o segundo dedo encosta.
       const dragging = mapRef.current.dragging;
       const handleTouchStart = (e: TouchEvent) => {
+        panStartRef.current = null;
+        hintShownRef.current = false;
         if (fullscreenRef.current) {
           dragging.enable();
           return;
         }
         if (e.touches.length >= 2) {
           dragging.enable();
-        } else {
-          dragging.disable();
-          flashHint("touch");
+          hideHint();
+          return;
         }
+        dragging.disable();
+        const t = e.touches[0];
+        panStartRef.current = { x: t.clientX, y: t.clientY };
+      };
+      const handleTouchMove = (e: TouchEvent) => {
+        if (fullscreenRef.current) return;
+        if (e.touches.length >= 2) {
+          // Virou pinça/arrasto de 2 dedos → gesto correto, nada de aviso.
+          panStartRef.current = null;
+          hideHint();
+          return;
+        }
+        const start = panStartRef.current;
+        if (!start || hintShownRef.current) return;
+        const t = e.touches[0];
+        const moved = Math.hypot(t.clientX - start.x, t.clientY - start.y);
+        if (moved < PAN_INTENT_PX) return;
+        hintShownRef.current = true;
+        flashHint("touch");
       };
       mapElRef.current.addEventListener("touchstart", handleTouchStart, { passive: true });
       touchHandlerRef.current = handleTouchStart;
+      mapElRef.current.addEventListener("touchmove", handleTouchMove, { passive: true });
+      touchMoveHandlerRef.current = handleTouchMove;
 
       // Recalcula o tamanho do mapa SEMPRE que o container muda de dimensão
       // (entrar/sair da tela cheia, layout tardio). Sem isso o Leaflet mantém o
@@ -297,46 +529,44 @@ export default function PurchaseHeatmapImpl({ data }: { data: PurchaseLocation[]
       });
       ro.observe(mapElRef.current);
       resizeObserverRef.current = ro;
+
+      // Zoom cruzou uma faixa → reagrupa (bairros viram cidade e vice-versa).
+      mapRef.current.on("zoomend", () => {
+        if (!mapRef.current) return;
+        const level = levelForZoom(mapRef.current.getZoom());
+        if (level !== renderedLevelRef.current) renderLevel(level);
+      });
     }
     // Container pode ter montado antes do layout → recalcula o tamanho.
     setTimeout(() => mapRef.current?.invalidateSize(), 60);
 
     const draw = async () => {
+      levelsRef.current = levels;
       if (located.length === 0) {
         if (heatRef.current) {
           mapRef.current.removeLayer(heatRef.current);
           heatRef.current = null;
         }
+        if (labelsRef.current) {
+          mapRef.current.removeLayer(labelsRef.current);
+          labelsRef.current = null;
+        }
+        renderedLevelRef.current = null;
         return;
       }
       await ensureHeatPlugin();
       if (!active || !mapRef.current) return;
 
-      const maxPurchases = Math.max(...located.map((d) => d.purchases), 1);
-      const points = located.map((d) => [d.lat as number, d.lng as number, d.purchases]);
-
-      if (heatRef.current) mapRef.current.removeLayer(heatRef.current);
-      heatRef.current = (L as any)
-        .heatLayer(points, {
-          radius: 30,
-          blur: 20,
-          minOpacity: 0.45,
-          maxZoom: HEAT_MAX_ZOOM,
-          // `max` abaixo do pico (metade) = bairros de baixo volume ainda visíveis.
-          max: Math.max(1, Math.ceil(maxPurchases / 2)),
-        })
-        .addTo(mapRef.current);
-
-      // Canvas ampliado (padding) não pode animar no zoom (transform errada) →
-      // escondê-lo durante a animação de zoom e redesenhar no fim (`_reset`).
-      const heatCanvas = heatRef.current._canvas as HTMLElement | undefined;
-      if (heatCanvas) {
-        heatCanvas.classList.remove("leaflet-zoom-animated");
-        heatCanvas.classList.add("leaflet-zoom-hide");
+      // Enquadra ANTES de desenhar: o zoom final é quem define o nível.
+      if (!fittedRef.current) {
+        const bounds = L.latLngBounds(
+          located.map((d) => L.latLng(d.lat as number, d.lng as number)),
+        );
+        mapRef.current.fitBounds(bounds.pad(0.2), { maxZoom: HEAT_MAX_ZOOM, animate: false });
+        fittedRef.current = true;
       }
 
-      const bounds = L.latLngBounds(points.map((p) => L.latLng(p[0], p[1])));
-      mapRef.current.fitBounds(bounds.pad(0.2), { maxZoom: HEAT_MAX_ZOOM });
+      renderLevel(levelForZoom(mapRef.current.getZoom()));
     };
 
     void draw();
@@ -388,6 +618,10 @@ export default function PurchaseHeatmapImpl({ data }: { data: PurchaseLocation[]
         mapElRef.current?.removeEventListener("touchstart", touchHandlerRef.current);
         touchHandlerRef.current = null;
       }
+      if (touchMoveHandlerRef.current) {
+        mapElRef.current?.removeEventListener("touchmove", touchMoveHandlerRef.current);
+        touchMoveHandlerRef.current = null;
+      }
       resizeObserverRef.current?.disconnect();
       resizeObserverRef.current = null;
       if (hintTimerRef.current) clearTimeout(hintTimerRef.current);
@@ -395,6 +629,7 @@ export default function PurchaseHeatmapImpl({ data }: { data: PurchaseLocation[]
       mapRef.current?.remove();
       mapRef.current = null;
       heatRef.current = null;
+      labelsRef.current = null;
     },
     [],
   );

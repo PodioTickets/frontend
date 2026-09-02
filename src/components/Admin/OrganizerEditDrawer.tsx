@@ -51,7 +51,6 @@ interface OrgDetail extends AdminAuditOrganization {
   number?: string;
   neighborhood?: string;
   whatsapp?: string;
-  phone?: string;
   siteUrl?: string;
   instagram?: string;
   description?: string;
@@ -405,7 +404,6 @@ export function OrganizerEditDrawer({ isOpen, onClose, org, onUpdated, mode = "e
   const [email, setEmail] = useState("");
   const [emailError, setEmailError] = useState("");
   const [whatsapp, setWhatsapp] = useState("");
-  const [phone, setPhone] = useState("");
   const [siteUrl, setSiteUrl] = useState("");
   const [instagram, setInstagram] = useState("");
   const [pixKeys, setPixKeys] = useState<PixKey[]>([]);
@@ -462,7 +460,6 @@ export function OrganizerEditDrawer({ isOpen, onClose, org, onUpdated, mode = "e
       setCity("");
       setEmail("");
       setWhatsapp("");
-      setPhone("");
       setSiteUrl("");
       setInstagram("");
       setPixKeys([]);
@@ -513,7 +510,6 @@ export function OrganizerEditDrawer({ isOpen, onClose, org, onUpdated, mode = "e
         setCity(d.city ?? "");
         setEmail(d.email ?? "");
         setWhatsapp(formatPhone(d.whatsapp));
-        setPhone(formatPhone(d.phone));
         setSiteUrl(d.siteUrl ?? "");
         setInstagram(d.instagram ?? "");
         setOwnerName(d.ownerName ?? "");
@@ -631,7 +627,6 @@ export function OrganizerEditDrawer({ isOpen, onClose, org, onUpdated, mode = "e
         city,
         email,
         whatsapp: digits(whatsapp) || undefined,
-        phone: digits(phone) || undefined,
         siteUrl,
         instagram,
         ownerName: ownerName.trim() || undefined,
@@ -1098,7 +1093,6 @@ export function OrganizerEditDrawer({ isOpen, onClose, org, onUpdated, mode = "e
                     error={emailError}
                   />
                   <FormField label="WhatsApp" value={whatsapp} onChange={(v) => setWhatsapp(withPhoneMask(v))} placeholder="(00) 00000-0000" className="min-w-[290px]" />
-                  <FormField label="Telefone" value={phone} onChange={(v) => setPhone(withPhoneMask(v))} placeholder="(00) 00000-0000" className="min-w-[290px]" />
                 </div>
               </div>
 
