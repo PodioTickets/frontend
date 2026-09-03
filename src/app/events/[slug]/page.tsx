@@ -405,7 +405,7 @@ export default function EventPage() {
             `pointer-events` volta a `auto` só quando a barra está visível. */}
         <div className="fixed bottom-0 left-0 right-0 z-50 md:hidden overflow-hidden pointer-events-none">
           <div
-            className={`bg-gray-2 border-t border-gray-6 shadow-lg px-4 py-4 transition-transform duration-300 ease-in-out ${
+            className={`bg-gray-2 border-t border-gray-6 shadow-lg px-4 py-4 pb-[max(1rem,env(safe-area-inset-bottom))] transition-transform duration-300 ease-in-out ${
               showFixedButton
                 ? "translate-y-0 pointer-events-auto"
                 : "translate-y-full"

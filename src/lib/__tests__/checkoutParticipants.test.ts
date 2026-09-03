@@ -3,6 +3,7 @@ import {
   mapParticipantForBackend,
   buildParticipantsPatchPayload,
   buildProductsPatchPayload,
+  getMissingEmergencyContactFields,
 } from "../checkoutParticipants";
 
 /**
@@ -154,5 +155,82 @@ describe("buildProductsPatchPayload", () => {
       { productId: "p1", variationId: "v1", quantity: 1, participantEmail: "same@x.com", participantIndex: 0 },
       { productId: "p2", variationId: "v2", quantity: 1, participantEmail: "same@x.com", participantIndex: 1 },
     ]);
+  });
+});
+
+describe("getMissingEmergencyContactFields", () => {
+  const preenchido = {
+    emergencyContactName: "Maria Souza",
+    emergencyPhone: "(11) 99999-0000",
+  };
+
+  it("evento que NÃO exige não cobra nada, mesmo com tudo vazio", () => {
+    expect(getMissingEmergencyContactFields({}, false)).toEqual([]);
+  });
+
+  it("evento que exige cobra os dois campos quando vazios", () => {
+    expect(getMissingEmergencyContactFields({}, true)).toEqual([
+      "emergencyContactName",
+      "emergencyPhone",
+    ]);
+  });
+
+  it("cobra só o campo que falta", () => {
+    expect(
+      getMissingEmergencyContactFields(
+        { emergencyContactName: "Maria Souza" },
+        true,
+      ),
+    ).toEqual(["emergencyPhone"]);
+    expect(
+      getMissingEmergencyContactFields(
+        { emergencyPhone: "(11) 99999-0000" },
+        true,
+      ),
+    ).toEqual(["emergencyContactName"]);
+  });
+
+  it("espaço em branco não conta como preenchido", () => {
+    expect(
+      getMissingEmergencyContactFields(
+        { emergencyContactName: "   ", emergencyPhone: "  " },
+        true,
+      ),
+    ).toEqual(["emergencyContactName", "emergencyPhone"]);
+  });
+
+  it("preenchido não cobra nada", () => {
+    expect(getMissingEmergencyContactFields(preenchido, true)).toEqual([]);
+  });
+});
+
+describe("mapParticipantForBackend — flag de contato de emergência", () => {
+  it("deriva hasEmergencyContact do dado quando a pergunta não foi respondida", () => {
+    // Evento que EXIGE o contato: a pergunta "Sim/Não" some do checkout, então
+    // hasEmergencyContact nunca é marcada — mas o contato existe.
+    const mapped = mapParticipantForBackend(
+      {
+        name: "João Silva",
+        cpf: "111.444.777-35",
+        email: "j@x.com",
+        birthDate: "1990-01-01",
+        phone: "(11) 98888-7777",
+        emergencyContactName: "Maria Souza",
+        emergencyPhone: "(11) 99999-0000",
+    });
+    expect(mapped.hasEmergencyContact).toBe(true);
+    expect(mapped.emergencyContactName).toBe("Maria Souza");
+  });
+
+  it("sem contato preenchido, a flag não é enviada", () => {
+    const mapped = mapParticipantForBackend(
+      {
+        name: "João Silva",
+        cpf: "111.444.777-35",
+        email: "j@x.com",
+        birthDate: "1990-01-01",
+        phone: "(11) 98888-7777",
+    });
+    expect(mapped.hasEmergencyContact).toBeUndefined();
   });
 });

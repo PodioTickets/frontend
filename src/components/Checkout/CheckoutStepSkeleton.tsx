@@ -161,7 +161,7 @@ function OrderSummarySkeleton() {
 
 function MobileFooterSkeleton() {
   return (
-    <div className="fixed bottom-0 left-0 right-0 bg-gray-2 border-t border-gray-6 px-4 py-4 z-50 md:hidden">
+    <div className="fixed bottom-0 left-0 right-0 bg-gray-2 border-t border-gray-6 px-4 py-4 pb-[max(1rem,env(safe-area-inset-bottom))] z-50 md:hidden">
       <div className="flex items-end justify-between gap-3">
         <div className="flex flex-col gap-2 flex-1">
           <div className="h-4 w-32 rounded bg-gray-3 animate-pulse" />

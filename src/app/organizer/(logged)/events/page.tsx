@@ -272,6 +272,10 @@ export default function OrganizerEventsPage() {
    * a mesma rota do "Continuar criação", já que a partir daqui é um rascunho
    * comum. Só navega depois do PATCH: entrar no wizard com o evento ainda em
    * CHANGES_REQUESTED deixaria a etapa financeira travada.
+   *
+   * `restart=1` abre na PRIMEIRA etapa em vez de pular pra próxima pendente: o
+   * evento recusado já está completo, e o organizador precisa revisar desde as
+   * informações pra atender ao motivo da recusa.
    */
   const handleMakeAdjustments = async () => {
     const event = adjustmentsModalEvent;
@@ -280,7 +284,7 @@ export default function OrganizerEventsPage() {
     try {
       await organizerService.revertEventToDraft(event.id);
       setAdjustmentsModalEvent(null);
-      orgNav.push(`/organizer/events/new?resume=${event.id}`);
+      orgNav.push(`/organizer/events/new?resume=${event.id}&restart=1`);
     } catch (error: any) {
       toast.error(
         error?.response?.data?.message || "Erro ao retomar a edição do evento",

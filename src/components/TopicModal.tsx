@@ -13,6 +13,10 @@ import {
   registerStravaClipboardMatcher,
   registerTopicQuillStravaEmbed,
 } from "@/components/Topic/registerTopicQuillStravaEmbed";
+import {
+  registerTopicQuillPasteBackgroundStripper,
+  withPastedBackgroundPreserved,
+} from "@/components/Topic/registerTopicQuillPasteBackground";
 import { createTopicResizeWithSideHandlesClass } from "@/components/Topic/topicQuillResizeWithSideHandles";
 import { extractVideoEmbedUrl } from "@/lib/extractVideoEmbedUrl";
 import {
@@ -727,6 +731,10 @@ export function TopicModal() {
           // Garante que paste HTML do Strava vire delta `stravaPlaceholder`
           // (evita que o matcher genérico do Quill strippe os data-*).
           registerStravaClipboardMatcher(quill);
+          // Descarta o `background` do conteúdo COLADO (ChatGPT e Google Docs
+          // mandam fundo branco inline em todo span). As cargas de conteúdo
+          // salvo passam por `withPastedBackgroundPreserved` e ficam intactas.
+          registerTopicQuillPasteBackgroundStripper(quill);
 
           /**
            * Paste handler — detecta embeds (Instagram, Twitter, Facebook, iframes
@@ -1095,10 +1103,12 @@ export function TopicModal() {
             // dangerouslyPasteHTML aplica os matchers do Quill — incluindo
             // o do Strava — então `<div class="strava-embed-placeholder">`
             // vira blot `stravaPlaceholder` ao invés de ser strippado.
-            quill.clipboard.dangerouslyPasteHTML(
-              0,
-              sanitizeImageDimensions(renderable),
-              "silent",
+            withPastedBackgroundPreserved(() =>
+              quill.clipboard.dangerouslyPasteHTML(
+                0,
+                sanitizeImageDimensions(renderable),
+                "silent",
+              ),
             );
             setContent(quill.root.innerHTML);
             scriptSrcs.forEach(injectEmbedScript);
@@ -1150,10 +1160,12 @@ export function TopicModal() {
           // o do Strava) sejam aplicados — innerHTML direto strippa data-*.
           const q = quillInstanceRef.current;
           q.setContents([], "silent");
-          q.clipboard.dangerouslyPasteHTML(
-            0,
-            sanitizeImageDimensions(renderable),
-            "silent",
+          withPastedBackgroundPreserved(() =>
+            q.clipboard.dangerouslyPasteHTML(
+              0,
+              sanitizeImageDimensions(renderable),
+              "silent",
+            ),
           );
           setContent(q.root.innerHTML);
           scriptSrcs.forEach(injectEmbedScript);
@@ -1239,7 +1251,9 @@ export function TopicModal() {
         decodeStoredEmbedsToRenderable(raw);
       embedScriptSrcsRef.current = scriptSrcs;
       quill.setContents([], "silent");
-      quill.clipboard.dangerouslyPasteHTML(0, renderable, "silent");
+      withPastedBackgroundPreserved(() =>
+        quill.clipboard.dangerouslyPasteHTML(0, renderable, "silent"),
+      );
       setContent(quill.root.innerHTML);
       scriptSrcs.forEach(injectEmbedScript);
       setIsCodeMode(false);

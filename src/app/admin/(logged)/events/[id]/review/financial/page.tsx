@@ -161,8 +161,8 @@ export default function ReviewFinancialPage() {
             type="button"
             onClick={() => setRejectModalOpen(true)}
             disabled={saving || rejecting}
-            variant="outline"
-            className={cn("h-[52px] border-gray-6 px-11 font-manrope text-lg font-bold text-gray-12 hover:bg-gray-2 disabled:cursor-not-allowed disabled:opacity-50", "max-md:h-12 max-md:w-full max-md:px-4")}
+            variant="destructive"
+            className={cn("h-[52px] px-11 font-manrope text-lg font-bold disabled:cursor-not-allowed disabled:opacity-50", "max-md:h-12 max-md:w-full max-md:px-4")}
           >
             Rejeitar evento
           </Button>
