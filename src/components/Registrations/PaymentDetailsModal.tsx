@@ -1,7 +1,7 @@
 "use client";
 import { usePaymentDetailsModal, useViewRegistrationModal } from "@/stores/modalStore";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Copy, CheckCircle, FileText, ChevronLeft, ChevronRight, ChevronDown, XCircleIcon } from "lucide-react";
+import { X, Copy, CheckCircle, FileText, ChevronDown, XCircleIcon } from "lucide-react";
 import { useState, useEffect, useMemo } from "react";
 import Image from "next/image";
 import Link from "next/link";
@@ -881,49 +881,13 @@ export function PaymentDetailsModal() {
                       </div>
 
                       {/* Paginacao dentro do outer card */}
-                      {totalPages > 1 && (
-                        <div className="flex items-center justify-center px-4 py-5 w-full bg-gray-2 border-t border-gray-6">
-                          <div className="flex h-8 items-center gap-0">
-                            <button
-                              type="button"
-                              onClick={() => setTicketsPage((p) => Math.max(1, p - 1))}
-                              disabled={ticketsPage === 1}
-                              className="size-8 flex items-center justify-center disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
-                              aria-label="Página anterior"
-                            >
-                              <ChevronLeft className="size-5 text-gray-11" />
-                            </button>
-                            <div className="flex items-center gap-1">
-                              {Array.from({ length: Math.min(totalPages, 6) }, (_, i) => {
-                                const pageNum = i + 1;
-                                const isActive = pageNum === ticketsPage;
-                                return (
-                                  <button
-                                    key={pageNum}
-                                    type="button"
-                                    onClick={() => setTicketsPage(pageNum)}
-                                    className={`size-8 flex items-center justify-center rounded-lg font-family-dm-sans font-medium text-[14px] leading-[18.2px] transition-colors cursor-pointer ${isActive
-                                      ? "bg-primary-11 text-primary-1"
-                                      : "bg-gray-4 text-gray-12 hover:bg-gray-5"
-                                      }`}
-                                  >
-                                    {pageNum}
-                                  </button>
-                                );
-                              })}
-                            </div>
-                            <button
-                              type="button"
-                              onClick={() => setTicketsPage((p) => Math.min(totalPages, p + 1))}
-                              disabled={ticketsPage >= totalPages}
-                              className="size-8 flex items-center justify-center disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
-                              aria-label="Próxima página"
-                            >
-                              <ChevronRight className="size-5 text-gray-11" />
-                            </button>
-                          </div>
-                        </div>
-                      )}
+                      <Pagination
+                        currentPage={ticketsPage}
+                        totalPages={totalPages}
+                        onPageChange={setTicketsPage}
+                        variant="card-footer"
+                        className="bg-gray-2 py-5"
+                      />
                     </div>
                   </div>
 

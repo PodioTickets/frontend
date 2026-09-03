@@ -533,29 +533,28 @@ export function AdminUserDetailsDrawer({ userId, fallback, onClose }: AdminUserD
                 </table>
               </div>
 
-              {/* Rodapé: paginação + Exportar CSV */}
-              <div className="flex items-center justify-between gap-3 flex-wrap border-t border-gray-6 px-4 py-3">
-                {regTotalPages > 1 ? (
-                  <Pagination
-                    currentPage={regPage}
-                    totalPages={regTotalPages}
-                    onPageChange={setRegPage}
-                    totalItems={regTotal}
-                    pageSize={REG_PAGE_SIZE}
-                    className="w-auto justify-start"
-                  />
-                ) : (
-                  <span />
-                )}
-                <Button
-                  type="button"
-                  onClick={() => void handleExport()}
-                  disabled={registrations.length === 0}
-                  className="w-auto"
-                >
-                  Exportar CSV
-                </Button>
-              </div>
+              {/* Rodapé: só a paginação — ela se esconde sozinha com 1 página. */}
+              <Pagination
+                currentPage={regPage}
+                totalPages={regTotalPages}
+                onPageChange={setRegPage}
+                totalItems={regTotal}
+                pageSize={REG_PAGE_SIZE}
+                className="justify-start border-t border-gray-6 px-4 py-3"
+              />
+            </div>
+
+            {/* Exportar CSV fica FORA do card da lista, alinhado à direita —
+                mesmo padrão do "Salvar alterações" da seção de cadastro. */}
+            <div className="mt-4 flex justify-end">
+              <Button
+                type="button"
+                onClick={() => void handleExport()}
+                disabled={registrations.length === 0}
+                className="w-auto"
+              >
+                Exportar CSV
+              </Button>
             </div>
           </div>
         </div>

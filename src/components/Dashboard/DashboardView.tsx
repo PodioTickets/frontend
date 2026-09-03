@@ -17,7 +17,7 @@ import { ProductDetailsDrawer } from "@/components/Organizer/ProductDetailsDrawe
 import { TicketsWithLotsList } from "@/components/Financial/TicketsWithLotsList";
 import { PurchaseHeatmap } from "./PurchaseHeatmap";
 import { DashboardWeekTrend } from "./DashboardWeekTrend";
-import { LotsNearDepletionPaginationBar } from "./LotsNearDepletionPaginationBar";
+import { Pagination } from "@/components/Pagination";
 import {
   DashboardRankingCategoryLabel,
   DashboardRankingTicketNameLabel,
@@ -312,10 +312,11 @@ export function DashboardView({
                 </div>
               ))}
             </div>
-            <LotsNearDepletionPaginationBar
-              page={ticketRankingPage}
+            <Pagination
+              currentPage={ticketRankingPage}
               totalPages={ticketRankingTotalPages}
               onPageChange={setTicketRankingPage}
+              variant="compact"
             />
           </div>
         </div>
@@ -443,10 +444,11 @@ export function DashboardView({
                 );
               })}
             </div>
-            <LotsNearDepletionPaginationBar
-              page={lotsNearDepletionPage}
+            <Pagination
+              currentPage={lotsNearDepletionPage}
               totalPages={lotsNearDepletionTotalPages}
               onPageChange={setLotsNearDepletionPage}
+              variant="compact"
             />
           </div>
 
@@ -648,11 +650,12 @@ export function DashboardView({
               </div>
             ))}
           </div>
-          <LotsNearDepletionPaginationBar
-            page={ticketRankingPage}
+          <Pagination
+            currentPage={ticketRankingPage}
             totalPages={ticketRankingTotalPages}
             onPageChange={setTicketRankingPage}
-            compact
+            variant="compact"
+            className="text-xs"
           />
         </div>
 
@@ -702,11 +705,12 @@ export function DashboardView({
               );
             })}
           </div>
-          <LotsNearDepletionPaginationBar
-            page={lotsNearDepletionPage}
+          <Pagination
+            currentPage={lotsNearDepletionPage}
             totalPages={lotsNearDepletionTotalPages}
             onPageChange={setLotsNearDepletionPage}
-            compact
+            variant="compact"
+            className="text-xs"
           />
         </div>
 

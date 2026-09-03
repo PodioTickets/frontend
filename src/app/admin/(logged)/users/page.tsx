@@ -8,7 +8,6 @@ import { adminService } from "@/services";
 import { queryKeys } from "@/services/cache/QueryClient";
 import type { AdminUser } from "@/services/admin/AdminService";
 import { UserAvatar } from "@/components/UserAvatar";
-import { SearchableSelect } from "@/components/SearchableSelect";
 import { Pagination } from "@/components/Pagination";
 import { AdminUserDetailsDrawer } from "@/components/Admin/AdminUserDetailsDrawer";
 import { formatTimeBRT } from "@/utils/datetimeBR";
@@ -85,10 +84,12 @@ function StatusBadge({ active }: { active: boolean }) {
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
+// `value` (não `id`): mesmo shape do filtro da tela de organizadores, que usa
+// um <select> nativo em vez do SearchableSelect.
 const STATUS_OPTIONS = [
-  { id: "", label: "Todos os status" },
-  { id: "ativo", label: "Ativo" },
-  { id: "inativo", label: "Inativo" },
+  { value: "", label: "Todos os status" },
+  { value: "ativo", label: "Ativo" },
+  { value: "inativo", label: "Inativo" },
 ];
 
 const inputShell =
@@ -181,14 +182,23 @@ export default function AdminUsersPage() {
             </div>
             <div className="w-full sm:w-[min(100%,220px)] shrink-0">
               <label className="sr-only">Filtrar por status</label>
-              <SearchableSelect
-                options={STATUS_OPTIONS}
+              <select
                 value={statusFilter}
-                onChange={setStatusFilter}
-                placeholder="Status: Todos"
-                emptyText="Nenhum status"
-                searchable={false}
-              />
+                onChange={(e) => setStatusFilter(e.target.value)}
+                className={cn(
+                  inputShell,
+                  "cursor-pointer appearance-none bg-[length:1rem] bg-[right_0.75rem_center] bg-no-repeat pr-10",
+                )}
+                style={{
+                  backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23737373' stroke-width='2'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C%2Fsvg%3E")`,
+                }}
+              >
+                {STATUS_OPTIONS.map((o) => (
+                  <option key={o.value || "all"} value={o.value}>
+                    {o.label}
+                  </option>
+                ))}
+              </select>
             </div>
           </div>
         </div>
@@ -248,7 +258,7 @@ export default function AdminUsersPage() {
             })
           )}
 
-          {!loading && pagination.totalPages > 1 && (
+          {!loading && (
             <Pagination
               currentPage={pagination.page}
               totalPages={pagination.totalPages}
@@ -348,7 +358,7 @@ export default function AdminUsersPage() {
             </table>
           </div>
 
-          {!loading && pagination.totalPages > 1 && (
+          {!loading && (
             <Pagination
               currentPage={pagination.page}
               totalPages={pagination.totalPages}

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Search, ChevronLeft, ChevronRight, X } from "lucide-react";
+import { Search, X } from "lucide-react";
 import { cn } from "@/utils/cn";
 import type { DateRange } from "react-day-picker";
 import { LogDateRangeFilter, dateRangeToParams } from "@/components/LogDateRangeFilter";
@@ -10,40 +10,11 @@ import type { OrganizationAuditLogItem } from "@/services/organizer/OrganizerSer
 import toast from "react-hot-toast";
 import { formatDateBRT, formatTimeBRT } from "@/utils/datetimeBR";
 import { UserAvatar } from "@/components/UserAvatar";
+import { Pagination } from "@/components/Pagination";
 
 export type SystemLogEntry = OrganizationAuditLogItem;
 
 const ITEMS_PER_PAGE = 8;
-
-/** Páginas visíveis com reticências (ex.: 1 … 4 5 6 … 20) para não lotar a barra. */
-function getVisiblePaginationPages(
-  current: number,
-  total: number,
-  neighbors = 1
-): (number | "ellipsis")[] {
-  if (total <= 1) return [1];
-  if (total <= 9) {
-    return Array.from({ length: total }, (_, i) => i + 1);
-  }
-
-  const set = new Set<number>();
-  set.add(1);
-  set.add(total);
-  for (let p = current - neighbors; p <= current + neighbors; p++) {
-    if (p >= 1 && p <= total) set.add(p);
-  }
-
-  const sorted = [...set].sort((a, b) => a - b);
-  const out: (number | "ellipsis")[] = [];
-  for (let i = 0; i < sorted.length; i++) {
-    const n = sorted[i];
-    if (i > 0 && n - sorted[i - 1]! > 1) {
-      out.push("ellipsis");
-    }
-    out.push(n);
-  }
-  return out;
-}
 
 function formatLogDateTime(iso: string) {
   const d = new Date(iso);
@@ -200,74 +171,6 @@ function AuditLogEditDetailsBlock({
           {summaryLine}
         </p>
       ) : null}
-    </div>
-  );
-}
-
-function AuditLogPagination({
-  totalPages,
-  safePage,
-  onPage,
-  className,
-}: {
-  totalPages: number;
-  safePage: number;
-  onPage: (p: number) => void;
-  className?: string;
-}) {
-  const visible = getVisiblePaginationPages(safePage, totalPages);
-  const pageBtnClass =
-    "size-8 rounded-lg border text-sm font-medium font-family-dm-sans transition-colors shrink-0";
-  return (
-    <div
-      className={cn(
-        "flex items-center gap-2 flex-wrap max-w-full min-w-0",
-        className
-      )}
-    >
-      <button
-        type="button"
-        onClick={() => onPage(Math.max(1, safePage - 1))}
-        disabled={safePage <= 1}
-        className="size-8 shrink-0 rounded-lg border border-gray-6 bg-gray-4/80 hover:bg-gray-4 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center transition-colors"
-        aria-label="Página anterior"
-      >
-        <ChevronLeft className="size-4 text-gray-12" />
-      </button>
-      {visible.map((item, idx) =>
-        item === "ellipsis" ? (
-          <span
-            key={`ellipsis-${idx}`}
-            className="size-1 flex items-center justify-center text-gray-11 text-sm font-medium select-none pointer-events-none shrink-0"
-            aria-hidden
-          >
-            -
-          </span>
-        ) : (
-          <button
-            key={item}
-            type="button"
-            onClick={() => onPage(item)}
-            className={cn(
-              pageBtnClass,
-              safePage === item
-                ? "bg-primary-11 text-gray-1 border-primary-11"
-                : "bg-gray-4 text-gray-12 border-transparent hover:bg-gray-5"
-            )}
-          >
-            {item}
-          </button>
-        )
-      )}
-      <button
-        type="button"
-        onClick={() => onPage(Math.min(totalPages, safePage + 1))}
-        disabled={safePage >= totalPages}
-        className="size-8 shrink-0 rounded-lg border border-gray-6 bg-gray-4/80 hover:bg-gray-4 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center transition-colors"
-        aria-label="Próxima página"
-      >
-        <ChevronRight className="size-4 text-gray-12" />
-      </button>
     </div>
   );
 }
@@ -548,22 +451,23 @@ export function SystemAuditLogTab() {
           </table>
         </div>
 
-        {!loading && totalPages > 1 && (
-          <AuditLogPagination
+        {!loading && (
+          <Pagination
+            currentPage={safePage}
             totalPages={totalPages}
-            safePage={safePage}
-            onPage={setPage}
-            className="hidden md:flex justify-end px-4 py-5 border-t border-gray-6"
+            onPageChange={setPage}
+            variant="table-footer"
+            className="hidden md:flex"
           />
         )}
       </div>
 
-      {!loading && totalPages > 1 && (
-        <AuditLogPagination
+      {!loading && (
+        <Pagination
+          currentPage={safePage}
           totalPages={totalPages}
-          safePage={safePage}
-          onPage={setPage}
-          className="md:hidden justify-center px-0 py-4"
+          onPageChange={setPage}
+          className="md:hidden py-4"
         />
       )}
     </div>

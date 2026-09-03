@@ -1,8 +1,8 @@
 "use client";
 
 import { useState, useMemo, useEffect } from "react";
-import { ChevronLeft, ChevronRight } from "lucide-react";
 import { ArrowButton } from "../ArrowButton";
+import { Pagination } from "@/components/Pagination";
 
 const ITEMS_PER_PAGE = 5;
 
@@ -76,41 +76,14 @@ export function QuestionsListing({ items, onItemClick }: QuestionsListingProps) 
                 </div>
               </div>
             ))}
-            {showPagination && totalPages > 1 && (
-              <div className="flex items-center justify-center gap-2 py-3 px-4 border-t border-gray-6 shrink-0">
-                <button
-                  type="button"
-                  onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                  disabled={currentPage === 1}
-                  className="size-8 flex items-center justify-center rounded-lg border border-gray-6 hover:bg-gray-3 disabled:opacity-50 disabled:cursor-not-allowed"
-                  aria-label="Página anterior"
-                >
-                  <ChevronLeft className="size-4" />
-                </button>
-                {Array.from({ length: Math.min(totalPages, 8) }, (_, i) => {
-                  const pageNum = i + 1;
-                  const isActive = pageNum === currentPage;
-                  return (
-                    <button
-                      key={pageNum}
-                      type="button"
-                      onClick={() => setCurrentPage(pageNum)}
-                      className={`size-8 flex items-center justify-center rounded-lg text-sm font-family-dm-sans font-medium transition-colors ${isActive ? "bg-primary-11 border-primary-11 text-primary-2 border" : "border border-gray-6 bg-gray-1 text-gray-12 hover:bg-gray-3"}`}
-                    >
-                      {pageNum}
-                    </button>
-                  );
-                })}
-                <button
-                  type="button"
-                  onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-                  disabled={currentPage >= totalPages}
-                  className="size-8 flex items-center justify-center rounded-lg border border-gray-6 hover:bg-gray-3 disabled:opacity-50 disabled:cursor-not-allowed"
-                  aria-label="Próxima página"
-                >
-                  <ChevronRight className="size-4" />
-                </button>
-              </div>
+            {showPagination && (
+              <Pagination
+                currentPage={currentPage}
+                totalPages={totalPages}
+                onPageChange={setCurrentPage}
+                variant="card-footer"
+                className="shrink-0"
+              />
             )}
           </>
         )}

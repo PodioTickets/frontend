@@ -36,6 +36,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import toast from "react-hot-toast";
 import { ArrowButton } from "@/components/ArrowButton";
 import { cn } from "@/utils/cn";
+import { loadQuillDeps } from "@/lib/topicEditorLoader";
 
 type QuillInstance = InstanceType<typeof import("quill").default>;
 
@@ -46,6 +47,60 @@ let topicQuillStravaEmbedRegistered = false;
 // Cache da classe custom de Resize (8 handles) — depende do QuillResize
 // importado dinamicamente; criada uma vez por sessão.
 let topicResizeWithSideHandlesClass: unknown = null;
+
+/**
+ * Placeholder do editor enquanto o Quill carrega. Reproduz a ESTRUTURA real
+ * (faixa da toolbar + linhas de texto de larguras variadas) para não haver salto
+ * de layout quando o editor entra no lugar.
+ *
+ * `aria-hidden` + `role="status"` no wrapper: o leitor de tela anuncia
+ * "Carregando o editor" uma vez, em vez de ler as barras decorativas.
+ */
+function TopicEditorSkeleton() {
+  // Larguras irregulares imitam parágrafo real — barras de igual largura leem
+  // como tabela/lista e denunciam o placeholder.
+  const lines = ["100%", "92%", "97%", "78%", "88%", "45%"];
+  return (
+    <div
+      role="status"
+      aria-live="polite"
+      aria-label="Carregando o editor"
+      className="flex min-h-[inherit] flex-1 flex-col overflow-hidden rounded-lg border border-gray-6"
+    >
+      {/* Faixa da toolbar — mesma altura da .ql-toolbar */}
+      <div
+        aria-hidden
+        className="flex shrink-0 flex-wrap items-center gap-1.5 border-b border-gray-6 bg-gray-2 px-3 py-2.5"
+      >
+        {Array.from({ length: 14 }).map((_, i) => (
+          <div
+            key={i}
+            className={cn(
+              "h-6 animate-pulse rounded bg-gray-4",
+              // Agrupa em blocos de 3–4, como os `.ql-formats` reais
+              i === 3 || i === 7 || i === 11 ? "ml-2 w-6" : "w-6",
+            )}
+            style={{ animationDelay: `${(i % 5) * 90}ms` }}
+          />
+        ))}
+      </div>
+
+      {/* Corpo — linhas de texto */}
+      <div
+        aria-hidden
+        className="flex min-h-0 flex-1 flex-col gap-3 px-4 py-4 md:px-5"
+      >
+        {lines.map((w, i) => (
+          <div
+            key={i}
+            className="h-3.5 animate-pulse rounded bg-gray-4"
+            style={{ width: w, animationDelay: `${i * 110}ms` }}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
 
 /**
  * Fluxo tipo quill-image-resize: inline-block permite várias imagens na mesma linha
@@ -283,6 +338,11 @@ export function TopicModal() {
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
+  /**
+   * `false` enquanto o Quill não está construído E o conteúdo salvo não foi
+   * injetado. Enquanto isso o modal mostra o skeleton no lugar do editor.
+   */
+  const [editorReady, setEditorReady] = useState(false);
   const [isCodeMode, setIsCodeMode] = useState(false);
   /* "Sujo" de CONTEÚDO: só vira true em edições REAIS do usuário (digitação,
    * paste, resize de imagem, edição no modo código). Cargas programáticas do
@@ -315,25 +375,18 @@ export function TopicModal() {
 
   // Initialize Quill
   useEffect(() => {
+    // Fecha a janela entre o `await` do import e o rAF: sem isso, fechar o modal
+    // durante a carga ainda construía um editor em um container já descartado.
+    let cancelled = false;
+
     if (isOpen && quillRef.current && typeof window !== 'undefined') {
       // Dynamically import Quill only when modal is open
       const initQuill = async () => {
-        // Load CSS only once
-        if (!quillLoadedRef.current) {
-          try {
-            // @ts-ignore - CSS import doesn't have type declarations
-            await import("quill/dist/quill.snow.css");
-            await import("quill-resize-module/dist/resize.css");
-          } catch (e) {
-            // CSS import might fail in SSR, that's okay
-          }
-          quillLoadedRef.current = true;
-        }
-
-        // Import Quill dynamically
-        const QuillModule = await import("quill");
-        const Quill = QuillModule.default;
-        const QuillResize = (await import("quill-resize-module")).default;
+        // Carga memoizada por sessão (JS + CSS em paralelo). Ver `loadQuillDeps`.
+        const { Quill, QuillResize } = await loadQuillDeps();
+        quillLoadedRef.current = true;
+        // O modal pode ter fechado enquanto o import resolvia.
+        if (cancelled || !quillRef.current) return;
         if (!quillResizeModuleRegistered) {
           Quill.register("modules/resize", QuillResize);
           quillResizeModuleRegistered = true;
@@ -382,9 +435,13 @@ export function TopicModal() {
           quillRef.current.innerHTML = '';
         }
 
-        // Small delay to ensure DOM is ready
-        setTimeout(() => {
-          if (!quillRef.current) return;
+        /* Espera um frame antes de construir o editor.
+         * Antes eram 100ms fixos ("small delay to ensure DOM is ready") — atraso
+         * arbitrário somado a TODA abertura. O container do `quillRef` já está no
+         * DOM quando o efeito roda; um rAF basta para o layout estar estável e
+         * custa ~1 frame em vez de 100ms. */
+        requestAnimationFrame(() => {
+          if (cancelled || !quillRef.current) return;
 
           const quill = new Quill(quillRef.current!, {
             theme: 'snow',
@@ -1052,13 +1109,19 @@ export function TopicModal() {
             embedScriptSrcsRef.current = [];
             setContent("");
           }
-        }, 100);
+
+          // Editor construído e conteúdo já injetado → troca o skeleton pelo
+          // editor real. Fica aqui (e não logo após o `new Quill`) para o
+          // usuário não ver o editor vazio piscar antes do conteúdo salvo.
+          setEditorReady(true);
+        });
       };
 
       initQuill();
     }
 
     return () => {
+      cancelled = true;
       quillToolbarMousedownCleanupRef.current?.();
       quillToolbarMousedownCleanupRef.current = null;
       quillPasteCleanupRef.current?.();
@@ -1110,6 +1173,8 @@ export function TopicModal() {
       setContent("");
       setIsCodeMode(false);
       setHasContentChanges(false);
+      // Volta ao skeleton: a próxima abertura reconstrói o editor do zero.
+      setEditorReady(false);
       embedScriptSrcsRef.current = [];
       if (quillInstanceRef.current) {
         // Clear content
@@ -1384,11 +1449,35 @@ export function TopicModal() {
                     />
                   </div>
 
-                  <div className="flex min-h-[min(42vh,280px)] min-w-0 flex-1 flex-col md:min-h-[240px]">
+                  <div className="relative flex min-h-[min(42vh,280px)] min-w-0 flex-1 flex-col md:min-h-[240px]">
+                    {/* Wrapper SÓ para esconder enquanto carrega.
+                        O `invisible` NÃO pode ir no elemento do `quillRef`: o Quill
+                        adiciona `ql-container ql-snow` nele imperativamente, e um
+                        className dinâmico faz o React reescrever o atributo no
+                        próximo render, apagando as classes do Quill — o editor
+                        perde todo o CSS e o conteúdo vaza pra fora do modal.
+                        Por isso o className do `quillRef` é ESTÁTICO (React não
+                        toca nele depois do mount) e o toggle vive aqui.
+
+                        `invisible` (visibility) e não `hidden` (display:none):
+                        o Quill mede o container ao montar a toolbar, e
+                        display:none zeraria essas medidas. */}
                     <div
-                      ref={quillRef}
-                      className="[&_.ql-tooltip]:z-200 flex min-h-[inherit] flex-1 flex-col"
-                    />
+                      className={cn(
+                        "flex min-h-[inherit] flex-1 flex-col",
+                        !editorReady && "invisible",
+                      )}
+                    >
+                      <div
+                        ref={quillRef}
+                        className="[&_.ql-tooltip]:z-200 flex min-h-[inherit] flex-1 flex-col"
+                      />
+                    </div>
+                    {!editorReady && !isCodeMode && (
+                      <div className="absolute inset-0 flex flex-col">
+                        <TopicEditorSkeleton />
+                      </div>
+                    )}
                     {isCodeMode && (
                       <div className="flex min-h-[inherit] flex-1 flex-col overflow-hidden border border-gray-12 bg-gray-12">
                         <div className="flex shrink-0 items-center justify-between gap-2 border-b border-gray-11 bg-gray-12 px-4 py-2">

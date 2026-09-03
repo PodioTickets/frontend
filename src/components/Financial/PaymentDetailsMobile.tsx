@@ -426,16 +426,14 @@ export function PaymentDetailsMobile({
               </div>
 
               {/* Paginacao — DENTRO do outer card, separada da lista */}
-              {totalPages > 1 && (
-                <Pagination
-                  currentPage={currentPage}
-                  totalPages={totalPages}
-                  onPageChange={onPageChange}
-                  totalItems={totalParticipants ?? participants.length}
-                  pageSize={pageSize}
-                  className="bg-gray-2 border-t border-gray-6 px-4 py-5"
-                />
-              )}
+              <Pagination
+                currentPage={currentPage}
+                totalPages={totalPages}
+                onPageChange={onPageChange}
+                totalItems={totalParticipants ?? participants.length}
+                pageSize={pageSize}
+                className="bg-gray-2 border-t border-gray-6 px-4 py-5"
+              />
             </div>
           </div>
         )}

@@ -47,8 +47,7 @@ export function DeleteQuestionModal() {
                   Deletar pergunta permanentemente?
                 </p>
                 <p className="font-normal text-base leading-[1.3] text-gray-11 font-family-dm-sans text-center">
-                  Esta ação remove a pergunta do questionário do evento. Depois de deletar, não
-                  será possível recuperar.
+                  A pergunta será removida para novas inscrições. As respostas já registradas serão mantidas.
                 </p>
               </div>
 

@@ -350,16 +350,14 @@ export function InstallmentsDrawer({
               </div>
 
               {/* Mobile pagination */}
-              {totalPages > 1 && (
-                <Pagination
-                  currentPage={currentPage}
-                  totalPages={totalPages}
-                  onPageChange={setCurrentPage}
-                  totalItems={filteredInstallments.length}
-                  pageSize={itemsPerPage}
-                  className="pt-2"
-                />
-              )}
+              <Pagination
+                currentPage={currentPage}
+                totalPages={totalPages}
+                onPageChange={setCurrentPage}
+                totalItems={filteredInstallments.length}
+                pageSize={itemsPerPage}
+                className="pt-2"
+              />
             </div>
           </div>
 
@@ -550,16 +548,14 @@ export function InstallmentsDrawer({
                 </div>
 
                 {/* Pagination */}
-                {totalPages > 1 && (
-                  <Pagination
-                    currentPage={currentPage}
-                    totalPages={totalPages}
-                    onPageChange={setCurrentPage}
-                    totalItems={filteredInstallments.length}
-                    pageSize={itemsPerPage}
-                    className="border-t border-gray-6 px-5 py-4"
-                  />
-                )}
+                <Pagination
+                  currentPage={currentPage}
+                  totalPages={totalPages}
+                  onPageChange={setCurrentPage}
+                  totalItems={filteredInstallments.length}
+                  pageSize={itemsPerPage}
+                  className="border-t border-gray-6 px-5 py-4"
+                />
               </div>
             </div>
           </div>

@@ -40,8 +40,9 @@ import {
 } from "@/components/ui/popover";
 import { SuspendEventModal } from "@/components/Event/SuspendEventModal";
 import { ResumeEventModal } from "@/components/Event/ResumeEventModal";
+import { ChangesRequestedModal } from "@/components/Event/ChangesRequestedModal";
 import { cn } from "@/utils/cn";
-import { ArrowButton } from "@/components/ArrowButton";
+import { Pagination } from "@/components/Pagination";
 import { formatEventListCurrency } from "@/lib/eventListFormatters";
 
 /** Alinhado à API: status SUSPENDED (POST …/suspend e …/resume). */
@@ -55,6 +56,7 @@ const STATUS_FILTER_OPTIONS: Array<{ value: string; label: string }> = [
   { value: "DRAFT", label: "Rascunhos" },
   { value: "PUBLISHED", label: "Publicados" },
   { value: "REVISION", label: "Em revisão" },
+  { value: "CHANGES_REQUESTED", label: "Ajustes solicitados" },
   { value: "SUSPENDED", label: "Suspensos" },
   { value: "COMPLETED", label: "Concluídos" },
   { value: "CANCELLED", label: "Cancelados" },
@@ -95,6 +97,9 @@ export default function OrganizerEventsPage() {
   const [suspendingId, setSuspendingId] = useState<string | null>(null);
   const [suspendModalEvent, setSuspendModalEvent] = useState<any>(null);
   const [resumeModalEvent, setResumeModalEvent] = useState<any>(null);
+  /** Evento em CHANGES_REQUESTED cujo motivo de recusa está aberto no modal. */
+  const [adjustmentsModalEvent, setAdjustmentsModalEvent] = useState<any>(null);
+  const [revertingToDraft, setRevertingToDraft] = useState(false);
   // Status que realmente existem nos eventos do organizador. Inicializa com
   // todos pra UI não piscar enquanto a checagem roda; o useEffect reconcilia.
   const [availableStatuses, setAvailableStatuses] = useState<Set<string>>(
@@ -245,6 +250,10 @@ export default function OrganizerEventsPage() {
         label: "Em revisão",
         className: "bg-yellow-11 text-yellow-1",
       },
+      CHANGES_REQUESTED: {
+        label: "Ajustes solicitados",
+        className: "bg-gray-5 text-gray-12",
+      },
       CANCELLED: { label: "Cancelado", className: "bg-red-10/20 text-red-11" },
       COMPLETED: {
         label: "Concluído",
@@ -256,6 +265,29 @@ export default function OrganizerEventsPage() {
       },
     };
     return statusMap[event.status] || statusMap.DRAFT;
+  };
+
+  /**
+   * "Fazer ajustes": devolve o evento para DRAFT e leva ao wizard de criação —
+   * a mesma rota do "Continuar criação", já que a partir daqui é um rascunho
+   * comum. Só navega depois do PATCH: entrar no wizard com o evento ainda em
+   * CHANGES_REQUESTED deixaria a etapa financeira travada.
+   */
+  const handleMakeAdjustments = async () => {
+    const event = adjustmentsModalEvent;
+    if (!event || revertingToDraft) return;
+    setRevertingToDraft(true);
+    try {
+      await organizerService.revertEventToDraft(event.id);
+      setAdjustmentsModalEvent(null);
+      orgNav.push(`/organizer/events/new?resume=${event.id}`);
+    } catch (error: any) {
+      toast.error(
+        error?.response?.data?.message || "Erro ao retomar a edição do evento",
+      );
+    } finally {
+      setRevertingToDraft(false);
+    }
   };
 
   const openSuspendModal = (event: any) => {
@@ -474,6 +506,7 @@ export default function OrganizerEventsPage() {
                       const registrations = getEventRegistrations(event);
                       const isCreationDraft = event.status === "DRAFT";
                       const isRevision = event.status === "REVISION"
+                      const needsAdjustments = event.status === "CHANGES_REQUESTED";
 
                       return (
                         <tr
@@ -524,6 +557,17 @@ export default function OrganizerEventsPage() {
                                 >
                                   <Button variant="outline" size="default" className="border-gray-6 text-gray-12 font-semibold font-family-dm-sans h-10 w-full"> Continuar criação</Button>
                                 </Link>
+                              ) : null
+                            ) : needsAdjustments ? (
+                              canEditEvent ? (
+                                <Button
+                                  type="button"
+                                  size="default"
+                                  onClick={() => setAdjustmentsModalEvent(event)}
+                                  className="h-10 w-full bg-yellow-11 text-yellow-2 hover:bg-yellow-11/90 font-manrope hover:text-yellow-1 font-bold"
+                                >
+                                  Ajustar evento
+                                </Button>
                               ) : null
                             ) : isRevision ? null : (
                               <div className="flex items-center gap-1 justify-center">
@@ -676,6 +720,7 @@ export default function OrganizerEventsPage() {
                 const registrations = getEventRegistrations(event);
                 const isCreationDraft = event.status === "DRAFT";
                 const isRevision = event.status === "REVISION";
+                const needsAdjustments = event.status === "CHANGES_REQUESTED";
                 const hasSecondaryMenu =
                   canViewDashboard ||
                   canViewFinancial ||
@@ -756,6 +801,16 @@ export default function OrganizerEventsPage() {
                             Continuar criação
                           </Button>
                         </Link>
+                      ) : null
+                    ) : needsAdjustments ? (
+                      canEditEvent ? (
+                        <Button
+                          type="button"
+                          onClick={() => setAdjustmentsModalEvent(event)}
+                          className="w-full h-11 bg-yellow-11 text-yellow-2 hover:bg-yellow-11/90 hover:text-yellow-3 font-manrope"
+                        >
+                          Ajustar evento
+                        </Button>
                       ) : null
                     ) : isRevision ? null : (
                       <div className="flex gap-2 w-full">
@@ -968,52 +1023,12 @@ export default function OrganizerEventsPage() {
           </>
         )}
 
-        <div className="mt-8 flex flex-wrap items-center justify-center gap-2">
-          <button
-            type="button"
-            onClick={() =>
-              setPagination((prev) => ({
-                ...prev,
-                page: Math.max(1, prev.page - 1),
-              }))
-            }
-            disabled={pagination.page <= 1}
-            className="size-8 rotate-180 rounded-md border border-gray-6 bg-gray-1 hover:bg-gray-2 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center transition-colors"
-          >
-            <ArrowButton isOpen={false} />
-          </button>
-          {Array.from(
-            { length: eventsPaginationTotalPages },
-            (_, i) => i + 1
-          ).map((page) => (
-            <button
-              type="button"
-              key={page}
-              onClick={() =>
-                setPagination((prev) => ({ ...prev, page }))
-              }
-              className={`size-8 rounded-md border transition-colors font-family-dm-sans text-sm ${pagination.page === page
-                ? "bg-primary-11 text-white border-primary-11"
-                : "bg-gray-1 border-gray-6 text-gray-12 hover:bg-gray-2"
-                }`}
-            >
-              {page}
-            </button>
-          ))}
-          <button
-            type="button"
-            onClick={() =>
-              setPagination((prev) => ({
-                ...prev,
-                page: Math.min(eventsPaginationTotalPages, prev.page + 1),
-              }))
-            }
-            disabled={pagination.page >= eventsPaginationTotalPages}
-            className="size-8 rounded-md border border-gray-6 bg-gray-1 hover:bg-gray-2 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center transition-colors"
-          >
-            <ArrowButton isOpen={false} />
-          </button>
-        </div>
+        <Pagination
+          currentPage={pagination.page}
+          totalPages={eventsPaginationTotalPages}
+          onPageChange={(page) => setPagination((prev) => ({ ...prev, page }))}
+          className="mt-8"
+        />
 
         <SuspendEventModal
           open={!!suspendModalEvent}
@@ -1028,6 +1043,13 @@ export default function OrganizerEventsPage() {
           event={resumeModalEvent}
           onConfirm={handleResumeConfirm}
           loading={suspendingId === resumeModalEvent?.id}
+        />
+        <ChangesRequestedModal
+          open={!!adjustmentsModalEvent}
+          onClose={() => setAdjustmentsModalEvent(null)}
+          reason={adjustmentsModalEvent?.rejectionReason}
+          onMakeAdjustments={handleMakeAdjustments}
+          loading={revertingToDraft}
         />
 
       </div>

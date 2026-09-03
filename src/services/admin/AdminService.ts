@@ -1182,6 +1182,18 @@ export class AdminService {
     await this.apiClient.post(`/api/v1/admin/events/${eventId}/publish`);
   }
 
+  /**
+   * Recusa um evento em revisão: status vai para `CHANGES_REQUESTED` e o motivo
+   * é entregue ao organizador (tela + e-mail). O backend exige 10–1000
+   * caracteres — a validação do modal deve espelhar isso para o usuário não
+   * descobrir o limite só no 400.
+   */
+  async rejectEvent(eventId: string, reason: string): Promise<void> {
+    await this.apiClient.post(`/api/v1/admin/events/${eventId}/reject`, {
+      reason: reason.trim(),
+    });
+  }
+
   // ──────────────── Eventos em destaque ────────────────
   // Toda mutação (add/remove/reorder) retorna a LISTA autoritativa já reordenada
   // pelo backend, então o front só substitui o estado — sem reconciliar índices.

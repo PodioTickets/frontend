@@ -13,6 +13,7 @@ import { Plus } from "lucide-react";
 import toast from "react-hot-toast";
 import { Loading } from "@/components/Loading";
 import { SortableTopicsList } from "@/components/Topic/SortableTopicsList";
+import { scheduleTopicEditorPreload } from "@/lib/topicEditorLoader";
 import {
   buildTopicSectionsFromEvent,
   clearTopicsPreviewDraft,
@@ -31,6 +32,10 @@ export default function ReviewTopicsPage() {
   const eventId = params.id as string;
   const { authChecked } = useWizardAuth();
   const { openTopicModal, setOnModalSave, setOnModalDelete } = useTopicModal();
+
+  // Aquece o editor de tópicos (Quill) enquanto o usuário lê a lista: sem isso
+  // o download+parse só começa no clique e o modal fica no skeleton por mais tempo.
+  useEffect(() => scheduleTopicEditorPreload(), []);
   const [sections, setSections] = useState<TopicSectionRow[]>([]);
   const defaultTopicApiIdRef = useRef<string | null>(null);
   const editingTopicRef = useRef<{ topicId?: string; isEditing: boolean } | null>(null);

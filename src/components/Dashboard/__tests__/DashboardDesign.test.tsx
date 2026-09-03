@@ -1,16 +1,19 @@
 import { describe, it, expect, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 
-import { LotsNearDepletionPaginationBar } from "../LotsNearDepletionPaginationBar";
+import { Pagination } from "@/components/Pagination";
 import {
   DashboardRankingCategoryLabel,
   DashboardRankingTicketNameLabel,
 } from "../DashboardRankingLabels";
 
-describe("LotsNearDepletionPaginationBar", () => {
+// A barra própria do dashboard (`LotsNearDepletionPaginationBar`) foi removida:
+// as listas paginadas usam o `Pagination` compartilhado no `variant="compact"`,
+// que mantém o `‹ N / M ›` e já esconde a si mesmo com uma única página.
+describe("Pagination compact (rodapé das listas do dashboard)", () => {
   it("não renderiza nada com 1 página", () => {
     const { container } = render(
-      <LotsNearDepletionPaginationBar page={1} totalPages={1} onPageChange={() => {}} />,
+      <Pagination currentPage={1} totalPages={1} onPageChange={() => {}} variant="compact" />,
     );
     expect(container).toBeEmptyDOMElement();
   });
@@ -18,7 +21,7 @@ describe("LotsNearDepletionPaginationBar", () => {
   it("mostra 'page / totalPages' e navega", () => {
     const onPageChange = vi.fn();
     render(
-      <LotsNearDepletionPaginationBar page={2} totalPages={5} onPageChange={onPageChange} />,
+      <Pagination currentPage={2} totalPages={5} onPageChange={onPageChange} variant="compact" />,
     );
     expect(screen.getByText("2 / 5")).toBeInTheDocument();
     screen.getByLabelText("Próxima página").click();
@@ -29,11 +32,11 @@ describe("LotsNearDepletionPaginationBar", () => {
 
   it("desabilita anterior na 1ª e próxima na última", () => {
     const { rerender } = render(
-      <LotsNearDepletionPaginationBar page={1} totalPages={3} onPageChange={() => {}} />,
+      <Pagination currentPage={1} totalPages={3} onPageChange={() => {}} variant="compact" />,
     );
     expect(screen.getByLabelText("Página anterior")).toBeDisabled();
     rerender(
-      <LotsNearDepletionPaginationBar page={3} totalPages={3} onPageChange={() => {}} />,
+      <Pagination currentPage={3} totalPages={3} onPageChange={() => {}} variant="compact" />,
     );
     expect(screen.getByLabelText("Próxima página")).toBeDisabled();
   });

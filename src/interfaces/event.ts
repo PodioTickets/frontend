@@ -59,6 +59,15 @@ export interface Event {
   isSuspended?: boolean;
   status: string;
   /**
+   * Motivo da última recusa do admin, preenchido junto com o status
+   * `CHANGES_REQUESTED`. Só vem nos contratos do organizador (`/organizers/me/events`)
+   * — payload público não expõe. Sobrevive à volta para `DRAFT`, então a
+   * presença dele NÃO indica, sozinha, que o evento está aguardando ajustes:
+   * cheque o status.
+   */
+  rejectionReason?: string | null;
+  rejectedAt?: string | null;
+  /**
    * Ordem no carrossel de "Eventos em destaque" (admin). `null`/ausente = não
    * destacado. Valor menor aparece primeiro; também é a chave primária da ordem
    * PADRÃO da busca (destaque no topo). Só exposto nos payloads públicos/admin

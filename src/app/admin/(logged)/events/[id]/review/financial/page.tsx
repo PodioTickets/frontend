@@ -7,6 +7,7 @@ import { useWizardAuth } from "@/hooks/useWizardAuth";
 import { useUnsavedLeaveGuard } from "@/hooks/useUnsavedLeaveGuard";
 import { Button } from "@/components/Button";
 import { UnsavedChangesModal } from "@/components/UnsavedChangesModal";
+import { RejectEventModal } from "@/components/Event/RejectEventModal";
 import { WizardStepLayout } from "@/components/Organizer/WizardStepLayout";
 import { FinancialSection } from "@/components/Organizer/FinancialSection";
 import toast from "react-hot-toast";
@@ -37,6 +38,8 @@ export default function ReviewFinancialPage() {
   const { authChecked } = useWizardAuth();
   const [dataLoaded, setDataLoaded] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [rejectModalOpen, setRejectModalOpen] = useState(false);
+  const [rejecting, setRejecting] = useState(false);
   const [organizerPercent, setOrganizerPercent] = useState(DEFAULT_BASELINE.organizerPercent);
   const [maxInstallments, setMaxInstallments] = useState<1 | 2 | 3>(DEFAULT_BASELINE.maxInstallments);
   const [totalFee, setTotalFee] = useState<number>(DEFAULT_BASELINE.totalFee);
@@ -87,6 +90,26 @@ export default function ReviewFinancialPage() {
     }
   };
 
+  /**
+   * Recusa: NÃO salva a configuração financeira antes (diferente do publicar).
+   * O evento volta ao organizador para edição, então gravar a taxa aqui só
+   * criaria divergência com o que ele reenviaria depois.
+   */
+  const handleReject = async (reason: string) => {
+    if (!eventId) return;
+    setRejecting(true);
+    try {
+      await adminService.rejectEvent(eventId, reason);
+      toast.success("Evento devolvido ao organizador com o motivo.");
+      setRejectModalOpen(false);
+      router.push("/admin/auditoria-evento");
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || "Erro ao rejeitar evento");
+    } finally {
+      setRejecting(false);
+    }
+  };
+
   const baseline = baselineRef.current;
   const hasChanges =
     baseline !== null &&
@@ -131,17 +154,30 @@ export default function ReviewFinancialPage() {
       showDescriptionOnMobile
       isLoading={!authChecked || !dataLoaded}
       actions={
-        <Button
-          type="button"
-          onClick={handleSave}
-          disabled={saving}
-          variant="default"
-          className={cn("h-[52px] px-11 font-manrope text-lg font-bold text-gray-12 disabled:cursor-not-allowed disabled:opacity-50", "max-md:h-12 max-md:w-full max-md:px-4")}
-        >
-          {/* Última etapa da revisão: este save de fato publica o evento
-              (saveFinancialSettings + publishEvent), então o rótulo reflete isso. */}
-          {saving ? "Publicando..." : "Publicar evento"}
-        </Button>
+        <div className="flex items-center gap-3 max-md:w-full max-md:flex-col-reverse">
+          {/* Recusa fica ao lado do publicar: é a etapa em que o admin decide o
+              desfecho da auditoria. Leva ao modal com o motivo obrigatório. */}
+          <Button
+            type="button"
+            onClick={() => setRejectModalOpen(true)}
+            disabled={saving || rejecting}
+            variant="outline"
+            className={cn("h-[52px] border-gray-6 px-11 font-manrope text-lg font-bold text-gray-12 hover:bg-gray-2 disabled:cursor-not-allowed disabled:opacity-50", "max-md:h-12 max-md:w-full max-md:px-4")}
+          >
+            Rejeitar evento
+          </Button>
+          <Button
+            type="button"
+            onClick={handleSave}
+            disabled={saving || rejecting}
+            variant="default"
+            className={cn("h-[52px] px-11 font-manrope text-lg font-bold text-gray-12 disabled:cursor-not-allowed disabled:opacity-50", "max-md:h-12 max-md:w-full max-md:px-4")}
+          >
+            {/* Última etapa da revisão: este save de fato publica o evento
+                (saveFinancialSettings + publishEvent), então o rótulo reflete isso. */}
+            {saving ? "Publicando..." : "Publicar evento"}
+          </Button>
+        </div>
       }
     >
       <FinancialSection
@@ -162,6 +198,13 @@ export default function ReviewFinancialPage() {
       title="Alterações não salvas"
       description="Você alterou a configuração financeira. Se sair agora, as alterações serão perdidas."
       onLeaveWithoutSaving={confirmLeaveWithoutSaving}
+    />
+
+    <RejectEventModal
+      open={rejectModalOpen}
+      onClose={() => setRejectModalOpen(false)}
+      onConfirm={handleReject}
+      loading={rejecting}
     />
     </>
   );

@@ -5,7 +5,6 @@ import {
   Pencil,
   Plus,
   ChevronLeft,
-  ChevronRight,
   MoreVertical,
   X,
   Copy,
@@ -31,6 +30,7 @@ import {
   DrawerTitle,
 } from "@/components/ui/drawer";
 import { hasDisplayableDistance } from "@/utils/checkoutModalityDisplay";
+import { Pagination } from "@/components/Pagination";
 
 export type TicketMoveCategoryOption = {
   id: string;
@@ -549,39 +549,12 @@ export function TicketTable({
           />
         ))}
 
-        {totalPages > 1 ? (
-          <div className="hidden items-center justify-center gap-2 border-t border-gray-6 px-5 py-4 md:flex">
-            <button
-              type="button"
-              onClick={() => onPageChange(currentPage - 1)}
-              disabled={currentPage === 1}
-              className="flex size-8 items-center justify-center rounded-lg border border-gray-6 hover:bg-gray-3 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              <ChevronLeft className="size-4" />
-            </button>
-            {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
-              <button
-                key={p}
-                type="button"
-                onClick={() => onPageChange(p)}
-                className={`flex size-8 items-center justify-center rounded-lg border ${currentPage === p
-                  ? "border-[#59E373] bg-[#59E373] text-gray-12"
-                  : "border-gray-6 hover:bg-gray-3"
-                  }`}
-              >
-                {p}
-              </button>
-            ))}
-            <button
-              type="button"
-              onClick={() => onPageChange(currentPage + 1)}
-              disabled={currentPage >= totalPages}
-              className="flex size-8 items-center justify-center rounded-lg border border-gray-6 hover:bg-gray-3 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              <ChevronRight className="size-4" />
-            </button>
-          </div>
-        ) : null}
+        <Pagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          onPageChange={onPageChange}
+          className="hidden border-t border-gray-6 px-5 py-4 md:flex"
+        />
       </div>
 
       <Drawer
