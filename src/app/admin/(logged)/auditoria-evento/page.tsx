@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Search, ChevronLeft, ChevronRight } from "lucide-react";
+import { Search } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { cn } from "@/utils/cn";
 import { getApiClient } from "@/services/base/ApiClient";
@@ -9,6 +9,7 @@ import { queryKeys } from "@/services/cache/QueryClient";
 import { ImageWithInitialFallback } from "@/components/ImageWithInitialFallback";
 import { formatTimeBRT } from "@/utils/datetimeBR";
 import Link from "next/link";
+import { Pagination } from "@/components/Pagination";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -88,69 +89,6 @@ function normalizeEvent(raw: Record<string, unknown>): AuditEvent | null {
       logoUrl: typeof org.logoUrl === "string" ? org.logoUrl : null,
     },
   };
-}
-
-// ─── Sub-components ───────────────────────────────────────────────────────────
-
-function PaginationBar({
-  totalPages,
-  page,
-  onPageChange,
-  variant,
-}: {
-  totalPages: number;
-  page: number;
-  onPageChange: (p: number) => void;
-  variant: "desktop" | "mobile";
-}) {
-  if (totalPages <= 1) return null;
-  const safePage = Math.min(page, totalPages);
-  const isMobile = variant === "mobile";
-
-  const navBtn = isMobile
-    ? "size-8 shrink-0 rounded-lg border border-gray-6 bg-gray-4/80 hover:bg-gray-4 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center transition-colors"
-    : "size-8 rounded-full border border-gray-6 bg-gray-1 hover:bg-gray-2 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center transition-colors";
-
-  const pageBtn = (active: boolean) =>
-    cn(
-      "size-8 shrink-0 border text-sm font-medium font-family-dm-sans transition-colors",
-      isMobile ? "rounded-lg" : "rounded-full",
-      active
-        ? "bg-primary-11 text-gray-1 border-primary-11"
-        : isMobile
-          ? "bg-gray-4 text-gray-12 border-transparent hover:bg-gray-5"
-          : "bg-gray-1 border-gray-6 text-gray-12 hover:bg-gray-2",
-    );
-
-  const pages = totalPages <= 7
-    ? Array.from({ length: totalPages }, (_, i) => i + 1)
-    : [
-        1,
-        ...(safePage > 3 ? ["…"] : []),
-        ...Array.from({ length: 3 }, (_, i) => safePage - 1 + i).filter((p) => p > 1 && p < totalPages),
-        ...(safePage < totalPages - 2 ? ["…"] : []),
-        totalPages,
-      ];
-
-  return (
-    <div className={cn("flex items-center gap-1.5", isMobile ? "justify-center w-full py-4 flex-wrap" : "justify-end px-4 py-5 border-t border-gray-6")}>
-      <button type="button" onClick={() => onPageChange(Math.max(1, safePage - 1))} disabled={safePage <= 1} className={navBtn} aria-label="Página anterior">
-        <ChevronLeft className={cn("size-4", isMobile ? "text-gray-12" : "text-gray-11")} />
-      </button>
-      {pages.map((p, i) =>
-        p === "…" ? (
-          <span key={`ellipsis-${i}`} className="size-8 flex items-center justify-center text-sm text-gray-11">…</span>
-        ) : (
-          <button key={p} type="button" onClick={() => onPageChange(p as number)} className={pageBtn(safePage === p)}>
-            {p}
-          </button>
-        )
-      )}
-      <button type="button" onClick={() => onPageChange(Math.min(totalPages, safePage + 1))} disabled={safePage >= totalPages} className={navBtn} aria-label="Próxima página">
-        <ChevronRight className={cn("size-4", isMobile ? "text-gray-12" : "text-gray-11")} />
-      </button>
-    </div>
-  );
 }
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -311,12 +249,7 @@ export default function AuditoriaEventoPage() {
           )}
 
           {!loading && (
-            <PaginationBar
-              totalPages={pagination.totalPages}
-              page={pagination.page}
-              onPageChange={setPage}
-              variant="mobile"
-            />
+            <Pagination currentPage={pagination.page} totalPages={pagination.totalPages} onPageChange={setPage} />
           )}
         </div>
 
@@ -421,12 +354,7 @@ export default function AuditoriaEventoPage() {
             })
           )}
 
-          <PaginationBar
-            totalPages={pagination.totalPages}
-            page={pagination.page}
-            onPageChange={setPage}
-            variant="desktop"
-          />
+          <Pagination currentPage={pagination.page} totalPages={pagination.totalPages} onPageChange={setPage} variant="table-footer" />
         </div>
 
       </div>

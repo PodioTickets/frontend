@@ -443,17 +443,15 @@ export function ViewVoucherModal() {
                           horizontal contido. O inline anterior renderizava TODAS as
                           páginas (um grupo de 500 vouchers = 25 botões), o que por si
                           só já estourava a largura no mobile. */}
-                      {voucherData.pagination.totalPages > 1 && (
-                        <Pagination
-                          currentPage={currentPage}
-                          totalPages={voucherData.pagination.totalPages}
-                          onPageChange={setCurrentPage}
-                          totalItems={voucherData.pagination.total}
-                          pageSize={voucherData.pagination.limit}
-                          disabled={loading}
-                          className="md:justify-end"
-                        />
-                      )}
+                      <Pagination
+                        currentPage={currentPage}
+                        totalPages={voucherData.pagination.totalPages}
+                        onPageChange={setCurrentPage}
+                        totalItems={voucherData.pagination.total}
+                        pageSize={voucherData.pagination.limit}
+                        disabled={loading}
+                        className="md:justify-end"
+                      />
                     </div>
 
                     {/* Card do ingresso vinculado — posicionado ABAIXO de tudo

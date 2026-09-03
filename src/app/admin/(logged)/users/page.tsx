@@ -248,7 +248,7 @@ export default function AdminUsersPage() {
             })
           )}
 
-          {!loading && pagination.totalPages > 1 && (
+          {!loading && (
             <Pagination
               currentPage={pagination.page}
               totalPages={pagination.totalPages}
@@ -348,7 +348,7 @@ export default function AdminUsersPage() {
             </table>
           </div>
 
-          {!loading && pagination.totalPages > 1 && (
+          {!loading && (
             <Pagination
               currentPage={pagination.page}
               totalPages={pagination.totalPages}

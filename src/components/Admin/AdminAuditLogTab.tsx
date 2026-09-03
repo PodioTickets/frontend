@@ -3,8 +3,6 @@
 import { useEffect, useState } from "react";
 import {
   Search,
-  ChevronLeft,
-  ChevronRight,
   X,
   Building2,
   UserRound,
@@ -571,37 +569,13 @@ export function AdminAuditLogTab() {
                     })
                   )}
                 </div>
-                {orgListTotalPages > 1 ? (
-                  <div className="flex items-center justify-between gap-2 p-2 border-t border-gray-6">
-                    <button
-                      type="button"
-                      onClick={() =>
-                        setOrgListPage((p) => Math.max(1, p - 1))
-                      }
-                      disabled={orgListSafePage <= 1}
-                      className="size-8 shrink-0 rounded-lg border border-gray-6 bg-gray-4/80 hover:bg-gray-4 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
-                      aria-label="Página anterior de organizações"
-                    >
-                      <ChevronLeft className="size-4 text-gray-12" />
-                    </button>
-                    <span className="text-xs text-gray-11 font-family-dm-sans tabular-nums">
-                      {orgListSafePage} / {orgListTotalPages}
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() =>
-                        setOrgListPage((p) =>
-                          Math.min(orgListTotalPages, p + 1)
-                        )
-                      }
-                      disabled={orgListSafePage >= orgListTotalPages}
-                      className="size-8 shrink-0 rounded-lg border border-gray-6 bg-gray-4/80 hover:bg-gray-4 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
-                      aria-label="Próxima página de organizações"
-                    >
-                      <ChevronRight className="size-4 text-gray-12" />
-                    </button>
-                  </div>
-                ) : null}
+                <Pagination
+                  currentPage={orgListSafePage}
+                  totalPages={orgListTotalPages}
+                  onPageChange={setOrgListPage}
+                  variant="compact"
+                  className="justify-between gap-2 p-2 text-xs [&_button]:bg-gray-4/80 [&_button:hover]:bg-gray-4"
+                />
               </PopoverContent>
             </Popover>
             {selectedOrganizationId ? (

@@ -341,6 +341,19 @@ export class OrganizerService extends OrganizerOrganizationService {
     return body.data.event;
   }
 
+  /**
+   * CHANGES_REQUESTED → DRAFT ("Fazer ajustes"). Também destrava as
+   * configurações financeiras no backend, devolvendo o evento ao wizard de
+   * criação. Idempotente: evento já em DRAFT responde 200.
+   */
+  async revertEventToDraft(id: string): Promise<Event> {
+    const { data: body } = await this.apiClient.post<{
+      message?: string;
+      data: { event: Event };
+    }>(`/api/v1/events/${id}/revert-to-draft`);
+    return body.data.event;
+  }
+
   /** PUBLISHED → SUSPENDED. Ver EVENT_SUSPEND_ORGANIZER_API.md */
   async suspendEvent(id: string): Promise<{ event: Event; message?: string }> {
     const { data: body } = await this.apiClient.post<{

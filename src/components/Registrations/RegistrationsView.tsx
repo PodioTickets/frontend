@@ -3,7 +3,7 @@
 import type { Dispatch, ReactNode, SetStateAction } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { Search, Users, CheckCircle, XCircle, ChevronLeft, ChevronRight, UserPlus } from "lucide-react";
+import { Search, Users, CheckCircle, XCircle, UserPlus } from "lucide-react";
 import type { DateRange } from "react-day-picker";
 import { Button } from "@/components/Button";
 import { Input } from "@/components/Input";
@@ -28,6 +28,7 @@ import {
 import { formatShortId } from "@/utils/shortId";
 import { RegistrationsStatsCards } from "./RegistrationsStatsCards";
 import { RegistrationRow } from "./RegistrationRow";
+import { Pagination } from "@/components/Pagination";
 
 /**
  * Corpo COMPLETO da página de inscrições, compartilhado entre admin e organizer.
@@ -61,26 +62,6 @@ interface ExportTarget {
     startDate?: string;
     endDate?: string;
   };
-}
-
-function getPageNumbers(currentPage: number, totalPages: number): (number | '...')[] {
-  const delta = 2;
-  const range: number[] = [];
-  const rangeWithDots: (number | '...')[] = [];
-
-  for (let i = Math.max(2, currentPage - delta); i <= Math.min(totalPages - 1, currentPage + delta); i++) {
-    range.push(i);
-  }
-
-  if (currentPage - delta > 2) rangeWithDots.push(1, '...');
-  else rangeWithDots.push(1);
-
-  rangeWithDots.push(...range);
-
-  if (currentPage + delta < totalPages - 1) rangeWithDots.push('...', totalPages);
-  else if (totalPages > 1) rangeWithDots.push(totalPages);
-
-  return rangeWithDots;
 }
 
 export interface RegistrationsViewProps {
@@ -576,36 +557,12 @@ export function RegistrationsView({
                 </div>
                 {pagination.totalPages > 1 && (
                   <div className="flex items-center justify-center gap-2 flex-wrap">
-                    <button
-                      type="button"
-                      onClick={() => setPagination((p) => ({ ...p, page: Math.max(1, p.page - 1) }))}
-                      disabled={pagination.page === 1}
-                      className="size-8 flex items-center justify-center rounded-lg border border-gray-6 disabled:opacity-50"
-                    >
-                      <ChevronLeft className="size-4" />
-                    </button>
-                    {getPageNumbers(pagination.page, pagination.totalPages).map((pageNum, idx) =>
-                      pageNum === '...'
-                        ? <span key={`dots-${idx}`} className="size-8 flex items-center justify-center text-gray-11 text-sm">…</span>
-                        : (
-                          <button
-                            key={pageNum}
-                            type="button"
-                            onClick={() => setPagination((p) => ({ ...p, page: pageNum as number }))}
-                            className={`size-8 flex items-center justify-center rounded-lg text-sm font-family-dm-sans font-medium transition-colors ${pageNum === pagination.page ? "bg-primary-11 border-primary-11 text-primary-2" : "border border-gray-6 bg-gray-4 text-gray-12"}`}
-                          >
-                            {pageNum}
-                          </button>
-                        )
-                    )}
-                    <button
-                      type="button"
-                      onClick={() => setPagination((p) => ({ ...p, page: Math.min(pagination.totalPages, p.page + 1) }))}
-                      disabled={pagination.page >= pagination.totalPages}
-                      className="size-8 flex items-center justify-center rounded-lg border border-gray-6 disabled:opacity-50"
-                    >
-                      <ChevronRight className="size-4" />
-                    </button>
+                    <Pagination
+                      currentPage={pagination.page}
+                      totalPages={pagination.totalPages}
+                      onPageChange={(page) => setPagination((p) => ({ ...p, page }))}
+                      className="w-max py-0"
+                    />
                     <p className="ml-2 text-xs text-gray-11 font-family-dm-sans whitespace-nowrap">
                       {registrosShown.toLocaleString("pt-BR")} de {pagination.total.toLocaleString("pt-BR")} registros
                     </p>
@@ -692,55 +649,21 @@ export function RegistrationsView({
                 </div>
 
                 {/* Pagination */}
+                {/* A contagem de registros fica ao lado da barra — é a única
+                    tela que a mantém, por isso o wrapper próprio em vez do
+                    `variant="table-footer"`. */}
                 {pagination.totalPages > 1 && (
                   <div className="flex items-center justify-start gap-2 py-4 px-5 border-t border-gray-6">
-
-                    <button
-                      onClick={() =>
-                        setPagination((prev) => ({
-                          ...prev,
-                          page: prev.page - 1,
-                        }))
-                      }
-                      disabled={pagination.page === 1}
-                      className="size-8 flex items-center justify-center border border-gray-6 rounded-lg hover:bg-gray-3 disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      <ChevronLeft className="size-4" />
-                    </button>
-                    {getPageNumbers(pagination.page, pagination.totalPages).map((pageNum, idx) =>
-                      pageNum === '...'
-                        ? <span key={`dots-${idx}`} className="size-8 flex items-center justify-center text-gray-11 text-sm">…</span>
-                        : (
-                          <button
-                            key={pageNum}
-                            onClick={() => setPagination((prev) => ({ ...prev, page: pageNum as number }))}
-                            className={`size-8 flex items-center justify-center border rounded-lg cursor-pointer ${pageNum === pagination.page
-                              ? "bg-primary-11 border-primary-11 text-gray-1"
-                              : "border-gray-6 hover:bg-gray-3"
-                              }`}
-                          >
-                            {pageNum}
-                          </button>
-                        )
-                    )}
-                    <button
-                      onClick={() =>
-                        setPagination((prev) => ({
-                          ...prev,
-                          page: prev.page + 1,
-                        }))
-                      }
-                      disabled={pagination.page >= pagination.totalPages}
-                      className="size-8 flex items-center justify-center border border-gray-6 rounded-lg hover:bg-gray-3 disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      <ChevronRight className="size-4" />
-                    </button>
-
+                    <Pagination
+                      currentPage={pagination.page}
+                      totalPages={pagination.totalPages}
+                      onPageChange={(page) => setPagination((prev) => ({ ...prev, page }))}
+                      className="w-max py-0"
+                    />
                     <p className="ml-2 text-xs text-gray-11 font-family-dm-sans whitespace-nowrap">
                       {registrosShown.toLocaleString("pt-BR")} de {pagination.total.toLocaleString("pt-BR")} registros
                     </p>
                   </div>
-
                 )}
               </div>
 

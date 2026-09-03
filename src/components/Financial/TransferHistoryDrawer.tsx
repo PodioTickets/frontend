@@ -319,16 +319,14 @@ export function TransferHistoryDrawer({
               </div>
 
               {/* Mobile pagination */}
-              {totalPages > 1 && (
-                <Pagination
-                  currentPage={currentPage}
-                  totalPages={totalPages}
-                  onPageChange={setCurrentPage}
-                  totalItems={filteredTransfers.length}
-                  pageSize={itemsPerPage}
-                  className="pt-2"
-                />
-              )}
+              <Pagination
+                currentPage={currentPage}
+                totalPages={totalPages}
+                onPageChange={setCurrentPage}
+                totalItems={filteredTransfers.length}
+                pageSize={itemsPerPage}
+                className="pt-2"
+              />
             </div>
           </div>
 

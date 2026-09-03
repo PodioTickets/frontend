@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Search, ChevronDown, ChevronLeft, ChevronRight } from "lucide-react";
+import { Search, ChevronDown, ChevronRight } from "lucide-react";
 import { cn } from "@/utils/cn";
 import { Button } from "@/components/Button";
 import { Dropdown } from "@/components/Dropdown";
@@ -18,6 +18,7 @@ import { organizerService } from "@/services";
 import type { EventNotificationsPagination } from "@/services";
 import toast from "react-hot-toast";
 import { formatDateBRT, formatTimeBRT } from "@/utils/datetimeBR";
+import { Pagination } from "@/components/Pagination";
 
 export type {
   EventNotificationRow,
@@ -99,63 +100,6 @@ function NotificationChannelBadges({
           </span>
         );
       })}
-    </div>
-  );
-}
-
-function NotificationsPagination({
-  totalPages,
-  safePage,
-  onPageChange,
-  className,
-}: {
-  totalPages: number;
-  safePage: number;
-  onPageChange: (page: number) => void;
-  className?: string;
-}) {
-  if (totalPages <= 1) return null;
-  return (
-    <div
-      className={cn(
-        "flex items-center gap-2 min-w-0 overflow-x-auto pb-1 [&::-webkit-scrollbar]:hidden",
-        className
-      )}
-      style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
-    >
-      <button
-        type="button"
-        onClick={() => onPageChange(Math.max(1, safePage - 1))}
-        disabled={safePage <= 1}
-        className="size-8 shrink-0 rounded-lg border border-gray-6 bg-gray-4/80 hover:bg-gray-4 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center transition-colors"
-        aria-label="Página anterior"
-      >
-        <ChevronLeft className="size-4 text-gray-12" />
-      </button>
-      {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
-        <button
-          key={p}
-          type="button"
-          onClick={() => onPageChange(p)}
-          className={cn(
-            "size-8 shrink-0 rounded-lg border text-sm font-medium font-family-dm-sans transition-colors",
-            safePage === p
-              ? "bg-primary-11 text-gray-1 border-primary-11"
-              : "bg-gray-4 text-gray-12 border-transparent hover:bg-gray-5"
-          )}
-        >
-          {p}
-        </button>
-      ))}
-      <button
-        type="button"
-        onClick={() => onPageChange(Math.min(totalPages, safePage + 1))}
-        disabled={safePage >= totalPages}
-        className="size-8 shrink-0 rounded-lg border border-gray-6 bg-gray-4/80 hover:bg-gray-4 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center transition-colors"
-        aria-label="Próxima página"
-      >
-        <ChevronRight className="size-4 text-gray-12" />
-      </button>
     </div>
   );
 }
@@ -423,11 +367,11 @@ export function EventNotificationsPanel({
         )}
       </div>
 
-      <NotificationsPagination
+      <Pagination
+        currentPage={safePage}
         totalPages={totalPages}
-        safePage={safePage}
         onPageChange={setPage}
-        className="md:hidden justify-center w-full max-w-full px-0 py-4"
+        className="md:hidden py-4"
       />
 
       <div className="hidden md:block rounded-xl border border-gray-6 bg-gray-1 overflow-hidden ">
@@ -535,11 +479,11 @@ export function EventNotificationsPanel({
           </table>
         </div>
 
-        <NotificationsPagination
+        <Pagination
+          currentPage={safePage}
           totalPages={totalPages}
-          safePage={safePage}
           onPageChange={setPage}
-          className="justify-end px-4 py-5 border-t border-gray-6"
+          variant="table-footer"
         />
       </div>
 

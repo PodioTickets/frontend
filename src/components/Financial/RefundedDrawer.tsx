@@ -443,16 +443,14 @@ export function RefundedDrawer({
                 </div>
 
                 {/* Pagination */}
-                {totalPages > 1 && (
-                  <Pagination
-                    currentPage={currentPage}
-                    totalPages={totalPages}
-                    onPageChange={setCurrentPage}
-                    totalItems={pagination.total}
-                    pageSize={itemsPerPage}
-                    className="border-t border-gray-6 px-5 py-4"
-                  />
-                )}
+                <Pagination
+                  currentPage={currentPage}
+                  totalPages={totalPages}
+                  onPageChange={setCurrentPage}
+                  totalItems={pagination.total}
+                  pageSize={itemsPerPage}
+                  className="border-t border-gray-6 px-5 py-4"
+                />
               </div>
             </div>
           </div>
