@@ -176,6 +176,8 @@ export interface Organization {
   customFeeEnabled?: boolean;
   /** Teto da taxa TOTAL (%) por evento quando `customFeeEnabled` (escala 0–100; default 6). */
   maxTotalFeePercent?: number;
+  /** Assessor responsável (enum `OrganizationAdvisor`). Alimenta o widget de suporte. */
+  advisor?: string;
   createdAt: string;
   updatedAt: string;
   members?: OrganizationMember[];

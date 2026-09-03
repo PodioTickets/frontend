@@ -25,6 +25,12 @@ import { FinanceIcon } from "../Icons/Organizer/FinanceIcon";
 import { lookupCepDigits } from "@/utils/lookupCep";
 import { formatDateBRT } from "@/utils/datetimeBR";
 import {
+  DEFAULT_ADVISOR_ID,
+  ORGANIZER_ADVISOR_OPTIONS,
+  resolveOrganizerAdvisor,
+  type OrganizerAdvisorId,
+} from "@/lib/organizerAdvisors";
+import {
   PIX_KEY_LABELS,
   PIX_KEY_TYPE_OPTIONS,
   maskPixKey,
@@ -63,6 +69,8 @@ interface OrgDetail extends AdminAuditOrganization {
   anticipationEnabled?: boolean;
   /** Taxa de organizador personalizada habilitada (default false). */
   customFeeEnabled?: boolean;
+  /** Assessor responsável (enum `OrganizationAdvisor` do backend). */
+  advisor?: string;
   /** Teto da taxa TOTAL (%) por evento quando customFeeEnabled (escala 0–100; default 6). */
   maxTotalFeePercent?: number;
   pixKeys?: Array<{ key: string; keyType: string; isDefault: boolean }>;
@@ -428,6 +436,7 @@ export function OrganizerEditDrawer({ isOpen, onClose, org, onUpdated, mode = "e
   // Taxa de organizador PERSONALIZADA: liga/desliga + teto da taxa TOTAL (%) por
   // evento (editado como número puro; ex.: "8" = 8%). DESLIGADA por padrão → teto 6% fixo.
   const [customFeeEnabled, setCustomFeeEnabled] = useState(false);
+  const [advisor, setAdvisor] = useState<OrganizerAdvisorId>(DEFAULT_ADVISOR_ID);
   const [maxTotalFeePercent, setMaxTotalFeePercent] = useState("6");
   const [loadingCep, setLoadingCep] = useState(false);
   // Guarda o último CEP buscado pra não disparar fetch duplicado em re-renders.
@@ -522,6 +531,8 @@ export function OrganizerEditDrawer({ isOpen, onClose, org, onUpdated, mode = "e
         );
         setAnticipationEnabled(d.anticipationEnabled ?? false);
         setCustomFeeEnabled(d.customFeeEnabled ?? false);
+        // Valor desconhecido (front desatualizado) cai no padrão, igual ao widget.
+        setAdvisor(resolveOrganizerAdvisor(d.advisor).id);
         setMaxTotalFeePercent(
           d.maxTotalFeePercent != null ? String(+d.maxTotalFeePercent.toFixed(2)) : "6",
         );
@@ -643,6 +654,7 @@ export function OrganizerEditDrawer({ isOpen, onClose, org, onUpdated, mode = "e
         // Só envia o teto quando válido (0–100). O cap efetivo por evento é enforçado
         // no backend (org desligada = 6% fixo).
         customFeeEnabled,
+        advisor,
         maxTotalFeePercent: (() => {
           const p = parseFloat(maxTotalFeePercent.replace(",", "."));
           return isNaN(p) || p < 0 || p > 100 ? undefined : p;
@@ -941,6 +953,31 @@ export function OrganizerEditDrawer({ isOpen, onClose, org, onUpdated, mode = "e
                   padrão (inclusive no cadastro); o admin liga aqui e define a taxa. */}
               <div className="flex flex-col gap-6">
                 <SectionTitle icon={<SlidersHorizontal className="size-5" />} label="Configurações específicas" />
+
+                {/* Assessor responsável — define nome, foto e WhatsApp do widget
+                    flutuante de suporte no painel deste organizador.
+                    Usa o `InlineSelect` deste drawer (mesmo componente do "Tipo de
+                    chave" PIX). O `Dropdown` compartilhado NÃO funciona aqui: o
+                    `DrawerContent` do vaul zera `pointer-events` fora do conteúdo,
+                    então um menu em portal no `body` aparece mas não recebe clique.
+                    O `InlineSelect` contorna com `pointerEvents: "auto"` +
+                    `zIndex: 9999` inline e opções em `onMouseDown`. */}
+                <div className="flex flex-col gap-2">
+                  <label className="text-base font-normal font-family-dm-sans text-gray-12 leading-[1.3]">
+                    Assessor responsável
+                  </label>
+                  <div className="w-full max-w-[360px]">
+                    <InlineSelect
+                      value={advisor}
+                      onChange={(v) => setAdvisor(v as OrganizerAdvisorId)}
+                      placeholder="Selecione o assessor"
+                      options={ORGANIZER_ADVISOR_OPTIONS.map((o) => ({
+                        id: o.id,
+                        label: o.name,
+                      }))}
+                    />
+                  </div>
+                </div>
 
                 {/* Checkbox — taxa de organizador personalizada. Quando ativa, o
                     organizador define a taxa TOTAL do evento até o teto abaixo na etapa

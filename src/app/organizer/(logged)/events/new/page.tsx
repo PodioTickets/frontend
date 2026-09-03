@@ -149,6 +149,20 @@ export default function CreateEventRedirectPage() {
             city: event.city ?? "",
             state: event.state ?? "",
             googleMapsLink: event.googleMapsLink ?? "",
+            /* Vagas e LOCAL do evento. O resume nunca os restaurou: enquanto
+               "Fazer ajustes" caía na última etapa, ninguém via o formulário de
+               informações e o buraco passou batido. Sem localStorage do rascunho
+               (outro navegador, ou evento devolvido pelo admin) os dois voltavam
+               vazios — e salvar por cima apagaria o que já estava no banco.
+               Conversão idêntica à do `EditEventContext`: o contexto guarda
+               string, a API devolve número. */
+            maxParticipants:
+              event.maxParticipants != null ? String(event.maxParticipants) : "",
+            /* O mapa decide "tem local?" por `hasValidCoordinates(lat, lng)` —
+               só o `googleMapsLink` acima não preenche o campo. */
+            latitude: event.latitude != null ? String(event.latitude) : "",
+            longitude: event.longitude != null ? String(event.longitude) : "",
+            locationName: event.locationName ?? "",
             bannerUrl: event.bannerUrl ?? "",
             regulationUrl: event.regulationUrl ?? "",
             emergencyContactRequired: !!event.emergencyContactRequired,

@@ -6,25 +6,11 @@ import { AnimatePresence, motion } from "framer-motion";
 import { X } from "lucide-react";
 import { WhatsappIcon } from "@/components/Icons/WhatsappIcon";
 import { useOrganizerPermissions } from "@/contexts/OrganizerPermissionsContext";
+import {
+  buildAdvisorWhatsappUrl,
+  resolveOrganizerAdvisor,
+} from "@/lib/organizerAdvisors";
 import { Button } from "../Button";
-
-/** Telefone do WhatsApp do assessor (fornecido pelo produto). */
-const ASSESSOR_WHATSAPP_PHONE = "5511994302713";
-
-/**
- * Monta o link do WhatsApp do assessor com a mensagem pré-preenchida, incluindo o
- * nome da organização quando disponível: "…Minha organização é NOME". O texto é
- * sempre encodado (encodeURIComponent) para não quebrar a URL com acentos, espaços
- * ou caracteres especiais do nome.
- */
-const buildAssessorWhatsappUrl = (organizationName?: string) => {
-  const name = organizationName?.trim();
-  const base = "Olá! Sou organizador na PódioTicket e tenho algumas dúvidas.";
-  const message = name ? `${base} Minha organização é ${name}` : base;
-  return `https://api.whatsapp.com/send/?phone=${ASSESSOR_WHATSAPP_PHONE}&text=${encodeURIComponent(
-    message,
-  )}`;
-};
 
 /**
  * Widget flutuante de suporte no canto inferior direito da interface do
@@ -36,8 +22,12 @@ const buildAssessorWhatsappUrl = (organizationName?: string) => {
 export function OrganizerSupportWidget() {
   const [open, setOpen] = useState(false);
   const { organization } = useOrganizerPermissions();
+  /* Assessor definido pelo admin em "Configurações específicas". Organização sem
+     valor (ou valor desconhecido por front desatualizado) cai no padrão. */
+  const advisor = resolveOrganizerAdvisor(organization?.advisor);
   // Nome de exibição da organização: nome fantasia quando houver, senão razão social.
-  const assessorWhatsappUrl = buildAssessorWhatsappUrl(
+  const assessorWhatsappUrl = buildAdvisorWhatsappUrl(
+    advisor,
     organization?.tradeName || organization?.name,
   );
   const rootRef = useRef<HTMLDivElement>(null);
@@ -113,8 +103,8 @@ export function OrganizerSupportWidget() {
               <div className="flex gap-2 items-center min-w-0">
                 <span className="relative size-10 rounded-full overflow-hidden shrink-0">
                   <Image
-                    src="/images/guarim.jpeg"
-                    alt="Marina"
+                    src={advisor.photoUrl}
+                    alt={advisor.name}
                     width={40}
                     height={40}
                     className="size-10 rounded-full object-cover scale-150"
@@ -122,7 +112,7 @@ export function OrganizerSupportWidget() {
                 </span>
                 <div className="flex flex-col gap-1 min-w-0">
                   <p className="font-manrope font-bold text-base leading-[1.1] text-[#eeeeee] truncate">
-                    Guarim
+                    {advisor.name}
                   </p>
                   <div className="flex gap-1 items-center">
                     <span className="size-2 rounded-full bg-primary-11 shrink-0" />
@@ -142,7 +132,10 @@ export function OrganizerSupportWidget() {
               </button>
             </div>
 
-            {/* Botão principal → WhatsApp */}
+            {/* Botão principal → WhatsApp. Some quando o assessor ainda não tem
+                telefone cadastrado — melhor não oferecer do que abrir um link
+                quebrado (ou o WhatsApp de outra pessoa). */}
+            {assessorWhatsappUrl && (
             <div className="p-4">
               <a
                 href={assessorWhatsappUrl}
@@ -158,6 +151,7 @@ export function OrganizerSupportWidget() {
                 </Button>
               </a>
             </div>
+            )}
 
             {/* Horário de atendimento */}
             <div className="border-t border-gray-6 p-4">
@@ -208,8 +202,8 @@ export function OrganizerSupportWidget() {
                 className="absolute inset-0"
               >
                 <Image
-                  src="/images/guarim.jpeg"
-                  alt="Suporte"
+                  src={advisor.photoUrl}
+                  alt={advisor.name}
                   width={60}
                   height={60}
                   className="size-full rounded-full object-cover scale-150"
