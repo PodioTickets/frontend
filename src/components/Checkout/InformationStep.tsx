@@ -2514,7 +2514,7 @@ export function InformationStep({
                           participant.hasEmergencyContact === true ? (
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-2 md:gap-4 mt-4">
                               <div className="flex flex-col gap-2">
-                                <label className="text-base font-normal text-gray-12 font-family-dm-sans">
+                                <label className="text-sm font-medium text-gray-12 font-family-manrope">
                                   Nome do contato de emergência
                                 </label>
                                 <input
@@ -2531,13 +2531,13 @@ export function InformationStep({
                                   placeholder="Nome do contato"
                                 />
                                 {fieldErrors[participantIndex]?.emergencyContactName && (
-                                  <p className="text-sm text-red-11">
+                                  <p className="text-xs text-red-11">
                                     {fieldErrors[participantIndex].emergencyContactName}
                                   </p>
                                 )}
                               </div>
                               <div className="flex flex-col gap-2">
-                                <label className="text-base font-normal text-gray-12 font-family-dm-sans">
+                                <label className="text-sm font-medium text-gray-12 font-family-manrope">
                                   Telefone de emergência
                                 </label>
                                 <input
@@ -2558,7 +2558,7 @@ export function InformationStep({
                                   placeholder={getPhonePlaceholderForCountry(participant.nationality)}
                                 />
                                 {fieldErrors[participantIndex]?.emergencyPhone && (
-                                  <p className="text-sm text-red-11">
+                                  <p className="text-xs text-red-11">
                                     {fieldErrors[participantIndex].emergencyPhone}
                                   </p>
                                 )}
