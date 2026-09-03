@@ -71,7 +71,7 @@ export function ChangesRequestedModal({
                 <div className="flex flex-col w-full">
                   <div className="-mb-2 rounded-t-lg border border-gray-6 bg-gray-2 px-3 pt-3 pb-5">
                     <p className="font-medium text-base leading-[1.3] text-gray-11 font-family-dm-sans">
-                      O que precisa ser corrigido
+                      O que precisa ser corrigido?
                     </p>
                   </div>
                   <div className="rounded-lg border border-gray-6 bg-gray-1 px-3 py-4">
