@@ -1,6 +1,6 @@
 "use client";
 
-import { ChevronDown, ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronDown, ChevronRight } from "lucide-react";
 import { ArrowButton } from "@/components/ArrowButton";
 import { Tooltip } from "@/components/Tooltip";
 import { TicketIcon } from "@/components/Icons/TicketIcon";
@@ -11,6 +11,7 @@ import type {
 } from "@/services/organizer/OrganizerService";
 // createdAt/lotCreatedAt são INSTANTES reais → BRT (America/Sao_Paulo).
 import { formatDateBRT } from "@/utils/datetimeBR";
+import { Pagination } from "@/components/Pagination";
 
 /**
  * Lista compartilhada "Ingressos de lotes" usada nas páginas de financeiro
@@ -33,54 +34,6 @@ interface TicketsWithLotsListProps {
   onPageChange: (page: number) => void;
   /** Title da seção mobile — desktop não tem header próprio. */
   mobileTitle?: string;
-}
-
-function Pagination({
-  page,
-  totalPages,
-  onChange,
-}: {
-  page: number;
-  totalPages: number;
-  onChange: (page: number) => void;
-}) {
-  return (
-    <div className="flex items-center justify-center gap-2 py-3">
-      <button
-        onClick={() => onChange(Math.max(1, page - 1))}
-        disabled={page <= 1}
-        className="size-8 flex items-center justify-center rounded-lg border border-gray-6 text-gray-12 disabled:opacity-50 hover:bg-gray-3 transition-colors"
-      >
-        <ChevronLeft className="size-4" />
-      </button>
-      <div className="flex items-center gap-1">
-        {Array.from({ length: Math.min(totalPages, 8) }, (_, i) => {
-          const pageNum = i + 1;
-          const isActive = pageNum === page;
-          return (
-            <button
-              key={pageNum}
-              onClick={() => onChange(pageNum)}
-              className={`size-8 flex items-center justify-center border rounded-lg text-sm font-family-dm-sans font-medium transition-colors ${
-                isActive
-                  ? "bg-primary-11 border-primary-11 text-primary-2"
-                  : "border-gray-6 hover:bg-gray-3 text-gray-12 bg-gray-4"
-              }`}
-            >
-              {pageNum}
-            </button>
-          );
-        })}
-      </div>
-      <button
-        onClick={() => onChange(Math.min(totalPages, page + 1))}
-        disabled={page >= totalPages}
-        className="size-8 flex items-center justify-center rounded-lg border border-gray-6 text-gray-12 disabled:opacity-50 hover:bg-gray-3 transition-colors"
-      >
-        <ChevronRight className="size-4" />
-      </button>
-    </div>
-  );
 }
 
 const formatBRL = (cents: number) =>
@@ -278,9 +231,10 @@ export function TicketsWithLotsList({
           })}
         </div>
         <Pagination
-          page={page}
+          currentPage={page}
           totalPages={totalPages}
-          onChange={onPageChange}
+          onPageChange={onPageChange}
+          className="py-3"
         />
       </div>
 
@@ -454,9 +408,10 @@ export function TicketsWithLotsList({
         </div>
         <div className="px-4">
           <Pagination
-            page={page}
+            currentPage={page}
             totalPages={totalPages}
-            onChange={onPageChange}
+            onPageChange={onPageChange}
+            className="py-3"
           />
         </div>
       </div>

@@ -281,16 +281,14 @@ export function FinancialDetailsMobile({
           </div>
 
           {/* Paginação */}
-          {totalPages > 1 && (
-            <Pagination
-              currentPage={currentPage}
-              totalPages={totalPages}
-              onPageChange={onPageChange}
-              totalItems={count}
-              pageSize={pageSize}
-              className="p-4"
-            />
-          )}
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            onPageChange={onPageChange}
+            totalItems={count}
+            pageSize={pageSize}
+            className="p-4"
+          />
 
           {/* Botão Exportar CSV */}
           {onExportCSV && (

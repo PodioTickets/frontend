@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Search, Plus, ChevronLeft, ChevronRight } from "lucide-react";
+import { Search, Plus } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useOrganizerNavigate } from "@/hooks/useOrganizerNavigate";
 import { organizerService } from "@/services";
@@ -16,6 +16,7 @@ import { cn } from "@/utils/cn";
 import { isCurrentUserOrganizationOwner } from "@/utils/organizationOwner";
 import { formatDateBRT, formatTimeBRT } from "@/utils/datetimeBR";
 import { UserAvatar } from "@/components/UserAvatar";
+import { Pagination } from "@/components/Pagination";
 
 const ITEMS_PER_PAGE = 8;
 
@@ -41,84 +42,6 @@ function memberInitials(m: OrganizationMember) {
   const b = m.user.lastName?.[0] ?? "";
   const s = `${a}${b}`.toUpperCase();
   return s || "?";
-}
-
-function TeamPaginationBar({
-  totalPages,
-  safePage,
-  onPageChange,
-  variant,
-}: {
-  totalPages: number;
-  safePage: number;
-  onPageChange: (page: number) => void;
-  variant: "mobile" | "desktop";
-}) {
-  if (totalPages <= 1) return null;
-
-  const isMobile = variant === "mobile";
-  const navBtn = isMobile
-    ? "size-8 shrink-0 rounded-lg border border-gray-6 bg-gray-4/80 hover:bg-gray-4 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center transition-colors"
-    : "size-8 rounded-full border border-gray-6 bg-gray-1 hover:bg-gray-2 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center transition-colors";
-  const pageBtn = (active: boolean) =>
-    cn(
-      "size-8 shrink-0 border text-sm font-medium font-family-dm-sans transition-colors",
-      isMobile ? "rounded-lg" : "rounded-full",
-      active
-        ? "bg-primary-11 text-gray-1 border-primary-11"
-        : isMobile
-          ? "bg-gray-4 text-gray-12 border-transparent hover:bg-gray-5"
-          : "bg-gray-1 border-gray-6 text-gray-12 hover:bg-gray-2"
-    );
-
-  return (
-    <div
-      className={cn(
-        "flex items-center gap-2 min-w-0",
-        isMobile &&
-        "justify-center w-full max-w-full overflow-x-auto py-4 [&::-webkit-scrollbar]:hidden",
-        !isMobile && "justify-end px-4 py-5 border-t border-gray-6"
-      )}
-      style={
-        isMobile
-          ? { scrollbarWidth: "none", msOverflowStyle: "none" }
-          : undefined
-      }
-    >
-      <button
-        type="button"
-        onClick={() => onPageChange(Math.max(1, safePage - 1))}
-        disabled={safePage <= 1}
-        className={navBtn}
-        aria-label="Página anterior"
-      >
-        <ChevronLeft
-          className={cn("size-4", isMobile ? "text-gray-12" : "text-gray-11")}
-        />
-      </button>
-      {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
-        <button
-          key={p}
-          type="button"
-          onClick={() => onPageChange(p)}
-          className={pageBtn(safePage === p)}
-        >
-          {p}
-        </button>
-      ))}
-      <button
-        type="button"
-        onClick={() => onPageChange(Math.min(totalPages, safePage + 1))}
-        disabled={safePage >= totalPages}
-        className={navBtn}
-        aria-label="Próxima página"
-      >
-        <ChevronRight
-          className={cn("size-4", isMobile ? "text-gray-12" : "text-gray-11")}
-        />
-      </button>
-    </div>
-  );
 }
 
 export default function OrganizerTeamPage() {
@@ -353,12 +276,7 @@ export default function OrganizerTeamPage() {
               )}
             </div>
 
-            <TeamPaginationBar
-              totalPages={totalPages}
-              safePage={safePage}
-              onPageChange={setPage}
-              variant="mobile"
-            />
+            <Pagination currentPage={safePage} totalPages={totalPages} onPageChange={setPage} />
 
             {/* Desktop: table */}
             <div className="hidden md:block rounded-xl border border-gray-6 bg-gray-1 overflow-hidden">
@@ -452,12 +370,7 @@ export default function OrganizerTeamPage() {
                 </table>
               </div>
 
-              <TeamPaginationBar
-                totalPages={totalPages}
-                safePage={safePage}
-                onPageChange={setPage}
-                variant="desktop"
-              />
+              <Pagination currentPage={safePage} totalPages={totalPages} onPageChange={setPage} variant="table-footer" />
             </div>
           </>
         )}

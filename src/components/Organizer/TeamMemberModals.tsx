@@ -2,17 +2,7 @@
 
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import {
-  X,
-  Check,
-  ArrowLeft,
-  Search,
-  ChevronLeft,
-  ChevronRight,
-  ImageIcon,
-  Eye,
-  EyeOff,
-} from "lucide-react";
+import { X, Check, ArrowLeft, Search, ImageIcon, Eye, EyeOff } from "lucide-react";
 import Image from "next/image";
 import { Button } from "@/components/Button";
 import { Drawer, DrawerContent, DrawerTitle } from "@/components/ui/drawer";
@@ -25,6 +15,7 @@ import type {
 import type { Event } from "@/interfaces/event";
 import { cn } from "@/utils/cn";
 import { organizerMemberSettingsClientPage } from "@/lib/organizerAudit";
+import { Pagination } from "@/components/Pagination";
 import {
   PERMISSION_ROWS,
   defaultNewMemberPermissions,
@@ -109,61 +100,6 @@ function FieldShell({
         {label}
       </label>
       {children}
-    </div>
-  );
-}
-
-/** Mesmo padrão visual de `NotificationsPagination` / lista mobile da equipe (setas + páginas). */
-function CollaboratorDrawerEventsPagination({
-  totalPages,
-  safePage,
-  onPageChange,
-  disabled,
-}: {
-  totalPages: number;
-  safePage: number;
-  onPageChange: (page: number) => void;
-  disabled?: boolean;
-}) {
-  return (
-    <div
-      className="flex items-center justify-end gap-2 min-w-0 w-full overflow-x-auto py-2 [&::-webkit-scrollbar]:hidden"
-      style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
-    >
-      <button
-        type="button"
-        onClick={() => onPageChange(Math.max(1, safePage - 1))}
-        disabled={disabled || safePage <= 1}
-        className="size-8 shrink-0 rounded-lg border border-gray-6 bg-gray-4/80 hover:bg-gray-4 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center transition-colors"
-        aria-label="Página anterior"
-      >
-        <ChevronLeft className="size-4 text-gray-12" />
-      </button>
-      {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
-        <button
-          key={p}
-          type="button"
-          onClick={() => onPageChange(p)}
-          disabled={disabled}
-          className={cn(
-            "size-8 shrink-0 rounded-lg border text-sm font-medium font-family-dm-sans transition-colors",
-            safePage === p
-              ? "bg-primary-11 text-gray-1 border-primary-11"
-              : "bg-gray-4 text-gray-12 border-transparent hover:bg-gray-5"
-          )}
-        >
-          {p}
-        </button>
-      ))}
-      <button
-        type="button"
-        onClick={() => onPageChange(Math.min(totalPages, safePage + 1))}
-        disabled={disabled || safePage >= totalPages}
-        className="size-8 shrink-0 rounded-lg border border-gray-6 bg-gray-4/80 hover:bg-gray-4 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center transition-colors"
-        aria-label="Próxima página"
-      >
-        <ChevronRight className="size-4 text-gray-12" />
-      </button>
     </div>
   );
 }
@@ -1004,11 +940,12 @@ export function CollaboratorDrawer({
                             </button>
                           );
                         })}
-                        <CollaboratorDrawerEventsPagination
+                        <Pagination
+                          currentPage={safeEventsPage}
                           totalPages={eventsTotalPages}
-                          safePage={safeEventsPage}
                           onPageChange={setEventsListPage}
                           disabled={saving || removing || isOwnerMember}
+                          className="justify-end"
                         />
                       </>
                     )}

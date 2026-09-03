@@ -1,6 +1,7 @@
 "use client";
 
-import { Pencil, Trash2, Plus, Minus, ChevronLeft, ChevronRight } from "lucide-react";
+import { Pencil, Trash2, Plus, Minus } from "lucide-react";
+import { Pagination } from "@/components/Pagination";
 import { DistanceIcon } from "@/components/Icons/DistanceIcon";
 import { CalendarIcon } from "@/components/Icons/CalendarIcon";
 import { ClockIcon } from "@/components/Icons/ClockIcon";
@@ -119,37 +120,12 @@ export function TicketCards({
         ))}
       </div>
       {/* Pagination for cards */}
-      {totalPages > 1 && (
-        <div className="flex items-center justify-center gap-2 pt-4 mt-4 border-t border-gray-6">
-          <button
-            onClick={() => onPageChange(currentPage - 1)}
-            disabled={currentPage === 1}
-            className="size-8 flex items-center justify-center border border-gray-6 rounded-lg hover:bg-gray-3 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            <ChevronLeft className="size-4" />
-          </button>
-          {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
-            <button
-              key={p}
-              onClick={() => onPageChange(p)}
-              className={`size-8 flex items-center justify-center border rounded-lg ${
-                currentPage === p
-                  ? "bg-[#59E373] border-[#59E373] text-gray-12"
-                  : "border-gray-6 hover:bg-gray-3"
-              }`}
-            >
-              {p}
-            </button>
-          ))}
-          <button
-            onClick={() => onPageChange(currentPage + 1)}
-            disabled={currentPage >= totalPages}
-            className="size-8 flex items-center justify-center border border-gray-6 rounded-lg hover:bg-gray-3 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            <ChevronRight className="size-4" />
-          </button>
-        </div>
-      )}
+      <Pagination
+        currentPage={currentPage}
+        totalPages={totalPages}
+        onPageChange={onPageChange}
+        className="pt-4 mt-4 border-t border-gray-6"
+      />
     </div>
   );
 }

@@ -1,14 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import {
-  Search,
-  ChevronLeft,
-  ChevronRight,
-  Clock,
-  CheckCircle,
-  XCircle,
-} from "lucide-react";
+import { Search, Clock, CheckCircle, XCircle } from "lucide-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { cn } from "@/utils/cn";
 import { formatTimeBRT } from "@/utils/datetimeBR";
@@ -18,6 +11,7 @@ import { queryKeys } from "@/services/cache/QueryClient";
 import toast from "react-hot-toast";
 import { ImageWithInitialFallback } from "@/components/ImageWithInitialFallback";
 import { NotificationDetailDrawer } from "@/components/Admin/NotificationDetailDrawer";
+import { Pagination } from "@/components/Pagination";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -173,85 +167,6 @@ function StatCard({ icon, iconBg, label, value }: {
       <div className={cn("size-[28px] rounded-lg flex items-center justify-center shrink-0 ml-4", iconBg)}>
         {icon}
       </div>
-    </div>
-  );
-}
-
-// ─── Pagination ───────────────────────────────────────────────────────────────
-
-function PaginationBar({
-  totalPages,
-  page,
-  onPageChange,
-  variant,
-}: {
-  totalPages: number;
-  page: number;
-  onPageChange: (p: number) => void;
-  variant: "desktop" | "mobile";
-}) {
-  if (totalPages <= 1) return null;
-  const safePage = Math.min(page, totalPages);
-  const isMobile = variant === "mobile";
-
-  const navBtn = isMobile
-    ? "size-8 shrink-0 rounded-lg border border-gray-6 bg-gray-4/80 hover:bg-gray-4 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center transition-colors"
-    : "size-8 rounded-full border border-gray-6 bg-gray-1 hover:bg-gray-2 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center transition-colors";
-
-  const pageBtn = (active: boolean) =>
-    cn(
-      "size-8 shrink-0 border text-sm font-medium font-family-dm-sans transition-colors",
-      isMobile ? "rounded-lg" : "rounded-full",
-      active
-        ? "bg-primary-11 text-gray-1 border-primary-11"
-        : isMobile
-          ? "bg-gray-4 text-gray-12 border-transparent hover:bg-gray-5"
-          : "bg-gray-1 border-gray-6 text-gray-12 hover:bg-gray-2"
-    );
-
-  const pages: (number | "ellipsis")[] = [];
-  if (totalPages <= 7) {
-    for (let i = 1; i <= totalPages; i++) pages.push(i);
-  } else {
-    pages.push(1);
-    if (safePage > 3) pages.push("ellipsis");
-    for (let i = Math.max(2, safePage - 1); i <= Math.min(totalPages - 1, safePage + 1); i++) pages.push(i);
-    if (safePage < totalPages - 2) pages.push("ellipsis");
-    pages.push(totalPages);
-  }
-
-  return (
-    <div
-      className={cn(
-        "flex items-center gap-2",
-        isMobile ? "justify-center w-full py-4 flex-wrap" : "justify-end px-4 py-5 border-t border-gray-6"
-      )}
-    >
-      <button
-        type="button"
-        onClick={() => onPageChange(Math.max(1, safePage - 1))}
-        disabled={safePage <= 1}
-        className={navBtn}
-        aria-label="Página anterior"
-      >
-        <ChevronLeft className={cn("size-4", isMobile ? "text-gray-12" : "text-gray-11")} />
-      </button>
-      {pages.map((p, idx) =>
-        p === "ellipsis" ? (
-          <span key={`ellipsis-${idx}`} className="size-8 flex items-center justify-center text-sm text-gray-11">…</span>
-        ) : (
-          <button key={p} type="button" onClick={() => onPageChange(p)} className={pageBtn(safePage === p)}>{p}</button>
-        )
-      )}
-      <button
-        type="button"
-        onClick={() => onPageChange(Math.min(totalPages, safePage + 1))}
-        disabled={safePage >= totalPages}
-        className={navBtn}
-        aria-label="Próxima página"
-      >
-        <ChevronRight className={cn("size-4", isMobile ? "text-gray-12" : "text-gray-11")} />
-      </button>
     </div>
   );
 }
@@ -574,7 +489,7 @@ export default function AdminAnunciosPage() {
           )}
 
           {!loading && (
-            <PaginationBar totalPages={pagination.totalPages} page={pagination.page} onPageChange={setPage} variant="mobile" />
+            <Pagination currentPage={pagination.page} totalPages={pagination.totalPages} onPageChange={setPage} />
           )}
         </div>
 
@@ -682,7 +597,7 @@ export default function AdminAnunciosPage() {
           </div>
 
           {!loading && (
-            <PaginationBar totalPages={pagination.totalPages} page={pagination.page} onPageChange={setPage} variant="desktop" />
+            <Pagination currentPage={pagination.page} totalPages={pagination.totalPages} onPageChange={setPage} variant="table-footer" />
           )}
         </div>
       </div>

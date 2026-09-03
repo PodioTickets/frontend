@@ -7,9 +7,10 @@ import { VoucherIcon } from "@/components/Icons/VoucherIcon";
 import { PencilIcon } from "@/components/Icons/PencilIcon";
 import { TrashIcon } from "@/components/Icons/TrashIcon";
 import toast from "react-hot-toast";
-import { Plus, ChevronLeft, ChevronRight } from "lucide-react";
+import { Plus } from "lucide-react";
 import { useCreateVoucherModal, useDeleteVoucherModal, useViewVoucherModal } from "@/stores/modalStore";
 import { Loading } from "@/components/Loading";
+import { Pagination } from "@/components/Pagination";
 
 interface VoucherGroup {
   id?: string;
@@ -36,26 +37,6 @@ interface VoucherGroup {
  * `view_event` enxerga a lista (e "Visualizar voucher"), mas as ações ficam
  * desabilitadas até ter `coupons`. O admin não passa a prop → tudo habilitado.
  */
-function getPageNumbers(currentPage: number, totalPages: number): (number | '...')[] {
-  const delta = 2;
-  const range: number[] = [];
-  const rangeWithDots: (number | '...')[] = [];
-
-  for (let i = Math.max(2, currentPage - delta); i <= Math.min(totalPages - 1, currentPage + delta); i++) {
-    range.push(i);
-  }
-
-  if (currentPage - delta > 2) rangeWithDots.push(1, '...');
-  else rangeWithDots.push(1);
-
-  rangeWithDots.push(...range);
-
-  if (currentPage + delta < totalPages - 1) rangeWithDots.push('...', totalPages);
-  else if (totalPages > 1) rangeWithDots.push(totalPages);
-
-  return rangeWithDots;
-}
-
 export function EventVouchersView({
   eventId,
   onUnauthenticated,
@@ -380,44 +361,11 @@ export function EventVouchersView({
           </div>
 
           {/* Pagination */}
-          {pagination.totalPages > 1 && (
-            <div className="flex items-center justify-center gap-2">
-              <button
-                onClick={() =>
-                  setPagination((prev) => ({ ...prev, page: prev.page - 1 }))
-                }
-                disabled={pagination.page === 1}
-                className="size-8 rounded-lg border border-gray-6 bg-gray-1 hover:bg-gray-2 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center transition-colors"
-              >
-                <ChevronLeft className="size-4 text-gray-11" />
-              </button>
-              {getPageNumbers(pagination.page, pagination.totalPages).map((page, idx) =>
-                page === '...'
-                  ? <span key={`dots-${idx}`} className="size-8 flex items-center justify-center text-gray-11 text-sm">…</span>
-                  : (
-                    <button
-                      key={page}
-                      onClick={() => setPagination((prev) => ({ ...prev, page: page as number }))}
-                      className={`size-8 rounded-lg border transition-colors font-family-dm-sans text-sm flex items-center justify-center ${pagination.page === page
-                        ? "bg-primary-11 text-primary-2 border-primary-11"
-                        : "bg-gray-4 border-gray-6 text-gray-12 hover:bg-gray-3"
-                        }`}
-                    >
-                      {page}
-                    </button>
-                  )
-              )}
-              <button
-                onClick={() =>
-                  setPagination((prev) => ({ ...prev, page: prev.page + 1 }))
-                }
-                disabled={pagination.page === pagination.totalPages}
-                className="size-8 rounded-lg border border-gray-6 bg-gray-1 hover:bg-gray-2 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center transition-colors"
-              >
-                <ChevronRight className="size-4 text-gray-11" />
-              </button>
-            </div>
-          )}
+          <Pagination
+            currentPage={pagination.page}
+            totalPages={pagination.totalPages}
+            onPageChange={(page) => setPagination((prev) => ({ ...prev, page }))}
+          />
         </div>
       </div>
     </div>

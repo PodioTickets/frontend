@@ -3,12 +3,7 @@
 import { useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import {
-  Search,
-  ChevronLeft,
-  ChevronRight,
-  ArrowUpDown,
-} from "lucide-react";
+import { Search, ArrowUpDown } from "lucide-react";
 import { cn } from "@/utils/cn";
 import { getApiClient } from "@/services/base/ApiClient";
 import { organizerService } from "@/services";
@@ -38,7 +33,14 @@ import { Pagination } from "@/components/Pagination";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-type EventStatus = "DRAFT" | "PUBLISHED" | "SUSPENDED" | "CANCELLED" | "COMPLETED";
+type EventStatus =
+  | "DRAFT"
+  | "REVISION"
+  | "CHANGES_REQUESTED"
+  | "PUBLISHED"
+  | "SUSPENDED"
+  | "CANCELLED"
+  | "COMPLETED";
 type SortBy = "eventDate" | "createdAt" | "name" | "registrations" | "revenue";
 type SortOrder = "asc" | "desc";
 
@@ -86,6 +88,8 @@ function getInitials(name: string): string {
 
 const STATUS_CONFIG: Record<EventStatus, { label: string; bg: string; text: string }> = {
   DRAFT: { label: "Rascunho", bg: "bg-gray-4", text: "text-gray-12" },
+  REVISION: { label: "Em revisão", bg: "bg-yellow-11", text: "text-yellow-1" },
+  CHANGES_REQUESTED: { label: "Ajustes solicitados", bg: "bg-yellow-11", text: "text-yellow-1" },
   PUBLISHED: { label: "Publicado", bg: "bg-primary-11", text: "text-primary-1" },
   SUSPENDED: { label: "Suspenso", bg: "bg-red-11", text: "text-red-1" },
   CANCELLED: { label: "Cancelado", bg: "bg-red-3", text: "text-red-11" },
@@ -115,58 +119,14 @@ function ActionIconLink({ href, title, children }: { href: string; title: string
   );
 }
 
-// ─── Pagination ───────────────────────────────────────────────────────────────
-
-function PaginationBar({
-  totalPages,
-  page,
-  onPageChange,
-  variant,
-}: {
-  totalPages: number;
-  page: number;
-  onPageChange: (p: number) => void;
-  variant: "desktop" | "mobile";
-}) {
-  if (totalPages <= 1) return null;
-  const isMobile = variant === "mobile";
-
-  const navBtn = isMobile
-    ? "size-8 shrink-0 rounded-lg border border-gray-6 bg-gray-4/80 hover:bg-gray-4 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center transition-colors"
-    : "size-8 rounded-full border border-gray-6 bg-gray-1 hover:bg-gray-2 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center transition-colors";
-
-  const pageBtn = (active: boolean) =>
-    cn(
-      "size-8 shrink-0 border text-sm font-medium font-family-dm-sans transition-colors",
-      isMobile ? "rounded-lg" : "rounded-full",
-      active
-        ? "bg-primary-11 text-gray-1 border-primary-11"
-        : isMobile
-          ? "bg-gray-4 text-gray-12 border-transparent hover:bg-gray-5"
-          : "bg-gray-1 border-gray-6 text-gray-12 hover:bg-gray-2"
-    );
-
-  return (
-    <div className={cn("flex items-center gap-2", isMobile ? "justify-center w-full py-4 flex-wrap" : "justify-end px-4 py-5 border-t border-gray-6")}>
-      <button type="button" onClick={() => onPageChange(Math.max(1, page - 1))} disabled={page <= 1} className={navBtn}>
-        <ChevronLeft className={cn("size-4", isMobile ? "text-gray-12" : "text-gray-11")} />
-      </button>
-      {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
-        <button key={p} type="button" onClick={() => onPageChange(p)} className={pageBtn(page === p)}>{p}</button>
-      ))}
-      <button type="button" onClick={() => onPageChange(Math.min(totalPages, page + 1))} disabled={page >= totalPages} className={navBtn}>
-        <ChevronRight className={cn("size-4", isMobile ? "text-gray-12" : "text-gray-11")} />
-      </button>
-    </div>
-  );
-}
-
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 const STATUS_OPTIONS = [
   { value: "", label: "Todos os status" },
   { value: "PUBLISHED", label: "Publicado" },
   { value: "DRAFT", label: "Rascunho" },
+  { value: "REVISION", label: "Em revisão" },
+  { value: "CHANGES_REQUESTED", label: "Ajustes solicitados" },
   { value: "SUSPENDED", label: "Suspenso" },
   { value: "CANCELLED", label: "Cancelado" },
   { value: "COMPLETED", label: "Concluído" },
@@ -761,7 +721,7 @@ export default function AdminEventsPage() {
           </div>
 
           {!loading && (
-            <PaginationBar totalPages={pagination.totalPages} page={pagination.page} onPageChange={setPage} variant="desktop" />
+            <Pagination currentPage={pagination.page} totalPages={pagination.totalPages} onPageChange={setPage} variant="table-footer" />
           )}
         </div>
 

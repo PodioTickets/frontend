@@ -453,7 +453,9 @@ export interface CreateEventRequest {
   | "CANCELLED"
   | "COMPLETED"
   | "SUSPENDED"
-  | "REVISION";
+  | "REVISION"
+  /** Admin recusou a revisão; o motivo vem em `rejectionReason`. */
+  | "CHANGES_REQUESTED";
   /** Quando true, inscrições/vendas do evento ficam pausadas (reativar com false). */
   isSuspended?: boolean;
   /**
