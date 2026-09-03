@@ -456,7 +456,16 @@ export function useOrganizerSignupFlow() {
       // Conversão do funil de captação: cadastro de organizador concluído.
       // Dispara SÓ aqui (após o backend criar a conta com sucesso), no clique do
       // último botão de finalizar o cadastro — Meta Pixel + Google Ads.
-      trackPlatformMetaPixel("CompleteRegistration");
+      //
+      // `value` + `currency` espelham `trackPlatformSignupConversion()` logo
+      // abaixo, que já mandava `value: 1.0, currency: "BRL"` pro Google Ads. Sem
+      // a moeda o Meta não consegue atribuir valor à conversão — e todos os
+      // demais eventos do pixel (Purchase, InitiateCheckout, AddPaymentInfo)
+      // já declaram BRL. 1.0 é valor NOMINAL de captação, não receita.
+      trackPlatformMetaPixel("CompleteRegistration", {
+        currency: "BRL",
+        value: 1.0,
+      });
       trackPlatformSignupConversion();
       setStepIndex(DONE_STEP_INDEX);
     } catch (err) {
