@@ -89,7 +89,7 @@ function getInitials(name: string): string {
 const STATUS_CONFIG: Record<EventStatus, { label: string; bg: string; text: string }> = {
   DRAFT: { label: "Rascunho", bg: "bg-gray-4", text: "text-gray-12" },
   REVISION: { label: "Em revisão", bg: "bg-yellow-11", text: "text-yellow-1" },
-  CHANGES_REQUESTED: { label: "Ajustes solicitados", bg: "bg-yellow-11", text: "text-yellow-1" },
+  CHANGES_REQUESTED: { label: "Ajustes solicitados", bg: "bg-gray-4", text: "text-gray-12" },
   PUBLISHED: { label: "Publicado", bg: "bg-primary-11", text: "text-primary-1" },
   SUSPENDED: { label: "Suspenso", bg: "bg-red-11", text: "text-red-1" },
   CANCELLED: { label: "Cancelado", bg: "bg-red-3", text: "text-red-11" },

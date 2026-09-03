@@ -22,12 +22,17 @@ import {
   type TopicSectionRow,
 } from "@/lib/eventTopicSections";
 import { WizardStepLayout } from "@/components/Organizer/WizardStepLayout";
+import { scheduleTopicEditorPreload } from "@/lib/topicEditorLoader";
 
 export default function TopicosPage() {
   const orgNav = useOrganizerNavigate();
   const { authChecked } = useWizardAuth();
   const { formData } = useCreateEvent();
   const { openTopicModal, setOnModalSave, setOnModalDelete } = useTopicModal();
+
+  // Aquece o editor de tópicos (Quill) enquanto o usuário lê a lista: sem isso
+  // o download+parse só começa no clique e o modal fica no skeleton por mais tempo.
+  useEffect(() => scheduleTopicEditorPreload(), []);
   const [sections, setSections] = useState<TopicSectionRow[]>([]);
   const defaultTopicApiIdRef = useRef<string | null>(null);
   const editingTopicRef = useRef<{ topicId?: string; isEditing: boolean } | null>(null);

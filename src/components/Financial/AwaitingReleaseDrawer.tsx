@@ -714,22 +714,29 @@ export function AwaitingReleaseDrawer({
                     ))
                   )}
                 </div>
+
+                {/* Paginação + contagem DENTRO do card da tabela, separadas da
+                    última linha pelo divisor — mesmo padrão da tela de inscrições.
+                    O `overflow-hidden` do card recorta nas bordas arredondadas. */}
+                {tabTotalPages > 1 && (
+                  <div className="flex items-center justify-start gap-2 border-t border-gray-6 px-5 py-4">
+                    <Pagination
+                      className="w-max py-0"
+                      onPageChange={onTabPageChange}
+                      currentPage={tabCurrentPage}
+                      totalPages={tabTotalPages}
+                      disabled={isLoading}
+                    />
+                    <span className="ml-2 font-family-dm-sans text-xs text-gray-11 whitespace-nowrap shrink-0">
+                      {rows.length} de {tabTotalCount} {tabTotalCount === 1 ? "registro" : "registros"}
+                    </span>
+                  </div>
+                )}
               </div>
 
-              {/* Footer: paginação + contagem (esquerda) + Exportar CSV (direita) */}
-              <div className="mt-4 flex items-center justify-between gap-4">
-                {/* A <div> fica mesmo vazia: é o 1º slot do `justify-between`,
-                    sem ela o botão de exportar escorrega para a esquerda. */}
-                <div className="flex items-center gap-3 min-w-0">
-                  {tabTotalPages > 1 && (
-                    <>
-                      <Pagination className="w-max" onPageChange={onTabPageChange} currentPage={tabCurrentPage} totalPages={tabTotalPages} totalItems={tabTotalCount} pageSize={itemsPerPage} disabled={isLoading} />
-                      <span className="font-family-dm-sans text-xs text-gray-11 whitespace-nowrap shrink-0">
-                        {rows.length} de {tabTotalCount} {tabTotalCount === 1 ? "registro" : "registros"}
-                      </span>
-                    </>
-                  )}
-                </div>
+              {/* Exportar CSV fica FORA do card da tabela, alinhado à direita —
+                  mesmo padrão da tela de inscrições. */}
+              <div className="mt-6 flex justify-end">
                 <Button
                   type="button"
                   onClick={() => setIsExportModalOpen(true)}

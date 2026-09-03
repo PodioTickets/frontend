@@ -600,6 +600,22 @@ input[type="number"] {
   font-size: 2.5em;
 }
 
+/*
+ * Quebra de palavras longas (URLs coladas, hashes, nomes de arquivo).
+ *
+ * O Quill aplica `word-wrap: break-word` no `.ql-editor` — escopado ao editor,
+ * como o resto do CSS dele. Fora do modal a regra não existia, então uma URL
+ * sem espaços empurrava a largura do card e, como os containers da lista usam
+ * `overflow-y-auto` (o que faz o `overflow-x` computar para `auto`), aparecia
+ * uma BARRA DE ROLAGEM HORIZONTAL.
+ *
+ * `break-word` e não `anywhere`: só quebra quando a palavra não cabe sozinha na
+ * linha, em vez de permitir quebra em qualquer ponto de qualquer palavra.
+ */
+.topic-rich-html {
+  overflow-wrap: break-word;
+}
+
 .topic-rich-html h1 {
   font-size: 2em;
   line-height: 1.25;
@@ -701,15 +717,15 @@ input[type="number"] {
  * de padding-left no <li> e troca o tipo do marcador (alpha → roman → decimal). */
 .ql-editor li.ql-indent-1,
 .topic-rich-html li.ql-indent-1 {
-  padding-left: 4.5em;
+  padding-left: min(4.5em, 9%);
 }
 .ql-editor li.ql-indent-2,
 .topic-rich-html li.ql-indent-2 {
-  padding-left: 7.5em;
+  padding-left: min(7.5em, 15%);
 }
 .ql-editor li.ql-indent-3,
 .topic-rich-html li.ql-indent-3 {
-  padding-left: 10.5em;
+  padding-left: min(10.5em, 21%);
 }
 
 .ql-editor li[data-list=ordered].ql-indent-1,
@@ -737,6 +753,73 @@ input[type="number"] {
 .ql-editor li[data-list=ordered].ql-indent-3::before,
 .topic-rich-html li[data-list=ordered].ql-indent-3::before {
   content: counter(list-3, decimal) '. ';
+}
+
+/*
+ * Indent em bloco NÃO-lista (parágrafo, título, blockquote).
+ *
+ * As regras acima cobrem só `li`. Quando o cursor está num <p> comum, o botão
+ * "indent right" carimba `ql-indent-N` no PRÓPRIO <p> — e o Quill estiliza isso
+ * com `.ql-editor .ql-indent-N` (sem o `li`). Como esse seletor é escopado ao
+ * editor, e o `quill.snow.css` só é carregado dentro do modal, o parágrafo
+ * indentado aparecia correto na edição e VOLTAVA AO NORMAL na lista de tópicos
+ * e na página do evento.
+ *
+ * Mesmos 3em/nível do Quill. Especificidade (0,2,0) fica ABAIXO das regras de
+ * `li` acima (0,2,1), então listas continuam com o padding próprio (4.5em+).
+ */
+.topic-rich-html .ql-indent-1 { padding-left: min(3em, 6%); }
+.topic-rich-html .ql-indent-2 { padding-left: min(6em, 12%); }
+.topic-rich-html .ql-indent-3 { padding-left: min(9em, 18%); }
+.topic-rich-html .ql-indent-4 { padding-left: min(12em, 24%); }
+.topic-rich-html .ql-indent-5 { padding-left: min(15em, 30%); }
+.topic-rich-html .ql-indent-6 { padding-left: min(18em, 36%); }
+.topic-rich-html .ql-indent-7 { padding-left: min(21em, 42%); }
+.topic-rich-html .ql-indent-8 { padding-left: min(24em, 48%); }
+
+/* Níveis 4–8 das listas: o Quill permite indentar até 8, mas as regras acima
+ * paravam no 3 — a partir daí o item perdia o recuo e o marcador ficava preso
+ * em `decimal` do nível 3. Ciclo de marcador do Quill: decimal → alpha → roman. */
+.ql-editor li.ql-indent-4,
+.topic-rich-html li.ql-indent-4 { padding-left: min(13.5em, 27%); }
+.ql-editor li.ql-indent-5,
+.topic-rich-html li.ql-indent-5 { padding-left: min(16.5em, 33%); }
+.ql-editor li.ql-indent-6,
+.topic-rich-html li.ql-indent-6 { padding-left: min(19.5em, 39%); }
+.ql-editor li.ql-indent-7,
+.topic-rich-html li.ql-indent-7 { padding-left: min(22.5em, 45%); }
+.ql-editor li.ql-indent-8,
+.topic-rich-html li.ql-indent-8 { padding-left: min(25.5em, 51%); }
+
+.ql-editor li[data-list=ordered].ql-indent-4,
+.topic-rich-html li[data-list=ordered].ql-indent-4 { counter-increment: list-4; }
+.ql-editor li[data-list=ordered].ql-indent-4::before,
+.topic-rich-html li[data-list=ordered].ql-indent-4::before {
+  content: counter(list-4, lower-alpha) '. ';
+}
+.ql-editor li[data-list=ordered].ql-indent-5,
+.topic-rich-html li[data-list=ordered].ql-indent-5 { counter-increment: list-5; }
+.ql-editor li[data-list=ordered].ql-indent-5::before,
+.topic-rich-html li[data-list=ordered].ql-indent-5::before {
+  content: counter(list-5, lower-roman) '. ';
+}
+.ql-editor li[data-list=ordered].ql-indent-6,
+.topic-rich-html li[data-list=ordered].ql-indent-6 { counter-increment: list-6; }
+.ql-editor li[data-list=ordered].ql-indent-6::before,
+.topic-rich-html li[data-list=ordered].ql-indent-6::before {
+  content: counter(list-6, decimal) '. ';
+}
+.ql-editor li[data-list=ordered].ql-indent-7,
+.topic-rich-html li[data-list=ordered].ql-indent-7 { counter-increment: list-7; }
+.ql-editor li[data-list=ordered].ql-indent-7::before,
+.topic-rich-html li[data-list=ordered].ql-indent-7::before {
+  content: counter(list-7, lower-alpha) '. ';
+}
+.ql-editor li[data-list=ordered].ql-indent-8,
+.topic-rich-html li[data-list=ordered].ql-indent-8 { counter-increment: list-8; }
+.ql-editor li[data-list=ordered].ql-indent-8::before,
+.topic-rich-html li[data-list=ordered].ql-indent-8::before {
+  content: counter(list-8, lower-roman) '. ';
 }
 /* ──────────────────────────────────────────────────────────────────────────
    Seletor de local do evento (LocationPickerModal): casa o web component do

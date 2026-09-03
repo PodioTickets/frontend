@@ -252,7 +252,7 @@ export default function OrganizerEventsPage() {
       },
       CHANGES_REQUESTED: {
         label: "Ajustes solicitados",
-        className: "bg-yellow-11 text-yellow-1",
+        className: "bg-gray-5 text-gray-12",
       },
       CANCELLED: { label: "Cancelado", className: "bg-red-10/20 text-red-11" },
       COMPLETED: {
@@ -564,7 +564,7 @@ export default function OrganizerEventsPage() {
                                   type="button"
                                   size="default"
                                   onClick={() => setAdjustmentsModalEvent(event)}
-                                  className="h-10 w-full bg-yellow-11 text-yellow-2 hover:bg-yellow-11/90 font-manrope text-xs font-bold"
+                                  className="h-10 w-full bg-yellow-11 text-yellow-2 hover:bg-yellow-11/90 font-manrope hover:text-yellow-1 font-bold"
                                 >
                                   Ajustar evento
                                 </Button>
@@ -807,7 +807,7 @@ export default function OrganizerEventsPage() {
                         <Button
                           type="button"
                           onClick={() => setAdjustmentsModalEvent(event)}
-                          className="w-full h-11 bg-yellow-11 text-yellow-2 hover:bg-yellow-11/90 font-manrope font-bold"
+                          className="w-full h-11 bg-yellow-11 text-yellow-2 hover:bg-yellow-11/90 hover:text-yellow-3 font-manrope"
                         >
                           Ajustar evento
                         </Button>
