@@ -6,6 +6,7 @@ import { Loading } from "@/components/Loading";
 import { useCreateEvent } from "@/contexts/CreateEventContext";
 import {
   DEFAULT_CREATE_EVENT_WIZARD_PATH,
+  getCreationDraftInfo,
   loadLastCreateEventWizardPath,
 } from "@/lib/createEventWizardPersistence";
 import { organizerService } from "@/services";
@@ -39,6 +40,40 @@ function getNextIncompleteStep(event: any, ticketCount: number): string {
   }
 
   return "/organizer/events/new/information";
+}
+
+/**
+ * Ordem das etapas do wizard — a MESMA do stepper (`new/layout.tsx`).
+ * Serve para comparar "onde o organizador parou" com "próxima etapa pendente"
+ * e nunca mandá-lo para TRÁS.
+ */
+const WIZARD_STEP_ORDER = [
+  "/organizer/events/new/information",
+  "/organizer/events/new/banner",
+  "/organizer/events/new/tickets",
+  "/organizer/events/new/topics",
+  "/organizer/events/new/questionnaire",
+  "/organizer/events/new/financial",
+] as const;
+
+function wizardStepIndex(path: string): number {
+  return WIZARD_STEP_ORDER.findIndex((step) => path.startsWith(step));
+}
+
+/**
+ * Escolhe a etapa MAIS AVANÇADA entre a calculada pelos dados e a última
+ * visitada.
+ *
+ * `getNextIncompleteStep` só enxerga o que o backend persiste, e o questionário
+ * pode ser concluído com ZERO perguntas — então ele nunca devolve "financeiro" e
+ * jogava de volta pro questionário quem já tinha passado dali. A última rota
+ * visitada cobre esse buraco; o `max` garante que ela também nunca faça o
+ * organizador RETROCEDER (ex.: saiu no meio da etapa 1 de um evento já completo).
+ */
+function furthestWizardStep(computed: string, lastVisited: string): string {
+  return wizardStepIndex(lastVisited) > wizardStepIndex(computed)
+    ? lastVisited
+    : computed;
 }
 
 // Datas/horas do evento são WALL-CLOCK (backend devolve ISO com `Z`). Ler em UTC
@@ -135,10 +170,17 @@ export default function CreateEventRedirectPage() {
               : {}),
           });
           const ticketCount = ticketsRes?.tickets?.length ?? 0;
+          const computed = getNextIncompleteStep(event, ticketCount);
+          /* A última rota salva é GLOBAL (uma só no localStorage), então só vale
+             quando o rascunho local é DESTE evento — senão retomar o evento A
+             herdaria a etapa em que o organizador parou no evento B. */
+          const draft = getCreationDraftInfo();
+          const target =
+            draft.createdEventId === resumeId
+              ? furthestWizardStep(computed, draft.lastPath)
+              : computed;
           orgNav.replace(
-            restartFromFirstStep
-              ? DEFAULT_CREATE_EVENT_WIZARD_PATH
-              : getNextIncompleteStep(event, ticketCount),
+            restartFromFirstStep ? DEFAULT_CREATE_EVENT_WIZARD_PATH : target,
           );
         })
         .catch(() => {
