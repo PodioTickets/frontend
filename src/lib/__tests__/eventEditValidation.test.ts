@@ -35,6 +35,7 @@ function validForm(): EditEventFormData {
     locationName: "Praça da Sé, São Paulo - SP",
     bannerUrl: "",
     regulationUrl: "",
+    emergencyContactRequired: false,
     description: "",
     contactEmail: "contato@evento.com",
     instagram: "",

@@ -273,7 +273,7 @@ export function MobileFiltersSheet({
           </div>
 
           {/* Rodapé */}
-          <div className="shrink-0 border-t border-gray-6 px-4 py-4 flex items-center justify-between gap-4">
+          <div className="shrink-0 border-t border-gray-6 px-4 py-4 pb-[max(1rem,env(safe-area-inset-bottom))] flex items-center justify-between gap-4">
             <button
               type="button"
               onClick={onClearAll}

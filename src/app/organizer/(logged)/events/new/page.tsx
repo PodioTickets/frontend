@@ -84,6 +84,11 @@ export default function CreateEventRedirectPage() {
     }
 
     const resumeId = url.searchParams.get("resume");
+    /* "Fazer ajustes" (evento recusado): hidrata o rascunho igual ao resume
+     * normal, mas ABRE NA PRIMEIRA ETAPA. O evento recusado está completo, então
+     * `getNextIncompleteStep` mandaria pro fim do wizard — e o organizador tem
+     * que revisar desde as informações para atender ao motivo da recusa. */
+    const restartFromFirstStep = url.searchParams.get("restart") === "1";
     if (resumeId) {
       Promise.all([
         organizerService.getEventById(resumeId),
@@ -111,6 +116,7 @@ export default function CreateEventRedirectPage() {
             googleMapsLink: event.googleMapsLink ?? "",
             bannerUrl: event.bannerUrl ?? "",
             regulationUrl: event.regulationUrl ?? "",
+            emergencyContactRequired: !!event.emergencyContactRequired,
             // Contato + redes sociais (salvos no create, mas o resume não os
             // restaurava → resetavam ao reabrir o rascunho sem localStorage).
             contactEmail: event.contactEmail ?? "",
@@ -129,7 +135,11 @@ export default function CreateEventRedirectPage() {
               : {}),
           });
           const ticketCount = ticketsRes?.tickets?.length ?? 0;
-          orgNav.replace(getNextIncompleteStep(event, ticketCount));
+          orgNav.replace(
+            restartFromFirstStep
+              ? DEFAULT_CREATE_EVENT_WIZARD_PATH
+              : getNextIncompleteStep(event, ticketCount),
+          );
         })
         .catch(() => {
           orgNav.replace(DEFAULT_CREATE_EVENT_WIZARD_PATH);

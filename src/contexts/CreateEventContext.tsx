@@ -29,6 +29,8 @@ export interface CreateEventFormData {
   locationName: string;
   bannerUrl: string;
   regulationUrl: string;
+  /** Exige contato de emergência de cada participante no checkout. */
+  emergencyContactRequired: boolean;
   createdEventId: string | null;
   contactEmail: string;
   instagram: string;
@@ -77,6 +79,7 @@ const initialFormData: CreateEventFormData = {
   locationName: "",
   bannerUrl: "",
   regulationUrl: "",
+  emergencyContactRequired: false,
   createdEventId: null,
   contactEmail: "",
   instagram: "",

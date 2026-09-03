@@ -1,5 +1,5 @@
 // build bump
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Manrope, DM_Sans } from "next/font/google";
 import { headers } from "next/headers";
 import Script from "next/script";
@@ -66,6 +66,26 @@ export const metadata: Metadata = {
     ],
     apple: [{ url: "/images/logo.png", sizes: "180x180", type: "image/png" }],
   },
+};
+
+/**
+ * `viewport-fit=cover` estende o layout viewport até as bordas FÍSICAS da tela.
+ *
+ * Sem ele (default do Next: só `width=device-width, initial-scale=1`), o iPhone
+ * recua o viewport da faixa do home indicator: uma barra `fixed bottom-0` para
+ * ACIMA do fundo real do aparelho e o conteúdo da página aparece na faixa
+ * abaixo dela. É também o que dá valor a `env(safe-area-inset-*)` — sem
+ * `cover` todo `env()` do app resolve para 0 e o padding que as barras fixas
+ * já declaram fica inerte.
+ *
+ * Contrapartida: com `cover` o conteúdo PODE ficar sob o home indicator, então
+ * toda barra ancorada no fundo precisa de
+ * `pb-[max(<padding>,env(safe-area-inset-bottom))]`.
+ */
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
 };
 
 export default async function RootLayout({

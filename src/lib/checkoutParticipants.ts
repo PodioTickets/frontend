@@ -39,6 +39,35 @@ export interface BackendParticipant {
   questionAnswers?: Array<{ questionId: string; answer: string | boolean | number }>;
 }
 
+/** Campos do contato de emergência que o evento pode exigir. */
+export type EmergencyContactField = "emergencyContactName" | "emergencyPhone";
+
+/**
+ * Contato de emergência exigido pelo evento (`emergencyContactRequired`).
+ * Retorna os campos ainda pendentes — lista vazia quando o evento não exige ou
+ * quando nome e telefone já estão preenchidos.
+ *
+ * `hasEmergencyContact` NÃO entra como gate de propósito: quando o evento
+ * exige, a pergunta "deseja adicionar?" some do checkout, e participantes
+ * salvos ANTES da exigência ser ligada carregam a flag em `false`. Cobrá-la
+ * travaria o checkout num estado que o usuário não tem mais como mudar pela UI.
+ */
+export function getMissingEmergencyContactFields(
+  participant: Pick<
+    CheckoutParticipantInput,
+    "emergencyContactName" | "emergencyPhone"
+  >,
+  required: boolean,
+): EmergencyContactField[] {
+  if (!required) return [];
+  const missing: EmergencyContactField[] = [];
+  if (!participant.emergencyContactName?.trim()) {
+    missing.push("emergencyContactName");
+  }
+  if (!participant.emergencyPhone?.trim()) missing.push("emergencyPhone");
+  return missing;
+}
+
 /** Mapeia o valor PT do select de gênero pro enum canônico do backend. */
 function mapGender(value?: string): BackendParticipant["gender"] {
   if (!value) return undefined;
@@ -74,7 +103,18 @@ export function mapParticipantForBackend(p: CheckoutParticipantInput): BackendPa
   if (p.emergencyPhone?.trim()) {
     mapped.emergencyPhone = getPhoneDigitsForBackend(p.emergencyPhone, p.nationality ?? null);
   }
-  if (p.hasEmergencyContact) mapped.hasEmergencyContact = true;
+  /* A flag acompanha o DADO, não o clique. Quando o evento exige o contato, a
+   * pergunta "deseja adicionar?" some do checkout e `hasEmergencyContact` nunca
+   * é marcada — sem isto o backend receberia nome e telefone preenchidos junto
+   * de um `false`, e os relatórios diriam "sem contato de emergência". Dizer
+   * "Não" limpa os dois campos, então preenchido ⇒ existe contato. */
+  if (
+    p.hasEmergencyContact ||
+    mapped.emergencyContactName ||
+    mapped.emergencyPhone
+  ) {
+    mapped.hasEmergencyContact = true;
+  }
   if (p.questionAnswers && Object.keys(p.questionAnswers).length > 0) {
     mapped.questionAnswers = Object.entries(p.questionAnswers).map(([questionId, answer]) => ({
       questionId,
