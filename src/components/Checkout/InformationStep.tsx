@@ -24,7 +24,10 @@ import {
 import { queryKeys } from "@/services/cache/QueryClient";
 import { useDeleteParticipantModal } from "@/stores/modalStore";
 import { useCheckoutTimer } from "@/contexts/CheckoutTimerContext";
-import { buildParticipantsPatchPayload } from "@/lib/checkoutParticipants";
+import {
+  buildParticipantsPatchPayload,
+  getMissingEmergencyContactFields,
+} from "@/lib/checkoutParticipants";
 import { questionAppliesToTicket } from "@/utils/questionAnswer";
 import { hasDisplayableDistance } from "@/utils/checkoutModalityDisplay";
 import { useCheckoutReservation } from "@/hooks/useCheckoutReservation";
@@ -1117,6 +1120,11 @@ export function InformationStep({
     ({ participantIndex }) => expandedParticipants[participantIndex],
   );
 
+  /* Opção avançada do organizador (etapa de informações do evento): quando
+   * ligada, nome e telefone de emergência viram campos obrigatórios e o
+   * participante não fecha o card nem avança de etapa sem preenchê-los. */
+  const emergencyContactRequired = !!event?.emergencyContactRequired;
+
   const isParticipantComplete = (index: number) => {
     const participant = participants[index];
     if (!participant) return false;
@@ -1151,6 +1159,13 @@ export function InformationStep({
     );
 
     if (!basicFieldsComplete) return false;
+
+    if (
+      getMissingEmergencyContactFields(participant, emergencyContactRequired)
+        .length > 0
+    ) {
+      return false;
+    }
 
     // Verificar se todas as perguntas obrigatórias DO INGRESSO foram respondidas
     const requiredQuestions = getRequiredQuestionsForParticipant(index);
@@ -1285,6 +1300,25 @@ export function InformationStep({
       } else if (isFemaleTicket && !participantIsFemale) {
         errors.gender = "Este ingresso é exclusivo para participantes do sexo feminino";
       }
+    }
+
+    getMissingEmergencyContactFields(participant, emergencyContactRequired).forEach(
+      (field) => {
+        errors[field] =
+          field === "emergencyContactName"
+            ? "Nome do contato de emergência é obrigatório"
+            : "Telefone de emergência é obrigatório";
+      },
+    );
+    /* Telefone preenchido mas malformado: mesma checagem por país do telefone
+     * principal, senão dá pra "cumprir" a exigência com 3 dígitos. */
+    if (
+      emergencyContactRequired &&
+      !errors.emergencyPhone &&
+      participant.emergencyPhone?.trim() &&
+      !isPhoneValidForCountry(participant.emergencyPhone, participant.nationality)
+    ) {
+      errors.emergencyPhone = "Informe um telefone válido";
     }
 
     // Perguntas obrigatórias DO INGRESSO deste participante
@@ -2416,9 +2450,17 @@ export function InformationStep({
                         {/* Seção de Contato de Emergência */}
                         <div className={`flex flex-col gap-3 mt-4 w-full ${previewMode ? "opacity-50 pointer-events-none" : ""}`}>
                           <p className="text-base font-normal text-gray-12 font-family-dm-sans leading-[1.3]">
-                            Deseja adicionar um número de emergência ?
+                            {emergencyContactRequired
+                              ? "Contato de emergência"
+                              : "Deseja adicionar um número de emergência ?"}
                           </p>
-                          <div className="flex gap-2.5 items-start">
+                          <div
+                            className={
+                              emergencyContactRequired
+                                ? "hidden"
+                                : "flex gap-2.5 items-start"
+                            }
+                          >
                             <div className="flex gap-2 items-center">
                               <Checkbox
                                 checked={
@@ -2468,10 +2510,11 @@ export function InformationStep({
                           </div>
 
                           {/* Campos de contato de emergência - mostrados apenas quando "Sim" é selecionado */}
-                          {participant.hasEmergencyContact === true ? (
+                          {emergencyContactRequired ||
+                          participant.hasEmergencyContact === true ? (
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-2 md:gap-4 mt-4">
                               <div className="flex flex-col gap-2">
-                                <label className="text-base font-normal text-gray-12 font-family-dm-sans">
+                                <label className="text-sm font-medium text-gray-12 font-family-manrope">
                                   Nome do contato de emergência
                                 </label>
                                 <input
@@ -2484,12 +2527,17 @@ export function InformationStep({
                                   onChange={(e) =>
                                     handleInputChange(participantIndex, e)
                                   }
-                                  className="w-full h-12 px-3 rounded-lg border border-gray-6 bg-transparent text-gray-12 focus:outline-none focus:border-primary-10 transition-colors font-family-dm-sans text-base placeholder:text-gray-11"
+                                  className={`w-full h-12 px-3 rounded-lg border bg-transparent text-gray-12 focus:outline-none transition-colors font-family-dm-sans text-base placeholder:text-gray-11 ${fieldErrors[participantIndex]?.emergencyContactName ? "border-red-6 focus:border-red-10" : "border-gray-6 focus:border-primary-10"}`}
                                   placeholder="Nome do contato"
                                 />
+                                {fieldErrors[participantIndex]?.emergencyContactName && (
+                                  <p className="text-xs text-red-11">
+                                    {fieldErrors[participantIndex].emergencyContactName}
+                                  </p>
+                                )}
                               </div>
                               <div className="flex flex-col gap-2">
-                                <label className="text-base font-normal text-gray-12 font-family-dm-sans">
+                                <label className="text-sm font-medium text-gray-12 font-family-manrope">
                                   Telefone de emergência
                                 </label>
                                 <input
@@ -2506,9 +2554,14 @@ export function InformationStep({
                                     )
                                   }
                                   maxLength={getPhoneMaxLengthForCountry(participant.nationality)}
-                                  className="w-full h-12 px-3 rounded-lg border border-gray-6 bg-transparent text-gray-12 focus:outline-none focus:border-primary-10 transition-colors font-family-dm-sans text-base placeholder:text-gray-11"
+                                  className={`w-full h-12 px-3 rounded-lg border bg-transparent text-gray-12 focus:outline-none transition-colors font-family-dm-sans text-base placeholder:text-gray-11 ${fieldErrors[participantIndex]?.emergencyPhone ? "border-red-6 focus:border-red-10" : "border-gray-6 focus:border-primary-10"}`}
                                   placeholder={getPhonePlaceholderForCountry(participant.nationality)}
                                 />
+                                {fieldErrors[participantIndex]?.emergencyPhone && (
+                                  <p className="text-xs text-red-11">
+                                    {fieldErrors[participantIndex].emergencyPhone}
+                                  </p>
+                                )}
                               </div>
                             </div>
                           ) : null}

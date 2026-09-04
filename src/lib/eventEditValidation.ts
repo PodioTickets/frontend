@@ -26,6 +26,7 @@ export const INFORMATION_FIELDS = [
   "latitude", "longitude", "locationName",
   "contactEmail", "instagram", "facebook", "youtube", "tiktok", "website",
   "regulationUrl",
+  "emergencyContactRequired",
 ] as const satisfies readonly (keyof EditEventFormData)[];
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;

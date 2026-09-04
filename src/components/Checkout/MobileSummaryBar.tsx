@@ -203,7 +203,7 @@ export function MobileSummaryBar({
             {open ? "Ocultar detalhes" : "Ver detalhes"}
           </button>
 
-          <div className="bg-gray-2 border-t border-gray-6 shadow-lg px-4 py-3">
+          <div className="bg-gray-2 border-t border-gray-6 shadow-lg px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
             <div className="flex flex-col gap-2">
               {/* Identificação do pedido também na barra minimizada. */}
               <div className="flex items-center justify-between gap-2 min-w-0">
@@ -233,7 +233,7 @@ export function MobileSummaryBar({
       ) : variant === "compact" ? (
         /* Barra minimizada COMPACTA — demais etapas: "(N participantes) · Ver detalhes". */
         <div data-mobile-summary-bar="true" className="fixed bottom-0 left-0 right-0 z-50 md:hidden flex flex-col">
-          <div className="bg-gray-2 border-t border-gray-6 shadow-lg px-4 py-3 flex items-center justify-between pb-5 w-full">
+          <div className="bg-gray-2 border-t border-gray-6 shadow-lg px-4 py-3 flex items-center justify-between pb-[max(1.25rem,env(safe-area-inset-bottom))] w-full">
             <h1 className="text-sm text-gray-11">({totalParticipants} {totalParticipants > 1 ? "Participantes" : "Participante"})</h1>
             <h1 onClick={toggleSheet}
               aria-expanded={open} className="flex items-center gap-2 text-primary-11 font-medium text-sm underline cursor-pointer">Ver detalhes <SeeDetailsIcon /></h1>
@@ -311,7 +311,7 @@ export function MobileSummaryBar({
 
                 {/* Corpo rolável — `min-h-0` é obrigatório p/ o overflow funcionar
                     dentro do flex-col com altura limitada (senão transborda e cobre a tela). */}
-                <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain [-webkit-overflow-scrolling:touch] px-4 py-4 flex flex-col gap-5">
+                <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain [-webkit-overflow-scrolling:touch] px-4 py-4 pb-[max(1rem,env(safe-area-inset-bottom))] flex flex-col gap-5">
                   {/* Detalhe rico do step (cards de participante + imagens dos
                     produtos) quando fornecido; senão, a lista flat de ingressos. */}
                   {extraDetails ? (

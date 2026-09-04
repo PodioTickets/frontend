@@ -38,6 +38,8 @@ export interface EditEventFormData {
   locationName: string;
   bannerUrl: string;
   regulationUrl: string;
+  /** Exige contato de emergência de cada participante no checkout. */
+  emergencyContactRequired: boolean;
   description: string;
   contactEmail: string;
   instagram: string;
@@ -85,6 +87,7 @@ const defaultFormData: EditEventFormData = {
   locationName: "",
   bannerUrl: "",
   regulationUrl: "",
+  emergencyContactRequired: false,
   description: "",
   contactEmail: "",
   instagram: "",
@@ -163,6 +166,8 @@ function buildFormDataFromEvent(eventId: string, eventData: any): EditEventFormD
     bannerUrl: eventData.bannerUrl || "",
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     regulationUrl: (eventData as any).regulationUrl || "",
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    emergencyContactRequired: !!(eventData as any).emergencyContactRequired,
     description: eventData.description || "",
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     contactEmail: (eventData as any).contactEmail || "",

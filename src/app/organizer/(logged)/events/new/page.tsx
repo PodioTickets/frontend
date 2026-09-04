@@ -6,6 +6,7 @@ import { Loading } from "@/components/Loading";
 import { useCreateEvent } from "@/contexts/CreateEventContext";
 import {
   DEFAULT_CREATE_EVENT_WIZARD_PATH,
+  getCreationDraftInfo,
   loadLastCreateEventWizardPath,
 } from "@/lib/createEventWizardPersistence";
 import { organizerService } from "@/services";
@@ -39,6 +40,40 @@ function getNextIncompleteStep(event: any, ticketCount: number): string {
   }
 
   return "/organizer/events/new/information";
+}
+
+/**
+ * Ordem das etapas do wizard — a MESMA do stepper (`new/layout.tsx`).
+ * Serve para comparar "onde o organizador parou" com "próxima etapa pendente"
+ * e nunca mandá-lo para TRÁS.
+ */
+const WIZARD_STEP_ORDER = [
+  "/organizer/events/new/information",
+  "/organizer/events/new/banner",
+  "/organizer/events/new/tickets",
+  "/organizer/events/new/topics",
+  "/organizer/events/new/questionnaire",
+  "/organizer/events/new/financial",
+] as const;
+
+function wizardStepIndex(path: string): number {
+  return WIZARD_STEP_ORDER.findIndex((step) => path.startsWith(step));
+}
+
+/**
+ * Escolhe a etapa MAIS AVANÇADA entre a calculada pelos dados e a última
+ * visitada.
+ *
+ * `getNextIncompleteStep` só enxerga o que o backend persiste, e o questionário
+ * pode ser concluído com ZERO perguntas — então ele nunca devolve "financeiro" e
+ * jogava de volta pro questionário quem já tinha passado dali. A última rota
+ * visitada cobre esse buraco; o `max` garante que ela também nunca faça o
+ * organizador RETROCEDER (ex.: saiu no meio da etapa 1 de um evento já completo).
+ */
+function furthestWizardStep(computed: string, lastVisited: string): string {
+  return wizardStepIndex(lastVisited) > wizardStepIndex(computed)
+    ? lastVisited
+    : computed;
 }
 
 // Datas/horas do evento são WALL-CLOCK (backend devolve ISO com `Z`). Ler em UTC
@@ -84,6 +119,11 @@ export default function CreateEventRedirectPage() {
     }
 
     const resumeId = url.searchParams.get("resume");
+    /* "Fazer ajustes" (evento recusado): hidrata o rascunho igual ao resume
+     * normal, mas ABRE NA PRIMEIRA ETAPA. O evento recusado está completo, então
+     * `getNextIncompleteStep` mandaria pro fim do wizard — e o organizador tem
+     * que revisar desde as informações para atender ao motivo da recusa. */
+    const restartFromFirstStep = url.searchParams.get("restart") === "1";
     if (resumeId) {
       Promise.all([
         organizerService.getEventById(resumeId),
@@ -109,8 +149,23 @@ export default function CreateEventRedirectPage() {
             city: event.city ?? "",
             state: event.state ?? "",
             googleMapsLink: event.googleMapsLink ?? "",
+            /* Vagas e LOCAL do evento. O resume nunca os restaurou: enquanto
+               "Fazer ajustes" caía na última etapa, ninguém via o formulário de
+               informações e o buraco passou batido. Sem localStorage do rascunho
+               (outro navegador, ou evento devolvido pelo admin) os dois voltavam
+               vazios — e salvar por cima apagaria o que já estava no banco.
+               Conversão idêntica à do `EditEventContext`: o contexto guarda
+               string, a API devolve número. */
+            maxParticipants:
+              event.maxParticipants != null ? String(event.maxParticipants) : "",
+            /* O mapa decide "tem local?" por `hasValidCoordinates(lat, lng)` —
+               só o `googleMapsLink` acima não preenche o campo. */
+            latitude: event.latitude != null ? String(event.latitude) : "",
+            longitude: event.longitude != null ? String(event.longitude) : "",
+            locationName: event.locationName ?? "",
             bannerUrl: event.bannerUrl ?? "",
             regulationUrl: event.regulationUrl ?? "",
+            emergencyContactRequired: !!event.emergencyContactRequired,
             // Contato + redes sociais (salvos no create, mas o resume não os
             // restaurava → resetavam ao reabrir o rascunho sem localStorage).
             contactEmail: event.contactEmail ?? "",
@@ -129,7 +184,18 @@ export default function CreateEventRedirectPage() {
               : {}),
           });
           const ticketCount = ticketsRes?.tickets?.length ?? 0;
-          orgNav.replace(getNextIncompleteStep(event, ticketCount));
+          const computed = getNextIncompleteStep(event, ticketCount);
+          /* A última rota salva é GLOBAL (uma só no localStorage), então só vale
+             quando o rascunho local é DESTE evento — senão retomar o evento A
+             herdaria a etapa em que o organizador parou no evento B. */
+          const draft = getCreationDraftInfo();
+          const target =
+            draft.createdEventId === resumeId
+              ? furthestWizardStep(computed, draft.lastPath)
+              : computed;
+          orgNav.replace(
+            restartFromFirstStep ? DEFAULT_CREATE_EVENT_WIZARD_PATH : target,
+          );
         })
         .catch(() => {
           orgNav.replace(DEFAULT_CREATE_EVENT_WIZARD_PATH);

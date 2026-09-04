@@ -40,6 +40,8 @@ export interface Event {
   stravaRouteId?: string;
   /** URL do regulamento do evento (ex.: PDF) */
   regulationUrl?: string;
+  /** Exige contato de emergência (nome + telefone) de cada participante no checkout. */
+  emergencyContactRequired?: boolean;
   eventDate: string;
   website?: string;
   tiktok?: string;

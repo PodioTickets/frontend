@@ -8,6 +8,9 @@ import { TimePicker } from "@/components/TimePicker";
 import { LocationIcon } from "@/components/Icons/LocationIcon";
 import { ParticipantsIcon } from "@/components/Icons/ParticipantsIcon";
 import { Plus, Globe } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import { ArrowButton } from "@/components/ArrowButton";
+import { Checkbox } from "@/components/CheckBox";
 import { InstagramIcon } from "@/components/Icons/InstagramIcon";
 import { FacebookIcon } from "@/components/Icons/FacebookIcon";
 import { YoutubeIcon } from "@/components/Icons/YoutubeIcon";
@@ -104,6 +107,11 @@ export interface InformationFormValues {
   tiktok?: string;
   website?: string;
   regulationUrl?: string;
+  /**
+   * Opção avançada: exige contato de emergência (nome + telefone) de cada
+   * participante no checkout. `undefined` é tratado como `false`.
+   */
+  emergencyContactRequired?: boolean;
 }
 
 interface InformationFormProps {
@@ -168,6 +176,13 @@ export function InformationForm({
   }, [pdfFile, onHasPendingPdfChange]);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  /* Painel de opções avançadas — mesmo padrão do modal de cupom. Abre sozinho
+   * quando o evento já tem alguma opção ativa, para o organizador não precisar
+   * caçar onde a configuração ficou guardada ao reabrir o formulário. */
+  const [showAdvanced, setShowAdvanced] = useState(
+    !!values.emergencyContactRequired,
+  );
 
   // ── Local no mapa ──────────────────────────────────────────────────────────
   const [mapOpen, setMapOpen] = useState(false);
@@ -758,6 +773,69 @@ export function InformationForm({
               )}
             </div>
           )}
+        </div>
+
+        {/* Opções avançadas — markup espelhado do painel do modal de cupom
+            (`CreateCouponModal`), para as duas telas lerem igual. */}
+        <div className="flex flex-col gap-5">
+          <button
+            type="button"
+            onClick={() => setShowAdvanced(!showAdvanced)}
+            className="flex items-center gap-2 text-primary-11 hover:text-primary-12 transition-colors self-start"
+          >
+            <span className="text-base font-medium font-family-dm-sans leading-[1.3]">
+              Opções avançadas
+            </span>
+            <ArrowButton isOpen={showAdvanced} />
+          </button>
+
+          <AnimatePresence>
+            {showAdvanced && (
+              <motion.div
+                initial={{ height: 0, opacity: 0 }}
+                animate={{ height: "auto", opacity: 1 }}
+                exit={{ height: 0, opacity: 0 }}
+                transition={{ duration: 0.2 }}
+                className="overflow-hidden flex flex-col gap-9"
+              >
+                <div className="flex flex-col gap-4">
+                  <div className="flex flex-col gap-2">
+                    <h3 className="text-gray-12 text-lg font-medium font-family-dm-sans leading-[1.3]">
+                      Deseja tornar obrigatório o contato de emergência?
+                    </h3>
+                    <p className="text-gray-11 text-base font-family-dm-sans leading-[1.3]">
+                      Se obrigatório, cada participante terá que informar nome e
+                      telefone de emergência no checkout para concluir a inscrição.
+                    </p>
+                  </div>
+                  <div className="flex gap-6">
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <Checkbox
+                        checked={!values.emergencyContactRequired}
+                        onCheckedChange={(checked) => {
+                          if (checked) onChange({ emergencyContactRequired: false });
+                        }}
+                      />
+                      <span className="text-sm font-family-dm-sans leading-[1.3] text-gray-12">
+                        Opcional
+                      </span>
+                    </label>
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <Checkbox
+                        checked={!!values.emergencyContactRequired}
+                        onCheckedChange={(checked) => {
+                          if (checked) onChange({ emergencyContactRequired: true });
+                        }}
+                      />
+                      <span className="text-sm font-family-dm-sans leading-[1.3] text-gray-12">
+                        Obrigatório
+                      </span>
+                    </label>
+                  </div>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
       </form>
 
