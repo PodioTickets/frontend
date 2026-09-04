@@ -1,9 +1,13 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import { Search, Plus } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useOrganizerNavigate } from "@/hooks/useOrganizerNavigate";
+import { useOrganizerAppSurface } from "@/contexts/OrganizerAppSurfaceContext";
+import { organizerExternalHref } from "@/lib/organizerPathPresentation";
+import { ArrowButton } from "@/components/ArrowButton";
 import { organizerService } from "@/services";
 import { Button } from "@/components/Button";
 import { LoadingAnimation } from "@/components/Loading";
@@ -46,6 +50,8 @@ function memberInitials(m: OrganizationMember) {
 
 export default function OrganizerTeamPage() {
   const orgNav = useOrganizerNavigate();
+  const appSurface = useOrganizerAppSurface();
+  const eventsListHref = organizerExternalHref("/organizer/events", appSurface);
   const { user, isLoading: authLoading } = useAuth();
   const [loading, setLoading] = useState(true);
   const [members, setMembers] = useState<OrganizationMember[]>([]);
@@ -123,18 +129,29 @@ export default function OrganizerTeamPage() {
         {/* Header row */}
         <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between mb-4 md:mb-6">
           <div>
-            <h1
-              className={cn(
-                "text-gray-12 tracking-tight",
-                tab === "audit"
-                  ? "text-2xl font-extrabold font-manrope leading-[1.1]"
-                  : "font-manrope font-extrabold text-base leading-[1.1] md:text-2xl md:font-family-dm-sans"
-              )}
-            >
-              {tab === "audit"
-                ? "Log Geral do Sistema"
-                : "Equipe"}
-            </h1>
+            {/* Voltar aparece só no mobile: no desktop a navegação já vive na
+                sidebar. Mesmo padrão de organization/settings. */}
+            <div className="flex items-center gap-2 min-w-0">
+              <Link
+                href={eventsListHref}
+                className="md:hidden size-8 flex items-center justify-center shrink-0 rounded-lg hover:bg-gray-3 transition-colors rotate-180"
+                aria-label="Voltar"
+              >
+                <ArrowButton isOpen={false} />
+              </Link>
+              <h1
+                className={cn(
+                  "text-gray-12 tracking-tight",
+                  tab === "audit"
+                    ? "text-2xl font-extrabold font-manrope leading-[1.1]"
+                    : "font-manrope font-extrabold text-base leading-[1.1] md:text-2xl md:font-family-dm-sans"
+                )}
+              >
+                {tab === "audit"
+                  ? "Log Geral do Sistema"
+                  : "Equipe"}
+              </h1>
+            </div>
             <p
               className={cn(
                 "mt-2 md:mt-1 text-gray-11 font-family-dm-sans leading-[1.3]",

@@ -1,8 +1,11 @@
 "use client";
 
 import { useEffect, useState, useRef } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useOrganizerNavigate } from "@/hooks/useOrganizerNavigate";
+import { useOrganizerAppSurface } from "@/contexts/OrganizerAppSurfaceContext";
+import { organizerExternalHref } from "@/lib/organizerPathPresentation";
 import { useAuth } from "@/hooks/useAuth";
 import { organizerService, userService } from "@/services";
 import { Button } from "@/components/Button";
@@ -25,6 +28,8 @@ import { TwoFASection } from "@/components/TwoFASection";
 export default function OrganizerSettingsPage() {
   const router = useRouter();
   const orgNav = useOrganizerNavigate();
+  const appSurface = useOrganizerAppSurface();
+  const eventsListHref = organizerExternalHref("/organizer/events", appSurface);
   const { isAuthenticated, isLoading: authLoading, user, refetchUser } = useAuth();
   const { openChangeEmailModal } = useChangeEmailModal();
   const { openChangePasswordModal } = useChangePasswordModal();
@@ -147,8 +152,17 @@ export default function OrganizerSettingsPage() {
     <div className="w-full min-h-screen bg-gray-2">
       {/* Header — estático no mobile (o menu mobile fixo já ocupa o topo);
           sticky só no desktop, onde não há barra fixa no topo. */}
-      <div className="md:sticky md:top-0 z-10 bg-gray-1 border-b border-gray-6 flex items-center h-16 md:h-[84px] px-4 md:px-8">
-        <p className="font-manrope font-extrabold leading-[1.1] text-xl md:text-2xl text-gray-12">
+      <div className="md:sticky md:top-0 z-10 bg-gray-1 border-b border-gray-6 flex items-center gap-2 h-16 md:h-[84px] px-4 md:px-8">
+        {/* Voltar só no mobile: no desktop a navegação já vive na sidebar.
+            Mesmo par (botão + título) de organization/settings. */}
+        <Link
+          href={eventsListHref}
+          className="md:hidden size-8 flex items-center justify-center shrink-0 rounded-lg hover:bg-gray-3 transition-colors rotate-180"
+          aria-label="Voltar"
+        >
+          <ArrowButton isOpen={false} />
+        </Link>
+        <p className="font-manrope font-extrabold leading-[1.1] text-base md:text-[20px] text-gray-12 truncate">
           Configurações de perfil
         </p>
       </div>
