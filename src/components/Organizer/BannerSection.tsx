@@ -98,7 +98,7 @@ interface BannerSectionProps {
    */
   onBannerUploaded: (url: string) => Promise<void>;
   /**
-   * When provided, o botão do banner vira "Próximo" e chama `onNext` após salvar
+   * When provided, o botão do banner vira "Próxima etapa" e chama `onNext` após salvar
    * (ou se o banner já estiver salvo). A "imagem do card" foi descontinuada — todo
    * o app exibe o BANNER, então esta é a única etapa de imagem do evento.
    */
@@ -375,6 +375,9 @@ export function BannerSection({
             <div className="flex flex-col gap-8 px-4 pb-8 pt-5 md:gap-11 md:pb-7 md:pt-6">
               {renderBannerUpload()}
               {renderBannerPreviewBlock()}
+              {/* No wizard (com `onNext`) o CTA copia a etapa de informações:
+                  largura total no mobile e botão grande no desktop. Nas telas de
+                  edição, onde ele é "Salvar", o tamanho antigo continua. */}
               <div className="flex justify-end">
                 <Button
                   type="button"
@@ -386,9 +389,13 @@ export function BannerSection({
                       ? !selectedBannerFile && !bannerUrl && !bannerPreview
                       : !selectedBannerFile)
                   }
-                  className="h-12 px-6 text-base font-bold font-manrope rounded-lg md:h-10 md:px-4 md:text-sm"
+                  className={
+                    onNext
+                      ? "h-12 w-full text-base font-bold font-manrope rounded-lg md:h-[52px] md:w-auto md:px-11 md:text-xl"
+                      : "h-12 px-6 text-base font-bold font-manrope rounded-lg md:h-10 md:px-4 md:text-sm"
+                  }
                 >
-                  {uploadingBanner || nextLoading ? "Enviando..." : onNext ? "Próximo" : "Salvar"}
+                  {uploadingBanner || nextLoading ? "Enviando..." : onNext ? "Próxima etapa" : "Salvar"}
                 </Button>
               </div>
             </div>

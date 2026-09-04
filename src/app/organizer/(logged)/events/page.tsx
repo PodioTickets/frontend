@@ -233,6 +233,13 @@ export default function OrganizerEventsPage() {
 
   const eventsPaginationTotalPages = Math.max(1, pagination.totalPages || 1);
 
+  // "Ainda não criou nenhum evento": só dá pra afirmar isso quando NÃO há filtro
+  // de status — com filtro, `pagination.total` conta apenas aquele status. Nesse
+  // caso o CTA do topo sai e sobra só o "Criar Primeiro Evento" do estado vazio,
+  // para não repetir a mesma ação duas vezes na tela.
+  const hasNoEvents =
+    statusFilter === "all" && !loading && events.length === 0 && pagination.total === 0;
+
   const getStatusBadge = (event: { status: string }) => {
     if (isEventSuspended(event)) {
       return {
@@ -387,7 +394,7 @@ export default function OrganizerEventsPage() {
               Meus eventos
             </h1>
           </div>
-          {canCreateEvent && (
+          {canCreateEvent && !hasNoEvents && (
             <Link href="/organizer/events/new?reset=1">
               <Button className="">
                 Criar evento
@@ -406,7 +413,7 @@ export default function OrganizerEventsPage() {
               Gerencie todos os projetos e pagamentos deste evento
             </p>
           </div>
-          {canCreateEvent && (
+          {canCreateEvent && !hasNoEvents && (
             <Link href="/organizer/events/new?reset=1" className="w-full">
               <Button className="w-full h-11">
                 <Plus className="size-5" />

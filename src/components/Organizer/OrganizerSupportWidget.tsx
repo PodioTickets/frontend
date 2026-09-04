@@ -101,12 +101,19 @@ export function OrganizerSupportWidget() {
             {/* Header (escuro) */}
             <div className="bg-[#111111] flex items-center justify-between px-4 py-3 gap-2">
               <div className="flex gap-2 items-center min-w-0">
+                {/* `width`/`height` = tamanho PINTADO (40px do box x 1.5 do
+                    `scale-150`), não o do box. Com width numérico o next/image
+                    emite srcset com descritor `x` (candidatos em `w` e `w*2`),
+                    escolhido só pelo devicePixelRatio — a transform de CSS é
+                    invisível pra ele. Declarar 40 servia 96px de imagem para um
+                    avatar que pinta 120px em tela 2x, e o rosto saía borrado.
+                    O box continua 40px pela classe `size-10`. */}
                 <span className="relative size-10 rounded-full overflow-hidden shrink-0">
                   <Image
                     src={advisor.photoUrl}
                     alt={advisor.name}
-                    width={40}
-                    height={40}
+                    width={60}
+                    height={60}
                     className="size-10 rounded-full object-cover scale-150"
                   />
                 </span>
@@ -201,11 +208,13 @@ export function OrganizerSupportWidget() {
                 transition={{ duration: 0.15 }}
                 className="absolute inset-0"
               >
+                {/* 60px do box x 1.5 do `scale-150` = 90px pintados (94,5 no
+                    hover). Ver a nota do avatar do header. */}
                 <Image
                   src={advisor.photoUrl}
                   alt={advisor.name}
-                  width={60}
-                  height={60}
+                  width={90}
+                  height={90}
                   className="size-full rounded-full object-cover scale-150"
                 />
               </motion.span>

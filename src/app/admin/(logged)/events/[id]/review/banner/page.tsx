@@ -38,13 +38,16 @@ export default function ReviewBannerPage() {
   const backHref = `/admin/events/${eventId}/review/information`;
 
   return (
+    // `pb-5` no mobile (e não o `pb-28` das outras etapas): esta etapa NÃO
+    // passa `actions`, então não existe barra fixa no rodapé para o padding
+    // compensar — ele só deixava uma faixa vazia no fim da página.
     <WizardStepLayout
       title="Banner"
       description="Imagens principais do evento que aparecem na página pública."
       showDescriptionOnMobile
       stickyMobileHeader
       backHref={backHref}
-      className="bg-gray-2 flex-1 pb-28 md:pb-44 md:px-[124px] pt-0 min-w-0"
+      className="bg-gray-2 flex-1 pb-5 md:pb-44 md:px-[124px] pt-0 min-w-0"
       maxWidth="max-w-[1100px]"
     >
       <BannerSection
