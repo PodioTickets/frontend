@@ -44,11 +44,8 @@ export const ORGANIZER_ADVISORS: Record<OrganizerAdvisorId, OrganizerAdvisor> = 
   LUCAS_SANTOS: {
     id: "LUCAS_SANTOS",
     name: "Lucas Santos",
-    // TODO(produto): trocar pelo arquivo real em `public/images/`.
     photoUrl: "/images/lucas-santos.jpeg",
-    // TODO(produto): preencher o WhatsApp do Lucas (DDI+DDD, só dígitos).
-    // Enquanto estiver vazio o widget não mostra o botão de WhatsApp.
-    whatsappPhone: "",
+    whatsappPhone: "5565992554096",
   },
 };
 
