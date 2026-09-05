@@ -100,14 +100,24 @@ export default function QuestionnairePage() {
       showDescriptionOnMobile
       isLoading={!authChecked || loading}
       actions={
-        <Button
-          type="button"
-          onClick={goFinanceiro}
-          variant="default"
-          className="rounded-lg font-manrope text-lg sm:text-base font-bold disabled:cursor-not-allowed disabled:opacity-50 sm:px-8"
-        >
-          Próximo
-        </Button>
+        <>
+          {/* Mesmo par de botões da etapa de informações: no desktop o CTA
+              grande alinhado à direita, no mobile largura total na barra fixa. */}
+          <Button
+            type="button"
+            onClick={goFinanceiro}
+            className="hidden h-[52px] px-11 text-xl font-bold font-manrope md:block"
+          >
+            Próxima etapa
+          </Button>
+          <Button
+            type="button"
+            onClick={goFinanceiro}
+            className="h-12 w-full text-base font-bold font-manrope md:hidden"
+          >
+            Próxima etapa
+          </Button>
+        </>
       }
     >
       <QuestionsGrid

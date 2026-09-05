@@ -1915,10 +1915,10 @@ export function InformationStep({
                   )}
 
                   {!hidePricing && (
-                  <div className="flex items-center justify-between w-full text-sm text-gray-12">
-                    <p className="font-semibold">Subtotal:</p>
-                    <p className="font-semibold font-family-dm-sans">{formatPrice(totalPrice)}</p>
-                  </div>
+                    <div className="flex items-center justify-between w-full text-sm text-gray-12">
+                      <p className="font-semibold">Subtotal:</p>
+                      <p className="font-semibold font-family-dm-sans">{formatPrice(totalPrice)}</p>
+                    </div>
                   )}
                   {!hidePricing && appliedCoupon && showCouponDiscount && couponDiscountAmount > 0 && (
                     <div className="flex items-center justify-between w-full text-sm text-gray-12">
@@ -1941,10 +1941,10 @@ export function InformationStep({
                 </div>
 
                 {!hidePricing && (
-                <div className="flex items-center justify-between border-t border-gray-6 pt-5 text-base font-bold text-gray-12">
-                  <p>Total:</p>
-                  <p>{formatPrice(totalAmountWithAge)}</p>
-                </div>
+                  <div className="flex items-center justify-between border-t border-gray-6 pt-5 text-base font-bold text-gray-12">
+                    <p>Total:</p>
+                    <p>{formatPrice(totalAmountWithAge)}</p>
+                  </div>
                 )}
               </div>
             </div>
@@ -2113,16 +2113,16 @@ export function InformationStep({
                               </button>
                             </div>
                             {!hidePricing && (
-                            <div className="hidden md:flex items-baseline gap-2">
-                              <h1 className="text-xl font-bold text-gray-12">
-                                {formatPrice(priceBreakdown.discounted)}
-                              </h1>
-                              {priceBreakdown.hasDiscount && (
-                                <p className="text-sm font-medium text-gray-11 line-through">
-                                  {formatPrice(priceBreakdown.original)}
-                                </p>
-                              )}
-                            </div>
+                              <div className="hidden md:flex items-baseline gap-2">
+                                <h1 className="text-xl font-bold text-gray-12">
+                                  {formatPrice(priceBreakdown.discounted)}
+                                </h1>
+                                {priceBreakdown.hasDiscount && (
+                                  <p className="text-sm font-medium text-gray-11 line-through">
+                                    {formatPrice(priceBreakdown.original)}
+                                  </p>
+                                )}
+                              </div>
                             )}
                           </div>
                         </div>
@@ -2448,8 +2448,13 @@ export function InformationStep({
                         </div>
 
                         {/* Seção de Contato de Emergência */}
-                        <div className={`flex flex-col gap-3 mt-4 w-full ${previewMode ? "opacity-50 pointer-events-none" : ""}`}>
-                          <p className="text-base font-normal text-gray-12 font-family-dm-sans leading-[1.3]">
+                        {/* Quando o evento EXIGE o contato, a linha Sim/Não fica
+                            `hidden` — o título passa a encostar direto nos campos.
+                            No mobile ele vira negrito (é um título de seção, não
+                            mais uma pergunta) e desce, colado no "Nome do contato".
+                            O fluxo opcional segue com o espaçamento antigo. */}
+                        <div className={`flex flex-col gap-3 w-full ${emergencyContactRequired ? "mt-6 max-md:mt-6" : "mt-4"} ${previewMode ? "opacity-50 pointer-events-none" : ""}`}>
+                          <p className={`text-base text-gray-12 font-family-dm-sans leading-[1.3] ${emergencyContactRequired ? "-mb-2 md:-mb-4 font-bold" : "font-normal"}`}>
                             {emergencyContactRequired
                               ? "Contato de emergência"
                               : "Deseja adicionar um número de emergência ?"}
@@ -2511,8 +2516,8 @@ export function InformationStep({
 
                           {/* Campos de contato de emergência - mostrados apenas quando "Sim" é selecionado */}
                           {emergencyContactRequired ||
-                          participant.hasEmergencyContact === true ? (
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-2 md:gap-4 mt-4">
+                            participant.hasEmergencyContact === true ? (
+                            <div className={`grid grid-cols-1 md:grid-cols-2 gap-2 md:gap-4 mt-4 ${emergencyContactRequired ? "max-md:mt-1" : ""}`}>
                               <div className="flex flex-col gap-2">
                                 <label className="text-sm font-medium text-gray-12 font-family-manrope">
                                   Nome do contato de emergência
@@ -2592,16 +2597,16 @@ export function InformationStep({
 
                         <div className="flex items-center justify-between gap-2 mt-10">
                           {hidePricing ? <span /> : (
-                          <div className="flex items-baseline gap-2">
-                            <h1 className="text-xl font-bold text-gray-12">
-                              {formatPrice(priceBreakdown.discounted)}
-                            </h1>
-                            {priceBreakdown.hasDiscount && (
-                              <p className="text-sm font-medium text-gray-11 line-through">
-                                {formatPrice(priceBreakdown.original)}
-                              </p>
-                            )}
-                          </div>
+                            <div className="flex items-baseline gap-2">
+                              <h1 className="text-xl font-bold text-gray-12">
+                                {formatPrice(priceBreakdown.discounted)}
+                              </h1>
+                              {priceBreakdown.hasDiscount && (
+                                <p className="text-sm font-medium text-gray-11 line-through">
+                                  {formatPrice(priceBreakdown.original)}
+                                </p>
+                              )}
+                            </div>
                           )}
                           <Button
                             onClick={async () => {
