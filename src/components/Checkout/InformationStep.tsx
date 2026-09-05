@@ -2453,8 +2453,8 @@ export function InformationStep({
                             No mobile ele vira negrito (é um título de seção, não
                             mais uma pergunta) e desce, colado no "Nome do contato".
                             O fluxo opcional segue com o espaçamento antigo. */}
-                        <div className={`flex flex-col gap-3 w-full ${emergencyContactRequired ? "mt-4 max-md:mt-6" : "mt-4"} ${previewMode ? "opacity-50 pointer-events-none" : ""}`}>
-                          <p className={`text-base text-gray-12 font-family-dm-sans leading-[1.3] ${emergencyContactRequired ? "font-bold md:font-normal" : "font-normal"}`}>
+                        <div className={`flex flex-col gap-3 w-full ${emergencyContactRequired ? "mt-6 max-md:mt-6" : "mt-4"} ${previewMode ? "opacity-50 pointer-events-none" : ""}`}>
+                          <p className={`text-base text-gray-12 font-family-dm-sans leading-[1.3] ${emergencyContactRequired ? "-mb-2 md:-mb-4 font-bold" : "font-normal"}`}>
                             {emergencyContactRequired
                               ? "Contato de emergência"
                               : "Deseja adicionar um número de emergência ?"}
