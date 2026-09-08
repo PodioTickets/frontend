@@ -771,20 +771,30 @@ export function InformationForm({
               </div>
             )}
 
+            {/* Mobile: grade de 2 colunas (chips de larguras diferentes num
+                flex-wrap ficavam desalinhados). Desktop segue no flex-wrap do
+                design, que acomoda os 5 numa linha só.
+
+                Ícone/texto encolhem no mobile por aritmética: num Android de
+                360px a coluna fica com ~138px, e "Site oficial" a 16px entre
+                dois ícones de 24px estoura. Com 20px/14px cabe; o
+                `whitespace-normal` é a rede de segurança para o rótulo mais
+                longo quebrar em duas linhas em vez de vazar (o grid iguala a
+                altura da linha, então a fileira não desalinha). */}
             {availableSocials.length > 0 && (
-              <div className="flex flex-wrap gap-3">
+              <div className="grid grid-cols-2 gap-3 md:flex md:flex-wrap">
                 {availableSocials.map(({ key, label, Icon }) => (
                   <button
                     key={key}
                     type="button"
                     onClick={() => openSocial(key)}
-                    className="flex items-center justify-center gap-2 px-4 py-3 rounded-lg border border-gray-6 hover:border-gray-8 hover:bg-gray-3 transition-colors"
+                    className="flex items-center justify-center gap-2 px-3 py-3 md:px-4 rounded-lg border border-gray-6 hover:border-gray-8 hover:bg-gray-3 transition-colors"
                   >
-                    <Icon className="size-6 shrink-0 text-gray-12" />
-                    <span className="text-gray-12 text-base font-semibold font-manrope leading-[1.1] whitespace-nowrap">
+                    <Icon className="size-5 md:size-6 shrink-0 text-gray-12" />
+                    <span className="min-w-0 text-gray-12 text-sm md:text-base font-semibold font-manrope leading-[1.1] text-center whitespace-normal md:whitespace-nowrap">
                       {label}
                     </span>
-                    <Plus className="size-6 shrink-0 text-gray-12" strokeWidth={1.5} />
+                    <Plus className="size-5 md:size-6 shrink-0 text-gray-12" strokeWidth={1.5} />
                   </button>
                 ))}
               </div>
