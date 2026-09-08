@@ -42,6 +42,8 @@ export interface Event {
   regulationUrl?: string;
   /** Exige contato de emergência (nome + telefone) de cada participante no checkout. */
   emergencyContactRequired?: boolean;
+  /** Permite que o mesmo CPF leve mais de um ingresso neste evento. */
+  allowMultipleTicketsPerCpf?: boolean;
   eventDate: string;
   website?: string;
   tiktok?: string;

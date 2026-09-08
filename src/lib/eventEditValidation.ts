@@ -27,6 +27,7 @@ export const INFORMATION_FIELDS = [
   "contactEmail", "instagram", "facebook", "youtube", "tiktok", "website",
   "regulationUrl",
   "emergencyContactRequired",
+  "allowMultipleTicketsPerCpf",
 ] as const satisfies readonly (keyof EditEventFormData)[];
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
