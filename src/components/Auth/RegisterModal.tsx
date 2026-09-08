@@ -225,9 +225,9 @@ export function RegisterModal() {
           <Button
             onClick={handleNext}
             disabled={isSubmitting}
-            className="w-full h-12 bg-primary-11 text-primary-2 hover:bg-primary-10 font-bold text-base font-manrope disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full h-12 font-bold text-base font-manrope disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            Continuar
+            Próximo
           </Button>
         </div>
       </div>
@@ -524,7 +524,7 @@ export function RegisterModal() {
             disabled={isSubmitting}
             className="px-8 font-bold text-base disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            Continuar
+            Próximo
           </Button>
         </div>
       </div>
