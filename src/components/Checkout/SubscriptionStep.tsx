@@ -42,6 +42,7 @@ import {
   maskCPF,
   formatDate,
   isVariationSoldOut,
+  canConfirmProductStep,
 } from "./SubscriptionStep.utils";
 
 interface SubscriptionStepProps {
@@ -914,17 +915,18 @@ export function SubscriptionStep({
     );
   }
 
-  /* Confirmação só é liberada quando: (a) nenhum card de participante está
-   * ABERTO (força salvar/minimizar antes); e (b) TODOS passaram pelo "Salvar e
-   * próximo" (`completedParticipants[idx]`). `isParticipantComplete` conta
-   * auto-fill de variação única, então exigimos a confirmação explícita.
-   * Reusado pelo botão "Confirmar produtos" (mobile) e pelo CTA da barra. */
-  const canConfirmProducts =
-    totalParticipants > 0 &&
-    !Object.values(expandedParticipants).some(Boolean) &&
-    participantsWithTickets.every(
-      ({ participantIndex }) => completedParticipants[participantIndex],
-    );
+  /* Confirmação liberada quando nenhum card está ABERTO e todos os participantes
+   * estão completos — pelo MESMO `isParticipantComplete` que pinta o selo
+   * "Concluído" no card. Ver `canConfirmProductStep` para o porquê de não exigir
+   * mais a confirmação explícita: ela travava a etapa quando não havia card a
+   * abrir. Reusado pelo botão "Confirmar produtos" (mobile) e pelo CTA da barra. */
+  const canConfirmProducts = canConfirmProductStep({
+    totalParticipants,
+    anyParticipantExpanded: Object.values(expandedParticipants).some(Boolean),
+    participantsComplete: participantsWithTickets.map(({ participantIndex }) =>
+      isParticipantComplete(participantIndex),
+    ),
+  });
 
   /* Detalhe rico do resumo mobile (cards de participante + produtos com imagem),
    * renderizado dentro do bottom-sheet do MobileSummaryBar via `extraDetails`.

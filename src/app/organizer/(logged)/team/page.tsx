@@ -131,7 +131,13 @@ export default function OrganizerTeamPage() {
           <div>
             {/* Voltar aparece só no mobile: no desktop a navegação já vive na
                 sidebar. Mesmo padrão de organization/settings. */}
-            <div className="flex items-center gap-2 min-w-0">
+            {/* Linha sob o título só no mobile, fechando o header como faz a barra
+                de `organizer/settings` (a referência). Sangra até as bordas com o
+                MESMO idioma da faixa de abas logo abaixo (`-mx-4 px-4 sm:mx-0
+                sm:px-0`): abaixo de `sm` o padding da página é `px-4`, mas de `sm`
+                para cima vira `px-6`, então o negative margin fixo só vale na
+                faixa mais estreita. */}
+            <div className="flex items-center gap-2 min-w-0 max-md:border-b max-md:border-gray-6 max-md:pb-4 -mx-4 px-4 sm:mx-0 sm:px-0">
               <Link
                 href={eventsListHref}
                 className="md:hidden size-8 flex items-center justify-center shrink-0 rounded-lg hover:bg-gray-3 transition-colors rotate-180"

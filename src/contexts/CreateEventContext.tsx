@@ -31,6 +31,8 @@ export interface CreateEventFormData {
   regulationUrl: string;
   /** Exige contato de emergência de cada participante no checkout. */
   emergencyContactRequired: boolean;
+  /** Permite que o mesmo CPF leve mais de um ingresso neste evento. */
+  allowMultipleTicketsPerCpf: boolean;
   createdEventId: string | null;
   contactEmail: string;
   instagram: string;
@@ -80,6 +82,7 @@ const initialFormData: CreateEventFormData = {
   bannerUrl: "",
   regulationUrl: "",
   emergencyContactRequired: false,
+  allowMultipleTicketsPerCpf: false,
   createdEventId: null,
   contactEmail: "",
   instagram: "",

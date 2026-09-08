@@ -291,6 +291,10 @@ export type OrderErrorCode =
   | "LAST_TICKET"
   // `POST /pay` quando há participante em branco
   | "INCOMPLETE_PARTICIPANTS"
+  // Evento com `allowMultipleTicketsPerCpf` desligado: documento repetido no
+  // pedido, ou já com inscrição no evento. Vem com `slots` (índices dos
+  // participantes que violaram) para o checkout marcar o card certo.
+  | "ONE_TICKET_PER_DOCUMENT"
   | "VALIDATION_ERROR";
 
 export interface OrderErrorResponse {
@@ -298,12 +302,15 @@ export interface OrderErrorResponse {
   code: OrderErrorCode;
   message: string;
   fields?: Array<{ path: string; message: string }>;
+  /** Índices de participante que violaram a regra (só em ONE_TICKET_PER_DOCUMENT). */
+  slots?: number[];
 }
 
 export class OrderApiError extends Error {
   statusCode: number;
   code: OrderErrorCode;
   fields?: Array<{ path: string; message: string }>;
+  slots?: number[];
 
   constructor(response: OrderErrorResponse) {
     super(response.message);
@@ -311,5 +318,6 @@ export class OrderApiError extends Error {
     this.statusCode = response.statusCode;
     this.code = response.code;
     this.fields = response.fields;
+    this.slots = response.slots;
   }
 }

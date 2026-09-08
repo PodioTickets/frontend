@@ -405,7 +405,10 @@ export default function OrganizerEventsPage() {
 
         {/* Header — Mobile */}
         <div className="md:hidden mb-6 flex flex-col gap-6">
-          <div className="flex flex-col gap-3 py-5">
+          {/* Sem padding-top: o container da página já dá `pt-6` e o `py-5`
+              empilhava mais 20px, jogando o título longe demais da barra fixa
+              do menu mobile. Só o respiro de baixo (`pb-5`) segue necessário. */}
+          <div className="flex flex-col gap-3 pb-5">
             <h1 className="text-lg font-bold text-gray-12 font-manrope leading-[1.1]">
               Meus eventos
             </h1>
@@ -423,48 +426,55 @@ export default function OrganizerEventsPage() {
           )}
         </div>
 
-        {/* Status filter — Desktop + Mobile (mesmo controle nas duas larguras) */}
-        <div className="mb-6 md:hidden">
-          <Popover open={statusFilterOpen} onOpenChange={setStatusFilterOpen}>
-            <PopoverTrigger asChild>
-              <button
-                type="button"
-                className="h-10 min-w-[147px] inline-flex items-center justify-between gap-2 px-3 py-4 rounded-lg border border-gray-7 bg-transparent text-sm font-family-dm-sans text-gray-11"
+        {/* Status filter (só mobile — o desktop não tem esse controle).
+            Escondido quando o organizador não tem NENHUM evento: sem nada para
+            filtrar, o controle só ocupa espaço. `hasNoEvents` já exige
+            `statusFilter === "all"`, então filtrar por um status sem resultado
+            NÃO some com o filtro — senão o usuário ficaria sem como voltar
+            para "Todos". */}
+        {!hasNoEvents && (
+          <div className="mb-6 md:hidden">
+            <Popover open={statusFilterOpen} onOpenChange={setStatusFilterOpen}>
+              <PopoverTrigger asChild>
+                <button
+                  type="button"
+                  className="h-10 min-w-[147px] inline-flex items-center justify-between gap-2 px-3 py-4 rounded-lg border border-gray-7 bg-transparent text-sm font-family-dm-sans text-gray-11"
+                >
+                  <span>Status: {currentStatusLabel}</span>
+                  <ChevronDown className="size-4 text-gray-11 shrink-0" />
+                </button>
+              </PopoverTrigger>
+              <PopoverContent
+                align="start"
+                sideOffset={6}
+                className="w-56 p-1 border-gray-6 bg-gray-1 shadow-lg"
               >
-                <span>Status: {currentStatusLabel}</span>
-                <ChevronDown className="size-4 text-gray-11 shrink-0" />
-              </button>
-            </PopoverTrigger>
-            <PopoverContent
-              align="start"
-              sideOffset={6}
-              className="w-56 p-1 border-gray-6 bg-gray-1 shadow-lg"
-            >
-              <div className="flex flex-col gap-0.5">
-                {visibleStatusOptions.map((opt) => (
-                  <button
-                    key={opt.value}
-                    type="button"
-                    onClick={() => {
-                      setStatusFilter(opt.value);
-                      // Reseta paginação ao trocar de filtro p/ evitar página vazia.
-                      setPagination((prev) => ({ ...prev, page: 1 }));
-                      setStatusFilterOpen(false);
-                    }}
-                    className={cn(
-                      "w-full text-left px-3 py-2.5 text-sm font-family-dm-sans rounded-md transition-colors hover:bg-gray-3",
-                      statusFilter === opt.value
-                        ? "text-gray-12 font-semibold bg-gray-2"
-                        : "text-gray-12"
-                    )}
-                  >
-                    {opt.label}
-                  </button>
-                ))}
-              </div>
-            </PopoverContent>
-          </Popover>
-        </div>
+                <div className="flex flex-col gap-0.5">
+                  {visibleStatusOptions.map((opt) => (
+                    <button
+                      key={opt.value}
+                      type="button"
+                      onClick={() => {
+                        setStatusFilter(opt.value);
+                        // Reseta paginação ao trocar de filtro p/ evitar página vazia.
+                        setPagination((prev) => ({ ...prev, page: 1 }));
+                        setStatusFilterOpen(false);
+                      }}
+                      className={cn(
+                        "w-full text-left px-3 py-2.5 text-sm font-family-dm-sans rounded-md transition-colors hover:bg-gray-3",
+                        statusFilter === opt.value
+                          ? "text-gray-12 font-semibold bg-gray-2"
+                          : "text-gray-12"
+                      )}
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+              </PopoverContent>
+            </Popover>
+          </div>
+        )}
 
         {/* Events */}
         {filteredEvents.length === 0 ? (

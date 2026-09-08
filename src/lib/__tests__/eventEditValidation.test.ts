@@ -36,6 +36,7 @@ function validForm(): EditEventFormData {
     bannerUrl: "",
     regulationUrl: "",
     emergencyContactRequired: false,
+    allowMultipleTicketsPerCpf: false,
     description: "",
     contactEmail: "contato@evento.com",
     instagram: "",

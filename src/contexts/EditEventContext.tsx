@@ -40,6 +40,8 @@ export interface EditEventFormData {
   regulationUrl: string;
   /** Exige contato de emergência de cada participante no checkout. */
   emergencyContactRequired: boolean;
+  /** Permite que o mesmo CPF leve mais de um ingresso neste evento. */
+  allowMultipleTicketsPerCpf: boolean;
   description: string;
   contactEmail: string;
   instagram: string;
@@ -88,6 +90,7 @@ const defaultFormData: EditEventFormData = {
   bannerUrl: "",
   regulationUrl: "",
   emergencyContactRequired: false,
+  allowMultipleTicketsPerCpf: false,
   description: "",
   contactEmail: "",
   instagram: "",
@@ -168,6 +171,8 @@ function buildFormDataFromEvent(eventId: string, eventData: any): EditEventFormD
     regulationUrl: (eventData as any).regulationUrl || "",
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     emergencyContactRequired: !!(eventData as any).emergencyContactRequired,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    allowMultipleTicketsPerCpf: !!(eventData as any).allowMultipleTicketsPerCpf,
     description: eventData.description || "",
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     contactEmail: (eventData as any).contactEmail || "",

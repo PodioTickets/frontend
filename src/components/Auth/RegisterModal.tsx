@@ -802,8 +802,8 @@ export function RegisterModal() {
           <Button
             onClick={handleNext}
             disabled={isSubmitting || authLoading}
-            className="w-full h-12 bg-primary-11 text-primary-2 hover:bg-primary-10 font-bold text-lg font-manrope disabled:opacity-50 disabled:cursor-not-allowed"
-          >
+            className="w-full h-12 font-bold text-lg disabled:opacity-50 disabled:cursor-not-allowed"
+          > 
             {isSubmitting || authLoading ? "Verificando..." : "Próximo"}
           </Button>
         </div>
