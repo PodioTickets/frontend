@@ -68,6 +68,89 @@ export function getMissingEmergencyContactFields(
   return missing;
 }
 
+// ─── 1 ingresso por CPF ──────────────────────────────────────────────────────
+
+/** Um slot do carrinho, do ponto de vista da regra de documento. */
+export interface CheckoutDocumentSlot {
+  /** Índice do participante em `participants` — o mesmo que o card exibe. */
+  index: number;
+  /** Documento como o comprador digitou (com ou sem máscara). */
+  doc?: string;
+  /** Brasileiro usa CPF (só dígitos); estrangeiro usa passaporte (alfanumérico). */
+  isBrazilian: boolean;
+  /** Ingresso ao qual o slot pertence. `null` = slot ainda sem ingresso resolvido. */
+  ticketId: string | null;
+}
+
+/**
+ * Normaliza para COMPARAÇÃO. CPF vira só dígitos ("123.456.789-00" ≡
+ * "12345678900"); passaporte vira minúsculo, porque a caixa não distingue
+ * documento. Espelha o `resolveDocument`/`cleanDocumentNumber` do backend — as
+ * duas pontas precisam concordar sobre o que é "o mesmo documento".
+ */
+export function normalizeCheckoutDocument(
+  value: string | undefined,
+  isBrazilian: boolean,
+): string {
+  const trimmed = value?.trim() ?? "";
+  if (!trimmed) return "";
+  return isBrazilian ? trimmed.replace(/\D/g, "") : trimmed.toLowerCase();
+}
+
+export type DuplicateDocumentReason = "same-ticket" | "event-single-ticket";
+
+/**
+ * Por que o documento do slot `index` está duplicado no carrinho — ou `null`.
+ *
+ * `allowMultipleTicketsPerCpf` é a opção avançada do evento:
+ *
+ *  - LIGADA: nada é bloqueado. O organizador optou explicitamente por deixar o
+ *    mesmo CPF levar vários ingressos, inclusive dois do MESMO tipo.
+ *  - DESLIGADA (default): o documento é único no evento. Qualquer repetição no
+ *    carrinho é erro, mesmo entre ingressos de tipos DIFERENTES — que era
+ *    justamente o caso que passava antes desta regra existir.
+ *
+ * `same-ticket` é devolvido quando a colisão é com o mesmo ingresso, só para
+ * preservar a mensagem mais específica que o checkout já mostrava.
+ *
+ * Slots de nacionalidade diferente nunca colidem: um CPF "12345678900" e um
+ * passaporte "12345678900" são documentos distintos, e comparar os dois
+ * inventaria uma duplicata que não existe.
+ */
+export function getDuplicateDocumentReason(
+  slots: readonly CheckoutDocumentSlot[],
+  index: number,
+  allowMultipleTicketsPerCpf: boolean,
+): DuplicateDocumentReason | null {
+  if (allowMultipleTicketsPerCpf) return null;
+
+  const current = slots.find((s) => s.index === index);
+  if (!current) return null;
+
+  const currentDoc = normalizeCheckoutDocument(current.doc, current.isBrazilian);
+  if (!currentDoc) return null;
+
+  let reason: DuplicateDocumentReason | null = null;
+  for (const other of slots) {
+    if (other.index === index) continue;
+    if (other.isBrazilian !== current.isBrazilian) continue;
+    if (normalizeCheckoutDocument(other.doc, other.isBrazilian) !== currentDoc) {
+      continue;
+    }
+    // Mesmo ingresso ganha da colisão genérica: a mensagem é mais precisa e a
+    // varredura continua, então a ordem dos slots não muda o resultado.
+    if (
+      current.ticketId !== null &&
+      other.ticketId !== null &&
+      other.ticketId === current.ticketId
+    ) {
+      return "same-ticket";
+    }
+    reason = "event-single-ticket";
+  }
+  return reason;
+}
+
 /** Mapeia o valor PT do select de gênero pro enum canônico do backend. */
 function mapGender(value?: string): BackendParticipant["gender"] {
   if (!value) return undefined;

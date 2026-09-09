@@ -4,6 +4,7 @@ import {
   isVariationSoldOut,
   previewVariationListPriceLabelForProduct,
   billableReaisForProductSelection,
+  canConfirmProductStep,
 } from "../SubscriptionStep.utils";
 import type { Product } from "../SubscriptionStep.utils";
 
@@ -109,5 +110,65 @@ describe("SubscriptionStep.utils — preço de variação (total, não acréscim
       const product = makeProduct({ isIncludedInTicket: true });
       expect(billableReaisForProductSelection(product, product.variations[1])).toBe(0);
     });
+  });
+});
+
+/**
+ * Liberação do CTA da etapa de produtos. O caso que motivou a extração está no
+ * primeiro teste: todos os cards "Concluído" e nenhum aberto — a etapa ficava
+ * sem botão de avançar no mobile, porque o gate pedia uma confirmação explícita
+ * que a UI não tinha como oferecer (não havia card a abrir).
+ */
+describe("canConfirmProductStep", () => {
+  it("libera quando todos estão completos e nenhum card está aberto", () => {
+    expect(
+      canConfirmProductStep({
+        totalParticipants: 2,
+        anyParticipantExpanded: false,
+        participantsComplete: [true, true],
+      }),
+    ).toBe(true);
+  });
+
+  it("bloqueia enquanto um card está aberto (força salvar/minimizar)", () => {
+    expect(
+      canConfirmProductStep({
+        totalParticipants: 2,
+        anyParticipantExpanded: true,
+        participantsComplete: [true, true],
+      }),
+    ).toBe(false);
+  });
+
+  it("bloqueia quando algum participante ainda está pendente", () => {
+    expect(
+      canConfirmProductStep({
+        totalParticipants: 2,
+        anyParticipantExpanded: false,
+        participantsComplete: [true, false],
+      }),
+    ).toBe(false);
+  });
+
+  it("bloqueia sem participante nenhum", () => {
+    expect(
+      canConfirmProductStep({
+        totalParticipants: 0,
+        anyParticipantExpanded: false,
+        participantsComplete: [],
+      }),
+    ).toBe(false);
+  });
+
+  it("com participantes mas sem card de ingresso, segue liberado (comportamento anterior)", () => {
+    // `.every` de lista vazia é true. Preservado de propósito: quem muda isso
+    // trava o avanço de pedidos sem card de produto por participante.
+    expect(
+      canConfirmProductStep({
+        totalParticipants: 1,
+        anyParticipantExpanded: false,
+        participantsComplete: [],
+      }),
+    ).toBe(true);
   });
 });

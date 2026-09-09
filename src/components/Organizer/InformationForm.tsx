@@ -7,7 +7,7 @@ import { DatePicker } from "@/components/DatePicker";
 import { TimePicker } from "@/components/TimePicker";
 import { LocationIcon } from "@/components/Icons/LocationIcon";
 import { ParticipantsIcon } from "@/components/Icons/ParticipantsIcon";
-import { Plus, Globe } from "lucide-react";
+import { Plus, Globe, X } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ArrowButton } from "@/components/ArrowButton";
 import { Checkbox } from "@/components/CheckBox";
@@ -41,12 +41,14 @@ import toast from "react-hot-toast";
 
 const EVENT_NAME_MAX_LENGTH = 100;
 
+// `label` é o texto do chip de "adicionar rede" (Figma 3885:128791). O do site
+// é "Site oficial", e não "Website", porque é assim que o design o nomeia.
 const SOCIAL_NETWORKS = [
-  { key: "instagram", prefix: "instagram.com/", base: "https://instagram.com/", placeholder: "seuperfil", Icon: InstagramIcon },
-  { key: "facebook", prefix: "facebook.com/", base: "https://facebook.com/", placeholder: "suapágina", Icon: FacebookIcon },
-  { key: "youtube", prefix: "youtube.com/@", base: "https://youtube.com/@", placeholder: "seucanal", Icon: YoutubeIcon },
-  { key: "tiktok", prefix: "tiktok.com/@", base: "https://tiktok.com/@", placeholder: "seuperfil", Icon: TiktokIcon },
-  { key: "website", prefix: "https://", base: "https://", placeholder: "suapágina", Icon: Globe },
+  { key: "instagram", label: "Instagram", prefix: "instagram.com/", base: "https://instagram.com/", placeholder: "seuperfil", Icon: InstagramIcon },
+  { key: "facebook", label: "Facebook", prefix: "facebook.com/", base: "https://facebook.com/", placeholder: "suapágina", Icon: FacebookIcon },
+  { key: "youtube", label: "Youtube", prefix: "youtube.com/@", base: "https://youtube.com/@", placeholder: "seucanal", Icon: YoutubeIcon },
+  { key: "tiktok", label: "Tiktok", prefix: "tiktok.com/@", base: "https://tiktok.com/@", placeholder: "seuperfil", Icon: TiktokIcon },
+  { key: "website", label: "Site oficial", prefix: "https://", base: "https://", placeholder: "suapágina", Icon: Globe },
 ];
 
 // ─── helpers ─────────────────────────────────────────────────────────────────
@@ -112,6 +114,11 @@ export interface InformationFormValues {
    * participante no checkout. `undefined` é tratado como `false`.
    */
   emergencyContactRequired?: boolean;
+  /**
+   * Opção avançada: permite que o MESMO CPF leve mais de um ingresso no evento.
+   * `undefined` é tratado como `false` — o padrão é 1 ingresso por CPF.
+   */
+  allowMultipleTicketsPerCpf?: boolean;
 }
 
 interface InformationFormProps {
@@ -181,7 +188,45 @@ export function InformationForm({
    * quando o evento já tem alguma opção ativa, para o organizador não precisar
    * caçar onde a configuração ficou guardada ao reabrir o formulário. */
   const [showAdvanced, setShowAdvanced] = useState(
-    !!values.emergencyContactRequired,
+    !!values.emergencyContactRequired || !!values.allowMultipleTicketsPerCpf,
+  );
+
+  /* Redes sociais abertas por CLIQUE no chip. O Set guarda só as que o usuário
+   * acabou de adicionar e ainda estão em branco — quem já tem valor salvo é
+   * derivado de `values`. Assim a edição de um evento abre sozinha os campos já
+   * preenchidos, sem depender de semear o Set na hidratação (que chega depois
+   * do primeiro render) e sem reabrir o que o usuário fechou. */
+  const [openSocials, setOpenSocials] = useState<Set<string>>(new Set());
+  const openSocial = (key: string) =>
+    setOpenSocials((prev) => new Set(prev).add(key));
+  const closeSocial = (key: string) => {
+    setOpenSocials((prev) => {
+      const next = new Set(prev);
+      next.delete(key);
+      return next;
+    });
+    // Fechar também LIMPA o valor: o campo some da tela, e deixar a URL salva
+    // publicaria uma rede que o organizador acabou de tirar do formulário.
+    onChange({ [key]: "" } as Partial<InformationFormValues>);
+  };
+
+  /* Cada rede com o handle já extraído, particionada em "virou campo" x "ainda
+   * é chip". Derivado a cada render de propósito: digitar muda `values`, e a
+   * partição precisa acompanhar sem um efeito no meio. */
+  const socialEntries = SOCIAL_NETWORKS.map((n) => ({
+    ...n,
+    handle: socialHandle(
+      values[n.key as keyof InformationFormValues] as string | undefined,
+      n.base,
+      n.prefix,
+    ),
+  }));
+  const addedSocials = socialEntries.filter(
+    (n) => !!n.handle || openSocials.has(n.key),
+  );
+  const addedSocialKeys = new Set(addedSocials.map((n) => n.key));
+  const availableSocials = socialEntries.filter(
+    (n) => !addedSocialKeys.has(n.key),
   );
 
   // ── Local no mapa ──────────────────────────────────────────────────────────
@@ -685,11 +730,14 @@ export function InformationForm({
               Adicione os canais oficiais do evento. Eles aparecem na página pública para que os participantes possam acompanhar atualizações
             </p>
           </div>
+          {/* A rede vira CAMPO quando já tem valor salvo ou quando o usuário
+              clica no chip; as demais seguem como chip de "adicionar" (Figma
+              3885:128791). Evento em edição abre sozinho o que está preenchido,
+              sem passar pelo clique. */}
           <div className="bg-gray-2 border border-gray-6 rounded-xl p-5 flex flex-col gap-5">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-6">
-              {SOCIAL_NETWORKS.map(({ key, prefix, base, placeholder, Icon }) => {
-                const handle = socialHandle((values as any)[key], base, prefix);
-                return (
+            {addedSocials.length > 0 && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-6">
+                {addedSocials.map(({ key, prefix, base, placeholder, label, Icon, handle }) => (
                   <div key={key} className="flex items-center gap-4 min-w-0">
                     <Icon className="size-8 shrink-0 text-gray-12" />
                     <div className="flex flex-1 min-w-0 h-11 items-stretch rounded-lg border border-gray-6 overflow-hidden focus-within:border-gray-8 transition-colors">
@@ -702,16 +750,61 @@ export function InformationForm({
                         value={handle}
                         onChange={(e) => {
                           const h = socialHandle(e.target.value, base, prefix);
-                          onChange({ [key]: h ? base + h : "" } as any);
+                          onChange({ [key]: h ? base + h : "" } as Partial<InformationFormValues>);
                         }}
                         placeholder={placeholder}
                         className="flex-1 min-w-0 px-3 bg-transparent outline-none text-gray-12 placeholder:text-gray-11 font-family-dm-sans text-base"
                       />
                     </div>
+                    {/* Contrapartida do "+" do chip: sem isto, adicionar uma rede
+                        por engano seria irreversível pela UI. */}
+                    <button
+                      type="button"
+                      onClick={() => closeSocial(key)}
+                      aria-label={`Remover ${label}`}
+                      className="size-8 shrink-0 flex items-center justify-center rounded-lg text-gray-11 hover:text-gray-12 hover:bg-gray-3 transition-colors"
+                    >
+                      <X className="size-5" />
+                    </button>
                   </div>
-                );
-              })}
-            </div>
+                ))}
+              </div>
+            )}
+
+            {/* Mobile: grade de 2 colunas (chips de larguras diferentes num
+                flex-wrap ficavam desalinhados). Desktop segue no flex-wrap do
+                design, que acomoda os 5 numa linha só.
+
+                Ícone/texto encolhem no mobile por aritmética: num Android de
+                360px a coluna fica com ~138px, e "Site oficial" a 16px entre
+                dois ícones de 24px estoura. Com 20px/14px cabe; o
+                `whitespace-normal` é a rede de segurança para o rótulo mais
+                longo quebrar em duas linhas em vez de vazar (o grid iguala a
+                altura da linha, então a fileira não desalinha). */}
+            {availableSocials.length > 0 && (
+              <div className="grid grid-cols-2 gap-3 md:flex md:flex-wrap">
+                {availableSocials.map(({ key, label, Icon }) => (
+                  <button
+                    key={key}
+                    type="button"
+                    onClick={() => openSocial(key)}
+                    className="flex items-center justify-center gap-2 px-3 py-3 md:px-4 rounded-lg border border-gray-6 hover:border-gray-8 hover:bg-gray-3 transition-colors"
+                  >
+                    <Icon className="size-5 md:size-6 shrink-0 text-gray-12" />
+                    <span className="min-w-0 text-gray-12 text-sm md:text-base font-semibold font-manrope leading-[1.1] text-center whitespace-normal md:whitespace-nowrap">
+                      {label}
+                    </span>
+                    <Plus className="size-5 md:size-6 shrink-0 text-gray-12" strokeWidth={1.5} />
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {addedSocials.length === 0 && (
+              <p className="text-gray-11 text-base font-family-dm-sans leading-[1.3]">
+                Clique para adicionar uma rede social
+              </p>
+            )}
           </div>
         </div>
 
@@ -829,6 +922,45 @@ export function InformationForm({
                       />
                       <span className="text-sm font-family-dm-sans leading-[1.3] text-gray-12">
                         Obrigatório
+                      </span>
+                    </label>
+                  </div>
+                </div>
+
+                {/* Mais de um ingresso por CPF. Mesmo par de checkboxes da opção
+                    acima; a ordem "Não / Sim" põe o DEFAULT primeiro, para o
+                    organizador ler antes o comportamento que já está valendo. */}
+                <div className="flex flex-col gap-4">
+                  <div className="flex flex-col gap-2">
+                    <h3 className="text-gray-12 text-lg font-medium font-family-dm-sans leading-[1.3]">
+                      Permitir mais de um ingresso por CPF
+                    </h3>
+                    <p className="text-gray-11 text-base font-family-dm-sans leading-[1.3]">
+                      Quando ativado, o cliente poderá comprar mais de um ingresso
+                      usando o mesmo CPF neste evento.
+                    </p>
+                  </div>
+                  <div className="flex gap-6">
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <Checkbox
+                        checked={!values.allowMultipleTicketsPerCpf}
+                        onCheckedChange={(checked) => {
+                          if (checked) onChange({ allowMultipleTicketsPerCpf: false });
+                        }}
+                      />
+                      <span className="text-sm font-family-dm-sans leading-[1.3] text-gray-12">
+                        Não
+                      </span>
+                    </label>
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <Checkbox
+                        checked={!!values.allowMultipleTicketsPerCpf}
+                        onCheckedChange={(checked) => {
+                          if (checked) onChange({ allowMultipleTicketsPerCpf: true });
+                        }}
+                      />
+                      <span className="text-sm font-family-dm-sans leading-[1.3] text-gray-12">
+                        Sim
                       </span>
                     </label>
                   </div>

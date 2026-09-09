@@ -198,3 +198,32 @@ export const formatDate = (date: string) => {
     year: "numeric",
   });
 };
+
+/**
+ * Etapa de produtos: o CTA de avançar ("Confirmar produtos" no mobile, e o do
+ * resumo) pode ser liberado?
+ *
+ * Regra: existe participante, nenhum card está ABERTO (força salvar/minimizar
+ * antes de avançar) e TODOS os participantes estão completos.
+ *
+ * `participantsComplete` DEVE vir do mesmo predicado que pinta o selo
+ * "Concluído" no card. Enquanto o gate exigia a confirmação explícita
+ * (`completedParticipants`, gravada só pelo clique em "Salvar") e o selo usava
+ * "tem todas as variações obrigatórias", os dois discordavam — e quando NENHUM
+ * participante tinha variação pendente (kit sem escolha, ou volta da etapa de
+ * pagamento com as seleções já salvas) o efeito de foco inicial não abria card
+ * nenhum, ninguém conseguia clicar em "Salvar", e a etapa ficava com todos os
+ * cards "Concluído" e sem botão de avançar. O desktop nunca teve o problema
+ * porque o botão dele sempre olhou o predicado do selo.
+ */
+export function canConfirmProductStep(args: {
+  totalParticipants: number;
+  /** Algum card de participante está expandido. */
+  anyParticipantExpanded: boolean;
+  /** Um booleano por participante COM ingresso, na ordem dos cards. */
+  participantsComplete: readonly boolean[];
+}): boolean {
+  if (args.totalParticipants <= 0) return false;
+  if (args.anyParticipantExpanded) return false;
+  return args.participantsComplete.every(Boolean);
+}

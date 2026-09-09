@@ -155,6 +155,7 @@ export function buildCreateEventBodyFromForm(
   // Opção avançada da etapa de informações. Enviada sempre (e não só quando
   // true) para que desmarcar no wizard também persista no rascunho já criado.
   eventData.emergencyContactRequired = !!formData.emergencyContactRequired;
+  eventData.allowMultipleTicketsPerCpf = !!formData.allowMultipleTicketsPerCpf;
 
   // Vagas do evento: string no form. "" (ou 0) → `null` (ilimitado / limpa o teto,
   // semântica de PATCH). Número válido → inteiro. NÃO enviar 0 (backend exige @Min(1)).

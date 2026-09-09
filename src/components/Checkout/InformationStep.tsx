@@ -26,7 +26,9 @@ import { useDeleteParticipantModal } from "@/stores/modalStore";
 import { useCheckoutTimer } from "@/contexts/CheckoutTimerContext";
 import {
   buildParticipantsPatchPayload,
+  getDuplicateDocumentReason,
   getMissingEmergencyContactFields,
+  type CheckoutDocumentSlot,
 } from "@/lib/checkoutParticipants";
 import { questionAppliesToTicket } from "@/utils/questionAnswer";
 import { hasDisplayableDistance } from "@/utils/checkoutModalityDisplay";
@@ -493,10 +495,14 @@ export function InformationStep({
   const lastSyncedSigRef = useRef<string | null>(null);
   const syncSavedParticipantsToServer = (savedMap: Record<number, boolean>) => {
     if (!orderId) return;
-    const savedList = participantsWithRaces
+    // `savedIndexes` guarda os índices REAIS dos participantes; `savedList` é a
+    // lista COMPACTADA que vai no payload. Os dois não coincidem quando algum
+    // card ainda não foi salvo — e o backend numera os `slots` pela lista que
+    // recebeu, então sem esse mapa o erro cairia no card errado.
+    const savedIndexes = participantsWithRaces
       .map(({ participantIndex }) => participantIndex)
-      .filter((i) => savedMap[i])
-      .map((i) => participants[i] ?? {});
+      .filter((i) => savedMap[i]);
+    const savedList = savedIndexes.map((i) => participants[i] ?? {});
     if (savedList.length === 0) return;
     const payload = buildParticipantsPatchPayload(savedList, savedList.length);
     const sig = JSON.stringify(payload);
@@ -507,8 +513,25 @@ export function InformationStep({
         syncFromOrder(updated);
         queryClient.invalidateQueries({ queryKey: ["checkout-order", orderId] });
       })
-      .catch(() => {
+      .catch((err: unknown) => {
         lastSyncedSigRef.current = null; // libera retry
+        // "1 ingresso por CPF": a repetição DENTRO do carrinho já é barrada
+        // localmente por getDuplicateDocError; o que só chega aqui é o documento
+        // que já tem inscrição em OUTRO pedido do evento — o front não tem como
+        // saber disso sozinho. Marca o card em vez de falhar em silêncio.
+        if (
+          err instanceof OrderApiError &&
+          err.code === "ONE_TICKET_PER_DOCUMENT"
+        ) {
+          const slots = err.slots?.length
+            ? err.slots
+            : savedIndexes.map((_, k) => k);
+          slots.forEach((slot) => {
+            const participantIndex = savedIndexes[slot];
+            if (participantIndex === undefined) return;
+            setParticipantFieldError(participantIndex, "cpf", err.message);
+          });
+        }
       });
   };
 
@@ -861,30 +884,32 @@ export function InformationStep({
     rawDoc: string | undefined,
     isBr: boolean
   ): string | null => {
-    const normalizeDoc = (value: string | undefined, br: boolean) => {
-      const trimmed = value?.trim() ?? "";
-      if (!trimmed) return "";
-      return br ? trimmed.replace(/\D/g, "") : trimmed.toLowerCase();
-    };
-    const currentDoc = normalizeDoc(rawDoc, isBr);
-    if (!currentDoc) return null;
-    const currentTicketId = participantsWithRaces.find(
-      (entry) => entry.participantIndex === index
-    )?.ticketId;
-    if (!currentTicketId) return null;
-    const hasDuplicate = participantsWithRaces.some((entry) => {
-      if (entry.participantIndex === index) return false;
-      if (entry.ticketId !== currentTicketId) return false;
+    // O documento e a nacionalidade do slot CORRENTE vêm por parâmetro porque a
+    // validação roda no onChange/onBlur, antes do estado ter o valor novo.
+    const slots: CheckoutDocumentSlot[] = participantsWithRaces.map((entry) => {
+      const isCurrent = entry.participantIndex === index;
       const other = participants[entry.participantIndex];
-      if (!other) return false;
-      const otherIsBr = isBrazilianCountry(other.nationality);
-      if (otherIsBr !== isBr) return false;
-      return normalizeDoc(other.cpf, otherIsBr) === currentDoc;
+      return {
+        index: entry.participantIndex,
+        doc: isCurrent ? rawDoc : other?.cpf,
+        isBrazilian: isCurrent ? isBr : isBrazilianCountry(other?.nationality),
+        ticketId: entry.ticketId ?? null,
+      };
     });
-    if (!hasDuplicate) return null;
+    const reason = getDuplicateDocumentReason(
+      slots,
+      index,
+      allowMultipleTicketsPerCpf
+    );
+    if (!reason) return null;
+    if (reason === "same-ticket") {
+      return isBr
+        ? "Você selecionou dois ingressos iguais para o mesmo CPF."
+        : "Você selecionou dois ingressos iguais para o mesmo documento.";
+    }
     return isBr
-      ? "Você selecionou dois ingressos iguais para o mesmo CPF."
-      : "Você selecionou dois ingressos iguais para o mesmo documento.";
+      ? "Este evento permite apenas um ingresso por CPF."
+      : "Este evento permite apenas um ingresso por documento.";
   };
 
   const handleInputChange = (
@@ -1124,6 +1149,10 @@ export function InformationStep({
    * ligada, nome e telefone de emergência viram campos obrigatórios e o
    * participante não fecha o card nem avança de etapa sem preenchê-los. */
   const emergencyContactRequired = !!event?.emergencyContactRequired;
+  /* Opção avançada do evento. Desligada (default) = 1 ingresso por documento no
+   * evento inteiro. O bloqueio DENTRO do carrinho é este; o "já inscrito em
+   * outro pedido" só o backend enxerga e chega pelo ONE_TICKET_PER_DOCUMENT. */
+  const allowMultipleTicketsPerCpf = !!event?.allowMultipleTicketsPerCpf;
 
   const isParticipantComplete = (index: number) => {
     const participant = participants[index];

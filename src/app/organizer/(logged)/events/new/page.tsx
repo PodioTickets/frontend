@@ -166,6 +166,7 @@ export default function CreateEventRedirectPage() {
             bannerUrl: event.bannerUrl ?? "",
             regulationUrl: event.regulationUrl ?? "",
             emergencyContactRequired: !!event.emergencyContactRequired,
+            allowMultipleTicketsPerCpf: !!event.allowMultipleTicketsPerCpf,
             // Contato + redes sociais (salvos no create, mas o resume não os
             // restaurava → resetavam ao reabrir o rascunho sem localStorage).
             contactEmail: event.contactEmail ?? "",
