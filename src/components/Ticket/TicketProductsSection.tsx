@@ -91,7 +91,15 @@ function SortableTicketProductCard({
       {...(dragDisabled ? {} : attributes)}
       {...(dragDisabled ? {} : listeners)}
     >
-      <div className="border-b border-gray-6 flex flex-col gap-3 p-3 md:flex-row md:items-center md:gap-3 md:p-4">
+      {/* `flex-1` no bloco de cima: o grid ja iguala a ALTURA EXTERNA dos cards
+          (align-items: stretch), mas sem o grow o bloco do topo fica do tamanho do
+          conteudo e a barra de acoes sobe junto. Um card com preco de 2 linhas
+          ("Valor incluso no ingresso" quebra em ~98px de largura no mobile) ou com
+          nome em 2 linhas (`line-clamp-2`) deixava a divisoria e os dois botoes mais
+          baixos que os do card vizinho. Crescendo o topo, a barra encosta no fundo do
+          card nos dois e as acoes alinham. No desktop e no-op: nome tem `md:truncate`
+          e preco cabe em 1 linha, entao os topos ja tem a mesma altura. */}
+      <div className="border-b border-gray-6 flex flex-1 flex-col gap-3 p-3 md:flex-row md:items-center md:gap-3 md:p-4">
         <div className="relative mx-auto aspect-square w-full max-h-[132px] max-w-[132px] rounded border border-gray-6 overflow-hidden bg-gray-3 shrink-0 md:mx-0 md:size-[100px] md:max-h-none md:max-w-none md:aspect-auto">
           <ImageWithInitialFallback
             src={product.product.image}
@@ -104,7 +112,11 @@ function SortableTicketProductCard({
             letterClassName="text-base font-semibold font-family-dm-sans"
           />
         </div>
-        <div className="flex flex-col justify-center gap-1.5 flex-1 min-w-0 md:justify-between md:py-2 md:gap-2">
+        {/* `justify-start` no mobile: com o `flex-1` do bloco de cima sobra espaco
+            neste box, e o `justify-center` antigo (inerte antes, porque nao sobrava
+            nada) passava a centralizar titulo+preco em vez de deixar os dois
+            encostados sob a imagem. No desktop segue `md:justify-between`. */}
+        <div className="flex flex-col justify-start gap-1.5 flex-1 min-w-0 md:justify-between md:py-2 md:gap-2">
           <h3 className="text-gray-12 text-sm font-semibold font-family-dm-sans leading-[1.1] line-clamp-2 md:text-base md:truncate md:line-clamp-none">
             {product.product.name}
           </h3>
