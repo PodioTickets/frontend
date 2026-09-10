@@ -94,9 +94,7 @@ export function DeleteParticipantModal() {
                     Remover participante da inscrição?
                   </p>
                   <p className="font-normal text-base leading-[1.3] text-gray-11 font-family-dm-sans text-center max-w-[400px]">
-                    Ao remover este participante, todos os ingressos e produtos
-                    vinculados a ele serão deletados do seu pedido. O valor
-                    total será atualizado antes do pagamento.
+                    Ao remover este participante, seus ingressos e produtos serão excluídos do pedido e o valor total será atualizado.
                   </p>
                 </div>
               </div>
