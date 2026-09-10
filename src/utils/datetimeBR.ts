@@ -219,10 +219,17 @@ const EVENT_HAPPENS_LABEL_OPTS: Intl.DateTimeFormatOptions = {
 export function formatEventHappensLabel(value: DateInput): string {
   const d = toUtcDate(value);
   if (!d) return "";
-  // `Intl` pt-BR devolve o dia da semana em minúsculo ("sábado, …") →
-  // capitalizamos a 1ª letra ("Sábado, …").
   const label = formatDateTimeBR(value, EVENT_HAPPENS_LABEL_OPTS);
-  return label ? label.charAt(0).toUpperCase() + label.slice(1) : "";
+  if (!label) return "";
+  // A preposição sai do `getUTCDay` do MESMO Date que o Intl formata (0 = domingo,
+  // 6 = sábado, os dois masculinos → "no"; de segunda a sexta o nome é "…-feira",
+  // feminino → "na"). Ler o índice em vez de casar o texto evita depender de como o
+  // locale escreve o dia (acento, "-feira" ou não) e de mudanças de ICU.
+  const preposition = d.getUTCDay() === 0 || d.getUTCDay() === 6 ? "no" : "na";
+  // O dia da semana fica em minúsculo de propósito: agora ele vem no meio da frase
+  // ("Acontece na quarta-feira, …"), não mais no começo — por isso some o
+  // capitalize que existia aqui.
+  return `Acontece ${preposition} ${label}`;
 }
 
 /**
