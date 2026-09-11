@@ -1115,7 +1115,15 @@ export function TicketForm({
     <div className={cn(className, "max-md:pb-20 max-w-7xl w-full mx-auto")}>
       <div className="w-full flex flex-col gap-9">
         {/* Title Section */}
-        <div className="flex flex-wrap items-center gap-2 border-gray-6 max-md:h-[52px] max-md:border-b md:gap-3 md:border-0 md:pb-0 md:pt-3 -mx-4 px-4">
+        {/* No mobile a faixa NAO tem mais altura fixa de 52px. Com `h-[52px]` +
+            `items-center`, o botao de voltar (32px) sobrava 10px de cada lado e o
+            texto do titulo, mais baixo que o botao, ficava 17px abaixo do header —
+            lida como um espaco em branco entre o header preto e o titulo, porque
+            esta faixa (ao contrario do `EventMobileHeader`) nao tem fundo proprio.
+            Agora a altura sai do conteudo: o titulo encosta no header e sobra so o
+            `pb-2` para a borda de baixo nao colar no botao. O desktop nao muda —
+            la a faixa ja era `md:border-0 md:pb-0 md:pt-3`. */}
+        <div className="flex flex-wrap items-center gap-2 border-gray-6 max-md:pb-2 max-md:border-b md:gap-3 md:border-0 md:pb-0 md:pt-3 pt-2 -mx-4 px-4">
           <button
             type="button"
             onClick={handleBack}
