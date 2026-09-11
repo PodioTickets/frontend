@@ -6,6 +6,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useOrganizerAppSurface } from "@/contexts/OrganizerAppSurfaceContext";
 import { withOrganizerPathPrefix } from "@/lib/organizerPathPresentation";
+import { isOrganizerShortSurfacePath } from "@/lib/organizerSurfacePath";
 import { useAuth } from "@/hooks/useAuth";
 import Image from "next/image";
 import { Dropdown } from "../Dropdown";
@@ -32,7 +33,11 @@ export function Header() {
   const adminSurface = useAdminAppSurface()
   const organizerPath = withOrganizerPathPrefix(pathname, appSurface);
   const adminPath = withAdminPathPrefix(pathname, adminSurface)
-  const isOrganizer = organizerPath.startsWith("/organizer");
+  // Mesma rede do `ContentWrapper`: sem depender do app host ser reconhecido, senão
+  // atrás do proxy este header público renderizava POR CIMA do nav do painel (os
+  // dois são escuros, passa despercebido) e o offset dele sobrava como faixa vazia.
+  const isOrganizer =
+    organizerPath.startsWith("/organizer") || isOrganizerShortSurfacePath(pathname);
   const isAdmin = adminPath.includes("/admin");
   const { push } = useRouter();
   const { isAuthenticated, user, logout } = useAuth();

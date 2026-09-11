@@ -5,6 +5,7 @@ import { useOrganizerAppSurface } from "@/contexts/OrganizerAppSurfaceContext";
 import { withOrganizerPathPrefix } from "@/lib/organizerPathPresentation";
 import { useAdminAppSurface } from "@/contexts/AdminAppSurfaceContext";
 import { withAdminPathPrefix } from "@/lib/adminPathPresentation";
+import { isOrganizerShortSurfacePath } from "@/lib/organizerSurfacePath";
 
 export function ContentWrapper({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -33,7 +34,13 @@ export function ContentWrapper({ children }: { children: React.ReactNode }) {
     return <div>{children}</div>;
   }
 
-  const isOrganizer = normalized.startsWith("/organizer");
+  // NÃO depende de reconhecer o app host: `normalized` só recebe o prefixo
+  // `/organizer` quando `isAppSurface` é true, e esse valor vem do `host` cru no
+  // `layout.tsx`. Se ele falhar atrás do proxy, o painel cairia no ramo público e
+  // ganharia `mt-[64px]` EM CIMA do `pt-16` do layout do organizador — 64px de
+  // faixa vazia. A forma do caminho é a mesma nos dois hosts, então serve de rede.
+  const isOrganizer =
+    normalized.startsWith("/organizer") || isOrganizerShortSurfacePath(pathname);
 
   if (isOrganizer) {
     return <div className="mb-12">{children}</div>;
