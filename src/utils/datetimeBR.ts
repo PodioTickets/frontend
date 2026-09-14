@@ -255,6 +255,21 @@ export function formatWeekdayDayMonthBR(value: DateInput): string {
   return formatDateTimeBR(value, EVENT_HAPPENS_LABEL_OPTS);
 }
 
+/**
+ * "Sábado, 25 de julho às 20:00" — data por extenso + horário do evento, sem o
+ * prefixo "Acontece". Usado no card mobile e na barra fixa da página pública.
+ * Wall-clock gravado como UTC (ver `eventWindowInstant`), então data e hora saem
+ * em UTC, sem shift. A 1ª letra vai maiúscula porque aqui o dia da semana abre a
+ * linha. Retorna "" para valor ausente/ inválido.
+ */
+export function formatEventDateWithTimeBR(value: DateInput): string {
+  const date = formatWeekdayDayMonthBR(value);
+  if (!date) return "";
+  const time = formatTimeBR(value);
+  const label = time ? `${date} às ${time}` : date;
+  return label.charAt(0).toUpperCase() + label.slice(1);
+}
+
 const MONTHS_BR_SHORT = [
   "Jan", "Fev", "Mar", "Abr", "Mai", "Jun",
   "Jul", "Ago", "Set", "Out", "Nov", "Dez",

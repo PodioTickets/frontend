@@ -19,6 +19,7 @@ import {
   formatDateTimeBR,
   eventWindowInstant,
   formatEventHappensLabel,
+  formatEventDateWithTimeBR,
   formatWeekdayDayMonthBR,
 } from "@/utils/datetimeBR";
 import { getEventOrganizer } from "@/utils/organization";
@@ -340,9 +341,15 @@ function EventMetaRows({ event, mobile }: { event: Event; mobile?: boolean }) {
     <div className={cn("flex flex-col", mobile ? "mb-4 gap-3" : "gap-4")}>
       <div className={cn("flex items-center gap-2 text-sm font-medium", textColor)}>
         <CalendarIcon className="size-5 shrink-0" />
-        <span>{formatEventHappensLabel(event.eventDate)}</span>
+        {/* Mobile: "Sábado, 25 de julho às 20:00" e sem a linha "Inscrições até"
+            (pedido só para o mobile — o desktop segue igual). */}
+        <span>
+          {mobile
+            ? formatEventDateWithTimeBR(event.eventDate)
+            : formatEventHappensLabel(event.eventDate)}
+        </span>
       </div>
-      {event.registrationEndDate && (
+      {!mobile && event.registrationEndDate && (
         <div className={cn("flex items-center gap-2 text-sm font-medium", textColor)}>
           <CalendarCheckIcon className="size-5 shrink-0 text-gray-12" />
           <span>

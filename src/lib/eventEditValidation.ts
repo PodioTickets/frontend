@@ -18,7 +18,7 @@ import {
 
 /** Campos da etapa de informações usados no dirty check (`hasChanges`). */
 export const INFORMATION_FIELDS = [
-  "name", "eventDate",
+  "name", "eventDate", "eventTime",
   "registrationStartDate", "registrationStartTime",
   "registrationEndDate", "registrationEndTime",
   "maxParticipants",

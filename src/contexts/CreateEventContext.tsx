@@ -10,6 +10,8 @@ import {
 export interface CreateEventFormData {
   name: string;
   eventDate: string;
+  /** Horário do evento (`HH:mm`). Junto com `eventDate` só no envio ao backend. */
+  eventTime: string;
   registrationStartDate: string;
   registrationStartTime: string;
   registrationEndDate: string;
@@ -65,6 +67,7 @@ const CreateEventContext = createContext<CreateEventContextType | undefined>(
 const initialFormData: CreateEventFormData = {
   name: "",
   eventDate: "",
+  eventTime: "",
   registrationStartDate: "",
   registrationStartTime: "",
   registrationEndDate: "",

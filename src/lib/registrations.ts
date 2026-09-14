@@ -20,6 +20,7 @@ export const REG_API_STATUSES = [
   "CONFIRMED",
   "CANCELLED",
   "COMPLETED",
+  "VOUCHER",
   "CHARGEBACK",
   "REFUNDED",
 ] as const;

@@ -10,7 +10,24 @@ import {
   toCivilDayString,
   toCivilDayBRT,
   eventWindowInstant,
+  formatEventDateWithTimeBR,
 } from "../datetimeBR";
+
+describe("formatEventDateWithTimeBR", () => {
+  it("data por extenso + 'às HH:mm' em UTC, sem 'Acontece' e com maiúscula", () => {
+    // 2026-07-25 é sábado.
+    expect(formatEventDateWithTimeBR("2026-07-25T20:00:00.000Z")).toBe("Sábado, 25 de julho às 20:00");
+  });
+
+  it("não desloca pelo fuso (00:30Z continua no mesmo dia)", () => {
+    expect(formatEventDateWithTimeBR("2026-07-25T00:30:00.000Z")).toBe("Sábado, 25 de julho às 00:30");
+  });
+
+  it("retorna '' para valor ausente/ inválido", () => {
+    expect(formatEventDateWithTimeBR(null)).toBe("");
+    expect(formatEventDateWithTimeBR("not-a-date")).toBe("");
+  });
+});
 
 /**
  * Garante que a formatação preserva o horário do servidor (UTC), sem reaplicar

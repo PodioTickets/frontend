@@ -29,12 +29,15 @@ export default function EditTicketPage() {
   }
 
   return (
+    // `pt-[52px]` reserva a ProgressBar do wizard, que é `hidden md:block` — no
+    // mobile virava 52px de faixa vazia entre o header e "Editar ingresso". `md:`
+    // restringe ao desktop, igual a `new/financial` e `new/questionnaire`.
     <TicketForm
       eventId={formData.createdEventId}
       ticketId={ticketId}
       backUrl="/organizer/events/new/tickets"
       mode="edit"
-      className="bg-gray-2 flex-1 px-4 md:px-5 pb-28 pt-[52px]"
+      className="bg-gray-2 flex-1 px-4 md:px-5 pb-28 pt-0 md:pt-[52px]"
     />
   );
 }

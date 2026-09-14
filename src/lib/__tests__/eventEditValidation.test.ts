@@ -19,6 +19,7 @@ function validForm(): EditEventFormData {
     eventId: "evt_1",
     name: "Corrida da Cidade",
     eventDate: "2026-08-10",
+    eventTime: "07:00",
     registrationStartDate: "2026-06-01",
     registrationStartTime: "08:00",
     registrationEndDate: "2026-07-01",
@@ -252,6 +253,11 @@ describe("eventInformationHasChanges", () => {
   it("true quando um campo monitorado muda", () => {
     const f = validForm();
     expect(eventInformationHasChanges({ ...f, name: "Outro" }, f, false)).toBe(true);
+  });
+
+  it("true quando só o horário do evento muda", () => {
+    const f = validForm();
+    expect(eventInformationHasChanges({ ...f, eventTime: "09:30" }, f, false)).toBe(true);
   });
 
   it("true quando há PDF de regulamento pendente, mesmo sem outras mudanças", () => {
