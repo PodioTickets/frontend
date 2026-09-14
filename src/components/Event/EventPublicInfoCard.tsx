@@ -18,9 +18,7 @@ import { cn } from "@/utils/cn";
 import {
   formatDateTimeBR,
   eventWindowInstant,
-  formatEventHappensLabel,
   formatEventDateWithTimeBR,
-  formatWeekdayDayMonthBR,
 } from "@/utils/datetimeBR";
 import { getEventOrganizer } from "@/utils/organization";
 import { buildGoogleMapsPlaceLink } from "@/utils/googleMapsGeo";
@@ -83,19 +81,6 @@ function OrganizerAvatar({
         <span className="text-sm font-semibold text-primary-11">{initial}</span>
       )}
     </div>
-  );
-}
-
-/** Ícone de calendário com "check" — espelha o usado em "Inscrições até" na página pública. */
-function CalendarCheckIcon({ className }: { className?: string }) {
-  return (
-    <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" className={className}>
-      <path d="M6.6665 1.66699V4.16699" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" />
-      <path d="M13.3335 1.66699V4.16699" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" />
-      <path d="M2.5 6.91699C2.5 4.70786 4.29086 2.91699 6.5 2.91699H13.5C15.7091 2.91699 17.5 4.70785 17.5 6.91699V14.3337C17.5 16.5428 15.7091 18.3337 13.5 18.3337H6.5C4.29086 18.3337 2.5 16.5428 2.5 14.3337V6.91699Z" stroke="currentColor" strokeWidth="1" />
-      <path d="M7.5 12.4997L8.83616 13.5686C9.25403 13.9029 9.86103 13.849 10.2134 13.4462L12.5 10.833" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" />
-      <path d="M2.5 7.5H17.5" stroke="currentColor" strokeWidth="1" strokeLinecap="round" />
-    </svg>
   );
 }
 
@@ -212,6 +197,11 @@ function RegistrationCtaBlock({
   } = useEventRegistrationUiState(event);
 
   const mt = desktopSpacing ? "mt-8" : "mb-3";
+  // Espaço botão → texto de apoio = espaço card do organizador → botão.
+  // Desktop: o botão tem `mt-8` (32px) abaixo do organizador → texto `mt-8`.
+  // Mobile: o organizador tem `mb-4` (16px); o botão (inline-flex, margens somam)
+  // já carrega `mb-3` (12px), então o texto soma `mt-1` (4px) para fechar os 16px.
+  const textMt = desktopSpacing ? "mt-8" : "mt-1";
   const disabledBtn = cn(
     "w-full bg-gray-4 text-gray-10 border-0 disabled:opacity-100 disabled:cursor-not-allowed",
     mt,
@@ -223,7 +213,7 @@ function RegistrationCtaBlock({
         <Button className={disabledBtn} disabled variant="outline">
           Evento realizado
         </Button>
-        <p className="mt-2 text-center text-sm text-gray-11">
+        <p className={cn("text-center text-sm text-gray-11", textMt)}>
           Este evento já foi realizado.
         </p>
       </>
@@ -235,7 +225,7 @@ function RegistrationCtaBlock({
         <Button className={disabledBtn} disabled variant="outline">
           Inscrições encerradas!
         </Button>
-        <p className="mt-2 text-center text-sm text-gray-11">
+        <p className={cn("text-center text-sm text-gray-11", textMt)}>
           O prazo de inscrições para este evento foi encerrado.
         </p>
       </>
@@ -247,7 +237,7 @@ function RegistrationCtaBlock({
         <Button className={disabledBtn} disabled variant="outline">
           Inscreva-se
         </Button>
-        <p className="mt-2 text-center text-sm text-gray-11">
+        <p className={cn("text-center text-sm text-gray-11", textMt)}>
           As inscrições para este evento não estão disponíveis no momento.
         </p>
       </>
@@ -259,7 +249,7 @@ function RegistrationCtaBlock({
         <Button className={disabledBtn} disabled variant="outline">
           Esgotado
         </Button>
-        <p className="mt-2 text-center text-sm text-gray-11">
+        <p className={cn("text-center text-sm text-gray-11", textMt)}>
           Este evento não possui mais vagas disponíveis.
         </p>
       </>
@@ -271,7 +261,7 @@ function RegistrationCtaBlock({
         <Button className={disabledBtn} disabled variant="outline">
           Em breve!
         </Button>
-        <p className="mt-2 text-center text-sm text-gray-11">
+        <p className={cn("text-center text-sm text-gray-11", textMt)}>
           {live ? (
             <>
               Inscrições abrem em <br />{" "}
@@ -341,22 +331,10 @@ function EventMetaRows({ event, mobile }: { event: Event; mobile?: boolean }) {
     <div className={cn("flex flex-col", mobile ? "mb-4 gap-3" : "gap-4")}>
       <div className={cn("flex items-center gap-2 text-sm font-medium", textColor)}>
         <CalendarIcon className="size-5 shrink-0" />
-        {/* Mobile: "Sábado, 25 de julho às 20:00" e sem a linha "Inscrições até"
-            (pedido só para o mobile — o desktop segue igual). */}
-        <span>
-          {mobile
-            ? formatEventDateWithTimeBR(event.eventDate)
-            : formatEventHappensLabel(event.eventDate)}
-        </span>
+        {/* "Sábado, 25 de julho às 20:00", sem "Acontece" e sem a linha
+            "Inscrições até" — mobile e desktop (igual à barra fixa mobile). */}
+        <span>{formatEventDateWithTimeBR(event.eventDate)}</span>
       </div>
-      {!mobile && event.registrationEndDate && (
-        <div className={cn("flex items-center gap-2 text-sm font-medium", textColor)}>
-          <CalendarCheckIcon className="size-5 shrink-0 text-gray-12" />
-          <span>
-            Inscrições até {formatWeekdayDayMonthBR(event.registrationEndDate)}
-          </span>
-        </div>
-      )}
       <div className={cn("flex items-center gap-2 font-medium", textColor)}>
         <LocationIcon className="size-5 shrink-0" />
         {mapsUrl ? (
