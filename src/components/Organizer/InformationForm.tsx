@@ -85,6 +85,8 @@ function getCurrentDatePlaceholder(): string {
 export interface InformationFormValues {
   name: string;
   eventDate?: string;
+  /** Horário do evento (`HH:mm`). "" com data preenchida = 00:00. */
+  eventTime?: string;
   registrationStartDate?: string;
   registrationStartTime?: string;
   registrationEndDate?: string;
@@ -177,7 +179,6 @@ export function InformationForm({
 }: InformationFormProps) {
   const [uploadingPDF, setUploadingPDF] = useState(false);
   const [pdfFile, setPdfFile] = useState<File | null>(null);
-  const [pdfUrl, setPdfUrl] = useState<string>("");
   useEffect(() => {
     onHasPendingPdfChange?.(pdfFile !== null);
   }, [pdfFile, onHasPendingPdfChange]);
@@ -406,8 +407,9 @@ export function InformationForm({
       return;
     }
 
-    // eventDate
-    onChange({ eventDate: value });
+    // eventDate — horário acompanha a data como nas inscrições: 00:00 ao escolher,
+    // vazio ao limpar.
+    onChange({ eventDate: value, eventTime: v ? values.eventTime?.trim() || "00:00" : "" });
     const eventBeforeEnd = !!v && isEventDateBeforeRegistrationEnd(value, values.registrationEndDate);
     const startBeforeEvent = isRegistrationStartNotBeforeEvent(
       values.registrationStartDate,
@@ -433,7 +435,6 @@ export function InformationForm({
     if (file.type !== "application/pdf") { toast.error("Formato inválido. Use apenas PDF."); return; }
     if (file.size > 10 * 1024 * 1024) { toast.error("Arquivo muito grande. Máximo de 10MB."); return; }
     setPdfFile(file);
-    setPdfUrl("");
   };
 
   const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
@@ -442,7 +443,6 @@ export function InformationForm({
     if (file?.type === "application/pdf") {
       if (file.size > 10 * 1024 * 1024) { toast.error("Arquivo muito grande. Máximo de 10MB."); return; }
       setPdfFile(file);
-      setPdfUrl("");
     } else {
       toast.error("Formato inválido. Use apenas PDF.");
     }
@@ -477,7 +477,15 @@ export function InformationForm({
         Object.values(result).find((v): v is string => typeof v === "string" && (v.startsWith("http") || v.startsWith("/")));
       if (!fileUrl) throw new Error("Resposta do servidor inválida - URL não encontrada");
       const full = fileUrl.startsWith("http") ? fileUrl : `${apiUrl}${fileUrl.startsWith("/") ? "" : "/"}${fileUrl}`;
-      setPdfUrl(full);
+      // O arquivo deixa de ser "pendente" assim que sobe: a URL passa a morar em
+      // `values.regulationUrl` e o `pdfFile` é limpo. Mantê-lo preso aqui fazia o
+      // `onHasPendingPdfChange` continuar `true` depois do save — a edição
+      // acusava "alterações não salvas" ao sair e a tela mostrava "Arquivo
+      // selecionado" em vez do link do PDF salvo. Se o save falhar, o form segue
+      // sujo pela diferença de `regulationUrl` e o retry não sobe o PDF de novo.
+      onChange({ regulationUrl: full });
+      setPdfFile(null);
+      if (fileInputRef.current) fileInputRef.current.value = "";
       toast.success("PDF enviado com sucesso!");
       return full;
     } catch (error: any) {
@@ -495,14 +503,12 @@ export function InformationForm({
     let resolvedPdfUrl: string | null = values.regulationUrl?.trim() && !values.regulationUrl.startsWith("data:")
       ? values.regulationUrl.trim()
       : null;
-    if (pdfFile && !pdfUrl) {
+    if (pdfFile) {
       try {
         resolvedPdfUrl = await uploadPDF();
       } catch {
         return;
       }
-    } else if (pdfUrl) {
-      resolvedPdfUrl = pdfUrl;
     }
     await onSubmit(e, resolvedPdfUrl);
   };
@@ -584,16 +590,31 @@ export function InformationForm({
                   text="Use a data oficial em que o evento começa."
                 />
               </div>
-              <DatePicker
-                value={values.eventDate}
-                onChange={(value) => handleDateChange("eventDate", value || "")}
-                placeholder={getCurrentDatePlaceholder()}
-                className="w-full md:w-max"
-                hideIcon={false}
-                error={!!errors.eventDate}
-                // Seleção livre: qualquer data (a validação de ordem/erro é inline).
-                disablePastDates={false}
-              />
+              {/* Data + horário lado a lado — mesmo markup das datas de inscrição.
+                  As regras de ordem (início antes do evento, evento depois do
+                  encerramento) seguem por DIA: o horário só compõe o `eventDate`
+                  no envio (`buildCreateEventBodyFromForm`). */}
+              <div className="flex gap-3 items-end w-full">
+                <div className="min-w-0 flex-1 md:flex-none">
+                  <DatePicker
+                    value={values.eventDate}
+                    onChange={(value) => handleDateChange("eventDate", value || "")}
+                    placeholder={getCurrentDatePlaceholder()}
+                    className="w-full md:w-max"
+                    hideIcon={false}
+                    error={!!errors.eventDate}
+                    // Seleção livre: qualquer data (a validação de ordem/erro é inline).
+                    disablePastDates={false}
+                  />
+                </div>
+                <div className="w-[112px] shrink-0 md:w-auto">
+                  <TimePicker
+                    value={values.eventDate?.trim() ? values.eventTime?.trim() || "00:00" : values.eventTime || ""}
+                    onChange={(v) => handleTimeChange("eventTime", v)}
+                    className="w-full md:w-max"
+                  />
+                </div>
+              </div>
             </div>
             {errors.eventDate && <p className="text-red-10 text-sm">{errors.eventDate}</p>}
           </div>
@@ -843,7 +864,6 @@ export function InformationForm({
                 type="button"
                 onClick={() => {
                   setPdfFile(null);
-                  setPdfUrl("");
                   onClearLocalRegulationDraft?.();
                   if (fileInputRef.current) fileInputRef.current.value = "";
                 }}
@@ -854,11 +874,11 @@ export function InformationForm({
             </div>
           )}
 
-          {!pdfFile && (pdfUrl || (values.regulationUrl && !values.regulationUrl.startsWith("data:")) || hasLocalRegulationDraft) && (
+          {!pdfFile && ((values.regulationUrl && !values.regulationUrl.startsWith("data:")) || hasLocalRegulationDraft) && (
             <div className="mt-2 flex flex-wrap items-center gap-2">
               <p className="text-gray-11 text-sm">PDF atual do regulamento</p>
-              {pdfUrl || (values.regulationUrl && !values.regulationUrl.startsWith("data:")) ? (
-                <a href={pdfUrl || values.regulationUrl} target="_blank" rel="noopener noreferrer" className="text-primary-11 text-sm hover:underline">
+              {values.regulationUrl && !values.regulationUrl.startsWith("data:") ? (
+                <a href={values.regulationUrl} target="_blank" rel="noopener noreferrer" className="text-primary-11 text-sm hover:underline">
                   Ver PDF
                 </a>
               ) : (

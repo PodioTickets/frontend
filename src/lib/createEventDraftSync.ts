@@ -105,7 +105,12 @@ export function buildCreateEventBodyFromForm(
 
   const eventData: Record<string, unknown> = {
     name: formData.name.trim(),
-    eventDate: formData.eventDate,
+    // Mesma composição wall-clock → UTC explícito das datas de inscrição. Sem
+    // horário escolhido vale 00:00 — idêntico ao que o backend gravava quando
+    // recebia só `YYYY-MM-DD`, então eventos antigos não mudam ao re-salvar.
+    eventDate:
+      composeRegistrationDateTime(formData.eventDate, formData.eventTime) ??
+      formData.eventDate,
     country: "BR",
     // `location` (endereço cru legado) exigido não-vazio pela publicação. Como o
     // logradouro pode faltar em POIs/praças/áreas sem número, caímos no nome/

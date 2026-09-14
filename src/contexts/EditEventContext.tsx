@@ -19,6 +19,8 @@ export interface EditEventFormData {
   eventId: string;
   name: string;
   eventDate: string;
+  /** Horário do evento (`HH:mm`). Junto com `eventDate` só no envio ao backend. */
+  eventTime: string;
   registrationStartDate: string;
   registrationStartTime: string;
   registrationEndDate: string;
@@ -73,6 +75,7 @@ const defaultFormData: EditEventFormData = {
   eventId: "",
   name: "",
   eventDate: "",
+  eventTime: "",
   registrationStartDate: "",
   registrationStartTime: "",
   registrationEndDate: "",
@@ -144,6 +147,7 @@ function buildFormDataFromEvent(eventId: string, eventData: any): EditEventFormD
     eventId,
     name: eventData.name || "",
     eventDate: formatDateForInput(eventData.eventDate),
+    eventTime: formatTimeForInput(eventData.eventDate),
     registrationStartDate: formatDateForInput(eventData.registrationStartDate),
     registrationStartTime: formatTimeForInput(eventData.registrationStartDate),
     registrationEndDate: formatDateForInput(eventData.registrationEndDate),

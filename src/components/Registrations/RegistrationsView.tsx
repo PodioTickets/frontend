@@ -216,6 +216,7 @@ export function RegistrationsView({
               options={[
                 { id: "all", label: "Todos" },
                 { id: "COMPLETED", label: "Pago", icon: CheckCircle },
+                { id: "VOUCHER", label: "Voucher", icon: CheckCircle },
                 { id: "CANCELLED", label: "Cancelado", icon: XCircle },
                 { id: "CHARGEBACK", label: "ChargeBack", icon: XCircle },
                 { id: "REFUNDED", label: "Estornado", icon: XCircle },
@@ -229,6 +230,7 @@ export function RegistrationsView({
                 const statusLabels: Record<string, string> = {
                   all: "Todos",
                   COMPLETED: "Pago",
+                  VOUCHER: "Voucher",
                   CANCELLED: "Cancelado",
                   CHARGEBACK: "ChargeBack",
                   REFUNDED: "Estornado",
@@ -303,6 +305,7 @@ export function RegistrationsView({
             options={[
               { id: "all", label: "Todos" },
               { id: "COMPLETED", label: "Pago", icon: CheckCircle },
+              { id: "VOUCHER", label: "Voucher", icon: CheckCircle },
               { id: "CANCELLED", label: "Cancelado", icon: XCircle },
               { id: "CHARGEBACK", label: "ChargeBack", icon: XCircle },
               { id: "REFUNDED", label: "Estornado", icon: XCircle },
@@ -320,6 +323,7 @@ export function RegistrationsView({
                   CONFIRMED: "Status: Pago",
                   CANCELLED: "Status: Cancelado",
                   COMPLETED: "Status: Pago",
+                  VOUCHER: "Status: Voucher",
                   CHARGEBACK: "Status: ChargeBack",
                   REFUNDED: "Status: Estornado",
                 };
