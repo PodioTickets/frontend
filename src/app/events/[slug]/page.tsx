@@ -7,13 +7,13 @@ import Link from "next/link";
 import { Button } from "@/components/Button";
 import { EventMap } from "@/components/EventMap";
 import { useEventBySlug } from "@/hooks/useEvent";
+import { useNowAtBoundaries } from "@/hooks/useNowAtBoundaries";
 import {
   formatDateTimeBR,
   eventWindowInstant,
   formatEventDateWithTimeBR,
 } from "@/utils/datetimeBR";
 import { useQueryClient } from "@tanstack/react-query";
-import { RegistrationCountdown } from "@/components/Event/RegistrationCountdown";
 import { ShareModal } from "@/components/ShareModal";
 import { ContactOrganizerFlow } from "@/components/Event/ContactOrganizerFlow";
 import { PODIO_SUPPORT_WHATSAPP } from "@/components/Event/ContactSubjectModal";
@@ -57,6 +57,16 @@ export default function EventPage() {
   const eventSlug = params.slug as string;
   const { event, loading: isLoading, error } = useEventBySlug(eventSlug);
   const queryClient = useQueryClient();
+
+  // "Agora" OFICIAL (hora do servidor, nunca o relógio do dispositivo) que muda no
+  // instante em que a inscrição abre/encerra ou o evento vira realizado → a barra
+  // fixa troca o botão sem recarregar. `null` até a hora do servidor chegar. Antes
+  // dos early returns (regra dos hooks), por isso lida com `event` indefinido.
+  const boundaryNow = useNowAtBoundaries([
+    eventWindowInstant(event?.registrationStartDate)?.getTime(),
+    eventWindowInstant(event?.registrationEndDate)?.getTime(),
+    (eventWindowInstant(event?.eventDate)?.getTime() ?? NaN) + 24 * 60 * 60 * 1000,
+  ]);
 
   /**
    * Disparado pelo `RegistrationCountdown` no momento em que a contagem chega
@@ -185,15 +195,16 @@ export default function EventPage() {
   );
   const registrationsNotOpenYet =
     !!registrationOpensInstant &&
-    Date.now() < registrationOpensInstant.getTime();
+    (boundaryNow ?? NaN) < registrationOpensInstant.getTime();
 
   const registrationOpensDateText =
     registrationsNotOpenYet && registrationOpensAt
       ? formatDateTimeBR(registrationOpensAt, {
           day: "numeric",
           month: "long",
-          ...(registrationOpensAt.getUTCFullYear() !==
-          new Date().getUTCFullYear()
+          ...(boundaryNow !== null &&
+          registrationOpensAt.getUTCFullYear() !==
+            new Date(boundaryNow).getUTCFullYear()
             ? { year: "numeric" }
             : {}),
         })
@@ -210,12 +221,12 @@ export default function EventPage() {
   const eventRealizationInstant = eventWindowInstant(event.eventDate);
   const eventRealizationPassed =
     !!eventRealizationInstant &&
-    Date.now() >= eventRealizationInstant.getTime() + ONE_DAY_MS;
+    (boundaryNow ?? NaN) >= eventRealizationInstant.getTime() + ONE_DAY_MS;
 
   const registrationEndsInstant = eventWindowInstant(event.registrationEndDate);
   const registrationPeriodEnded =
     !!registrationEndsInstant &&
-    Date.now() >= registrationEndsInstant.getTime();
+    (boundaryNow ?? NaN) >= registrationEndsInstant.getTime();
 
   const eventSuspendedByOrganizer =
     event.status === "SUSPENDED" || event.isSuspended === true;
@@ -456,78 +467,58 @@ export default function EventPage() {
               </div>
             </div>
 
-            {eventRealizationPassed ? (
-              <>
-                <Button
-                  className="w-full bg-gray-4 text-gray-10 border-0 disabled:opacity-100 disabled:cursor-not-allowed"
-                  disabled
-                  variant="outline"
-                >
-                  Evento realizado
-                </Button>
-                <p className="text-sm text-gray-11 text-center mt-2">
-                  Este evento já foi realizado.
-                </p>
-              </>
+            {/* Barra fixa: só o botão, sem o texto de apoio abaixo dele (esse
+                texto continua no card). A contagem de "Em breve!" também vive no
+                card, que segue montado e dispara o onExpire.
+                Sem hora do servidor ainda → desabilitado (mesma regra do card). */}
+            {boundaryNow === null ? (
+              <Button
+                className="w-full bg-gray-4 text-gray-10 border-0 disabled:opacity-100 disabled:cursor-not-allowed"
+                disabled
+                variant="outline"
+              >
+                Inscreva-se
+              </Button>
+            ) : eventRealizationPassed ? (
+              <Button
+                className="w-full bg-gray-4 text-gray-10 border-0 disabled:opacity-100 disabled:cursor-not-allowed"
+                disabled
+                variant="outline"
+              >
+                Evento realizado
+              </Button>
             ) : registrationPeriodEnded ? (
-              <>
-                <Button
-                  className="w-full bg-gray-4 text-gray-10 border-0 disabled:opacity-100 disabled:cursor-not-allowed"
-                  disabled
-                  variant="outline"
-                >
-                  Inscrições encerradas!
-                </Button>
-                <p className="text-sm text-gray-11 text-center mt-2">
-                  O prazo de inscrições para este evento foi encerrado.
-                </p>
-              </>
+              <Button
+                className="w-full bg-gray-4 text-gray-10 border-0 disabled:opacity-100 disabled:cursor-not-allowed"
+                disabled
+                variant="outline"
+              >
+                Inscrições encerradas!
+              </Button>
             ) : eventSuspendedByOrganizer ? (
-              <>
-                <Button
-                  className="w-full bg-gray-4 text-gray-10 border-0 disabled:opacity-100 disabled:cursor-not-allowed"
-                  disabled
-                  variant="outline"
-                >
-                  Inscreva-se
-                </Button>
-                <p className="text-sm text-gray-11 text-center mt-2">
-                  As inscrições para este evento não estão disponíveis no
-                  momento.
-                </p>
-              </>
+              <Button
+                className="w-full bg-gray-4 text-gray-10 border-0 disabled:opacity-100 disabled:cursor-not-allowed"
+                disabled
+                variant="outline"
+              >
+                Inscreva-se
+              </Button>
             ) : registrationSlotsSoldOut ? (
-              <>
-                <Button
-                  className="w-full bg-gray-4 text-gray-10 border-0 disabled:opacity-100 disabled:cursor-not-allowed"
-                  disabled
-                  variant="outline"
-                >
-                  Esgotado
-                </Button>
-                <p className="text-sm text-gray-11 text-center mt-2">
-                  Este evento não possui mais vagas disponíveis.
-                </p>
-              </>
+              <Button
+                className="w-full bg-gray-4 text-gray-10 border-0 disabled:opacity-100 disabled:cursor-not-allowed"
+                disabled
+                variant="outline"
+              >
+                Esgotado
+              </Button>
             ) : registrationsNotOpenYet ? (
-              <>
-                <Button
-                  className="w-full bg-gray-4 text-gray-10 border-0 disabled:opacity-100 disabled:cursor-not-allowed"
-                  disabled
-                  variant="outline"
-                >
-                  Em breve!
-                </Button>
-                <p className="text-sm text-gray-11 text-center mt-2">
-                  Inscrições abrem em <br />{" "}
-                  <RegistrationCountdown
-                    targetDate={registrationOpensInstant}
-                    fallbackText={registrationOpensDateText}
-                    onExpire={handleRegistrationCountdownExpire}
-                    className="font-semibold"
-                  />
-                </p>
-              </>
+              <Button
+                className="w-full bg-gray-4 text-gray-10 border-0 disabled:opacity-100 disabled:cursor-not-allowed"
+                disabled
+                variant="outline"
+              >
+                Em breve!
+              </Button>
             ) : (
               <Button onClick={handleCheckoutClick} className="w-full">
                 Inscreva-se

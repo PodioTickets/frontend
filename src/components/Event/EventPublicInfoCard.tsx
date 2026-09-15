@@ -23,6 +23,7 @@ import {
 import { getEventOrganizer } from "@/utils/organization";
 import { buildGoogleMapsPlaceLink } from "@/utils/googleMapsGeo";
 import { useMemo, useState } from "react";
+import { useNowAtBoundaries } from "@/hooks/useNowAtBoundaries";
 
 /**
  * Card de informações do evento — FONTE ÚNICA usada tanto na página pública real
@@ -84,7 +85,17 @@ function OrganizerAvatar({
   );
 }
 
+const ONE_DAY_MS = 24 * 60 * 60 * 1000;
+
 function useEventRegistrationUiState(event: Event) {
+  // Re-renderiza no instante em que a inscrição abre, encerra ou o evento vira
+  // "realizado" — senão o botão só mudava ao recarregar a página.
+  const now = useNowAtBoundaries([
+    eventWindowInstant(event.registrationStartDate)?.getTime(),
+    eventWindowInstant(event.registrationEndDate)?.getTime(),
+    (eventWindowInstant(event.eventDate)?.getTime() ?? NaN) + ONE_DAY_MS,
+  ]);
+
   return useMemo(() => {
     // `registrationOpensAt` (wall-clock UTC) é só pro DISPLAY (mostra a hora digitada).
     // A comparação com o tempo real usa o INSTANTE em BRT (+3h) — senão abre/fecha 3h cedo.
@@ -92,16 +103,20 @@ function useEventRegistrationUiState(event: Event) {
       ? new Date(event.registrationStartDate)
       : null;
     const registrationOpensInstant = eventWindowInstant(event.registrationStartDate);
+    // Sem hora do servidor ainda (`now === null`), NaN deixa todas as comparações
+    // falsas e `clockPending` segura o CTA desabilitado — nunca o relógio local.
+    const t = now ?? NaN;
+    const clockPending = now === null;
     const registrationsNotOpenYet =
       !!registrationOpensInstant &&
-      Date.now() < registrationOpensInstant.getTime();
+      t < registrationOpensInstant.getTime();
 
     const registrationOpensDateText =
       registrationsNotOpenYet && registrationOpensAt
         ? formatDateTimeBR(registrationOpensAt, {
           day: "numeric",
           month: "long",
-          ...(registrationOpensAt.getUTCFullYear() !== new Date().getUTCFullYear()
+          ...(now !== null && registrationOpensAt.getUTCFullYear() !== new Date(now).getUTCFullYear()
             ? { year: "numeric" }
             : {}),
         })
@@ -113,30 +128,41 @@ function useEventRegistrationUiState(event: Event) {
     // "Evento realizado" só UM DIA depois da data do evento (não no instante de
     // início) — mesma regra da página /events/[slug]. Durante o dia do evento e as
     // 24h seguintes, NÃO é marcado como realizado (cai em "Inscrições encerradas").
-    const ONE_DAY_MS = 24 * 60 * 60 * 1000;
     const eventRealizationInstant = eventWindowInstant(event.eventDate);
     const eventRealizationPassed =
       !!eventRealizationInstant &&
-      Date.now() >= eventRealizationInstant.getTime() + ONE_DAY_MS;
+      t >= eventRealizationInstant.getTime() + ONE_DAY_MS;
 
     const registrationEndsInstant = eventWindowInstant(event.registrationEndDate);
     const registrationPeriodEnded =
       !!registrationEndsInstant &&
-      Date.now() >= registrationEndsInstant.getTime();
+      t >= registrationEndsInstant.getTime();
 
     const eventSuspendedByOrganizer =
       event.status === "SUSPENDED" || event.isSuspended === true;
 
+    // Fallback da contagem de encerramento (SSR / antes do 1º tick): data digitada,
+    // em wall-clock UTC como o `registrationOpensDateText`.
+    const registrationEndsDateText = event.registrationEndDate
+      ? formatDateTimeBR(new Date(event.registrationEndDate), {
+        day: "numeric",
+        month: "long",
+      })
+      : "";
+
     return {
+      clockPending,
       registrationOpensInstant,
       registrationOpensDateText,
+      registrationEndsInstant,
+      registrationEndsDateText,
       registrationsNotOpenYet,
       registrationSlotsSoldOut,
       eventRealizationPassed,
       registrationPeriodEnded,
       eventSuspendedByOrganizer,
     };
-  }, [event]);
+  }, [event, now]);
 }
 
 /**
@@ -188,7 +214,10 @@ function RegistrationCtaBlock({
   desktopSpacing,
 }: EventPublicInfoCardProps & { desktopSpacing: boolean }) {
   const {
+    clockPending,
     registrationOpensDateText,
+    registrationEndsInstant,
+    registrationEndsDateText,
     registrationsNotOpenYet,
     registrationSlotsSoldOut,
     eventRealizationPassed,
@@ -197,15 +226,26 @@ function RegistrationCtaBlock({
   } = useEventRegistrationUiState(event);
 
   const mt = desktopSpacing ? "mt-8" : "mb-3";
-  // Espaço botão → texto de apoio = espaço card do organizador → botão.
-  // Desktop: o botão tem `mt-8` (32px) abaixo do organizador → texto `mt-8`.
-  // Mobile: o organizador tem `mb-4` (16px); o botão (inline-flex, margens somam)
-  // já carrega `mb-3` (12px), então o texto soma `mt-1` (4px) para fechar os 16px.
-  const textMt = desktopSpacing ? "mt-8" : "mt-1";
+  // Espaço botão → texto de apoio.
+  // Desktop: `mt-2` (valor original — o `mt-8` igualado ao organizador foi revertido).
+  // Mobile: espaço = card do organizador → botão. O organizador tem `mb-4` (16px); o
+  // botão (inline-flex, margens somam) já carrega `mb-3` (12px), então o texto soma
+  // `mt-1` (4px) para fechar os 16px.
+  const textMt = desktopSpacing ? "mt-2" : "mt-1";
   const disabledBtn = cn(
     "w-full bg-gray-4 text-gray-10 border-0 disabled:opacity-100 disabled:cursor-not-allowed",
     mt,
   );
+
+  // Hora do servidor ainda não chegou: não dá para saber se as inscrições estão
+  // abertas. Botão desabilitado até sincronizar (fração de segundo).
+  if (clockPending) {
+    return (
+      <Button className={disabledBtn} disabled variant="outline">
+        Inscreva-se
+      </Button>
+    );
+  }
 
   if (eventRealizationPassed) {
     return (
@@ -294,13 +334,28 @@ function RegistrationCtaBlock({
   }
 
   return (
-    <Button
-      type="button"
-      onClick={onRegisterClick}
-      className={cn("w-full", mt)}
-    >
-      Inscreva-se
-    </Button>
+    <>
+      <Button
+        type="button"
+        onClick={onRegisterClick}
+        className={cn("w-full", mt)}
+      >
+        Inscreva-se
+      </Button>
+      {/* Só no desktop: contagem até o encerramento, no mesmo formato do "Em breve!".
+          Ao zerar, o mesmo onExpire revalida o evento → "Inscrições encerradas!". */}
+      {desktopSpacing && live && registrationEndsInstant && (
+        <p className={cn("text-center text-sm text-gray-11", textMt)}>
+          Encerramento das inscrições <br />{" "}
+          <RegistrationCountdown
+            targetDate={registrationEndsInstant}
+            fallbackText={registrationEndsDateText}
+            onExpire={live.onRegistrationCountdownExpire}
+            className="font-semibold"
+          />
+        </p>
+      )}
+    </>
   );
 }
 
