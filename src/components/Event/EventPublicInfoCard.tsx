@@ -342,9 +342,9 @@ function RegistrationCtaBlock({
       >
         Inscreva-se
       </Button>
-      {/* Só no desktop: contagem até o encerramento, no mesmo formato do "Em breve!".
-          Ao zerar, o mesmo onExpire revalida o evento → "Inscrições encerradas!". */}
-      {desktopSpacing && live && registrationEndsInstant && (
+      {/* Contagem até o encerramento (card mobile e desktop; a barra fixa não tem),
+          no mesmo formato do "Em breve!". Ao zerar, o botão troca sozinho. */}
+      {live && registrationEndsInstant && (
         <p className={cn("text-center text-sm text-gray-11", textMt)}>
           Encerramento das inscrições <br />{" "}
           <RegistrationCountdown
