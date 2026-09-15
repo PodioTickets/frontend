@@ -4,7 +4,7 @@ import { useEffect } from "react";
 import { useCountdown } from "@/hooks/useCountdown";
 
 interface RegistrationCountdownProps {
-  /** Momento em que as inscrições abrem. */
+  /** Alvo da contagem (abertura ou encerramento das inscrições). */
   targetDate: Date | null;
   /**
    * Texto fallback exibido durante SSR e até o primeiro tick no client.

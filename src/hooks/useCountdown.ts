@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { serverNow, useServerClock } from "@/lib/serverClock";
 
 export interface CountdownState {
   days: number;
@@ -27,7 +28,10 @@ const INITIAL: CountdownState = {
 };
 
 function compute(targetMs: number): CountdownState {
-  const totalMs = Math.max(0, targetMs - Date.now());
+  // Hora OFICIAL do servidor — nunca o relógio do dispositivo (lib/serverClock).
+  const now = serverNow();
+  if (now === null) return INITIAL;
+  const totalMs = Math.max(0, targetMs - now);
   const totalSeconds = Math.floor(totalMs / 1000);
   return {
     days: Math.floor(totalSeconds / 86400),
@@ -54,6 +58,8 @@ export function useCountdown(target: Date | null | undefined): CountdownState {
     typeof targetMs === "number" && !Number.isNaN(targetMs) ? targetMs : null;
 
   const [state, setState] = useState<CountdownState>(INITIAL);
+  // Re-roda o efeito quando a hora do servidor chega/re-sincroniza.
+  const clockVersion = useServerClock();
 
   useEffect(() => {
     if (validTarget === null) {
@@ -76,7 +82,7 @@ export function useCountdown(target: Date | null | undefined): CountdownState {
       clearInterval(id);
       document.removeEventListener("visibilitychange", onVisibility);
     };
-  }, [validTarget]);
+  }, [validTarget, clockVersion]);
 
   return state;
 }

@@ -1,6 +1,7 @@
 import type { Event, EventResponse, Question } from "@/interfaces/event";
 import type { ApiClient } from "../base/ApiClient";
 import { normalizeSearchLocationsPayload } from "@/utils/locationFacets";
+import { applyServerTime } from "@/lib/serverClock";
 
 export type EventSearchLocationPair = {
   state: string;
@@ -75,6 +76,8 @@ export class EventService {
 
   async getEventBySlug(slug: string): Promise<Event> {
     const { data } = await this.apiClient.get(`/api/v1/events/slug/${slug}`);
+    // Hora do servidor para as regras de horário da página (nunca o relógio local).
+    applyServerTime(data.data.serverTime);
     return data.data.event || null;
   }
 
