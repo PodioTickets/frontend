@@ -238,7 +238,7 @@ export function EventFinancialView({
                   </div>
                   <div className="px-3 py-4">
                     <p className="font-manrope font-extrabold text-lg text-gray-12">
-                      {(financialData.awaitingRelease / 100).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      {((financialData.awaitingRelease + financialData.installmentsToReceive) / 100).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </p>
                   </div>
                   <button onClick={() => setIsAwaitingReleaseOpen(true)} className="text-sm text-gray-11 underline font-family-dm-sans font-normal pb-3 pt-1 px-3">
@@ -356,7 +356,7 @@ export function EventFinancialView({
               </div>
               <div className="flex items-center justify-between">
                 <p className="font-family-dm-sans font-bold text-[20px] text-gray-12">
-                  R${(financialData.awaitingRelease / 100).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  R${((financialData.awaitingRelease + financialData.installmentsToReceive) / 100).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </p>
                 <button
                   onClick={() => setIsAwaitingReleaseOpen(true)}

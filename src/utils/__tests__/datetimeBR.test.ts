@@ -19,6 +19,10 @@ describe("formatEventDateWithTimeBR", () => {
     expect(formatEventDateWithTimeBR("2026-07-25T20:00:00.000Z")).toBe("Sábado, 25 de julho às 20:00");
   });
 
+  it("sem horário escolhido (00:00) mostra só a data", () => {
+    expect(formatEventDateWithTimeBR("2026-07-25T00:00:00.000Z")).toBe("Sábado, 25 de julho");
+  });
+
   it("não desloca pelo fuso (00:30Z continua no mesmo dia)", () => {
     expect(formatEventDateWithTimeBR("2026-07-25T00:30:00.000Z")).toBe("Sábado, 25 de julho às 00:30");
   });
