@@ -80,13 +80,29 @@ export function DeleteParticipantModal() {
             <div className="flex flex-col items-center justify-center p-5 gap-11">
               {/* Topo com ícone */}
               <div className="flex flex-col gap-6 items-center w-full">
-                <Image
-                  src="/images/remove_participant.png"
-                  alt="Delete Participant"
-                  width={102}
-                  height={80}
-                  draggable={false}
-                />
+                {/* Figma 806:50220 — badge circular de 88px com gradiente vermelho/2 →
+                    vermelho/5 e o glifo "user-remove" de 52px. Os tres valores do design
+                    batem 1:1 com os tokens do projeto (`--red-2: #fff7f7`,
+                    `--red-5: #ffcdce`, e o traco do SVG e `--red-11: #ce2c31`), entao
+                    nada de hex solto aqui.
+
+                    O SVG foi exportado do Figma e COMMITADO em `public/images/` em vez de
+                    referenciar a URL do asset: o link da Figma expira em 7 dias. Nenhum
+                    icone do projeto servia — `UserIcon`, `RemoveIcon` e `RemoveCircleIcon`
+                    tem glifos diferentes, e desenhar o vetor a mao sairia errado. */}
+                <div
+                  aria-hidden
+                  className="flex size-[88px] shrink-0 items-center justify-center rounded-full bg-linear-to-b from-red-2 to-red-5"
+                >
+                  <Image
+                    src="/images/user-remove.svg"
+                    alt=""
+                    width={52}
+                    height={52}
+                    className="size-[52px]"
+                    draggable={false}
+                  />
+                </div>
 
                 {/* Conteúdo */}
                 <div className="flex flex-col gap-4 items-center justify-center w-full">

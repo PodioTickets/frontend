@@ -213,16 +213,37 @@ const EVENT_HAPPENS_LABEL_OPTS: Intl.DateTimeFormatOptions = {
  * Rótulo "Acontece no sábado, 25 de julho" — dia da semana + dia + mês por
  * extenso, em UTC (wall-clock do evento, sem shift). A preposição concorda com o
  * gênero do dia: domingo/sábado (m) → "no"; segunda a sexta (…-feira, f) → "na".
+ * Data que JÁ PASSOU vira "Aconteceu no/na …".
  * Compartilhado pelos cards de evento (home/busca) e de ingresso (meus ingressos).
  * Retorna "" para valor ausente/ inválido.
  */
 export function formatEventHappensLabel(value: DateInput): string {
   const d = toUtcDate(value);
   if (!d) return "";
-  // `Intl` pt-BR devolve o dia da semana em minúsculo ("sábado, …") →
-  // capitalizamos a 1ª letra ("Sábado, …").
   const label = formatDateTimeBR(value, EVENT_HAPPENS_LABEL_OPTS);
-  return label ? label.charAt(0).toUpperCase() + label.slice(1) : "";
+  if (!label) return "";
+  // A preposição sai do `getUTCDay` do MESMO Date que o Intl formata (0 = domingo,
+  // 6 = sábado, os dois masculinos → "no"; de segunda a sexta o nome é "…-feira",
+  // feminino → "na"). Ler o índice em vez de casar o texto evita depender de como o
+  // locale escreve o dia (acento, "-feira" ou não) e de mudanças de ICU.
+  const preposition = d.getUTCDay() === 0 || d.getUTCDay() === 6 ? "no" : "na";
+  // Passado/futuro por DIA CIVIL, não por instante: o evento de HOJE ainda é
+  // "Acontece" (não terminou), só um dia ANTERIOR vira "Aconteceu". O dia do evento
+  // sai dos componentes UTC (é wall-clock gravado como UTC — ver `eventWindowInstant`)
+  // e "hoje" sai de `brasiliaTodayCivilStart`, para que o rótulo seja o mesmo
+  // independentemente do fuso do dispositivo de quem acessa. Os dois viram meia-noite
+  // LOCAL pelo mesmo caminho, então a comparação não depende do fuso do runtime.
+  const eventCivilStart = new Date(
+    d.getUTCFullYear(),
+    d.getUTCMonth(),
+    d.getUTCDate(),
+  );
+  const isPast = eventCivilStart.getTime() < brasiliaTodayCivilStart().getTime();
+  const verb = isPast ? "Aconteceu" : "Acontece";
+  // O dia da semana fica em minúsculo de propósito: agora ele vem no meio da frase
+  // ("Acontece na quarta-feira, …"), não mais no começo — por isso some o
+  // capitalize que existia aqui.
+  return `${verb} ${preposition} ${label}`;
 }
 
 /**
@@ -232,6 +253,21 @@ export function formatEventHappensLabel(value: DateInput): string {
  */
 export function formatWeekdayDayMonthBR(value: DateInput): string {
   return formatDateTimeBR(value, EVENT_HAPPENS_LABEL_OPTS);
+}
+
+/**
+ * "Sábado, 25 de julho às 20:00" — data por extenso + horário do evento, sem o
+ * prefixo "Acontece". Usado no card mobile e na barra fixa da página pública.
+ * Wall-clock gravado como UTC (ver `eventWindowInstant`), então data e hora saem
+ * em UTC, sem shift. A 1ª letra vai maiúscula porque aqui o dia da semana abre a
+ * linha. Retorna "" para valor ausente/ inválido.
+ */
+export function formatEventDateWithTimeBR(value: DateInput): string {
+  const date = formatWeekdayDayMonthBR(value);
+  if (!date) return "";
+  const time = formatTimeBR(value);
+  const label = time ? `${date} às ${time}` : date;
+  return label.charAt(0).toUpperCase() + label.slice(1);
 }
 
 const MONTHS_BR_SHORT = [

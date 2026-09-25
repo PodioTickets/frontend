@@ -7,14 +7,13 @@ import Link from "next/link";
 import { Button } from "@/components/Button";
 import { EventMap } from "@/components/EventMap";
 import { useEventBySlug } from "@/hooks/useEvent";
+import { useNowAtBoundaries } from "@/hooks/useNowAtBoundaries";
 import {
   formatDateTimeBR,
   eventWindowInstant,
-  formatEventHappensLabel,
-  formatWeekdayDayMonthBR,
+  formatEventDateWithTimeBR,
 } from "@/utils/datetimeBR";
 import { useQueryClient } from "@tanstack/react-query";
-import { RegistrationCountdown } from "@/components/Event/RegistrationCountdown";
 import { ShareModal } from "@/components/ShareModal";
 import { ContactOrganizerFlow } from "@/components/Event/ContactOrganizerFlow";
 import { PODIO_SUPPORT_WHATSAPP } from "@/components/Event/ContactSubjectModal";
@@ -58,6 +57,16 @@ export default function EventPage() {
   const eventSlug = params.slug as string;
   const { event, loading: isLoading, error } = useEventBySlug(eventSlug);
   const queryClient = useQueryClient();
+
+  // "Agora" OFICIAL (hora do servidor, nunca o relógio do dispositivo) que muda no
+  // instante em que a inscrição abre/encerra ou o evento vira realizado → a barra
+  // fixa troca o botão sem recarregar. `null` até a hora do servidor chegar. Antes
+  // dos early returns (regra dos hooks), por isso lida com `event` indefinido.
+  const boundaryNow = useNowAtBoundaries([
+    eventWindowInstant(event?.registrationStartDate)?.getTime(),
+    eventWindowInstant(event?.registrationEndDate)?.getTime(),
+    (eventWindowInstant(event?.eventDate)?.getTime() ?? NaN) + 24 * 60 * 60 * 1000,
+  ]);
 
   /**
    * Disparado pelo `RegistrationCountdown` no momento em que a contagem chega
@@ -186,15 +195,16 @@ export default function EventPage() {
   );
   const registrationsNotOpenYet =
     !!registrationOpensInstant &&
-    Date.now() < registrationOpensInstant.getTime();
+    (boundaryNow ?? NaN) < registrationOpensInstant.getTime();
 
   const registrationOpensDateText =
     registrationsNotOpenYet && registrationOpensAt
       ? formatDateTimeBR(registrationOpensAt, {
           day: "numeric",
           month: "long",
-          ...(registrationOpensAt.getUTCFullYear() !==
-          new Date().getUTCFullYear()
+          ...(boundaryNow !== null &&
+          registrationOpensAt.getUTCFullYear() !==
+            new Date(boundaryNow).getUTCFullYear()
             ? { year: "numeric" }
             : {}),
         })
@@ -211,12 +221,12 @@ export default function EventPage() {
   const eventRealizationInstant = eventWindowInstant(event.eventDate);
   const eventRealizationPassed =
     !!eventRealizationInstant &&
-    Date.now() >= eventRealizationInstant.getTime() + ONE_DAY_MS;
+    (boundaryNow ?? NaN) >= eventRealizationInstant.getTime() + ONE_DAY_MS;
 
   const registrationEndsInstant = eventWindowInstant(event.registrationEndDate);
   const registrationPeriodEnded =
     !!registrationEndsInstant &&
-    Date.now() >= registrationEndsInstant.getTime();
+    (boundaryNow ?? NaN) >= registrationEndsInstant.getTime();
 
   const eventSuspendedByOrganizer =
     event.status === "SUSPENDED" || event.isSuspended === true;
@@ -449,133 +459,66 @@ export default function EventPage() {
                     strokeLinecap="round"
                   />
                 </svg>
+                {/* Mesmo texto do card mobile ("Sábado, 25 de julho às 20:00");
+                    a linha "Inscrições até" saiu da barra. */}
                 <span className="text-xs">
-                  {formatEventHappensLabel(event.eventDate)}
+                  {formatEventDateWithTimeBR(event.eventDate)}
                 </span>
-              </div>
-              <div className="flex items-center gap-1 text-gray-12">
-                <svg
-                  width="20"
-                  height="20"
-                  viewBox="0 0 20 20"
-                  fill="none"
-                  xmlns="http://www.w3.org/2000/svg"
-                  className="shrink-0"
-                >
-                  <path
-                    d="M6.6665 1.66699V4.16699"
-                    stroke="#202020"
-                    strokeWidth="1"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                  <path
-                    d="M13.3335 1.66699V4.16699"
-                    stroke="#202020"
-                    strokeWidth="1"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                  <path
-                    d="M2.5 6.91699C2.5 4.70786 4.29086 2.91699 6.5 2.91699H13.5C15.7091 2.91699 17.5 4.70785 17.5 6.91699V14.3337C17.5 16.5428 15.7091 18.3337 13.5 18.3337H6.5C4.29086 18.3337 2.5 16.5428 2.5 14.3337V6.91699Z"
-                    stroke="#202020"
-                    strokeWidth="1"
-                  />
-                  <path
-                    d="M7.5 12.4997L8.83616 13.5686C9.25403 13.9029 9.86103 13.849 10.2134 13.4462L12.5 10.833"
-                    stroke="#202020"
-                    strokeWidth="1"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                  <path
-                    d="M2.5 7.5H17.5"
-                    stroke="#202020"
-                    strokeWidth="1"
-                    strokeLinecap="round"
-                  />
-                </svg>
-                {event.registrationEndDate && (
-                  <span className="text-xs">
-                    Inscrições até{" "}
-                    {formatWeekdayDayMonthBR(event.registrationEndDate)}
-                  </span>
-                )}
               </div>
             </div>
 
-            {eventRealizationPassed ? (
-              <>
-                <Button
-                  className="w-full bg-gray-4 text-gray-10 border-0 disabled:opacity-100 disabled:cursor-not-allowed"
-                  disabled
-                  variant="outline"
-                >
-                  Evento realizado
-                </Button>
-                <p className="text-sm text-gray-11 text-center mt-2">
-                  Este evento já foi realizado.
-                </p>
-              </>
+            {/* Barra fixa: só o botão, sem o texto de apoio abaixo dele (esse
+                texto continua no card). A contagem de "Em breve!" também vive no
+                card, que segue montado e dispara o onExpire.
+                Sem hora do servidor ainda → desabilitado (mesma regra do card). */}
+            {boundaryNow === null ? (
+              <Button
+                className="w-full bg-gray-4 text-gray-10 border-0 disabled:opacity-100 disabled:cursor-not-allowed"
+                disabled
+                variant="outline"
+              >
+                Inscreva-se
+              </Button>
+            ) : eventRealizationPassed ? (
+              <Button
+                className="w-full bg-gray-4 text-gray-10 border-0 disabled:opacity-100 disabled:cursor-not-allowed"
+                disabled
+                variant="outline"
+              >
+                Evento realizado
+              </Button>
             ) : registrationPeriodEnded ? (
-              <>
-                <Button
-                  className="w-full bg-gray-4 text-gray-10 border-0 disabled:opacity-100 disabled:cursor-not-allowed"
-                  disabled
-                  variant="outline"
-                >
-                  Inscrições encerradas!
-                </Button>
-                <p className="text-sm text-gray-11 text-center mt-2">
-                  O prazo de inscrições para este evento foi encerrado.
-                </p>
-              </>
+              <Button
+                className="w-full bg-gray-4 text-gray-10 border-0 disabled:opacity-100 disabled:cursor-not-allowed"
+                disabled
+                variant="outline"
+              >
+                Inscrições encerradas!
+              </Button>
             ) : eventSuspendedByOrganizer ? (
-              <>
-                <Button
-                  className="w-full bg-gray-4 text-gray-10 border-0 disabled:opacity-100 disabled:cursor-not-allowed"
-                  disabled
-                  variant="outline"
-                >
-                  Inscreva-se
-                </Button>
-                <p className="text-sm text-gray-11 text-center mt-2">
-                  As inscrições para este evento não estão disponíveis no
-                  momento.
-                </p>
-              </>
+              <Button
+                className="w-full bg-gray-4 text-gray-10 border-0 disabled:opacity-100 disabled:cursor-not-allowed"
+                disabled
+                variant="outline"
+              >
+                Inscreva-se
+              </Button>
             ) : registrationSlotsSoldOut ? (
-              <>
-                <Button
-                  className="w-full bg-gray-4 text-gray-10 border-0 disabled:opacity-100 disabled:cursor-not-allowed"
-                  disabled
-                  variant="outline"
-                >
-                  Esgotado
-                </Button>
-                <p className="text-sm text-gray-11 text-center mt-2">
-                  Este evento não possui mais vagas disponíveis.
-                </p>
-              </>
+              <Button
+                className="w-full bg-gray-4 text-gray-10 border-0 disabled:opacity-100 disabled:cursor-not-allowed"
+                disabled
+                variant="outline"
+              >
+                Esgotado
+              </Button>
             ) : registrationsNotOpenYet ? (
-              <>
-                <Button
-                  className="w-full bg-gray-4 text-gray-10 border-0 disabled:opacity-100 disabled:cursor-not-allowed"
-                  disabled
-                  variant="outline"
-                >
-                  Em breve!
-                </Button>
-                <p className="text-sm text-gray-11 text-center mt-2">
-                  Inscrições abrem em <br />{" "}
-                  <RegistrationCountdown
-                    targetDate={registrationOpensInstant}
-                    fallbackText={registrationOpensDateText}
-                    onExpire={handleRegistrationCountdownExpire}
-                    className="font-semibold"
-                  />
-                </p>
-              </>
+              <Button
+                className="w-full bg-gray-4 text-gray-10 border-0 disabled:opacity-100 disabled:cursor-not-allowed"
+                disabled
+                variant="outline"
+              >
+                Em breve!
+              </Button>
             ) : (
               <Button onClick={handleCheckoutClick} className="w-full">
                 Inscreva-se

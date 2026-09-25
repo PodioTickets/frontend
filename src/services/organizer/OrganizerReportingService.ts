@@ -607,7 +607,8 @@ export class OrganizerReportingService extends OrganizerServiceBase {
       | "CANCELLED"
       | "COMPLETED"
       | "CHARGEBACK"
-      | "REFUNDED";
+      | "REFUNDED"
+      | "VOUCHER";
       search?: string;
       ticketIds?: string[];
       startDate?: string;

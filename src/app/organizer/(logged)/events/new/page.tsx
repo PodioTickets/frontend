@@ -139,6 +139,7 @@ export default function CreateEventRedirectPage() {
             createdEventId: resumeId,
             name: event.name ?? "",
             eventDate: formatDateOnly(event.eventDate),
+            eventTime: formatTimeOnly(event.eventDate),
             registrationStartDate: formatDateOnly(event.registrationStartDate),
             registrationStartTime: formatTimeOnly(event.registrationStartDate),
             registrationEndDate: formatDateOnly(event.registrationEndDate),

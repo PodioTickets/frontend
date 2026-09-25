@@ -12,13 +12,12 @@ import { composeRegistrationDateTime } from "@/lib/createEventDraftSync";
 const organizer = { name: "Org Teste", logoSrc: "" };
 
 /**
- * Regressão: no fluxo NOVO não existe `previewEvent`, então o card da prévia só
- * enxerga o que `BannerSection` repassa. Antes, `registrationEndDate` não era
- * repassado → o card caía no `undefined` e ESCONDIA a linha "Inscrições até",
- * deixando só a linha da data do evento.
+ * No fluxo NOVO não existe `previewEvent`, então o card da prévia só enxerga o que
+ * `BannerSection` repassa. O card (mobile e desktop) mostra a data do evento como
+ * "Domingo, 20 de setembro às 08:00" e NÃO tem mais a linha "Inscrições até".
  */
 describe("BannerSection — datas na prévia do card (fluxo novo)", () => {
-  it("mostra a data do evento E a linha 'Inscrições até' sem previewEvent", () => {
+  it("mostra data + horário do evento, sem 'Acontece' e sem 'Inscrições até'", () => {
     render(
       <BannerSection
         eventName="Maratona"
@@ -32,24 +31,9 @@ describe("BannerSection — datas na prévia do card (fluxo novo)", () => {
       />,
     );
 
-    // Linha 2 do bloco de metadados — a que sumia.
-    expect(screen.getByText(/Inscrições até/i)).toBeInTheDocument();
-    // Data de ENCERRAMENTO das inscrições: 10/set (exibida em UTC).
-    expect(screen.getByText(/10 de set/i)).toBeInTheDocument();
-  });
-
-  it("sem as datas de inscrição, a linha 'Inscrições até' não aparece (comportamento do card)", () => {
-    render(
-      <BannerSection
-        eventName="Maratona"
-        eventDate="2026-09-20T08:00:00.000Z"
-        city="São Paulo"
-        state="SP"
-        organizer={organizer}
-        onBannerUploaded={vi.fn()}
-      />,
-    );
-
+    // Horário em UTC (wall-clock do evento), sem shift de fuso.
+    expect(screen.getByText("Domingo, 20 de setembro às 08:00")).toBeInTheDocument();
+    expect(screen.queryByText(/Acontece n/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/Inscrições até/i)).not.toBeInTheDocument();
   });
 });

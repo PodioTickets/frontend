@@ -56,3 +56,18 @@ describe("buildCreateEventBodyFromForm — datetime em UTC explícito", () => {
     expect(body.registrationEndDate).toBeUndefined();
   });
 });
+
+describe("buildCreateEventBodyFromForm — horário do evento", () => {
+  it("junta eventDate + eventTime como wall-clock UTC", () => {
+    const body = buildCreateEventBodyFromForm(baseForm({ eventTime: "07:30" }));
+    expect(body.eventDate).toBe("2026-07-10T07:30:00.000Z");
+  });
+
+  it("sem horário vale 00:00 — mesmo instante que o backend gravava com só a data", () => {
+    const body = buildCreateEventBodyFromForm(baseForm({ eventTime: "" }));
+    expect(body.eventDate).toBe("2026-07-10T00:00:00.000Z");
+    expect(new Date(body.eventDate as string).getTime()).toBe(
+      new Date("2026-07-10").getTime(),
+    );
+  });
+});

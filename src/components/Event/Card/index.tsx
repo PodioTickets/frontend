@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useMemo } from "react";
 import type { Event } from "@/interfaces/event";
-import { formatEventHappensLabel } from "@/utils/datetimeBR";
+import { formatWeekdayDayMonthBR } from "@/utils/datetimeBR";
 import { EventCardContent } from "./EventCardContent";
 
 interface EventCardProps {
@@ -29,11 +29,12 @@ export function EventCard({ event, preview = false }: EventCardProps) {
       .join(", ");
   }, [event.locationName, event.city, event.state]);
 
-  // "Acontece no sábado, 25 de julho" — helper compartilhado com o card de ingresso.
-  const dateLabel = useMemo(
-    () => formatEventHappensLabel(event.eventDate),
-    [event.eventDate],
-  );
+  // "Sábado, 25 de julho" — sem o prefixo "Acontece/Aconteceu na". A 1ª letra vai
+  // maiúscula porque o dia da semana abre a linha.
+  const dateLabel = useMemo(() => {
+    const label = formatWeekdayDayMonthBR(event.eventDate);
+    return label.charAt(0).toUpperCase() + label.slice(1);
+  }, [event.eventDate]);
 
   const cardInner = (
     <div className="flex w-full flex-col items-start">

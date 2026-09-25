@@ -18,12 +18,12 @@ import { cn } from "@/utils/cn";
 import {
   formatDateTimeBR,
   eventWindowInstant,
-  formatEventHappensLabel,
-  formatWeekdayDayMonthBR,
+  formatEventDateWithTimeBR,
 } from "@/utils/datetimeBR";
 import { getEventOrganizer } from "@/utils/organization";
 import { buildGoogleMapsPlaceLink } from "@/utils/googleMapsGeo";
 import { useMemo, useState } from "react";
+import { useNowAtBoundaries } from "@/hooks/useNowAtBoundaries";
 
 /**
  * Card de informações do evento — FONTE ÚNICA usada tanto na página pública real
@@ -85,20 +85,17 @@ function OrganizerAvatar({
   );
 }
 
-/** Ícone de calendário com "check" — espelha o usado em "Inscrições até" na página pública. */
-function CalendarCheckIcon({ className }: { className?: string }) {
-  return (
-    <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" className={className}>
-      <path d="M6.6665 1.66699V4.16699" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" />
-      <path d="M13.3335 1.66699V4.16699" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" />
-      <path d="M2.5 6.91699C2.5 4.70786 4.29086 2.91699 6.5 2.91699H13.5C15.7091 2.91699 17.5 4.70785 17.5 6.91699V14.3337C17.5 16.5428 15.7091 18.3337 13.5 18.3337H6.5C4.29086 18.3337 2.5 16.5428 2.5 14.3337V6.91699Z" stroke="currentColor" strokeWidth="1" />
-      <path d="M7.5 12.4997L8.83616 13.5686C9.25403 13.9029 9.86103 13.849 10.2134 13.4462L12.5 10.833" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" />
-      <path d="M2.5 7.5H17.5" stroke="currentColor" strokeWidth="1" strokeLinecap="round" />
-    </svg>
-  );
-}
+const ONE_DAY_MS = 24 * 60 * 60 * 1000;
 
 function useEventRegistrationUiState(event: Event) {
+  // Re-renderiza no instante em que a inscrição abre, encerra ou o evento vira
+  // "realizado" — senão o botão só mudava ao recarregar a página.
+  const now = useNowAtBoundaries([
+    eventWindowInstant(event.registrationStartDate)?.getTime(),
+    eventWindowInstant(event.registrationEndDate)?.getTime(),
+    (eventWindowInstant(event.eventDate)?.getTime() ?? NaN) + ONE_DAY_MS,
+  ]);
+
   return useMemo(() => {
     // `registrationOpensAt` (wall-clock UTC) é só pro DISPLAY (mostra a hora digitada).
     // A comparação com o tempo real usa o INSTANTE em BRT (+3h) — senão abre/fecha 3h cedo.
@@ -106,16 +103,20 @@ function useEventRegistrationUiState(event: Event) {
       ? new Date(event.registrationStartDate)
       : null;
     const registrationOpensInstant = eventWindowInstant(event.registrationStartDate);
+    // Sem hora do servidor ainda (`now === null`), NaN deixa todas as comparações
+    // falsas e `clockPending` segura o CTA desabilitado — nunca o relógio local.
+    const t = now ?? NaN;
+    const clockPending = now === null;
     const registrationsNotOpenYet =
       !!registrationOpensInstant &&
-      Date.now() < registrationOpensInstant.getTime();
+      t < registrationOpensInstant.getTime();
 
     const registrationOpensDateText =
       registrationsNotOpenYet && registrationOpensAt
         ? formatDateTimeBR(registrationOpensAt, {
           day: "numeric",
           month: "long",
-          ...(registrationOpensAt.getUTCFullYear() !== new Date().getUTCFullYear()
+          ...(now !== null && registrationOpensAt.getUTCFullYear() !== new Date(now).getUTCFullYear()
             ? { year: "numeric" }
             : {}),
         })
@@ -127,30 +128,41 @@ function useEventRegistrationUiState(event: Event) {
     // "Evento realizado" só UM DIA depois da data do evento (não no instante de
     // início) — mesma regra da página /events/[slug]. Durante o dia do evento e as
     // 24h seguintes, NÃO é marcado como realizado (cai em "Inscrições encerradas").
-    const ONE_DAY_MS = 24 * 60 * 60 * 1000;
     const eventRealizationInstant = eventWindowInstant(event.eventDate);
     const eventRealizationPassed =
       !!eventRealizationInstant &&
-      Date.now() >= eventRealizationInstant.getTime() + ONE_DAY_MS;
+      t >= eventRealizationInstant.getTime() + ONE_DAY_MS;
 
     const registrationEndsInstant = eventWindowInstant(event.registrationEndDate);
     const registrationPeriodEnded =
       !!registrationEndsInstant &&
-      Date.now() >= registrationEndsInstant.getTime();
+      t >= registrationEndsInstant.getTime();
 
     const eventSuspendedByOrganizer =
       event.status === "SUSPENDED" || event.isSuspended === true;
 
+    // Fallback da contagem de encerramento (SSR / antes do 1º tick): data digitada,
+    // em wall-clock UTC como o `registrationOpensDateText`.
+    const registrationEndsDateText = event.registrationEndDate
+      ? formatDateTimeBR(new Date(event.registrationEndDate), {
+        day: "numeric",
+        month: "long",
+      })
+      : "";
+
     return {
+      clockPending,
       registrationOpensInstant,
       registrationOpensDateText,
+      registrationEndsInstant,
+      registrationEndsDateText,
       registrationsNotOpenYet,
       registrationSlotsSoldOut,
       eventRealizationPassed,
       registrationPeriodEnded,
       eventSuspendedByOrganizer,
     };
-  }, [event]);
+  }, [event, now]);
 }
 
 /**
@@ -202,7 +214,10 @@ function RegistrationCtaBlock({
   desktopSpacing,
 }: EventPublicInfoCardProps & { desktopSpacing: boolean }) {
   const {
+    clockPending,
     registrationOpensDateText,
+    registrationEndsInstant,
+    registrationEndsDateText,
     registrationsNotOpenYet,
     registrationSlotsSoldOut,
     eventRealizationPassed,
@@ -211,10 +226,26 @@ function RegistrationCtaBlock({
   } = useEventRegistrationUiState(event);
 
   const mt = desktopSpacing ? "mt-8" : "mb-3";
+  // Espaço botão → texto de apoio.
+  // Desktop: `mt-2` (valor original — o `mt-8` igualado ao organizador foi revertido).
+  // Mobile: espaço = card do organizador → botão. O organizador tem `mb-4` (16px); o
+  // botão (inline-flex, margens somam) já carrega `mb-3` (12px), então o texto soma
+  // `mt-1` (4px) para fechar os 16px.
+  const textMt = desktopSpacing ? "mt-2" : "mt-1";
   const disabledBtn = cn(
     "w-full bg-gray-4 text-gray-10 border-0 disabled:opacity-100 disabled:cursor-not-allowed",
     mt,
   );
+
+  // Hora do servidor ainda não chegou: não dá para saber se as inscrições estão
+  // abertas. Botão desabilitado até sincronizar (fração de segundo).
+  if (clockPending) {
+    return (
+      <Button className={disabledBtn} disabled variant="outline">
+        Inscreva-se
+      </Button>
+    );
+  }
 
   if (eventRealizationPassed) {
     return (
@@ -222,7 +253,7 @@ function RegistrationCtaBlock({
         <Button className={disabledBtn} disabled variant="outline">
           Evento realizado
         </Button>
-        <p className="mt-2 text-center text-sm text-gray-11">
+        <p className={cn("text-center text-sm text-gray-11", textMt)}>
           Este evento já foi realizado.
         </p>
       </>
@@ -234,7 +265,7 @@ function RegistrationCtaBlock({
         <Button className={disabledBtn} disabled variant="outline">
           Inscrições encerradas!
         </Button>
-        <p className="mt-2 text-center text-sm text-gray-11">
+        <p className={cn("text-center text-sm text-gray-11", textMt)}>
           O prazo de inscrições para este evento foi encerrado.
         </p>
       </>
@@ -246,7 +277,7 @@ function RegistrationCtaBlock({
         <Button className={disabledBtn} disabled variant="outline">
           Inscreva-se
         </Button>
-        <p className="mt-2 text-center text-sm text-gray-11">
+        <p className={cn("text-center text-sm text-gray-11", textMt)}>
           As inscrições para este evento não estão disponíveis no momento.
         </p>
       </>
@@ -258,7 +289,7 @@ function RegistrationCtaBlock({
         <Button className={disabledBtn} disabled variant="outline">
           Esgotado
         </Button>
-        <p className="mt-2 text-center text-sm text-gray-11">
+        <p className={cn("text-center text-sm text-gray-11", textMt)}>
           Este evento não possui mais vagas disponíveis.
         </p>
       </>
@@ -270,7 +301,7 @@ function RegistrationCtaBlock({
         <Button className={disabledBtn} disabled variant="outline">
           Em breve!
         </Button>
-        <p className="mt-2 text-center text-sm text-gray-11">
+        <p className={cn("text-center text-sm text-gray-11", textMt)}>
           {live ? (
             <>
               Inscrições abrem em <br />{" "}
@@ -303,13 +334,28 @@ function RegistrationCtaBlock({
   }
 
   return (
-    <Button
-      type="button"
-      onClick={onRegisterClick}
-      className={cn("w-full", mt)}
-    >
-      Inscreva-se
-    </Button>
+    <>
+      <Button
+        type="button"
+        onClick={onRegisterClick}
+        className={cn("w-full", mt)}
+      >
+        Inscreva-se
+      </Button>
+      {/* Contagem até o encerramento (card mobile e desktop; a barra fixa não tem),
+          no mesmo formato do "Em breve!". Ao zerar, o botão troca sozinho. */}
+      {live && registrationEndsInstant && (
+        <p className={cn("text-center text-sm text-gray-11", textMt)}>
+          Encerramento das inscrições <br />{" "}
+          <RegistrationCountdown
+            targetDate={registrationEndsInstant}
+            fallbackText={registrationEndsDateText}
+            onExpire={live.onRegistrationCountdownExpire}
+            className="font-semibold"
+          />
+        </p>
+      )}
+    </>
   );
 }
 
@@ -340,16 +386,10 @@ function EventMetaRows({ event, mobile }: { event: Event; mobile?: boolean }) {
     <div className={cn("flex flex-col", mobile ? "mb-4 gap-3" : "gap-4")}>
       <div className={cn("flex items-center gap-2 text-sm font-medium", textColor)}>
         <CalendarIcon className="size-5 shrink-0" />
-        <span>{formatEventHappensLabel(event.eventDate)}</span>
+        {/* "Sábado, 25 de julho às 20:00", sem "Acontece" e sem a linha
+            "Inscrições até" — mobile e desktop (igual à barra fixa mobile). */}
+        <span>{formatEventDateWithTimeBR(event.eventDate)}</span>
       </div>
-      {event.registrationEndDate && (
-        <div className={cn("flex items-center gap-2 text-sm font-medium", textColor)}>
-          <CalendarCheckIcon className="size-5 shrink-0 text-gray-12" />
-          <span>
-            Inscrições até {formatWeekdayDayMonthBR(event.registrationEndDate)}
-          </span>
-        </div>
-      )}
       <div className={cn("flex items-center gap-2 font-medium", textColor)}>
         <LocationIcon className="size-5 shrink-0" />
         {mapsUrl ? (

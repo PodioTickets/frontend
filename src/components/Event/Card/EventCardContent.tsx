@@ -13,7 +13,7 @@ interface EventCardContentProps {
   fallbackId: string;
   /** "Local, Cidade, Estado" (ou "Cidade, Estado"). */
   addressLabel?: string;
-  /** "Acontece no sábado, 25 de julho". */
+  /** Linha de data (ex.: "Sábado, 25 de julho" ou "Acontece no sábado, 25 de julho"). */
   dateLabel?: string;
   /**
    * Cor (Tailwind) da linha de data. Default `"text-primary-11"` (verde,
