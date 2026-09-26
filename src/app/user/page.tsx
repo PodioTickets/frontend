@@ -639,7 +639,11 @@ export default function UserProfilePage() {
                   src={pendingAvatar.resolveSrc(user?.avatarUrl)}
                   alt="Profile"
                   fill
-                  sizes="36px"
+                  // Original sem o otimizador do Next: ele recomprime (qualidade 75) e a foto
+                  // ficava pior DEPOIS de salvar que na prévia (blob:, que já pula o otimizador).
+                  // O arquivo é o PNG de 600px do recorte, salvo sem perda pelo backend.
+                  nativeImg
+                  sizes="96px"
                   name={user?.firstName ?? ""}
                   className="object-cover w-full h-full rounded-full"
                 />

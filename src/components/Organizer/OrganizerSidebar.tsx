@@ -217,6 +217,8 @@ export function OrganizerSidebar() {
                   fallbackId={user?.id}
                   fill
                   sizes="36px"
+                  // Foto original (PNG do recorte), sem a recompressão do next/image.
+                  nativeImg
                   className="size-full rounded-full"
                   imgClassName="object-cover rounded-full"
                   letterClassName="text-sm font-medium text-[#B4B4B4]"
