@@ -28,9 +28,8 @@ export function useFeaturedEvents(limit = 20, options?: { enabled?: boolean }) {
 }
 
 /**
- * Lista da HOME (hero + "Eventos em destaque"): destaques do admin e, só quando não
- * há nenhum, eventos recentes — a home nunca fica vazia. Os dois consumidores usam o
- * MESMO `limit`, então compartilham o cache do React Query (1 request, não 2).
+ * Banners da hero da home: destaques do admin e, só quando não há nenhum, eventos
+ * recentes — a hero nunca fica vazia.
  */
 export function useHomeFeaturedEvents(limit = 20) {
   const { events: featured, isLoading } = useFeaturedEvents(limit);

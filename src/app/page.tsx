@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import { HomeFilters } from "@/components/HomeFilters";
-import { EventCarousel } from "@/components/EventCarousel";
+import { HomeEventsGrid } from "@/components/HomeEventsGrid";
 import { HomeHero } from "@/components/HomeHero";
 import { Button } from "@/components/Button";
 import Link from "next/link";
@@ -56,14 +56,9 @@ export default function Home() {
         </div>
       </div>
 
-      {/* Featured Events Section — full width (preenche a tela) */}
-      <div className="relative left-1/2 right-1/2 -mx-[50vw] w-screen mt-8 md:mt-16">
-        <h1 className="font-manrope text-2xl md:text-[28px] font-extrabold text-center text-gray-12">
-          Eventos em destaque
-        </h1>
-        <div className="mt-6 md:mt-8">
-          <EventCarousel items={20} />
-        </div>
+      {/* Todos os eventos (Figma 6731:59738): 2 linhas de 4 + "Ver mais eventos". */}
+      <div className="mt-8 md:mt-9">
+        <HomeEventsGrid />
       </div>
 
       <div className="w-full mt-6 md:mt-14">
