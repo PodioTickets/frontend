@@ -173,6 +173,8 @@ export function OrganizerMobileNav() {
                   fallbackId={user?.id}
                   fill
                   sizes="64px"
+                  // Foto original (PNG do recorte), sem a recompressão do next/image.
+                  nativeImg
                   className="size-full rounded-full"
                   imgClassName="object-cover rounded-full"
                   letterClassName="text-xl font-semibold text-white"

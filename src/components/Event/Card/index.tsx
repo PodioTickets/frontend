@@ -12,6 +12,8 @@ interface EventCardProps {
    *  navegação (sem `<Link>`) e com imagem nativa, aceitando `data:` URLs do
    *  upload em andamento. Default false → comportamento idêntico ao de produção. */
   preview?: boolean;
+  /** Banner ORIGINAL, sem redimensionar/recomprimir no next/image (grid da home). */
+  originalImage?: boolean;
 }
 
 /**
@@ -19,7 +21,7 @@ interface EventCardProps {
  * evento (aspect 312/142, cantos arredondados). Card SEM borda/fundo/sombra:
  * banner arredondado → título → endereço (local, cidade, estado) → data por extenso.
  */
-export function EventCard({ event, preview = false }: EventCardProps) {
+export function EventCard({ event, preview = false, originalImage = false }: EventCardProps) {
   // Endereço completo: "Local, Cidade, Estado". `locationName` (escolhido no mapa)
   // pode faltar em eventos legados → cai pra "Cidade, Estado".
   const addressLabel = useMemo(() => {
@@ -45,7 +47,7 @@ export function EventCard({ event, preview = false }: EventCardProps) {
         fallbackId={event.id}
         addressLabel={addressLabel}
         dateLabel={dateLabel}
-        nativeImg={preview}
+        nativeImg={preview || originalImage}
       />
     </div>
   );

@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import { HomeFilters } from "@/components/HomeFilters";
-import { EventCarousel } from "@/components/EventCarousel";
+import { HomeEventsGrid } from "@/components/HomeEventsGrid";
+import { HomeHero } from "@/components/HomeHero";
 import { Button } from "@/components/Button";
 import Link from "next/link";
 
@@ -43,23 +44,21 @@ export const metadata: Metadata = {
 export default function Home() {
   return (
     <section className="flex flex-col min-h-screen w-full px-4 md:px-0 max-w-[1280px] mx-auto mb-12">
-      <Suspense fallback={null}>
-        <HomeFilters />
-      </Suspense>
-
-      {/* Hero Banner */}
-      <div className="w-full mt-6 md:mt-14">
-        <div className="md:bg-[url('/banners/banner_1.png')] bg-[url('/banners/banner_1_mobile.png')] md:bg-cover bg-contain bg-center bg-no-repeat w-full h-[200px] md:h-[400px] lg:h-[388px] rounded-lg" />
+      {/* Hero (Figma 6731:58998): faixa gray-3 full-bleed com a busca + banners em destaque. */}
+      <div className="relative left-1/2 right-1/2 -mx-[50vw] w-screen bg-gray-3 border-b border-gray-6">
+        <div className="mx-auto flex w-full max-w-[1280px] flex-col items-center gap-7 pb-6 pt-5 md:gap-[52px] md:pb-11 md:pt-9">
+          <div className="hidden w-full md:block md:max-w-[1138px]">
+            <Suspense fallback={null}>
+              <HomeFilters hero />
+            </Suspense>
+          </div>
+          <HomeHero />
+        </div>
       </div>
 
-      {/* Featured Events Section — full width (preenche a tela) */}
-      <div className="relative left-1/2 right-1/2 -mx-[50vw] w-screen mt-8 md:mt-16">
-        <h1 className="font-manrope text-2xl md:text-[28px] font-extrabold text-center text-gray-12">
-          Eventos em destaque
-        </h1>
-        <div className="mt-6 md:mt-8">
-          <EventCarousel items={20} />
-        </div>
+      {/* Todos os eventos (Figma 6731:59738): 2 linhas de 5 + "Ver mais eventos". */}
+      <div className="mt-8 md:mt-9">
+        <HomeEventsGrid />
       </div>
 
       <div className="w-full mt-6 md:mt-14">

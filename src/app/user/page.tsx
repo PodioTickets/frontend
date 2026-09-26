@@ -618,7 +618,7 @@ export default function UserProfilePage() {
     <div className="min-h-screen bg-gray-2 md:pb-32">
       <div className="mx-auto flex max-w-[842px] flex-col items-center justify-center px-4 py-10 md:px-5 md:py-[52px]">
         {/* Profile Card */}
-        <div className="w-full rounded-xl bg-gray-1 shadow-[0px_2px_6px_0px_rgba(17,17,17,0.25)]">
+        <div className="w-full rounded-xl border border-gray-6 bg-gray-1">
           {/* Header */}
           <div className="flex flex-col gap-6 border-b border-gray-6 px-4 pb-8 pt-6">
             {/* Mobile: Centered title */}
@@ -639,7 +639,11 @@ export default function UserProfilePage() {
                   src={pendingAvatar.resolveSrc(user?.avatarUrl)}
                   alt="Profile"
                   fill
-                  sizes="36px"
+                  // Original sem o otimizador do Next: ele recomprime (qualidade 75) e a foto
+                  // ficava pior DEPOIS de salvar que na prévia (blob:, que já pula o otimizador).
+                  // O arquivo é o PNG de 600px do recorte, salvo sem perda pelo backend.
+                  nativeImg
+                  sizes="96px"
                   name={user?.firstName ?? ""}
                   className="object-cover w-full h-full rounded-full"
                 />

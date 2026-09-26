@@ -150,15 +150,6 @@ export function Header() {
                 />
               </div>
             </Link>
-
-            <div className="hidden lg:flex items-center h-full text-[#B4B4B4] text-sm gap-4">
-              <Link
-                href="/search"
-                className="flex items-center gap-2 hover:text-primary-7 transition-all duration-200"
-              >
-                Calendário de eventos
-              </Link>
-            </div>
           </div>
           <div className="flex w-full max-w-[560px] px-4 md:px-0">
             <SearchBar
@@ -185,6 +176,8 @@ export function Header() {
                       fallbackId={user.id}
                       width={40}
                       height={40}
+                      // Foto original (PNG do recorte), sem a recompressão do next/image.
+                      nativeImg
                       className="size-10 rounded-full shrink-0 overflow-hidden bg-primary-10"
                       imgClassName="object-cover rounded-full"
                       letterClassName="text-base font-semibold text-gray-12 uppercase"

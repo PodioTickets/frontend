@@ -17,7 +17,7 @@ export default function UserLoading() {
       aria-live="polite"
     >
       <div className="mx-auto flex max-w-[842px] flex-col items-center justify-center px-4 py-10 md:px-5 md:py-[52px]">
-        <div className="w-full rounded-xl bg-gray-1 shadow-[0px_2px_6px_0px_rgba(17,17,17,0.25)]">
+        <div className="w-full rounded-xl border border-gray-6 bg-gray-1">
           {/* Header: título + avatar + botões */}
           <div className="flex flex-col gap-6 border-b border-gray-6 px-4 pb-8 pt-6">
             <div className="flex items-center justify-center md:justify-start">

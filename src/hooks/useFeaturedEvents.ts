@@ -1,5 +1,6 @@
 import { useApiQuery } from "./base/useApiQuery";
 import { eventService } from "@/services";
+import { useEvents } from "./useEvents";
 import type { Event } from "@/interfaces/event";
 
 /**
@@ -23,5 +24,23 @@ export function useFeaturedEvents(limit = 20, options?: { enabled?: boolean }) {
     isLoading,
     error,
     refetch,
+  };
+}
+
+/**
+ * Banners da hero da home: destaques do admin e, só quando não há nenhum, eventos
+ * recentes — a hero nunca fica vazia.
+ */
+export function useHomeFeaturedEvents(limit = 20) {
+  const { events: featured, isLoading } = useFeaturedEvents(limit);
+  const useFallback = !isLoading && featured.length === 0;
+  const { events: fallback, isLoading: loadingFallback } = useEvents({
+    page: 1,
+    limit,
+    enabled: useFallback,
+  });
+  return {
+    events: featured.length > 0 ? featured : fallback,
+    isLoading: isLoading || (useFallback && loadingFallback),
   };
 }

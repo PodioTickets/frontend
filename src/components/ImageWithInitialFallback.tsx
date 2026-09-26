@@ -64,6 +64,9 @@ export function ImageWithInitialFallback(props: ImageWithInitialFallbackProps) {
             <img
               src={trimmed}
               alt={alt}
+              // Arquivo original (sem otimizador) é mais pesado: só baixa ao entrar na tela.
+              loading={priority ? "eager" : "lazy"}
+              decoding="async"
               className={cn(
                 "absolute inset-0 size-full object-cover",
                 imgClassName,
@@ -77,6 +80,8 @@ export function ImageWithInitialFallback(props: ImageWithInitialFallbackProps) {
               alt={alt}
               width={props.width}
               height={props.height}
+              loading={priority ? "eager" : "lazy"}
+              decoding="async"
               className={cn(
                 "object-cover size-full max-h-full max-w-full",
                 imgClassName,

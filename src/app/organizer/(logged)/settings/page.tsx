@@ -170,7 +170,7 @@ export default function OrganizerSettingsPage() {
       {/* Content */}
       <div className="mx-auto w-full max-w-4xl flex flex-col gap-6 md:gap-8 px-4 md:px-8 py-6 md:py-8">
         {/* Personal Info Section */}
-        <div className="bg-gray-2 flex flex-col gap-8 md:gap-[44px] items-start pb-[32px] pt-[24px] px-4 md:px-[16px] rounded-[12px] shadow-[0px_2px_6px_0px_rgba(17,17,17,0.25)] w-full">
+        <div className="bg-gray-2 flex flex-col gap-8 md:gap-[44px] items-start pb-[32px] pt-[24px] px-4 md:px-[16px] rounded-[12px] border border-gray-6 w-full">
           {/* Profile Container — empilha no mobile, lado a lado no desktop */}
           <div className="flex flex-col sm:flex-row gap-4 sm:gap-[16px] items-start sm:items-end w-full">
             <div className="relative shrink-0 size-[96px] rounded-full overflow-hidden">
@@ -182,6 +182,8 @@ export default function OrganizerSettingsPage() {
                   : user?.email || "Nome do usuário"}
                 fill
                 sizes="96px"
+                // Foto original (PNG do recorte), sem a recompressão do next/image.
+                nativeImg
                 className="size-full rounded-full"
                 letterClassName="text-2xl font-semibold"
               />
@@ -264,7 +266,7 @@ export default function OrganizerSettingsPage() {
         </div>
 
         {/* Account Security Section */}
-        <div className="bg-gray-2 flex flex-col gap-[24px] items-start pb-[32px] pt-[24px] px-4 md:px-[16px] rounded-[12px] shadow-[0px_2px_6px_0px_rgba(17,17,17,0.25)] w-full">
+        <div className="bg-gray-2 flex flex-col gap-[24px] items-start pb-[32px] pt-[24px] px-4 md:px-[16px] rounded-[12px] border border-gray-6 w-full">
           <div className="flex flex-col gap-[12px] items-start w-full">
             <p className="font-manrope font-bold leading-[1.1] text-[20px] text-gray-12">
               Conta e segurança
@@ -307,7 +309,7 @@ export default function OrganizerSettingsPage() {
         </div>
 
         {/* Security Section */}
-        <div className="bg-gray-2 flex flex-col gap-[24px] items-start pb-[32px] pt-[24px] px-4 md:px-[16px] rounded-[12px] shadow-[0px_2px_6px_0px_rgba(17,17,17,0.25)] w-full">
+        <div className="bg-gray-2 flex flex-col gap-[24px] items-start pb-[32px] pt-[24px] px-4 md:px-[16px] rounded-[12px] border border-gray-6 w-full">
           <TwoFASection
             userEmail={user?.email ?? ""}
             initialEnabled={!!user?.mfaEnabled}
