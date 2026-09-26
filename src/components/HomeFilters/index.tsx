@@ -16,6 +16,7 @@ import { useEventLocationFacets } from "@/hooks/useEventLocationFacets";
 import { LocationCascadePicker } from "@/components/LocationCascadePicker";
 import { MobileFiltersSheet } from "./MobileFiltersSheet";
 import { useQueryClient } from "@tanstack/react-query";
+import { cn } from "@/utils/cn";
 
 interface HomeFiltersProps {
   initialState?: string | null;
@@ -24,6 +25,8 @@ interface HomeFiltersProps {
   initialModalities?: string[];
   initialDateRange?: DateRange | undefined;
   initialPriceRange?: [number, number];
+  /** Dentro da hero da home (faixa gray-3): sem margem de topo, barra gray-2 e botão de 56px. */
+  hero?: boolean;
 }
 
 const arraysEqual = (a: string[], b: string[]) => {
@@ -70,6 +73,7 @@ export function HomeFilters({
   initialModalities = [],
   initialDateRange = undefined,
   initialPriceRange = [0, 1000],
+  hero = false,
 }: HomeFiltersProps = {}) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -295,7 +299,7 @@ export function HomeFilters({
   ]);
 
   return (
-    <div className="w-full md:px-0 mt-6 md:mt-14">
+    <div className={cn("w-full md:px-0", !hero && "mt-6 md:mt-14")}>
       {/* Mobile Layout — card que abre o bottom-sheet de filtros (home E /search) */}
       <button
         type="button"
@@ -340,7 +344,7 @@ export function HomeFilters({
       />
 
       {/* Desktop Layout */}
-      <div className="hidden md:flex relative items-center justify-between shadow-[0px_2px_6px_0px_rgba(17,17,17,0.15)] rounded-4xl h-[75px]">
+      <div className={cn("hidden md:flex relative items-center justify-between shadow-[0px_2px_6px_0px_rgba(17,17,17,0.15)] rounded-4xl h-[75px]", hero && "bg-gray-2")}>
         <Dropdown
           dataAttribute="location"
           width="w-full min-w-[280px] max-w-[320px]"
@@ -469,7 +473,7 @@ export function HomeFilters({
 
         <button
           onClick={handleSearch}
-          className="absolute right-0 flex items-center justify-center gap-2 bg-[#5CC870] hover:bg-[#4db860] transition-colors p-2 rounded-full w-10 h-10 ml-4 mr-4 cursor-pointer"
+          className={cn("absolute right-0 flex items-center justify-center gap-2 bg-[#5CC870] hover:bg-[#4db860] transition-colors p-2 rounded-full w-10 h-10 ml-4 mr-4 cursor-pointer", hero && "size-14 mr-2.5")}
           aria-label="Pesquisar eventos"
         >
           <SearchIcon />
