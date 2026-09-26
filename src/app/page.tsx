@@ -46,8 +46,8 @@ export default function Home() {
     <section className="flex flex-col min-h-screen w-full px-4 md:px-0 max-w-[1280px] mx-auto mb-12">
       {/* Hero (Figma 6731:58998): faixa gray-3 full-bleed com a busca + banners em destaque. */}
       <div className="relative left-1/2 right-1/2 -mx-[50vw] w-screen bg-gray-3 border-b border-gray-6">
-        <div className="mx-auto flex w-full max-w-[1280px] flex-col items-center gap-6 px-4 pb-8 pt-6 md:gap-[52px] md:px-0 md:pb-11 md:pt-9">
-          <div className="w-full md:max-w-[1138px]">
+        <div className="mx-auto flex w-full max-w-[1280px] flex-col items-center gap-7 pb-6 pt-5 md:gap-[52px] md:pb-11 md:pt-9">
+          <div className="hidden w-full md:block md:max-w-[1138px]">
             <Suspense fallback={null}>
               <HomeFilters hero />
             </Suspense>

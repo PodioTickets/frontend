@@ -13,16 +13,18 @@ const SLIDES = 5;
 const SWIPE_PX = 40;
 
 /**
- * Posição de cada banner pela distância ao ativo (Figma, frame de 1280px):
- * centro 606px; vizinhos 524px a ±210px; extremos 436px a ±339px. Em % do
- * container para escalar abaixo de 1280. Os laterais só aparecem no desktop.
+ * Posição de cada banner pela distância ao ativo, em % do container:
+ * - desktop (Figma 6731:58998, 1280px): centro 606px; vizinhos 524px a ±210px;
+ *   extremos 436px a ±339px.
+ * - mobile (Figma 829:59389, 375px, sem margem lateral): centro 312px; vizinhos
+ *   269px a ±108px; extremos 224px a ±172px — cortados pela borda da tela.
  */
 const POSITIONS: Record<number, { card: string; overlay: string }> = {
-  0: { card: "z-30 left-1/2 w-full md:w-[47.4%]", overlay: "opacity-0" },
-  [-1]: { card: "z-20 left-[33.6%] w-[40.9%] skew-x-[2.54deg] hidden md:block", overlay: "opacity-60" },
-  1: { card: "z-20 left-[66.4%] w-[40.9%] skew-x-[-2.54deg] hidden md:block", overlay: "opacity-60" },
-  [-2]: { card: "z-10 left-[23.5%] w-[34.1%] skew-x-[2.54deg] hidden md:block", overlay: "opacity-67" },
-  2: { card: "z-10 left-[76.5%] w-[34.1%] skew-x-[-2.54deg] hidden md:block", overlay: "opacity-67" },
+  0: { card: "z-30 left-1/2 w-[83.2%] md:w-[47.4%]", overlay: "opacity-0" },
+  [-1]: { card: "z-20 left-[21.2%] w-[71.8%] md:left-[33.6%] md:w-[40.9%] skew-x-[2.54deg]", overlay: "opacity-60" },
+  1: { card: "z-20 left-[78.8%] w-[71.8%] md:left-[66.4%] md:w-[40.9%] skew-x-[-2.54deg]", overlay: "opacity-60" },
+  [-2]: { card: "z-10 left-[4.1%] w-[59.8%] md:left-[23.5%] md:w-[34.1%] skew-x-[2.54deg]", overlay: "opacity-67" },
+  2: { card: "z-10 left-[95.9%] w-[59.8%] md:left-[76.5%] md:w-[34.1%] skew-x-[-2.54deg]", overlay: "opacity-67" },
 };
 
 /** Distância circular do slide `i` ao ativo, em [-n/2, n/2]. */
@@ -42,9 +44,9 @@ export function HomeHero() {
   if (isLoading) {
     // Mesma caixa da hero pronta (área + espaço das bolinhas) → sem salto de layout.
     return (
-      <div className="flex w-full flex-col items-center gap-9">
-        <div className="relative w-full aspect-1660/930 md:aspect-[1280/344]">
-          <div className="absolute left-1/2 top-1/2 aspect-1660/930 w-full -translate-x-1/2 -translate-y-1/2 animate-pulse rounded-xl bg-gray-5 md:w-[47.4%]" />
+      <div className="flex w-full flex-col items-center gap-5 md:gap-9">
+        <div className="relative w-full aspect-[375/177] md:aspect-[1280/344]">
+          <div className="absolute left-1/2 top-1/2 aspect-1660/930 w-[83.2%] -translate-x-1/2 -translate-y-1/2 animate-pulse rounded-md bg-gray-5 md:w-[47.4%] md:rounded-xl" />
         </div>
         <div className="h-2" />
       </div>
@@ -57,9 +59,11 @@ export function HomeHero() {
     "hidden md:flex absolute top-1/2 -translate-y-1/2 z-40 size-12 items-center justify-center rounded-full bg-gray-2 border-[1.5px] border-gray-6 hover:bg-gray-3 transition-colors";
 
   return (
-    <div className="flex w-full flex-col items-center gap-9">
+    // `overflow-x-clip`: no mobile os banners das pontas passam da borda da tela (Figma)
+    // — corta sem gerar scroll horizontal (e sem virar contexto de rolagem, como `hidden`).
+    <div className="flex w-full flex-col items-center gap-5 overflow-x-clip md:gap-9">
       <div
-        className="relative w-full aspect-1660/930 md:aspect-[1280/344]"
+        className="relative w-full aspect-[375/177] md:aspect-[1280/344]"
         onTouchStart={(e) => (touchX.current = e.touches[0].clientX)}
         onTouchEnd={(e) => {
           if (touchX.current === null) return;
@@ -85,7 +89,7 @@ export function HomeHero() {
                 setActive(i);
               }}
               className={cn(
-                "group absolute top-1/2 aspect-1660/930 -translate-x-1/2 -translate-y-1/2 overflow-hidden rounded-xl transition-all duration-500 ease-out",
+                "group absolute top-1/2 aspect-1660/930 -translate-x-1/2 -translate-y-1/2 overflow-hidden rounded-md transition-all duration-500 ease-out md:rounded-xl",
                 pos ? pos.card : "z-0 left-1/2 w-[34.1%] opacity-0 pointer-events-none",
               )}
             >
