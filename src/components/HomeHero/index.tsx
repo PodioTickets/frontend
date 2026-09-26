@@ -9,8 +9,6 @@ import { cn } from "@/utils/cn";
 
 /** Nº de banners na hero (Figma: 5 páginas). */
 const SLIDES = 5;
-/** Mesmo `limit` do "Eventos em destaque" → reaproveita o cache (sem request extra). */
-const HOME_EVENTS_LIMIT = 20;
 /** Arraste mínimo (px) para trocar de slide no toque. */
 const SWIPE_PX = 40;
 
@@ -35,7 +33,7 @@ function offsetOf(i: number, active: number, n: number) {
 
 /** Hero da home (Figma 6731:58998): banners dos eventos em destaque em leque. */
 export function HomeHero() {
-  const { events, isLoading } = useHomeFeaturedEvents(HOME_EVENTS_LIMIT);
+  const { events, isLoading } = useHomeFeaturedEvents(SLIDES);
   const slides = events.slice(0, SLIDES);
   const n = slides.length;
   const [active, setActive] = useState(0);
@@ -98,8 +96,9 @@ export function HomeHero() {
                 fallbackId={event.id}
                 fill
                 priority={i === 0}
+                // Banner ORIGINAL: sem redimensionar nem recomprimir no next/image.
+                nativeImg
                 sizes="(max-width: 768px) 92vw, 607px"
-                quality={90}
                 // Fundo transparente e sem raio próprio: o recorte é SÓ do link. O
                 // `bg-gray-3` padrão vazava como fio claro na borda inclinada/arredondada.
                 className="size-full bg-transparent border-0 border-transparent object-cover"
