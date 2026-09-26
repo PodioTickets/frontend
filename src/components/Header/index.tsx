@@ -185,6 +185,8 @@ export function Header() {
                       fallbackId={user.id}
                       width={40}
                       height={40}
+                      // Foto original (PNG do recorte), sem a recompressão do next/image.
+                      nativeImg
                       className="size-10 rounded-full shrink-0 overflow-hidden bg-primary-10"
                       imgClassName="object-cover rounded-full"
                       letterClassName="text-base font-semibold text-gray-12 uppercase"
