@@ -56,7 +56,7 @@ export default function Home() {
         </div>
       </div>
 
-      {/* Todos os eventos (Figma 6731:59738): 2 linhas de 4 + "Ver mais eventos". */}
+      {/* Todos os eventos (Figma 6731:59738): 2 linhas de 5 + "Ver mais eventos". */}
       <div className="mt-8 md:mt-9">
         <HomeEventsGrid />
       </div>

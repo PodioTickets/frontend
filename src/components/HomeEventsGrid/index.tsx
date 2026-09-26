@@ -4,11 +4,11 @@ import Link from "next/link";
 import { EventCard } from "@/components/Event/Card";
 import { useEventSearch } from "@/hooks/useEventSearch";
 
-/** 2 linhas de 4 no desktop (Figma 6731:59738). */
-const HOME_EVENTS = 8;
+/** 2 linhas de 5 no desktop (Figma tinha 4; 5 a pedido do usuário). */
+const HOME_EVENTS = 10;
 
 /**
- * "Todos os eventos" da home = os 8 PRIMEIROS do calendário (/search sem filtros):
+ * "Todos os eventos" da home = os 10 PRIMEIROS do calendário (/search sem filtros):
  * mesma busca, e o backend já pagina na ordem do calendário (destaques, próximos por
  * data, concluídos no fim). "Ver mais eventos" leva ao calendário.
  */
@@ -23,7 +23,7 @@ export function HomeEventsGrid() {
         Todos os eventos
       </h2>
 
-      <div className="grid w-full grid-cols-2 gap-x-4 gap-y-5 lg:grid-cols-4">
+      <div className="grid w-full grid-cols-2 gap-x-4 gap-y-5 lg:grid-cols-5">
         {isLoading
           ? Array.from({ length: HOME_EVENTS }).map((_, i) => (
               <div key={i} className="aspect-1660/930 w-full animate-pulse rounded-[8px] bg-gray-5" />
