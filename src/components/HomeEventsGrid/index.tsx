@@ -7,8 +7,8 @@ import { cn } from "@/utils/cn";
 
 /** 2 linhas de 5 no desktop (Figma tinha 4; 5 a pedido do usuário). */
 const HOME_EVENTS = 10;
-/** Abaixo de `lg` (2 colunas): no máximo 4 = 2 linhas de 2. Esconde por CSS, sem request extra. */
-const MOBILE_MAX = 4;
+/** Abaixo de `lg` (2 colunas): no máximo 6 = 3 linhas de 2. Esconde por CSS, sem request extra. */
+const MOBILE_MAX = 6;
 const hideOnMobile = (i: number) => (i >= MOBILE_MAX ? "hidden lg:block" : undefined);
 
 /**
