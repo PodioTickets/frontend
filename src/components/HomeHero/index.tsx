@@ -17,7 +17,7 @@ const SWIPE_PX = 40;
  * - desktop (Figma 6731:58998, 1280px): centro 606px; vizinhos 524px a ±210px;
  *   extremos 436px a ±339px.
  * - mobile (Figma 829:59389, 375px, sem margem lateral): centro 312px; vizinhos
- *   269px a ±108px; extremos 224px a ±172px — cortados pela borda da tela.
+ *   269px a ±108px; extremos 224px a ±172px — cortados pela borda da tela. Raio 8px (Figma: 6,6).
  */
 const POSITIONS: Record<number, { card: string; overlay: string }> = {
   0: { card: "z-30 left-1/2 w-[83.2%] md:w-[47.4%]", overlay: "opacity-0" },
@@ -46,7 +46,7 @@ export function HomeHero() {
     return (
       <div className="flex w-full flex-col items-center gap-5 md:gap-9">
         <div className="relative w-full aspect-[375/177] md:aspect-[1280/344]">
-          <div className="absolute left-1/2 top-1/2 aspect-1660/930 w-[83.2%] -translate-x-1/2 -translate-y-1/2 animate-pulse rounded-md bg-gray-5 md:w-[47.4%] md:rounded-xl" />
+          <div className="absolute left-1/2 top-1/2 aspect-1660/930 w-[83.2%] -translate-x-1/2 -translate-y-1/2 animate-pulse rounded-[8px] bg-gray-5 md:w-[47.4%] md:rounded-xl" />
         </div>
         <div className="h-2" />
       </div>
@@ -89,7 +89,7 @@ export function HomeHero() {
                 setActive(i);
               }}
               className={cn(
-                "group absolute top-1/2 aspect-1660/930 -translate-x-1/2 -translate-y-1/2 overflow-hidden rounded-md transition-all duration-500 ease-out md:rounded-xl",
+                "group absolute top-1/2 aspect-1660/930 -translate-x-1/2 -translate-y-1/2 overflow-hidden rounded-[8px] transition-all duration-500 ease-out md:rounded-xl",
                 pos ? pos.card : "z-0 left-1/2 w-[34.1%] opacity-0 pointer-events-none",
               )}
             >
