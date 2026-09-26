@@ -3,9 +3,13 @@
 import Link from "next/link";
 import { EventCard } from "@/components/Event/Card";
 import { useEventSearch } from "@/hooks/useEventSearch";
+import { cn } from "@/utils/cn";
 
 /** 2 linhas de 5 no desktop (Figma tinha 4; 5 a pedido do usuário). */
 const HOME_EVENTS = 10;
+/** Abaixo de `lg` (2 colunas): no máximo 4 = 2 linhas de 2. Esconde por CSS, sem request extra. */
+const MOBILE_MAX = 4;
+const hideOnMobile = (i: number) => (i >= MOBILE_MAX ? "hidden lg:block" : undefined);
 
 /**
  * "Todos os eventos" da home = os 10 PRIMEIROS do calendário (/search sem filtros):
@@ -26,10 +30,12 @@ export function HomeEventsGrid() {
       <div className="grid w-full grid-cols-2 gap-x-4 gap-y-5 lg:grid-cols-5">
         {isLoading
           ? Array.from({ length: HOME_EVENTS }).map((_, i) => (
-              <div key={i} className="aspect-1660/930 w-full animate-pulse rounded-[8px] bg-gray-5" />
+              <div key={i} className={cn("aspect-1660/930 w-full animate-pulse rounded-[8px] bg-gray-5", hideOnMobile(i))} />
             ))
-          : events.slice(0, HOME_EVENTS).map((event) => (
-              <EventCard key={event.id} event={event} originalImage />
+          : events.slice(0, HOME_EVENTS).map((event, i) => (
+              <div key={event.id} className={hideOnMobile(i)}>
+                <EventCard event={event} originalImage />
+              </div>
             ))}
       </div>
 
