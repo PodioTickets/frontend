@@ -451,9 +451,11 @@ export default function TicketDetailsPage() {
 
                   {/* Participant Profile Card */}
                   <div className="px-4 py-4 border-b border-gray-6 gap-3">
-                    <p className="text-base text-gray-12 font-family-dm-sans mb-2">
-                      Participante {index + 1}
-                    </p>
+                    {participants.length > 1 && (
+                      <p className="text-base text-gray-12 font-family-dm-sans mb-2">
+                        Participante {index + 1}
+                      </p>
+                    )}
                     <div className="flex items-center justify-center">
                       <div className="border border-gray-6 rounded-xl p-3 flex items-center gap-2 min-w-0 flex-1">
                         <div className="size-10 rounded-full bg-gray-6 flex items-center justify-center shrink-0 overflow-hidden">
