@@ -23,8 +23,8 @@ describe("HomeHero", () => {
     expect(document.querySelectorAll("a[href^='/events/']")).toHaveLength(5);
     expect(slide(0).className).toContain("z-30");
     // Circular: o anterior ao 1º é o último (4) — vizinho à esquerda.
-    expect(slide(1).className).toContain("left-[66.4%]");
-    expect(slide(4).className).toContain("left-[33.6%]");
+    expect(slide(1).className).toContain("-translate-x-[15.4%]");
+    expect(slide(4).className).toContain("-translate-x-[84.6%]");
     expect(screen.getAllByRole("button", { name: /Ir para o banner/ })).toHaveLength(5);
   });
 

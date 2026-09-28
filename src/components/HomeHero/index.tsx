@@ -18,13 +18,18 @@ const SWIPE_PX = 40;
  *   extremos 436px a ±339px.
  * - mobile (Figma 829:59389, 375px, sem margem lateral): centro 312px; vizinhos
  *   269px a ±108px; extremos 224px a ±172px — cortados pela borda da tela. Raio 8px (Figma: 6,6).
+ *
+ * Todos têm a largura do centro e chegam à posição só por `translate` + `scale`: animar
+ * `left`/`width` refazia layout e rasterizava os banners originais a cada frame — o swipe
+ * travava no iOS. O translate é em % do PRÓPRIO card: (left − 50%) ÷ largura do centro.
+ * Proporção vizinho/centro (0,863) e extremo/centro (0,719) é igual nos dois tamanhos.
  */
 const POSITIONS: Record<number, { card: string; overlay: string }> = {
-  0: { card: "z-30 left-1/2 w-[83.2%] md:w-[47.4%]", overlay: "opacity-0" },
-  [-1]: { card: "z-20 left-[21.2%] w-[71.8%] md:left-[33.6%] md:w-[40.9%] skew-x-[2.54deg]", overlay: "opacity-60" },
-  1: { card: "z-20 left-[78.8%] w-[71.8%] md:left-[66.4%] md:w-[40.9%] skew-x-[-2.54deg]", overlay: "opacity-60" },
-  [-2]: { card: "z-10 left-[4.1%] w-[59.8%] md:left-[23.5%] md:w-[34.1%] skew-x-[2.54deg]", overlay: "opacity-67" },
-  2: { card: "z-10 left-[95.9%] w-[59.8%] md:left-[76.5%] md:w-[34.1%] skew-x-[-2.54deg]", overlay: "opacity-67" },
+  0: { card: "z-30", overlay: "opacity-0" },
+  [-1]: { card: "z-20 -translate-x-[84.6%] scale-[0.863] skew-x-[2.54deg]", overlay: "opacity-60" },
+  1: { card: "z-20 -translate-x-[15.4%] scale-[0.863] skew-x-[-2.54deg]", overlay: "opacity-60" },
+  [-2]: { card: "z-10 -translate-x-[105.2%] md:-translate-x-[105.9%] scale-[0.719] skew-x-[2.54deg]", overlay: "opacity-67" },
+  2: { card: "z-10 translate-x-[5.2%] md:translate-x-[5.9%] scale-[0.719] skew-x-[-2.54deg]", overlay: "opacity-67" },
 };
 
 /** Distância circular do slide `i` ao ativo, em [-n/2, n/2]. */
@@ -63,7 +68,8 @@ export function HomeHero() {
     // — corta sem gerar scroll horizontal (e sem virar contexto de rolagem, como `hidden`).
     <div className="flex w-full flex-col items-center gap-5 overflow-x-clip md:gap-9">
       <div
-        className="relative w-full aspect-[375/177] md:aspect-[1280/344]"
+        // `touch-pan-y`: o arraste horizontal é só nosso — o iOS não disputa o gesto com a página.
+        className="relative w-full touch-pan-y aspect-[375/177] md:aspect-[1280/344]"
         onTouchStart={(e) => (touchX.current = e.touches[0].clientX)}
         onTouchEnd={(e) => {
           if (touchX.current === null) return;
@@ -89,8 +95,9 @@ export function HomeHero() {
                 setActive(i);
               }}
               className={cn(
-                "group absolute top-1/2 aspect-1660/930 -translate-x-1/2 -translate-y-1/2 overflow-hidden rounded-[8px] transition-all duration-500 ease-out md:rounded-xl",
-                pos ? pos.card : "z-0 left-1/2 w-[34.1%] opacity-0 pointer-events-none",
+                // Raio dividido pela escala → os laterais seguem com 8px/12px na tela.
+                "group absolute left-1/2 top-1/2 aspect-1660/930 w-[83.2%] -translate-x-1/2 -translate-y-1/2 overflow-hidden rounded-[calc(8px/var(--tw-scale-x,1))] transition-[translate,scale,transform,opacity] duration-500 ease-out md:w-[47.4%] md:rounded-[calc(12px/var(--tw-scale-x,1))]",
+                pos ? pos.card : "z-0 scale-[0.719] opacity-0 pointer-events-none",
               )}
             >
               <ImageWithInitialFallback
