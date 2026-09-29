@@ -193,6 +193,8 @@ export default function OrganizerSettingsPage() {
                 <Button
                   onClick={() => avatarCropRef.current?.open()}
                   disabled={saving}
+                  // Mesma tipografia e padding do "Remover imagem" ao lado (o default é text-sm semibold).
+                  className="px-[32px] has-[>svg]:px-[32px] rounded-[8px] shrink-0 font-manrope font-bold leading-[1.1] text-[16px]"
                 >
                   <Plus className="size-6" />
                   Alterar imagem

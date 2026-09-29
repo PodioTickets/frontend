@@ -80,7 +80,8 @@ export function OrganizerSignupLayout({
         <BackButton onBack={onBack} className="left-4 top-4 md:hidden" />
       ) : null}
 
-      <div className="md:mt-8 flex justify-center">
+      {/* Mobile: faixa de 36px a 16px do topo = mesma linha do botão voltar (`top-4 size-9`). */}
+      <div className="-mt-2 flex h-9 items-center justify-center md:mt-8 md:h-auto">
         <Image
           src="/images/org-login-dark.svg"
           alt="PódioTicket Organizadores"
@@ -90,7 +91,7 @@ export function OrganizerSignupLayout({
           // SVG não passa pelo otimizador de raster (retornaria 400 sem
           // `dangerouslyAllowSVG`, que mantemos OFF por segurança). Serve direto.
           unoptimized
-          className="h-10 w-auto md:h-13"
+          className="h-8 w-auto md:h-13"
         />
       </div>
 

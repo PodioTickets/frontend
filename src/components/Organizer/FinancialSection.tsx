@@ -167,7 +167,9 @@ export function FinancialSection({
                 ref={trackRef}
                 className={cn(
                   "relative flex-1 h-8 select-none",
-                  readOnly ? "pointer-events-none" : "cursor-pointer",
+                  // `touch-none`: sem ele, no toque o navegador disputa o arraste como rolagem da
+                  // página e dispara `pointercancel` — o controle travava no meio do gesto (mobile).
+                  readOnly ? "pointer-events-none" : "cursor-pointer touch-none",
                 )}
                 onPointerDown={handlePointerDown}
                 onPointerMove={handlePointerMove}
