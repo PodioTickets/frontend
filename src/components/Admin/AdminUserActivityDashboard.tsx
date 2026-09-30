@@ -21,27 +21,19 @@ import {
   AdminEventFilterSelect,
   type EventFilterOption,
 } from "./AdminEventFilterSelect";
-
-const PERIOD_OPTIONS = [
-  { value: 1, label: "Hoje" },
-  { value: 7, label: "Últimos 7 dias" },
-  { value: 30, label: "Últimos 30 dias" },
-  { value: 90, label: "Últimos 90 dias" },
-] as const;
-
-/** `from` (YYYY-MM-DD, UTC) de uma janela de N dias terminando hoje. */
-function fromForPeriod(days: number): string {
-  const d = new Date();
-  d.setUTCDate(d.getUTCDate() - (days - 1));
-  return d.toISOString().slice(0, 10);
-}
+import {
+  ACTIVITY_PERIOD_OPTIONS,
+  activityPeriodRange,
+  type ActivityPeriod,
+} from "@/lib/activityPeriod";
 
 const numberFmt = new Intl.NumberFormat("pt-BR");
 
 /**
  * Série diária densa: o backend manda apenas dias COM eventos — preenche os
  * buracos com 0 sobre a janela pra barra de cada dia existir no gráfico.
- * Cap defensivo de 370 pontos — range malformado não trava o render.
+ * Cap defensivo de 740 pontos (retenção máx. de 2 anos, alcançável no "Geral")
+ * — range malformado não trava o render.
  */
 function densifyDailySeries(
   series: Array<{ day: string; count: number }>,
@@ -54,7 +46,7 @@ function densifyDailySeries(
   if (!start || !end) return series;
   const out: Array<{ day: string; count: number }> = [];
   const cursor = new Date(start.getTime());
-  while (cursor.getTime() <= end.getTime() && out.length < 370) {
+  while (cursor.getTime() <= end.getTime() && out.length < 740) {
     const key = cursor.toISOString().slice(0, 10);
     out.push({ day: key, count: byDay.get(key) ?? 0 });
     cursor.setUTCDate(cursor.getUTCDate() + 1);
@@ -173,18 +165,19 @@ function DistributionRow({
 }
 
 export function AdminUserActivityDashboard() {
-  const [periodDays, setPeriodDays] = useState<number>(30);
+  const [period, setPeriod] = useState<ActivityPeriod>("30");
   const [categoryFilter, setCategoryFilter] = useState("");
   const [sourceFilter, setSourceFilter] = useState("");
   const [eventFilter, setEventFilter] = useState<EventFilterOption | null>(
     null
   );
 
-  const from = useMemo(() => fromForPeriod(periodDays), [periodDays]);
+  const { from, to } = useMemo(() => activityPeriodRange(period), [period]);
 
   const statsQuery = useQuery({
     queryKey: queryKeys.admin.userActivity.stats({
       from,
+      to,
       category: categoryFilter,
       source: sourceFilter,
       eventId: eventFilter?.id ?? "",
@@ -192,6 +185,7 @@ export function AdminUserActivityDashboard() {
     queryFn: () =>
       adminService.getUserActivityStats({
         from,
+        to,
         category: categoryFilter || undefined,
         source: sourceFilter || undefined,
         eventId: eventFilter?.id || undefined,
@@ -257,12 +251,12 @@ export function AdminUserActivityDashboard() {
           <div className="w-full sm:w-[min(100%,200px)] shrink-0">
             <label className="sr-only">Período</label>
             <select
-              value={periodDays}
-              onChange={(e) => setPeriodDays(Number(e.target.value))}
+              value={period}
+              onChange={(e) => setPeriod(e.target.value as ActivityPeriod)}
               className={selectShell}
               style={selectChevron}
             >
-              {PERIOD_OPTIONS.map((o) => (
+              {ACTIVITY_PERIOD_OPTIONS.map((o) => (
                 <option key={o.value} value={o.value}>
                   {o.label}
                 </option>
