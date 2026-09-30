@@ -13,20 +13,11 @@ import {
   type EventFilterOption,
 } from "./AdminEventFilterSelect";
 import { FUNNEL_STAGE_LABELS, FUNNEL_STAGE_HINTS } from "./userActivityLabels";
-
-const PERIOD_OPTIONS = [
-  { value: 1, label: "Hoje" },
-  { value: 7, label: "Últimos 7 dias" },
-  { value: 30, label: "Últimos 30 dias" },
-  { value: 90, label: "Últimos 90 dias" },
-] as const;
-
-/** `from` (YYYY-MM-DD, UTC) de uma janela de N dias terminando hoje. */
-function fromForPeriod(days: number): string {
-  const d = new Date();
-  d.setUTCDate(d.getUTCDate() - (days - 1));
-  return d.toISOString().slice(0, 10);
-}
+import {
+  ACTIVITY_PERIOD_OPTIONS,
+  activityPeriodRange,
+  type ActivityPeriod,
+} from "@/lib/activityPeriod";
 
 const numberFmt = new Intl.NumberFormat("pt-BR");
 const pctFmt = (value: number) => `${Math.round(value * 100)}%`;
@@ -37,21 +28,23 @@ const pctFmt = (value: number) => `${Math.round(value * 100)}%`;
  * Conversões calculadas client-side a partir dos counts do backend.
  */
 export function AdminUserActivityFunnelTab() {
-  const [periodDays, setPeriodDays] = useState<number>(30);
+  const [period, setPeriod] = useState<ActivityPeriod>("30");
   const [eventFilter, setEventFilter] = useState<EventFilterOption | null>(
     null
   );
 
-  const from = useMemo(() => fromForPeriod(periodDays), [periodDays]);
+  const { from, to } = useMemo(() => activityPeriodRange(period), [period]);
 
   const funnelQuery = useQuery({
     queryKey: queryKeys.admin.userActivity.funnel({
       from,
+      to,
       eventId: eventFilter?.id ?? "",
     }),
     queryFn: () =>
       adminService.getUserActivityFunnel({
         from,
+        to,
         eventId: eventFilter?.id || undefined,
       }),
     placeholderData: (prev) => prev,
@@ -123,12 +116,12 @@ export function AdminUserActivityFunnelTab() {
           <div className="w-full sm:w-[min(100%,200px)] shrink-0">
             <label className="sr-only">Período</label>
             <select
-              value={periodDays}
-              onChange={(e) => setPeriodDays(Number(e.target.value))}
+              value={period}
+              onChange={(e) => setPeriod(e.target.value as ActivityPeriod)}
               className={selectShell}
               style={selectChevron}
             >
-              {PERIOD_OPTIONS.map((o) => (
+              {ACTIVITY_PERIOD_OPTIONS.map((o) => (
                 <option key={o.value} value={o.value}>
                   {o.label}
                 </option>
