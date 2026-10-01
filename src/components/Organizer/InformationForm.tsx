@@ -16,6 +16,8 @@ import { FacebookIcon } from "@/components/Icons/FacebookIcon";
 import { YoutubeIcon } from "@/components/Icons/YoutubeIcon";
 import { TiktokIcon } from "@/components/Icons/TiktokIcon";
 import { EmailIcon } from "@/components/Icons/EmailIcon";
+import { PDFIcon } from "@/components/Icons/PDFIcon";
+import { TrashIcon } from "@/components/Icons/TrashIcon";
 import { LocationPickerModal, type LocationPickerResult } from "@/components/Organizer/LocationPickerModal";
 import { hasGoogleMapsApiKey } from "@/hooks/useGoogleMaps";
 import { useIpLocation } from "@/hooks/useIpLocation";
@@ -36,6 +38,22 @@ import {
   wouldRegistrationEndBeforeStart,
 } from "@/utils/registrationPeriod";
 import toast from "react-hot-toast";
+
+/** "216 KB" / "1,4 MB" — tamanho do PDF recém-escolhido no card. */
+function formatPdfSize(bytes: number): string {
+  if (bytes < 1024 * 1024) return `${Math.max(1, Math.round(bytes / 1024))} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1).replace(".", ",")} MB`;
+}
+
+/** Nome do arquivo a partir da URL do PDF salvo (último segmento, sem query). */
+function pdfNameFromUrl(url: string): string {
+  const last = url.split("?")[0].split("/").filter(Boolean).pop() ?? "";
+  try {
+    return decodeURIComponent(last) || "Regulamento.pdf";
+  } catch {
+    return last || "Regulamento.pdf";
+  }
+}
 
 // ─── constants ───────────────────────────────────────────────────────────────
 
@@ -111,6 +129,8 @@ export interface InformationFormValues {
   tiktok?: string;
   website?: string;
   regulationUrl?: string;
+  /** Usuário apagou o PDF JÁ SALVO (lixeira) → o save envia `regulationUrl: null`. */
+  regulationRemoved?: boolean;
   /**
    * Opção avançada: exige contato de emergência (nome + telefone) de cada
    * participante no checkout. `undefined` é tratado como `false`.
@@ -429,6 +449,30 @@ export function InformationForm({
 
   // ── PDF ───────────────────────────────────────────────────────────────────
 
+  const savedPdfUrl =
+    values.regulationUrl && !values.regulationUrl.startsWith("data:") ? values.regulationUrl : null;
+  // Card do PDF preenchido: arquivo recém-escolhido (nome + tamanho) > PDF salvo (link) >
+  // PDF guardado no rascunho local (fluxo de criação). null → mostra a área de upload.
+  const pdfCard: { name: string; detail: string | null; href: string | null } | null = pdfFile
+    ? { name: pdfFile.name, detail: formatPdfSize(pdfFile.size), href: null }
+    : savedPdfUrl
+      ? { name: pdfNameFromUrl(savedPdfUrl), detail: null, href: savedPdfUrl }
+      : hasLocalRegulationDraft
+        ? { name: "Regulamento.pdf", detail: "Guardado no rascunho (será enviado ao concluir o banner)", href: null }
+        : null;
+
+  // Lixeira: arquivo pendente/rascunho → só descarta; PDF JÁ SALVO → marca a remoção
+  // (o save envia `regulationUrl: null` e o evento fica sem regulamento).
+  const removePdf = () => {
+    if (pdfFile || !savedPdfUrl) {
+      setPdfFile(null);
+      onClearLocalRegulationDraft?.();
+    } else {
+      onChange({ regulationUrl: "", regulationRemoved: true });
+    }
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  };
+
   const handlePDFSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -483,7 +527,7 @@ export function InformationForm({
       // acusava "alterações não salvas" ao sair e a tela mostrava "Arquivo
       // selecionado" em vez do link do PDF salvo. Se o save falhar, o form segue
       // sujo pela diferença de `regulationUrl` e o retry não sobe o PDF de novo.
-      onChange({ regulationUrl: full });
+      onChange({ regulationUrl: full, regulationRemoved: false });
       setPdfFile(null);
       if (fileInputRef.current) fileInputRef.current.value = "";
       toast.success("PDF enviado com sucesso!");
@@ -829,10 +873,46 @@ export function InformationForm({
           </div>
         </div>
 
-        {/* PDF regulation */}
+        {/* PDF regulation — vazio: área de upload; preenchido: card do arquivo (Figma 6993:135496) */}
         <div className="flex flex-col items-stretch justify-center w-full">
+          {pdfCard ? (
+            <div className="border-2 border-dashed border-gray-6 rounded-xl p-4 w-full md:max-w-[622px]">
+              <div className="border border-gray-6 rounded-lg p-3 flex items-center justify-between gap-3">
+                <div className="flex gap-3 items-center min-w-0">
+                  <div className="size-10 shrink-0 rounded-md bg-primary-5 p-2 flex items-center justify-center">
+                    <PDFIcon className="size-7 text-gray-12" />
+                  </div>
+                  <div className="flex flex-col gap-1 min-w-0">
+                    {pdfCard.href ? (
+                      <a
+                        href={pdfCard.href}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-gray-12 text-base font-bold font-manrope leading-[1.1] truncate hover:underline"
+                      >
+                        {pdfCard.name}
+                      </a>
+                    ) : (
+                      <p className="text-gray-12 text-base font-bold font-manrope leading-[1.1] truncate">{pdfCard.name}</p>
+                    )}
+                    {pdfCard.detail && (
+                      <p className="text-gray-11 text-sm font-family-dm-sans leading-[1.3]">{pdfCard.detail}</p>
+                    )}
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={removePdf}
+                  aria-label="Remover PDF"
+                  className="size-8 shrink-0 rounded-lg bg-red-2 border-[1.5px] border-red-6 hover:bg-red-3 flex items-center justify-center transition-colors"
+                >
+                  <TrashIcon className="size-5" />
+                </button>
+              </div>
+            </div>
+          ) : (
           <div
-            className="border-2 border-dashed border-gray-6 rounded-xl md:rounded-[12px] p-4 md:p-6 flex flex-col md:flex-row gap-4 items-center justify-center w-full cursor-pointer hover:border-gray-6 transition-colors min-h-[140px] md:min-h-0"
+            className="border-2 border-dashed border-gray-6 rounded-xl md:rounded-[12px] p-4 md:p-4 flex flex-col md:flex-row gap-4 items-center justify-center w-full cursor-pointer hover:border-gray-6 transition-colors min-h-[140px] md:min-h-0"
             onDrop={handleDrop}
             onDragOver={(e) => e.preventDefault()}
             onClick={() => fileInputRef.current?.click()}
@@ -848,44 +928,14 @@ export function InformationForm({
               </div>
               <div className="flex flex-col gap-4 items-start justify-center flex-1">
                 <div className="flex flex-col gap-2 items-start justify-center w-full">
-                  <p className="text-primary-11 text-base font-bold font-family-dm-sans leading-[1.3] text-start w-full">Envie o regulamento do evento em PDF para que os participantes possam visualizar na página do evento.</p>
-                  <p className="text-gray-12 text-base font-semibold font-manrope leading-[1.1] w-full">Formato recomendado: PDF</p>
+                  <p className="text-primary-11 text-base font-bold font-family-dm-sans leading-[1.3] text-start w-full">Anexe o regulamento em PDF para que os participantes possam consultá-lo.</p>
+                  <p className="text-gray-12 text-base font-semibold font-manrope leading-[1.1] w-full">Arraste o arquivo ou clique para selecionar</p>
                 </div>
-                <p className="text-gray-12 text-base font-bold font-family-dm-sans leading-[1.3]">Arraste um arquivo PDF para este campo ou clique aqui</p>
               </div>
             </div>
           </div>
+          )}
           <input ref={fileInputRef} type="file" accept="application/pdf" onChange={handlePDFSelect} className="hidden" />
-
-          {pdfFile && (
-            <div className="mt-2 flex flex-wrap items-center gap-2">
-              <p className="text-gray-11 text-sm">Arquivo selecionado: {pdfFile.name}</p>
-              <button
-                type="button"
-                onClick={() => {
-                  setPdfFile(null);
-                  onClearLocalRegulationDraft?.();
-                  if (fileInputRef.current) fileInputRef.current.value = "";
-                }}
-                className="text-red-10 text-sm hover:text-red-11"
-              >
-                Remover
-              </button>
-            </div>
-          )}
-
-          {!pdfFile && ((values.regulationUrl && !values.regulationUrl.startsWith("data:")) || hasLocalRegulationDraft) && (
-            <div className="mt-2 flex flex-wrap items-center gap-2">
-              <p className="text-gray-11 text-sm">PDF atual do regulamento</p>
-              {values.regulationUrl && !values.regulationUrl.startsWith("data:") ? (
-                <a href={values.regulationUrl} target="_blank" rel="noopener noreferrer" className="text-primary-11 text-sm hover:underline">
-                  Ver PDF
-                </a>
-              ) : (
-                <span className="text-gray-11 text-sm">Guardado no rascunho (será enviado ao concluir o banner)</span>
-              )}
-            </div>
-          )}
         </div>
 
         {/* Opções avançadas — markup espelhado do painel do modal de cupom

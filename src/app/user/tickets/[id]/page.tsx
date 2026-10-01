@@ -419,7 +419,7 @@ export default function TicketDetailsPage() {
                     <div className="flex gap-3 items-start w-full md:flex-col md:gap-5 md:items-start md:w-auto">
                       {/* QR — visível só no mobile aqui (no desktop renderiza na direita) */}
                       <div className="shrink-0 md:hidden">
-                        <RegistrationQRCode qrCodeData={qrCode} size={120} />
+                        <RegistrationQRCode qrCodeData={qrCode} size={64} />
                       </div>
                       <div className="flex flex-col items-start gap-2 py-3 md:gap-2 md:py-0">
 
@@ -445,17 +445,12 @@ export default function TicketDetailsPage() {
 
                     {/* QR — desktop-only, à direita */}
                     <div className="hidden md:block shrink-0">
-                      <RegistrationQRCode qrCodeData={qrCode} size={120} />
+                      <RegistrationQRCode qrCodeData={qrCode} size={64} />
                     </div>
                   </button>
 
                   {/* Participant Profile Card */}
                   <div className="px-4 py-4 border-b border-gray-6 gap-3">
-                    {participants.length > 1 && (
-                      <p className="text-base text-gray-12 font-family-dm-sans mb-2">
-                        Participante {index + 1}
-                      </p>
-                    )}
                     <div className="flex items-center justify-center">
                       <div className="border border-gray-6 rounded-xl p-3 flex items-center gap-2 min-w-0 flex-1">
                         <div className="size-10 rounded-full bg-gray-6 flex items-center justify-center shrink-0 overflow-hidden">

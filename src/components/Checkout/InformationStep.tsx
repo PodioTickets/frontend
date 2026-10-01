@@ -54,7 +54,6 @@ import {
 } from "@/utils/phone";
 import { motion, AnimatePresence } from "framer-motion";
 import { X } from "lucide-react";
-import { isHiddenPrePaymentCoupon } from "@/lib/orderAutoCouponDisplay";
 import { formatCouponLineLabel, formatVoucherLineLabel } from "@/lib/orderCouponDiscount";
 import { useAuth } from "@/hooks/useAuth";
 import { useAgeCouponEligibility } from "@/hooks/useAgeCouponEligibility";
@@ -640,17 +639,14 @@ export function InformationStep({
     return totalPrice + serviceFee;
   }, [orderData, totalPrice, serviceFee]);
 
-  // Cupom aplicado (badge + linha de desconto). Cupons automáticos
-  // (QUANTITY/AGE) ficam escondidos pré-pagamento — o resumo só revela o
-  // valor lá. Pra DISCOUNT manual (incluindo o vindo de link `?coupon=`),
-  // mostramos imediatamente pra dar feedback ao usuário.
+  // Cupom aplicado (badge + linha de desconto) — qualquer tipo, já pré-pagamento
+  // (QUANTITY revelado desde 2026-09-30, igual ao AGE e ao DISCOUNT manual).
   //
   // Prioriza `currentOrder` do CheckoutTimerContext: ele é populado pela
   // response do `patchCoupon` (que garante `applyToProducts`). O GET /orders
   // pode omitir esse campo em algumas versões do backend.
   const appliedCoupon = timerCurrentOrder?.coupon ?? orderData?.coupon ?? null;
-  // Revela AGE (cupom de idade) pré-pagamento; só QUANTITY fica escondido.
-  const showCouponDiscount = !!appliedCoupon && !isHiddenPrePaymentCoupon(appliedCoupon);
+  const showCouponDiscount = !!appliedCoupon;
   const couponDiscountAmount = useMemo(() => {
     if (!showCouponDiscount) return 0;
     // Fallback pro snapshot do timer (resposta do `patchCoupon`) quando o GET

@@ -128,6 +128,10 @@ export function TimePicker({
         className="z-100000 w-full p-2"
         align="start"
       >
+        {/* Horários do evento são wall-clock de Brasília — deixa o fuso explícito. */}
+        <div className="-mx-2 -mt-2 mb-2 px-3 py-2 border-b border-gray-6 text-center text-xs font-medium text-gray-11 font-family-dm-sans">
+          Brasília (UTC−3)
+        </div>
         <div className="space-y-4 w-full">
           <div className="flex items-center justify-center w-full gap-1">
             <WheelPickerWrapper className="flex-1 w-full">
