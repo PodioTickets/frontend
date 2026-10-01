@@ -14,7 +14,8 @@ export default function UserTicketsPage() {
   const [page, setPage] = useState(1);
 
   const { tickets, pagination, loading, refetch } = useMyTickets(
-    { page, limit: 20, status: "CONFIRMED" },
+    // 21 = múltiplo das 3 colunas da grid (lg+) → a última linha da página fecha cheia.
+    { page, limit: 21, status: "CONFIRMED" },
     isAuthenticated
   );
 
