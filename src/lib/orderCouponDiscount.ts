@@ -23,6 +23,8 @@ export type CouponPreviewResult =
       minCartValue?: number | null;
       /** Quantidade mínima de ingressos no carrinho. `null`/ausente = sem condição. */
       minQuantity?: number | null;
+      /** Quantidade máxima — acima dela o cupom NÃO aplica. `null`/ausente = sem limite. */
+      maxQuantity?: number | null;
       /**
        * Uso restante do cupom (`maxUsage − usageCount`) para cupom DISCOUNT — 1 uso
        * = 1 unidade coberta. `null`/ausente = sem limite. Capa o desconto do preview
@@ -200,13 +202,18 @@ export function couponPreviewToOrderCoupon(
 /**
  * Condições de aplicação de um cupom de LINK no checkout (preview):
  *  - `minCartValue` (CENTAVOS): carrinho abaixo do mínimo → não atende;
- *  - `minQuantity`: menos ingressos que o mínimo → não atende.
+ *  - `minQuantity`: menos ingressos que o mínimo → não atende;
+ *  - `maxQuantity`: mais ingressos que o máximo → não atende (faixa, não teto).
  * Ausência de cada campo = sem aquela condição. `cartSubtotal` em REAIS;
  * `cartQuantity` = total de ingressos selecionados. Backend é a verdade final.
  */
 export function couponConditionsMet(
   coupon:
-    | { minCartValue?: number | null; minQuantity?: number | null }
+    | {
+        minCartValue?: number | null;
+        minQuantity?: number | null;
+        maxQuantity?: number | null;
+      }
     | null
     | undefined,
   cartSubtotal: number,
@@ -217,6 +224,9 @@ export function couponConditionsMet(
     return false;
   }
   if (coupon.minQuantity != null && cartQuantity < coupon.minQuantity) {
+    return false;
+  }
+  if (coupon.maxQuantity != null && cartQuantity > coupon.maxQuantity) {
     return false;
   }
   return true;
@@ -285,6 +295,7 @@ export function computeLinkCouponTicketDiscount(
         appliesTo?: string[] | null;
         minCartValue?: number | null;
         minQuantity?: number | null;
+        maxQuantity?: number | null;
         remaining?: number | null;
       }
     | null

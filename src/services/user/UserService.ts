@@ -103,6 +103,7 @@ export class UserService extends AuthService {
         minCartValue:
           typeof d.minCartValue === "number" ? d.minCartValue : null,
         minQuantity: typeof d.minQuantity === "number" ? d.minQuantity : null,
+        maxQuantity: typeof d.maxQuantity === "number" ? d.maxQuantity : null,
         // Uso restante (maxUsage − usageCount) p/ cupom DISCOUNT. Ausente/null =
         // sem limite. Capa o desconto do preview às N unidades mais caras.
         remaining: typeof d.remaining === "number" ? d.remaining : null,

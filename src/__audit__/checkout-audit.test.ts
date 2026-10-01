@@ -105,6 +105,12 @@ describe("orderCouponDiscount.couponConditionsMet", () => {
     expect(couponConditionsMet({ minQuantity: 2 }, 999, 1)).toBe(false);
     expect(couponConditionsMet({ minQuantity: 2 }, 999, 2)).toBe(true);
   });
+
+  it("maxQuantity é faixa: acima do máximo não atende (inclusivo)", () => {
+    expect(couponConditionsMet({ maxQuantity: 3 }, 999, 3)).toBe(true);
+    expect(couponConditionsMet({ maxQuantity: 3 }, 999, 4)).toBe(false);
+    expect(couponConditionsMet({ minQuantity: 2, maxQuantity: 3 }, 999, 1)).toBe(false);
+  });
 });
 
 describe("orderCouponDiscount.computeLinkCouponTicketDiscount", () => {
