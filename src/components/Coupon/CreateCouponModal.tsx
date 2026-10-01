@@ -88,6 +88,7 @@ export function CreateCouponModal() {
 
   // Campos específicos por tipo de cupom
   const [minQuantity, setMinQuantity] = useState(""); // Para QUANTITY
+  const [maxQuantity, setMaxQuantity] = useState(""); // Para QUANTITY (opcional; ao menos min ou max)
   const [minAge, setMinAge] = useState(""); // Para AGE
   const [maxAge, setMaxAge] = useState(""); // Para AGE
 
@@ -127,6 +128,7 @@ export function CreateCouponModal() {
       cpfListStatus !== (c.cpfListStatus || "DISABLED") ||
       JSON.stringify(cpfList) !== JSON.stringify(c.cpfList || []) ||
       minQuantity !== (c.minQuantity?.toString() || "") ||
+      maxQuantity !== (c.maxQuantity?.toString() || "") ||
       minAge !== (c.minAge?.toString() || "") ||
       maxAge !== (c.maxAge?.toString() || "") ||
       applyToProducts !== !!c.applyToProducts
@@ -135,7 +137,7 @@ export function CreateCouponModal() {
     isEditing, data, couponType, code, note, discountType, value,
     appliesTo, selectedTicketIds, expiryDate, expiryEnabled,
     usageLimit, usageLimitEnabled, cpfListStatus, cpfList,
-    minQuantity, minAge, maxAge, applyToProducts,
+    minQuantity, maxQuantity, minAge, maxAge, applyToProducts,
   ]);
 
   // Initialize form when modal opens
@@ -201,6 +203,7 @@ export function CreateCouponModal() {
           )
         );
         setMinQuantity(c.minQuantity?.toString() || "");
+        setMaxQuantity(c.maxQuantity?.toString() || "");
         setMinAge(c.minAge?.toString() || "");
         setMaxAge(c.maxAge?.toString() || "");
       } else {
@@ -225,6 +228,7 @@ export function CreateCouponModal() {
         setCpfList([]);
         setApplyToProducts(false);
         setMinQuantity("");
+        setMaxQuantity("");
         setMinAge("");
         setMaxAge("");
       }
@@ -358,8 +362,16 @@ export function CreateCouponModal() {
 
     // Validações específicas por tipo de cupom
     if (couponType === "QUANTITY") {
-      if (!minQuantity.trim() || parseInt(minQuantity) <= 0) {
-        toast.error("Digite uma quantidade mínima válida");
+      if (!minQuantity.trim() && !maxQuantity.trim()) {
+        toast.error("Digite ao menos uma quantidade (mínima ou máxima)");
+        return;
+      }
+      if ((minQuantity && parseInt(minQuantity) <= 0) || (maxQuantity && parseInt(maxQuantity) <= 0)) {
+        toast.error("As quantidades devem ser maiores que 0");
+        return;
+      }
+      if (minQuantity && maxQuantity && parseInt(maxQuantity) < parseInt(minQuantity)) {
+        toast.error("A quantidade máxima não pode ser menor que a mínima");
         return;
       }
     }
@@ -433,7 +445,8 @@ export function CreateCouponModal() {
         applyToProducts,
         // Campos específicos por tipo — quando o tipo do cupom muda, os campos
         // dos outros tipos precisam ser limpos no backend.
-        minQuantity: couponType === "QUANTITY" ? parseInt(minQuantity) : null,
+        minQuantity: couponType === "QUANTITY" && minQuantity ? parseInt(minQuantity) : null,
+        maxQuantity: couponType === "QUANTITY" && maxQuantity ? parseInt(maxQuantity) : null,
         minAge: couponType === "AGE" && minAge ? parseInt(minAge) : null,
         maxAge: couponType === "AGE" && maxAge ? parseInt(maxAge) : null,
       };
@@ -746,9 +759,9 @@ export function CreateCouponModal() {
                           <div className="flex flex-col gap-2 md:flex-row md:flex-wrap">
                             {(
                               [
-                                { key: "DISCOUNT" as CouponType, label: "Cupom de desconto", onSelect: () => { setCouponType("DISCOUNT"); setMinQuantity(""); setMinAge(""); setMaxAge(""); } },
+                                { key: "DISCOUNT" as CouponType, label: "Cupom de desconto", onSelect: () => { setCouponType("DISCOUNT"); setMinQuantity(""); setMaxQuantity(""); setMinAge(""); setMaxAge(""); } },
                                 { key: "QUANTITY" as CouponType, label: "Cupom por quantidade", onSelect: () => { setCouponType("QUANTITY"); setMinAge(""); setMaxAge(""); } },
-                                { key: "AGE" as CouponType, label: "Cupom por idade", onSelect: () => { setCouponType("AGE"); setMinQuantity(""); } },
+                                { key: "AGE" as CouponType, label: "Cupom por idade", onSelect: () => { setCouponType("AGE"); setMinQuantity(""); setMaxQuantity(""); } },
                               ] as const
                             ).map(({ key, label, onSelect }) => (
                               <button
@@ -808,20 +821,39 @@ export function CreateCouponModal() {
                               </div>
                             )}
 
-                            {/* Quantidade mínima — QUANTITY */}
+                            {/* Faixa de quantidade — QUANTITY (mesmo layout da faixa de idade) */}
                             {couponType === "QUANTITY" && (
-                              <div className="flex flex-col gap-2.5 md:w-[596px]">
-                                <div className="flex flex-col gap-2">
-                                  <label className="text-gray-11 text-base font-family-dm-sans leading-[1.3]">
-                                    Ao atingir essa quantidade no carrinho, o cupom é aplicado automaticamente
-                                  </label>
-                                  <Input
-                                    type="text"
-                                    placeholder="Ex: 3"
-                                    value={minQuantity}
-                                    onChange={(e) => setMinQuantity(e.target.value.replace(/[^0-9]/g, ""))}
-                                    className="h-12"
-                                  />
+                              <div className="flex flex-col gap-5 w-full">
+                                <div className="flex flex-col gap-3">
+                                  <p className="text-gray-11 text-base font-family-dm-sans leading-[1.3]">
+                                    O cupom será aplicado automaticamente quando a quantidade no carrinho estiver dentro da faixa definida. Preencha ao menos um campo.
+                                  </p>
+                                </div>
+                                <div className="flex gap-4">
+                                  <div className="flex flex-col gap-2 flex-1 max-w-[130px]">
+                                    <label className="text-gray-12 text-base font-family-dm-sans leading-[1.3]">
+                                      Qtd. mínima
+                                    </label>
+                                    <Input
+                                      type="text"
+                                      placeholder="Ex: 3"
+                                      value={minQuantity}
+                                      onChange={(e) => setMinQuantity(e.target.value.replace(/[^0-9]/g, ""))}
+                                      className="h-12"
+                                    />
+                                  </div>
+                                  <div className="flex flex-col gap-2 flex-1 max-w-[130px]">
+                                    <label className="text-gray-12 text-base font-family-dm-sans leading-[1.3]">
+                                      Qtd. máxima
+                                    </label>
+                                    <Input
+                                      type="text"
+                                      placeholder="Ex: 5"
+                                      value={maxQuantity}
+                                      onChange={(e) => setMaxQuantity(e.target.value.replace(/[^0-9]/g, ""))}
+                                      className="h-12"
+                                    />
+                                  </div>
                                 </div>
                               </div>
                             )}
