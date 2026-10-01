@@ -71,3 +71,26 @@ describe("buildCreateEventBodyFromForm — horário do evento", () => {
     );
   });
 });
+
+// Lixeira no PDF já salvo (2026-09-30): só a marcação explícita apaga o regulamento.
+describe("buildCreateEventBodyFromForm — regulamento (PDF)", () => {
+  it("com URL → envia a URL", () => {
+    const body = buildCreateEventBodyFromForm(baseForm(), "https://cdn/x.pdf");
+    expect(body.regulationUrl).toBe("https://cdn/x.pdf");
+  });
+
+  it("sem PDF e SEM remoção → omite o campo (nunca apaga por acidente)", () => {
+    const body = buildCreateEventBodyFromForm(baseForm(), null);
+    expect("regulationUrl" in body).toBe(false);
+  });
+
+  it("PDF removido pela lixeira → envia null (apaga do evento)", () => {
+    const body = buildCreateEventBodyFromForm(baseForm({ regulationUrl: "", regulationRemoved: true }), null);
+    expect(body.regulationUrl).toBeNull();
+  });
+
+  it("removido mas escolheu outro PDF → vale o novo", () => {
+    const body = buildCreateEventBodyFromForm(baseForm({ regulationRemoved: true }), "https://cdn/novo.pdf");
+    expect(body.regulationUrl).toBe("https://cdn/novo.pdf");
+  });
+});

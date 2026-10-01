@@ -37,6 +37,11 @@ import { usePendingCouponSnapshot } from "@/hooks/usePendingCoupon";
 import { useCouponPreview } from "@/hooks/useCouponPreview";
 import { useAgeCouponEligibility } from "@/hooks/useAgeCouponEligibility";
 import { computeAgeCouponTicketDiscount, formatAgeCouponLineLabel } from "@/lib/ageCoupon";
+import {
+  pickBestAutoCoupon,
+  quantityCouponCandidates,
+  quantityCouponCardPreview,
+} from "@/lib/quantityCoupon";
 
 interface ModalitiesStepProps {
   event: Event;
@@ -298,8 +303,8 @@ export function ModalitiesStep({ event, onNext, onBack, isSubmitting = false, di
   }
 
   // Cupom de LINK manual (`?cupom=`, preview): respeita appliesTo + minCartValue
-  // + minQuantity. Cupons automáticos (QUANTITY/AGE) seguem ocultos até o
-  // pagamento (comportamento atual). Só quando ainda não há cupom REAL na order
+  // + minQuantity. Cupom de link do tipo QUANTITY/AGE não entra aqui — os
+  // automáticos são calculados abaixo. Só quando ainda não há cupom REAL na order
   // (o backend já é autoritativo nesse caso, via finalUnitPrice).
   const isAutoLinkCoupon =
     couponData?.couponType === "QUANTITY" || couponData?.couponType === "AGE";
@@ -356,6 +361,26 @@ export function ModalitiesStep({ event, onNext, onBack, isSubmitting = false, di
     ? computeAgeCouponTicketDiscount(ageCoupon, selectedTickets, totalPrice)
     : 0;
 
+  // Cupons AUTOMÁTICOS (idade × quantidade): vale o que MAIS desconta; empate → o já
+  // aplicado no pedido, senão o 1º criado — mesma regra do backend. O de quantidade
+  // aparece assim que a seleção cai na faixa min/max. Voucher e cupom manual/link vêm
+  // antes (escolha do usuário).
+  const autoChoice =
+    !useVoucher && !hasManualCoupon && !useLinkCoupon
+      ? pickBestAutoCoupon(
+        [
+          ...(ageCoupon
+            ? [{ id: ageCoupon.id, discount: ageDiscount, createdAt: ageCoupon.createdAt, quantity: null }]
+            : []),
+          ...quantityCouponCandidates(ageEligibility?.quantityCoupons, selectedTickets, totalPrice).map(
+            (c) => ({ id: c.coupon.id, discount: c.discount, createdAt: c.coupon.createdAt, quantity: c }),
+          ),
+        ],
+        orderCoupon?.id,
+      )
+      : null;
+  const quantityAuto = autoChoice?.quantity ?? null;
+
   // Preview pros cards: desconta o preço de cada ingresso (strike-through) igual
   // ao cupom de link. Só quando `appliesTo: "all"` — pra um subconjunto de
   // modalidades o desconto por-card não é confiável (o resumo segue correto).
@@ -370,6 +395,11 @@ export function ModalitiesStep({ event, onNext, onBack, isSubmitting = false, di
         applyToProducts: ageCoupon.applyToProducts,
       }
       : null;
+  // Strike-through dos cards = o cupom automático ESCOLHIDO. O de quantidade risca assim
+  // que "aplica" (seleção na faixa), só nos ingressos do `appliesTo`.
+  const autoCouponCardPreview: CouponPreviewResult | null = quantityAuto
+    ? quantityCouponCardPreview(quantityAuto.coupon)
+    : ageCouponPreview;
 
   // Taxa de serviço + total calculados client-side com a MESMA regra do
   // SubscriptionStep (`/produtos`): a taxa incide sobre o subtotal JÁ
@@ -382,6 +412,12 @@ export function ModalitiesStep({ event, onNext, onBack, isSubmitting = false, di
           totalPrice,
           event.participantFeePercent ?? 0,
         )
+        : quantityAuto
+          ? computeTicketPricingWithDiscount(
+            quantityAuto.discount,
+            totalPrice,
+            event.participantFeePercent ?? 0,
+          )
         : ageCoupon
           ? computeTicketPricingWithDiscount(
             ageDiscount,
@@ -410,7 +446,7 @@ export function ModalitiesStep({ event, onNext, onBack, isSubmitting = false, di
                 totalPrice,
                 event.participantFeePercent ?? 0,
               ),
-    [useVoucher, voucherDiscount, ageCoupon, ageDiscount, linkCouponDiscount, orderManualCouponDiscount, appliedCoupon, totalPrice, event.participantFeePercent],
+    [useVoucher, voucherDiscount, quantityAuto, ageCoupon, ageDiscount, linkCouponDiscount, orderManualCouponDiscount, appliedCoupon, totalPrice, event.participantFeePercent],
   );
   const serviceFee = pricing.serviceFee;
   const totalWithFee = pricing.total;
@@ -419,6 +455,8 @@ export function ModalitiesStep({ event, onNext, onBack, isSubmitting = false, di
   // "Cupom CÓDIGO (...)".
   const discountLineLabel = useVoucher
     ? formatVoucherLineLabel(voucherData?.code ?? orderVoucher?.code)
+    : quantityAuto
+      ? formatAgeCouponLineLabel(quantityAuto.coupon)
     : ageCoupon
       ? formatAgeCouponLineLabel(ageCoupon)
       : appliedCoupon
@@ -509,7 +547,7 @@ export function ModalitiesStep({ event, onNext, onBack, isSubmitting = false, di
 
                   kitSelectionDisplay={kitSelectionDisplay}
                   userAge={userAge}
-                  couponPreviewOverride={ageCouponPreview}
+                  couponPreviewOverride={autoCouponCardPreview}
                   voucherFreeTicketId={voucherFreeTicketId}
                   couponConditionsMet={linkCouponConditionsMet}
                 />
@@ -527,7 +565,7 @@ export function ModalitiesStep({ event, onNext, onBack, isSubmitting = false, di
 
                   kitSelectionDisplay={kitSelectionDisplay}
                   userAge={userAge}
-                  couponPreviewOverride={ageCouponPreview}
+                  couponPreviewOverride={autoCouponCardPreview}
                   voucherFreeTicketId={voucherFreeTicketId}
                   couponConditionsMet={linkCouponConditionsMet}
                 />
@@ -609,7 +647,7 @@ export function ModalitiesStep({ event, onNext, onBack, isSubmitting = false, di
 
                         kitSelectionDisplay={kitSelectionDisplay}
                         userAge={userAge}
-                        couponPreviewOverride={ageCouponPreview}
+                        couponPreviewOverride={autoCouponCardPreview}
                         voucherFreeTicketId={voucherFreeTicketId}
                         couponConditionsMet={linkCouponConditionsMet}
                       />
@@ -633,7 +671,7 @@ export function ModalitiesStep({ event, onNext, onBack, isSubmitting = false, di
 
                         kitSelectionDisplay={kitSelectionDisplay}
                         userAge={userAge}
-                        couponPreviewOverride={ageCouponPreview}
+                        couponPreviewOverride={autoCouponCardPreview}
                         voucherFreeTicketId={voucherFreeTicketId}
                         couponConditionsMet={linkCouponConditionsMet}
                       />

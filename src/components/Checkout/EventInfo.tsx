@@ -17,6 +17,7 @@ import { useCouponPreview } from "@/hooks/useCouponPreview";
 import { useAgeCouponEligibility } from "@/hooks/useAgeCouponEligibility";
 import { useAuth } from "@/hooks/useAuth";
 import { computeAgeCouponTicketDiscount, formatAgeCouponLineLabel } from "@/lib/ageCoupon";
+import { pickBestAutoCoupon, quantityCouponCandidates } from "@/lib/quantityCoupon";
 import type { OrderCoupon, OrderVoucher } from "@/interfaces/order";
 import {
   computeLinkCouponTicketDiscount,
@@ -284,8 +285,37 @@ export function EventInfo({ event, onNext, isSubmitting = false, tickets = [], c
     );
   }, [useLinkCoupon, resolvedCoupon, categorizedTickets, uncategorizedTickets, raceQuantities, totalPrice]);
 
+  // Cupons AUTOMÁTICOS (idade × quantidade) — espelha o ModalitiesStep: o que MAIS
+  // desconta; empate → o já aplicado no pedido, senão o 1º criado.
+  const quantityAuto = useMemo(() => {
+    if (useVoucher || hasManualCoupon || useLinkCoupon) return null;
+    const selected: Array<{ id: string; price: number; quantity: number }> = [];
+    categorizedTickets.forEach((category) => {
+      category.tickets.forEach((ticket) => {
+        const quantity = raceQuantities[ticket.id] || 0;
+        if (quantity > 0) selected.push({ id: ticket.id, price: getTicketPrice(ticket), quantity });
+      });
+    });
+    uncategorizedTickets.forEach((ticket) => {
+      const quantity = raceQuantities[ticket.id] || 0;
+      if (quantity > 0) selected.push({ id: ticket.id, price: getTicketPrice(ticket), quantity });
+    });
+    const choice = pickBestAutoCoupon(
+      [
+        ...(ageCoupon
+          ? [{ id: ageCoupon.id, discount: ageDiscount, createdAt: ageCoupon.createdAt, quantity: null }]
+          : []),
+        ...quantityCouponCandidates(ageEligibility?.quantityCoupons, selected, totalPrice).map(
+          (c) => ({ id: c.coupon.id, discount: c.discount, createdAt: c.coupon.createdAt, quantity: c }),
+        ),
+      ],
+      hasRealOrderCoupon ? appliedCoupon?.id : null,
+    );
+    return choice?.quantity ?? null;
+  }, [useVoucher, hasManualCoupon, useLinkCoupon, ageCoupon, ageDiscount, ageEligibility, hasRealOrderCoupon, appliedCoupon, categorizedTickets, uncategorizedTickets, raceQuantities, totalPrice]);
+
   // Taxa de serviço sobre o subtotal JÁ DESCONTADO (mesma regra do /produtos).
-  // Voucher e cupom de idade entram como desconto pré-calculado; cupom manual
+  // Voucher e cupons automáticos entram como desconto pré-calculado; cupom manual
   // segue o caminho percentual/fixo.
   const pricing = useMemo(
     () =>
@@ -295,6 +325,12 @@ export function EventInfo({ event, onNext, isSubmitting = false, tickets = [], c
           totalPrice,
           event.participantFeePercent ?? 0,
         )
+        : quantityAuto
+          ? computeTicketPricingWithDiscount(
+            quantityAuto.discount,
+            totalPrice,
+            event.participantFeePercent ?? 0,
+          )
         : ageCoupon
           ? computeTicketPricingWithDiscount(
             ageDiscount,
@@ -321,13 +357,15 @@ export function EventInfo({ event, onNext, isSubmitting = false, tickets = [], c
                 totalPrice,
                 event.participantFeePercent ?? 0,
               ),
-    [useVoucher, voucherDiscount, ageCoupon, ageDiscount, useLinkCoupon, linkCouponDiscount, orderManualCouponDiscount, resolvedCoupon, totalPrice, event.participantFeePercent],
+    [useVoucher, voucherDiscount, quantityAuto, ageCoupon, ageDiscount, useLinkCoupon, linkCouponDiscount, orderManualCouponDiscount, resolvedCoupon, totalPrice, event.participantFeePercent],
   );
   const serviceFee = pricing.serviceFee;
   const hasCouponLine = pricing.showCouponDiscount && pricing.couponDiscount > 0;
   // Label da linha de desconto: "Voucher CÓDIGO", "Cupom idade (X% OFF)" ou "Cupom CÓDIGO (...)".
   const discountLineLabel = useVoucher
     ? formatVoucherLineLabel(voucherData?.code ?? appliedVoucher?.code)
+    : quantityAuto
+      ? formatAgeCouponLineLabel(quantityAuto.coupon)
     : ageCoupon
       ? formatAgeCouponLineLabel(ageCoupon)
       : resolvedCoupon

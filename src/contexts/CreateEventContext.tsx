@@ -31,6 +31,8 @@ export interface CreateEventFormData {
   locationName: string;
   bannerUrl: string;
   regulationUrl: string;
+  /** Usuário apagou o PDF JÁ SALVO (lixeira) → o save envia `regulationUrl: null`. */
+  regulationRemoved?: boolean;
   /** Exige contato de emergência de cada participante no checkout. */
   emergencyContactRequired: boolean;
   /** Permite que o mesmo CPF leve mais de um ingresso neste evento. */
