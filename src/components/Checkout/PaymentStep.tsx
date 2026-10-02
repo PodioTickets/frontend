@@ -652,7 +652,8 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
         ticketCounters[ticket.id] = reservationIdx + 1;
         const reservedTicket = reservations[reservationIdx];
 
-        const unitDiscount = reservedTicket?.unitDiscount ?? 0;
+        // Ingresso + produtos DESTE participante (quando o cupom/voucher cobre produtos).
+        const unitDiscount = (reservedTicket?.unitDiscount ?? 0) + (reservedTicket?.productsDiscount ?? 0);
         // couponApplied vem do servidor por reserva; fallback para presença do cupom + desconto.
         const couponApplied = reservedTicket?.couponApplied ?? (!!orderCoupon && unitDiscount > 0);
 
@@ -807,13 +808,17 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
   const couponDiscount = currentOrder?.pricing.couponDiscount
     ? currentOrder.pricing.couponDiscount / 100
     : 0;
+  // Cupom automático acumulado com o manual (linha própria; 0 sem acúmulo).
+  const autoCouponDiscount = (currentOrder?.pricing.autoCouponDiscount ?? 0) / 100;
+  const autoCouponPercent =
+    currentOrder?.autoCoupon?.type === "PERCENTAGE" ? currentOrder.autoCoupon.value : undefined;
 
   const voucherDiscount = currentOrder?.pricing.voucherDiscount
     ? currentOrder.pricing.voucherDiscount / 100
     : 0;
   const totalValue = currentOrder
     ? currentOrder.pricing.total / 100
-    : subtotalValue - couponDiscount - voucherDiscount;
+    : subtotalValue - couponDiscount - autoCouponDiscount - voucherDiscount;
 
   const isFreeOrder = totalValue <= 0;
   const isCardSelected = selectedPaymentMethod === "credit" || selectedPaymentMethod === "debit";
@@ -1764,6 +1769,8 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
               coupon={{
                 code: couponCode,
                 discount: couponDiscount,
+                autoDiscount: autoCouponDiscount,
+                autoPercent: autoCouponPercent,
                 name: appliedCouponName,
                 percent: couponPercent,
                 type: currentOrder?.coupon?.type ?? undefined,
@@ -1964,7 +1971,9 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
         }))}
         subtotal={ticketSubtotalLocal + additionalProductsTotal}
         discount={
-          isCouponApplied && couponDiscount > 0
+          isCouponApplied && couponDiscount > 0 && autoCouponDiscount > 0
+            ? { label: "Descontos", amount: couponDiscount + autoCouponDiscount }
+            : isCouponApplied && couponDiscount > 0
             ? {
               label: `${isAutomaticCoupon
                 ? "Cupom automático"
@@ -2172,6 +2181,8 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
             coupon={{
               code: couponCode,
               discount: couponDiscount,
+              autoDiscount: autoCouponDiscount,
+              autoPercent: autoCouponPercent,
               name: appliedCouponName,
               percent: couponPercent,
               type: currentOrder?.coupon?.type ?? undefined,

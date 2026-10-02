@@ -187,8 +187,9 @@ export function EventInfo({ event, onNext, isSubmitting = false, tickets = [], c
   // Cupom AUTOMÁTICO de idade — só quando não há voucher nem cupom manual (link).
   // Espelha o ModalitiesStep pra desktop e mobile mostrarem o mesmo desconto.
   const hasManualCoupon = !!resolvedCoupon && resolvedCoupon.couponType === "DISCOUNT";
+  // Acúmulo (2026-10-02): com cupom manual o automático TAMBÉM vale — só o voucher exclui.
   const ageCoupon =
-    !useVoucher && !hasManualCoupon && ageEligibility?.applicable
+    !useVoucher && ageEligibility?.applicable
       ? ageEligibility.appliedCoupon
       : null;
   const ageDiscount = useMemo(() => {
@@ -288,7 +289,7 @@ export function EventInfo({ event, onNext, isSubmitting = false, tickets = [], c
   // Cupons AUTOMÁTICOS (idade × quantidade) — espelha o ModalitiesStep: o que MAIS
   // desconta; empate → o já aplicado no pedido, senão o 1º criado.
   const quantityAuto = useMemo(() => {
-    if (useVoucher || hasManualCoupon || useLinkCoupon) return null;
+    if (useVoucher) return null;
     const selected: Array<{ id: string; price: number; quantity: number }> = [];
     categorizedTickets.forEach((category) => {
       category.tickets.forEach((ticket) => {
@@ -312,7 +313,13 @@ export function EventInfo({ event, onNext, isSubmitting = false, tickets = [], c
       hasRealOrderCoupon ? appliedCoupon?.id : null,
     );
     return choice?.quantity ?? null;
-  }, [useVoucher, hasManualCoupon, useLinkCoupon, ageCoupon, ageDiscount, ageEligibility, hasRealOrderCoupon, appliedCoupon, categorizedTickets, uncategorizedTickets, raceQuantities, totalPrice]);
+  }, [useVoucher, ageCoupon, ageDiscount, ageEligibility, hasRealOrderCoupon, appliedCoupon, categorizedTickets, uncategorizedTickets, raceQuantities, totalPrice]);
+
+  // Acúmulo automático + manual: soma dos descontos (cada um sobre o preço cheio),
+  // capada no subtotal — espelha o ModalitiesStep e o backend.
+  const autoPreviewDiscount = quantityAuto ? quantityAuto.discount : ageCoupon ? ageDiscount : 0;
+  const manualPreviewDiscount = (useLinkCoupon ? linkCouponDiscount : orderManualCouponDiscount) ?? 0;
+  const stackedPreview = (hasManualCoupon || useLinkCoupon) && !useVoucher && autoPreviewDiscount > 0 && manualPreviewDiscount > 0;
 
   // Taxa de serviço sobre o subtotal JÁ DESCONTADO (mesma regra do /produtos).
   // Voucher e cupons automáticos entram como desconto pré-calculado; cupom manual
@@ -325,6 +332,12 @@ export function EventInfo({ event, onNext, isSubmitting = false, tickets = [], c
           totalPrice,
           event.participantFeePercent ?? 0,
         )
+        : stackedPreview
+          ? computeTicketPricingWithDiscount(
+            Math.min(totalPrice, autoPreviewDiscount + manualPreviewDiscount),
+            totalPrice,
+            event.participantFeePercent ?? 0,
+          )
         : quantityAuto
           ? computeTicketPricingWithDiscount(
             quantityAuto.discount,
@@ -357,13 +370,15 @@ export function EventInfo({ event, onNext, isSubmitting = false, tickets = [], c
                 totalPrice,
                 event.participantFeePercent ?? 0,
               ),
-    [useVoucher, voucherDiscount, quantityAuto, ageCoupon, ageDiscount, useLinkCoupon, linkCouponDiscount, orderManualCouponDiscount, resolvedCoupon, totalPrice, event.participantFeePercent],
+    [useVoucher, voucherDiscount, stackedPreview, autoPreviewDiscount, manualPreviewDiscount, quantityAuto, ageCoupon, ageDiscount, useLinkCoupon, linkCouponDiscount, orderManualCouponDiscount, resolvedCoupon, totalPrice, event.participantFeePercent],
   );
   const serviceFee = pricing.serviceFee;
   const hasCouponLine = pricing.showCouponDiscount && pricing.couponDiscount > 0;
   // Label da linha de desconto: "Voucher CÓDIGO", "Cupom idade (X% OFF)" ou "Cupom CÓDIGO (...)".
   const discountLineLabel = useVoucher
     ? formatVoucherLineLabel(voucherData?.code ?? appliedVoucher?.code)
+    : stackedPreview
+      ? "Descontos"
     : quantityAuto
       ? formatAgeCouponLineLabel(quantityAuto.coupon)
     : ageCoupon
