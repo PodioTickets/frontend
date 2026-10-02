@@ -1078,6 +1078,8 @@ export class AdminService {
             ([, v]) => typeof v === "string" && v.trim() !== ""
           )
         ),
+        // "Geral" agrega o histórico inteiro — o default de 15s cortava a resposta.
+        timeout: 60_000,
       }
     );
 
@@ -1150,6 +1152,8 @@ export class AdminService {
             ([, v]) => typeof v === "string" && v.trim() !== ""
           )
         ),
+        // "Geral" agrega o histórico inteiro — o default de 15s cortava a resposta.
+        timeout: 60_000,
       }
     );
 

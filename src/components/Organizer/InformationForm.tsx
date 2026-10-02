@@ -656,6 +656,7 @@ export function InformationForm({
                     value={values.eventDate?.trim() ? values.eventTime?.trim() || "00:00" : values.eventTime || ""}
                     onChange={(v) => handleTimeChange("eventTime", v)}
                     className="w-full md:w-max"
+                    hideTimezone
                   />
                 </div>
               </div>
@@ -938,7 +939,7 @@ export function InformationForm({
           <input ref={fileInputRef} type="file" accept="application/pdf" onChange={handlePDFSelect} className="hidden" />
         </div>
 
-        {/* Opções avançadas — markup espelhado do painel do modal de cupom
+        {/* Configurações adicionais — markup espelhado do painel do modal de cupom
             (`CreateCouponModal`), para as duas telas lerem igual. */}
         <div className="flex flex-col gap-5">
           <button
@@ -947,7 +948,7 @@ export function InformationForm({
             className="flex items-center gap-2 text-primary-11 hover:text-primary-12 transition-colors self-start"
           >
             <span className="text-base font-medium font-family-dm-sans leading-[1.3]">
-              Opções avançadas
+              Configurações adicionais
             </span>
             <ArrowButton isOpen={showAdvanced} />
           </button>

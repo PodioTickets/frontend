@@ -58,6 +58,7 @@ import { formatCouponLineLabel, formatVoucherLineLabel } from "@/lib/orderCoupon
 import { useAuth } from "@/hooks/useAuth";
 import { useAgeCouponEligibility } from "@/hooks/useAgeCouponEligibility";
 import { isAgeWithinTicketLimit } from "@/lib/ageCoupon";
+import { removalBreaksMinQuantity } from "@/lib/ticketMinQuantity";
 import Image from "next/image";
 
 interface InformationStepProps {
@@ -658,6 +659,11 @@ export function InformationStep({
       0;
     return cents / 100;
   }, [orderData, timerCurrentOrder, showCouponDiscount]);
+  // Cupom automático ACUMULADO com o manual (linha própria, acima do manual).
+  const autoCoupon = timerCurrentOrder?.autoCoupon ?? orderData?.autoCoupon ?? null;
+  const autoCouponDiscountAmount =
+    ((orderData?.pricing?.autoCouponDiscount ?? timerCurrentOrder?.pricing?.autoCouponDiscount ?? 0) / 100);
+  const hasAutoCouponLine = !!autoCoupon && autoCouponDiscountAmount > 0;
 
   // Voucher aplicado na order (via `?voucher=` no /ingressos). Valor autoritativo
   // do `pricing.voucherDiscount` (centavos). Cupom e voucher são mutuamente
@@ -1415,6 +1421,14 @@ export function InformationStep({
     participantIndex: number,
     ticketId: string
   ) => {
+    // Quantidade mínima: só dá pra zerar o ingresso ou mantê-lo no mínimo (o backend recusa igual).
+    const minTicket = tickets.find((t) => t.id === ticketId);
+    if (removalBreaksMinQuantity(raceQuantities[ticketId] || 0, minTicket?.minPurchaseQuantity)) {
+      toast.error(
+        `O ingresso "${minTicket?.name}" exige no mínimo ${minTicket?.minPurchaseQuantity} participantes.`,
+      );
+      return;
+    }
     openDeleteParticipantModal({
       participantIndex,
       raceId: ticketId,
@@ -1943,6 +1957,12 @@ export function InformationStep({
                     <div className="flex items-center justify-between w-full text-sm text-gray-12">
                       <p className="font-semibold">Subtotal:</p>
                       <p className="font-semibold font-family-dm-sans">{formatPrice(totalPrice)}</p>
+                    </div>
+                  )}
+                  {!hidePricing && hasAutoCouponLine && (
+                    <div className="flex items-center justify-between w-full text-sm text-gray-12">
+                      <p className="font-semibold">{formatCouponLineLabel(autoCoupon!)}:</p>
+                      <p className="font-semibold font-family-dm-sans">- {formatPrice(autoCouponDiscountAmount)}</p>
                     </div>
                   )}
                   {!hidePricing && appliedCoupon && showCouponDiscount && couponDiscountAmount > 0 && (
@@ -2792,7 +2812,9 @@ export function InformationStep({
         subtotal={totalPrice}
         discount={
           appliedCoupon && showCouponDiscount && couponDiscountAmount > 0
-            ? { label: formatCouponLineLabel(appliedCoupon), amount: couponDiscountAmount }
+            ? hasAutoCouponLine
+              ? { label: "Descontos", amount: couponDiscountAmount + autoCouponDiscountAmount }
+              : { label: formatCouponLineLabel(appliedCoupon), amount: couponDiscountAmount }
             : hasVoucherLine
               ? { label: formatVoucherLineLabel(appliedVoucher!.code), amount: voucherDiscountAmount }
               : null
@@ -2895,6 +2917,16 @@ export function InformationStep({
                       <p className="font-semibold">Subtotal:</p>
                       <p className="font-bold">{formatPrice(totalPrice)}</p>
                     </div>
+                    {hasAutoCouponLine && (
+                      <div className="flex items-center justify-between text-base text-gray-12">
+                        <p className="font-semibold">
+                          {formatCouponLineLabel(autoCoupon!)}:
+                        </p>
+                        <p className="font-bold">
+                          -{formatPrice(autoCouponDiscountAmount)}
+                        </p>
+                      </div>
+                    )}
                     {appliedCoupon && showCouponDiscount && couponDiscountAmount > 0 && (
                       <div className="flex items-center justify-between text-base text-gray-12">
                         <p className="font-semibold">

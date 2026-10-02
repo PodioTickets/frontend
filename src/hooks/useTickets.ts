@@ -28,6 +28,8 @@ export interface Ticket {
     max?: number;
   };
   description?: string
+  /** Mínimo de unidades por pedido (null = sem mínimo). Ver `lib/ticketMinQuantity`. */
+  minPurchaseQuantity?: number | null;
   gender?: string;
   activeBatch?: { id: string; price: number; label?: string; status?: string };
   activeBatchStatus?: string;
@@ -84,6 +86,7 @@ export function formatRawTicket(ticket: any): Ticket {
     })(),
     description: ticket.description ?? undefined,
     ageLimit: ticket.ageLimit,
+    minPurchaseQuantity: ticket.minPurchaseQuantity ?? null,
     gender: ticket.gender,
     activeBatch: ticket.activeBatch
       ? {

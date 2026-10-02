@@ -268,7 +268,8 @@ export function formatEventDateWithTimeBR(value: DateInput): string {
   const time = formatTimeBR(value);
   // Sem horário escolhido o evento é gravado às 00:00 (ver `composeRegistrationDateTime`)
   // — não há flag separada, então 00:00 é tratado como "sem horário" e some da tela.
-  const label = time && time !== "00:00" ? `${date} às ${time}` : date;
+  // Espaço inseparável ( ) entre "às" e a hora: se quebrar linha, o "às" desce junto.
+  const label = time && time !== "00:00" ? `${date} às ${time}` : date;
   return label.charAt(0).toUpperCase() + label.slice(1);
 }
 

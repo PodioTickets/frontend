@@ -192,7 +192,7 @@ export function FiscalExportFormatModal({
                   onClick={() => setShowAdvanced((v) => !v)}
                   className="flex items-center gap-1 font-family-dm-sans font-medium text-sm text-primary-11 hover:text-primary-12 transition-colors w-fit cursor-pointer"
                 >
-                  Ver opções avançadas
+                  Ver configurações adicionais
                   <ChevronDown
                     className={`size-4 transition-transform ${showAdvanced ? "rotate-180" : ""}`}
                   />

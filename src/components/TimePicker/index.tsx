@@ -20,6 +20,8 @@ interface TimePickerProps {
   className?: string;
   disabled?: boolean;
   placeholder?: string;
+  /** Esconde o cabeçalho "Brasília (UTC−3)" do popover. */
+  hideTimezone?: boolean;
 }
 
 const createTimeOptions = (length: number, start = 0) =>
@@ -41,6 +43,7 @@ export function TimePicker({
   className,
   disabled = false,
   placeholder = "00:00",
+  hideTimezone = false,
 }: TimePickerProps) {
   const [isOpen, setIsOpen] = React.useState(false);
   const [internalValue, setInternalValue] = React.useState<string>(
@@ -129,9 +132,11 @@ export function TimePicker({
         align="start"
       >
         {/* Horários do evento são wall-clock de Brasília — deixa o fuso explícito. */}
-        <div className="-mx-2 -mt-2 mb-2 px-3 py-2 border-b border-gray-6 text-center text-xs font-medium text-gray-11 font-family-dm-sans">
-          Brasília (UTC−3)
-        </div>
+        {!hideTimezone && (
+          <div className="-mx-2 -mt-2 mb-2 px-3 py-2 border-b border-gray-6 text-center text-xs font-medium text-gray-11 font-family-dm-sans">
+            Brasília (UTC−3)
+          </div>
+        )}
         <div className="space-y-4 w-full">
           <div className="flex items-center justify-center w-full gap-1">
             <WheelPickerWrapper className="flex-1 w-full">

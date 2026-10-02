@@ -26,6 +26,10 @@ export interface OrderTicket {
   unitPrice: number;
   unitDiscount?: number;
   totalDiscount?: number;
+  /** Desconto nos produtos do participante desta unidade (cupom/voucher que cobre produtos). */
+  productsDiscount?: number;
+  /** Parte do cupom automático em `unitDiscount` (acúmulo). */
+  autoUnitDiscount?: number;
   finalUnitPrice?: number;
   finalTotalPrice?: number;
   couponApplied?: boolean;
@@ -60,6 +64,8 @@ export interface OrderPricing {
   /** Desconto de QUALQUER cupom (manual/link DISCOUNT, AGE, QUANTITY). O tipo é
    *  lido em `coupon.couponType` para o rótulo. */
   couponDiscount?: number;
+  /** Cupom AUTOMÁTICO acumulado com o manual (`autoCoupon`); 0 sem acúmulo. */
+  autoCouponDiscount?: number;
   voucherDiscount?: number;
   total: number;
   currency: "BRL";
@@ -107,6 +113,8 @@ export interface OrderResponse {
   tickets: OrderTicket[];
   pricing: OrderPricing;
   coupon?: OrderCoupon | null;
+  /** Cupom automático (AGE/QUANTITY) acumulado com o cupom manual em `coupon`. */
+  autoCoupon?: OrderCoupon | null;
   voucher?: OrderVoucher | null;
   payment?: OrderPaymentInfo;
   registrations?: OrderRegistration[];

@@ -23,6 +23,7 @@ import { usePendingCouponSnapshot } from "@/hooks/usePendingCoupon";
 import { useCouponPreview } from "@/hooks/useCouponPreview";
 import type { CouponPreviewResult } from "@/lib/orderCouponDiscount";
 import { isAgeWithinTicketLimit } from "@/lib/ageCoupon";
+import { stepTicketQuantity } from "@/lib/ticketMinQuantity";
 
 /* Aplica preview de cupom (`?coupon=` na URL) ao preço base do ticket pra
  * exibir "R$ X (com desconto)  R$ Y (riscado)" nos cards. Backend é fonte
@@ -993,15 +994,21 @@ export function TicketCategoryCard({
     setIsExpanded((prev) => !prev);
   }, [hasSelectedTicket]);
 
+  // Quantidade mínima por pedido: + pula de 0 para N e − volta de N para 0.
+  const minOf = useCallback(
+    (ticketId: string) => tickets.find((t) => t.id === ticketId)?.minPurchaseQuantity,
+    [tickets],
+  );
+
   const handleDecrease = useCallback((ticketId: string) => {
     const currentQuantity = raceQuantities[ticketId] || 0;
-    updateRaceQuantity(ticketId, Math.max(0, currentQuantity - 1));
-  }, [raceQuantities, updateRaceQuantity]);
+    updateRaceQuantity(ticketId, stepTicketQuantity(currentQuantity, -1, minOf(ticketId)));
+  }, [raceQuantities, updateRaceQuantity, minOf]);
 
   const handleIncrease = useCallback((ticketId: string) => {
     const currentQuantity = raceQuantities[ticketId] || 0;
-    updateRaceQuantity(ticketId, currentQuantity + 1);
-  }, [raceQuantities, updateRaceQuantity]);
+    updateRaceQuantity(ticketId, stepTicketQuantity(currentQuantity, 1, minOf(ticketId)));
+  }, [raceQuantities, updateRaceQuantity, minOf]);
 
   // Bare mode: no category header/accordion, just render ticket items
   if (!categoryName) {

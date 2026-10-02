@@ -33,6 +33,8 @@ export function toOrderResponse(data: any): OrderResponse {
       unitPrice: t.unitPrice ?? 0,
       unitDiscount: t.unitDiscount ?? 0,
       totalDiscount: t.totalDiscount ?? 0,
+      productsDiscount: t.productsDiscount ?? 0,
+      autoUnitDiscount: t.autoUnitDiscount ?? 0,
       finalUnitPrice: t.finalUnitPrice ?? t.unitPrice ?? 0,
       finalTotalPrice: t.finalTotalPrice ?? 0,
       couponApplied: t.couponApplied ?? false,
@@ -51,6 +53,7 @@ export function toOrderResponse(data: any): OrderResponse {
           : data.appliedDiscount?.type === "coupon"
             ? data.appliedDiscount.discount
             : rawDiscount),
+      autoCouponDiscount: data.pricing?.autoCouponDiscount ?? 0,
       voucherDiscount:
         data.pricing?.voucherDiscount ??
         (isVoucherOrder
@@ -63,6 +66,7 @@ export function toOrderResponse(data: any): OrderResponse {
       currency: "BRL" as const,
     },
     coupon: data.coupon ?? null,
+    autoCoupon: data.autoCoupon ?? null,
     voucher: data.voucher ?? null,
     payment: data.payment,
     registrations: data.registrations,
