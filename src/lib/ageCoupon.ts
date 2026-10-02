@@ -11,6 +11,7 @@
  * que ainda depende de DUAS condições no checkout: `appliesTo` (modalidade) e
  * `minCartValue` (valor mínimo do carrinho).
  */
+import type { QuantityAutoCoupon } from "./quantityCoupon";
 
 /** Cupom de idade que será aplicado (shape do `appliedCoupon` do endpoint). */
 export interface AgeAppliedCoupon {
@@ -28,6 +29,8 @@ export interface AgeAppliedCoupon {
   minCartValue?: number | null;
   applyToProducts?: boolean;
   note?: string | null;
+  /** ISO — desempate "1º criado" com os cupons de quantidade. */
+  createdAt?: string | null;
 }
 
 export interface AgeCouponEligibility {
@@ -36,10 +39,13 @@ export interface AgeCouponEligibility {
   age: number | null;
   eventDate: string | null;
   appliedCoupon: AgeAppliedCoupon | null;
+  /** Cupons automáticos por quantidade do evento (vêm na mesma resposta; ver `quantityCoupon.ts`). */
+  quantityCoupons: QuantityAutoCoupon[];
 }
 
 /** Label inline do cupom de idade pras linhas de resumo (paralelo ao cupom/voucher). */
-export function formatAgeCouponLineLabel(coupon: AgeAppliedCoupon): string {
+// Também serve ao cupom automático por quantidade (mesmo rótulo "Cupom automático").
+export function formatAgeCouponLineLabel(coupon: Pick<AgeAppliedCoupon, "type" | "value">): string {
   if (coupon.type === "PERCENTAGE" && coupon.value > 0) {
     return `Cupom automático (${coupon.value}% OFF)`;
   }

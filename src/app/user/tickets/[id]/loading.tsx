@@ -7,7 +7,7 @@
  * - Lista de cards de participante com QR placeholder + área de dados.
  *
  * Proporções alinhadas ao componente real (`EventInfoCard`,
- * `RegistrationQRCode 120px`) pra evitar layout shift na hidratação.
+ * `RegistrationQRCode 64px`) pra evitar layout shift na hidratação.
  */
 export default function UserTicketDetailLoading() {
   return (
@@ -66,7 +66,7 @@ export default function UserTicketDetailLoading() {
               <div className="flex flex-col gap-5 items-start px-4 py-6 border-b border-gray-6 md:flex-row md:items-center md:justify-between">
                 <div className="flex gap-3 items-start w-full md:flex-col md:gap-5 md:items-start md:w-auto">
                   {/* QR placeholder mobile */}
-                  <div className="size-[120px] shrink-0 rounded bg-gray-3 animate-pulse md:hidden" />
+                  <div className="size-16 shrink-0 rounded bg-gray-3 animate-pulse md:hidden" />
                   <div className="flex flex-col items-start gap-2 py-3 md:gap-2 md:py-0 flex-1 min-w-0 w-full">
                     <div className="h-4 w-32 rounded bg-gray-3 animate-pulse" />
                     <div className="h-3 w-28 rounded bg-gray-2 animate-pulse" />
@@ -74,7 +74,7 @@ export default function UserTicketDetailLoading() {
                   </div>
                 </div>
                 {/* QR placeholder desktop */}
-                <div className="hidden md:block size-[120px] shrink-0 rounded bg-gray-3 animate-pulse" />
+                <div className="hidden md:block size-16 shrink-0 rounded bg-gray-3 animate-pulse" />
               </div>
 
               {/* Participant profile card */}

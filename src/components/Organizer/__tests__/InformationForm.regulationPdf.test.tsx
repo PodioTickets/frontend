@@ -21,13 +21,22 @@ const UPLOADED_URL = "https://cdn.example.com/regulamento.pdf";
  * Espelha a página de edição: baseline + `hasPendingPdf` alimentam o dirty check,
  * e o save re-fixa o baseline com a URL resolvida (`commitInitialFormData`).
  */
-function EditHarness({ onDirty }: { onDirty: (dirty: boolean) => void }) {
-  const [values, setValues] = useState<InformationFormValues>({ name: "Evento" } as InformationFormValues);
+function EditHarness({
+  onDirty,
+  initial = { name: "Evento" } as InformationFormValues,
+  onValues,
+}: {
+  onDirty: (dirty: boolean) => void;
+  initial?: InformationFormValues;
+  onValues?: (v: InformationFormValues) => void;
+}) {
+  const [values, setValues] = useState<InformationFormValues>(initial);
   const [baseline, setBaseline] = useState(values);
   const [hasPendingPdf, setHasPendingPdf] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   onDirty(hasPendingPdf || values.regulationUrl !== baseline.regulationUrl);
+  onValues?.(values);
 
   return (
     <InformationForm
@@ -73,15 +82,56 @@ describe("InformationForm — PDF do regulamento após salvar", () => {
     const file = new File(["%PDF-1.4"], "regulamento.pdf", { type: "application/pdf" });
     fireEvent.change(input, { target: { files: [file] } });
 
-    expect(screen.getByText(/Arquivo selecionado: regulamento.pdf/)).toBeInTheDocument();
+    // Card do arquivo (Figma 6993:135496): nome + tamanho, ainda sem link (não subiu).
+    expect(screen.getByText("regulamento.pdf")).toBeInTheDocument();
+    expect(screen.getByText("1 KB")).toBeInTheDocument();
+    expect(screen.queryByRole("link")).not.toBeInTheDocument();
     expect(dirty).toBe(true);
 
     fireEvent.submit(container.querySelector("form#f") as HTMLFormElement);
 
-    const link = await screen.findByRole("link", { name: "Ver PDF" });
+    const link = await screen.findByRole("link", { name: "regulamento.pdf" });
     expect(link).toHaveAttribute("href", UPLOADED_URL);
-    expect(screen.queryByText(/Arquivo selecionado/)).not.toBeInTheDocument();
+    expect(screen.queryByText("1 KB")).not.toBeInTheDocument(); // agora é o PDF salvo
     await waitFor(() => expect(dirty).toBe(false));
     expect(fetch).toHaveBeenCalledTimes(1);
+  });
+  it("lixeira no PDF JÁ SALVO marca a remoção e volta a área de upload", () => {
+    let last: InformationFormValues | null = null;
+    render(
+      <EditHarness
+        onDirty={() => {}}
+        initial={{ name: "Evento", regulationUrl: UPLOADED_URL } as InformationFormValues}
+        onValues={(v) => (last = v)}
+      />,
+    );
+    expect(screen.getByRole("link", { name: "regulamento.pdf" })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Remover PDF" }));
+
+    expect(last!.regulationUrl).toBe("");
+    expect(last!.regulationRemoved).toBe(true);
+    expect(screen.queryByRole("link", { name: "regulamento.pdf" })).not.toBeInTheDocument();
+    expect(screen.getByText(/Arraste um arquivo PDF/)).toBeInTheDocument();
+  });
+
+  it("lixeira no arquivo recém-escolhido só descarta (PDF salvo continua)", () => {
+    let last: InformationFormValues | null = null;
+    const { container } = render(
+      <EditHarness
+        onDirty={() => {}}
+        initial={{ name: "Evento", regulationUrl: UPLOADED_URL } as InformationFormValues}
+        onValues={(v) => (last = v)}
+      />,
+    );
+    const input = container.querySelector('input[type="file"]') as HTMLInputElement;
+    fireEvent.change(input, { target: { files: [new File(["%PDF"], "novo.pdf", { type: "application/pdf" })] } });
+    expect(screen.getByText("novo.pdf")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Remover PDF" }));
+
+    expect(screen.getByRole("link", { name: "regulamento.pdf" })).toBeInTheDocument();
+    expect(last!.regulationUrl).toBe(UPLOADED_URL);
+    expect(last!.regulationRemoved).toBeFalsy();
   });
 });

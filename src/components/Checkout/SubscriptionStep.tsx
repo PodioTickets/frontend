@@ -10,10 +10,7 @@ import { useCheckout } from "@/contexts/CheckoutContext";
 import { useCheckoutTimer } from "@/contexts/CheckoutTimerContext";
 import { useCheckoutReservation } from "@/hooks/useCheckoutReservation";
 import { buildProductsPatchPayload } from "@/lib/checkoutParticipants";
-import {
-  ticketUnitPriceForPrePaymentCents,
-  isHiddenPrePaymentCoupon,
-} from "@/lib/orderAutoCouponDisplay";
+import { ticketUnitPriceForPrePaymentCents } from "@/lib/orderAutoCouponDisplay";
 import {
   computeCouponDiscount,
   formatCouponLineLabel,
@@ -844,9 +841,9 @@ export function SubscriptionStep({
   // O GET /orders pode omitir esse campo em algumas versões do backend, então
   // usamos o snapshot do timer como fonte primária e o orderData como fallback.
   const appliedCoupon = timerCurrentOrder?.coupon ?? orderData?.coupon ?? null;
-  // Revela AGE pré-pagamento; só QUANTITY fica escondido. Cupom é UMA linha só
-  // (qualquer tipo): valor de `pricing.couponDiscount`, rótulo por `couponType`.
-  const showCouponDiscount = !!appliedCoupon && !isHiddenPrePaymentCoupon(appliedCoupon);
+  // Todo cupom (inclusive QUANTITY, desde 2026-09-30) aparece pré-pagamento. Cupom é
+  // UMA linha só (qualquer tipo): valor de `pricing.couponDiscount`, rótulo por `couponType`.
+  const showCouponDiscount = !!appliedCoupon;
   const appliedVoucher = timerCurrentOrder?.voucher ?? orderData?.voucher ?? null;
 
   // Pricing do servidor (centavos). O backend recomputa a cada PATCH /products

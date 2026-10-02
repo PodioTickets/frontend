@@ -155,6 +155,10 @@ export function buildCreateEventBodyFromForm(
   const reg = regulationUrlForCreate?.trim();
   if (reg && !reg.startsWith("data:")) {
     eventData.regulationUrl = reg;
+  } else if (formData.regulationRemoved) {
+    // Lixeira no PDF já salvo: apaga do evento. Só com a marcação explícita — sem PDF
+    // no form o campo continua omitido (nunca apaga por acidente em outro save).
+    eventData.regulationUrl = null;
   }
 
   // Opção avançada da etapa de informações. Enviada sempre (e não só quando

@@ -188,8 +188,22 @@ export class UserService extends AuthService {
             minCartValue: c.minCartValue ?? null,
             applyToProducts: !!c.applyToProducts,
             note: c.note ?? null,
+            createdAt: typeof c.createdAt === "string" ? c.createdAt : null,
           }
           : null,
+        quantityCoupons: Array.isArray(d.quantityCoupons)
+          ? d.quantityCoupons.map((q: any) => ({
+            id: String(q.id),
+            type: q.type === "FIXED" ? "FIXED" : "PERCENTAGE",
+            value: Number(q.value) || 0,
+            appliesTo: typeof q.appliesTo === "string" ? q.appliesTo : null,
+            // O ResponseCompressionInterceptor remove chaves null → ausência = sem condição.
+            minCartValue: typeof q.minCartValue === "number" ? q.minCartValue : null,
+            minQuantity: typeof q.minQuantity === "number" ? q.minQuantity : null,
+            maxQuantity: typeof q.maxQuantity === "number" ? q.maxQuantity : null,
+            createdAt: typeof q.createdAt === "string" ? q.createdAt : null,
+          }))
+          : [],
       };
     } catch {
       return null;
