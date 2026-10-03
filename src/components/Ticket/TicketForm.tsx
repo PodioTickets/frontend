@@ -123,11 +123,9 @@ export function TicketForm({
   const [minPurchaseQuantity, setMinPurchaseQuantity] = useState(
     initialData?.minPurchaseQuantity || "",
   );
-  /* Configurações adicionais: abre sozinho quando o ingresso já tem alguma ativa
-   * (idade ou mínimo) — mesmo padrão do formulário do evento. */
-  const [showAdvanced, setShowAdvanced] = useState(
-    !!initialData?.hasAgeRestriction || !!initialData?.minPurchaseQuantity || mode === "create",
-  );
+  /* Configurações adicionais: sempre MINIMIZADO ao abrir o formulário (pedido do
+   * usuário). Só abre sozinho quando a validação aponta erro num campo de dentro. */
+  const [showAdvanced, setShowAdvanced] = useState(false);
   const [hasKit, setHasKit] = useState(initialData?.hasKit || false);
   const [selectedGroupId, setSelectedGroupId] = useState(
     initialData?.selectedGroupId || initialGroupId || "",
@@ -526,8 +524,6 @@ export function TicketForm({
             setMaxAge(ticketData.ageLimit.max?.toString() || "");
           }
           setMinPurchaseQuantity(ticketData.minPurchaseQuantity?.toString() || "");
-          const hasAge = !!(ticketData.ageLimit?.min || ticketData.ageLimit?.max);
-          setShowAdvanced(hasAge || !!ticketData.minPurchaseQuantity);
 
           setHasKit(ticketData.hasKit || false);
 
