@@ -29,6 +29,7 @@ import {
   formatCouponLineLabel,
   formatVoucherLineLabel,
   normalizeCouponAppliesTo,
+  stackedManualDiscount,
 } from "@/lib/orderCouponDiscount";
 
 interface EventInfoProps {
@@ -315,10 +316,14 @@ export function EventInfo({ event, onNext, isSubmitting = false, tickets = [], c
     return choice?.quantity ?? null;
   }, [useVoucher, ageCoupon, ageDiscount, ageEligibility, hasRealOrderCoupon, appliedCoupon, categorizedTickets, uncategorizedTickets, raceQuantities, totalPrice]);
 
-  // Acúmulo automático + manual: soma dos descontos (cada um sobre o preço cheio),
-  // capada no subtotal — espelha o ModalitiesStep e o backend.
+  // Acúmulo automático + manual: o manual incide sobre o valor já descontado pelo
+  // automático, capado no subtotal — espelha o ModalitiesStep e o backend.
   const autoPreviewDiscount = quantityAuto ? quantityAuto.discount : ageCoupon ? ageDiscount : 0;
-  const manualPreviewDiscount = (useLinkCoupon ? linkCouponDiscount : orderManualCouponDiscount) ?? 0;
+  const manualPreviewDiscount = stackedManualDiscount(
+    (useLinkCoupon ? linkCouponDiscount : orderManualCouponDiscount) ?? 0,
+    autoPreviewDiscount,
+    resolvedCoupon,
+  );
   const stackedPreview = (hasManualCoupon || useLinkCoupon) && !useVoucher && autoPreviewDiscount > 0 && manualPreviewDiscount > 0;
 
   // Taxa de serviço sobre o subtotal JÁ DESCONTADO (mesma regra do /produtos).

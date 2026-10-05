@@ -298,7 +298,7 @@ function ProductCard({
   );
 }
 
-function ProductsSection({
+export function ProductsSection({
   title,
   products,
   participantIndex,

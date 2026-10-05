@@ -550,6 +550,8 @@ export interface AdminUserRegistration {
   createdAt: string;
   /** Status CRU da Registration (PENDING/CONFIRMED/CANCELLED/COMPLETED). */
   status: string;
+  /** Substituída por troca de ingresso (status segue CANCELLED) → badge "Trocado". */
+  voidedAt: string | null;
   eventName: string;
   orderId: string | null;
   /**
@@ -582,6 +584,7 @@ function parseAdminUserRegistration(raw: unknown): AdminUserRegistration | null 
     id,
     createdAt: typeof o.createdAt === "string" ? o.createdAt : "",
     status: typeof o.status === "string" ? o.status : "PENDING",
+    voidedAt: typeof o.voidedAt === "string" ? o.voidedAt : null,
     eventName: typeof o.eventName === "string" ? o.eventName : "",
     orderId: typeof o.orderId === "string" ? o.orderId : null,
     order: {
@@ -871,6 +874,25 @@ export class AdminService {
         total: typeof p.total === "number" ? p.total : 0,
         totalPages: Math.max(1, typeof p.totalPages === "number" ? p.totalPages : 1),
       },
+    };
+  }
+
+  /**
+   * Troca o ingresso de uma inscrição: o backend ANULA a inscrição e cria outra no mesmo
+   * pedido com o ingresso/produtos escolhidos (sem cobrança) e envia o ingresso novo ao
+   * participante. Retorna o id da inscrição nova.
+   */
+  async swapRegistrationTicket(
+    registrationId: string,
+    body: { ticketId: string; products: Array<{ productId: string; variationId?: string | null }> },
+  ): Promise<{ registrationId: string; emailSent: boolean }> {
+    const res = await this.apiClient.post<{ data?: { registrationId?: string; emailSent?: boolean } }>(
+      `/api/v1/admin/registrations/${registrationId}/swap-ticket`,
+      body,
+    );
+    return {
+      registrationId: res.data?.data?.registrationId ?? "",
+      emailSent: res.data?.data?.emailSent === true,
     };
   }
 

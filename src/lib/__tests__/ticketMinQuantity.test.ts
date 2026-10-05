@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { removalBreaksMinQuantity, stepTicketQuantity } from "../ticketMinQuantity";
+import { removalBreaksMinQuantity, stepTicketQuantity, ticketQuantityCap } from "../ticketMinQuantity";
 
 describe("stepTicketQuantity", () => {
   it("sem mínimo: anda de 1 em 1", () => {
@@ -22,5 +22,15 @@ describe("removalBreaksMinQuantity", () => {
     expect(removalBreaksMinQuantity(5, 4)).toBe(false); // sobra 4
     expect(removalBreaksMinQuantity(1, 4)).toBe(false); // zera
     expect(removalBreaksMinQuantity(2, null)).toBe(false);
+  });
+});
+
+describe("ticketQuantityCap", () => {
+  it("usa o menor entre vagas do lote e máximo por pedido", () => {
+    expect(ticketQuantityCap(10, 4)).toBe(4);
+    expect(ticketQuantityCap(2, 4)).toBe(2);
+    expect(ticketQuantityCap(null, 3)).toBe(3);
+    expect(ticketQuantityCap(5, null)).toBe(5);
+    expect(ticketQuantityCap(null, null)).toBe(Infinity);
   });
 });

@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { User, Phone as PhoneIcon, Eye, EyeOff, X, FileText } from "lucide-react";
+import { User, Phone as PhoneIcon, Eye, EyeOff, X, FileText, ArrowLeftRight } from "lucide-react";
+import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
 import {
   Drawer,
@@ -127,6 +128,12 @@ export function AdminUserDetailsDrawer({ userId, fallback, onClose }: AdminUserD
   const openTicketModal = (registrationId: string) => {
     onClose();
     openViewRegistrationModal({ registrationId });
+  };
+  // Troca de ingresso: página inteira; `userId` volta pra cá ("Ver nas inscrições").
+  const router = useRouter();
+  const openSwap = (registrationId: string) => {
+    onClose();
+    router.push(`/admin/registrations/${registrationId}/swap?userId=${userId}`);
   };
 
   const [form, setForm] = useState<FormState>({
@@ -445,6 +452,8 @@ export function AdminUserDetailsDrawer({ userId, fallback, onClose }: AdminUserD
                         const meta = r.order?.payment?.metadata;
                         const refundType = r.order?.payment?.refundType;
                         const badge = getRegistrationStatusBadge(finalStatus);
+                        // Substituída por troca de ingresso: CANCELLED no banco, "Trocado" na tela.
+                        const isVoided = !!r.voidedAt;
                         const isCancelled =
                           finalStatus === "CANCELLED" || paymentStatus === "FAILED";
                         const isRefunded =
@@ -475,7 +484,9 @@ export function AdminUserDetailsDrawer({ userId, fallback, onClose }: AdminUserD
                               <span
                                 className={cn(
                                   "inline-flex items-center justify-center gap-1 px-3 py-1 rounded text-xs font-medium whitespace-nowrap",
-                                  isPaid
+                                  isVoided
+                                    ? "bg-gray-11 text-white"
+                                    : isPaid
                                     ? "bg-primary-11 text-white"
                                     : isCancelled
                                       ? "bg-red-11 text-white"
@@ -486,7 +497,9 @@ export function AdminUserDetailsDrawer({ userId, fallback, onClose }: AdminUserD
                                           : badge?.className || "bg-gray-10/20 text-gray-11",
                                 )}
                               >
-                                {isPaid
+                                {isVoided
+                                  ? "Trocado"
+                                  : isPaid
                                   ? "Pago"
                                   : isCancelled
                                     ? "Cancelado"
@@ -521,6 +534,17 @@ export function AdminUserDetailsDrawer({ userId, fallback, onClose }: AdminUserD
                                     >
                                       <TicketIcon className="size-4" />
                                     </button>
+                                    {isPaid && (
+                                      <button
+                                        type="button"
+                                        onClick={() => openSwap(r.id)}
+                                        aria-label="Trocar ingresso"
+                                        title="Trocar ingresso"
+                                        className="flex size-9 items-center justify-center rounded-lg border border-gray-6 text-gray-12 hover:bg-gray-3 transition-colors"
+                                      >
+                                        <ArrowLeftRight className="size-4" />
+                                      </button>
+                                    )}
                                   </>
                                 )}
                               </div>

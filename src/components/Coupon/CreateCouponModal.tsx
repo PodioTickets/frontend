@@ -1026,7 +1026,7 @@ export function CreateCouponModal() {
                             )}
                           </div>
 
-                          {/* Conteúdo avançado */}
+                          {/* Configurações adicionais */}
                           <div className="flex flex-col gap-5">
                             <button
                               onClick={() => {
@@ -1036,7 +1036,7 @@ export function CreateCouponModal() {
                               className="flex items-center gap-2 text-primary-11 hover:text-primary-12 transition-colors self-start"
                             >
                               <span className="text-base font-medium font-family-dm-sans leading-[1.3]">
-                                Mostrar conteúdo avançado opcionais
+                                Configurações adicionais
                               </span>
                               <ArrowButton isOpen={showAdvanced} />
                             </button>

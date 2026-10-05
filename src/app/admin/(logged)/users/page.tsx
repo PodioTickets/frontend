@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Search } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { cn } from "@/utils/cn";
@@ -100,11 +101,28 @@ const ITEMS_PER_PAGE = 20;
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function AdminUsersPage() {
+  // Suspense exigido pelo useSearchParams (deep-link `?user=`).
+  return (
+    <Suspense fallback={null}>
+      <AdminUsersContent />
+    </Suspense>
+  );
+}
+
+function AdminUsersContent() {
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
   const [page, setPage] = useState(1);
   const [selected, setSelected] = useState<AdminUser | null>(null);
+  const router = useRouter();
+  // `?user=<id>` (volta da troca de ingresso) abre o drawer direto; fechar limpa a URL.
+  const searchParams = useSearchParams();
+  const deepLinkUserId = searchParams.get("user");
+  const closeDrawer = () => {
+    setSelected(null);
+    if (deepLinkUserId) router.replace("/admin/users");
+  };
 
   useEffect(() => {
     const t = setTimeout(() => setDebouncedSearch(search.trim()), 400);
@@ -151,9 +169,9 @@ export default function AdminUsersPage() {
   return (
     <div className="min-h-screen bg-gray-2 pb-10">
       <AdminUserDetailsDrawer
-        userId={selected?.id ?? null}
+        userId={selected?.id ?? deepLinkUserId}
         fallback={selected}
-        onClose={() => setSelected(null)}
+        onClose={closeDrawer}
       />
 
       <div className="max-w-[1222px] mx-auto w-full">

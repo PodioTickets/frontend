@@ -29,6 +29,7 @@ import {
   formatCouponLineLabel,
   formatVoucherLineLabel,
   normalizeCouponAppliesTo,
+  stackedManualDiscount,
 } from "@/lib/orderCouponDiscount";
 import type { CouponPreviewResult } from "@/lib/orderCouponDiscount";
 import { useAuth } from "@/hooks/useAuth";
@@ -402,10 +403,14 @@ export function ModalitiesStep({ event, onNext, onBack, isSubmitting = false, di
     ? quantityCouponCardPreview(quantityAuto.coupon)
     : ageCouponPreview;
 
-  // Acúmulo automático + manual (link ou da order): soma dos descontos, cada um sobre o
-  // preço cheio, capada no subtotal — espelha o backend (que segue autoritativo).
+  // Acúmulo automático + manual (link ou da order): o manual incide sobre o valor já
+  // descontado pelo automático, capado no subtotal — espelha o backend (autoritativo).
   const autoPreviewDiscount = quantityAuto ? quantityAuto.discount : ageCoupon ? ageDiscount : 0;
-  const manualPreviewDiscount = linkCouponDiscount ?? orderManualCouponDiscount ?? 0;
+  const manualPreviewDiscount = stackedManualDiscount(
+    linkCouponDiscount ?? orderManualCouponDiscount ?? 0,
+    autoPreviewDiscount,
+    appliedCoupon,
+  );
   const stackedPreview = hasManualCoupon || useLinkCoupon
     ? !useVoucher && autoPreviewDiscount > 0 && manualPreviewDiscount > 0
     : false;

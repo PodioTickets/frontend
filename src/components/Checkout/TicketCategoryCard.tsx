@@ -23,7 +23,8 @@ import { usePendingCouponSnapshot } from "@/hooks/usePendingCoupon";
 import { useCouponPreview } from "@/hooks/useCouponPreview";
 import type { CouponPreviewResult } from "@/lib/orderCouponDiscount";
 import { isAgeWithinTicketLimit } from "@/lib/ageCoupon";
-import { stepTicketQuantity } from "@/lib/ticketMinQuantity";
+import { stepTicketQuantity, ticketQuantityCap } from "@/lib/ticketMinQuantity";
+import { TicketPickControl, useTicketPick } from "@/contexts/TicketPickContext";
 
 /* Aplica preview de cupom (`?coupon=` na URL) ao preço base do ticket pra
  * exibir "R$ X (com desconto)  R$ Y (riscado)" nos cards. Backend é fonte
@@ -179,6 +180,7 @@ const TicketItemMobile = memo(({
   const [isImageModalOpen, setIsImageModalOpen] = useState(false);
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
   const hidePricing = useHidePricing();
+  const pick = useTicketPick();
 
   const price = getTicketPrice(ticket);
   const distanceKm = getDistanceKm(ticket);
@@ -222,8 +224,9 @@ const TicketItemMobile = memo(({
   const thumbnails = productItems.slice(1, 1 + VISIBLE_THUMB_COUNT);
   const remainingCount = Math.max(0, productItems.length - (1 + VISIBLE_THUMB_COUNT));
 
-  // "+" limitado à quantidade disponível do lote (teto total 20 no stepper).
-  const maxQuantity = ticket.availableQuantity ?? Infinity;
+  // "+" limitado à quantidade disponível do lote e ao máximo por pedido do ingresso
+  // (teto total 20 no stepper).
+  const maxQuantity = ticketQuantityCap(ticket.availableQuantity, ticket.maxPurchaseQuantity);
   const isAtMax = quantity >= maxQuantity || totalQuantity >= 20;
 
   const isBatchSoldOut =
@@ -451,6 +454,12 @@ const TicketItemMobile = memo(({
           </div>
         ) : null}
 
+        {pick ? (
+          /* Modo seleção (troca de ingresso no admin): sem preço, checkbox à direita. */
+          <div className="flex items-center justify-end">
+            <TicketPickControl ticket={ticket} soldOut={isBatchSoldOut} />
+          </div>
+        ) : (
         <div className="flex items-center justify-between">
           {hidePricing ? (
             <p className="text-xl font-bold text-gray-11 font-manrope leading-[1.1]">
@@ -510,6 +519,7 @@ const TicketItemMobile = memo(({
             </div>
           )}
         </div>
+        )}
 
         {productItems.length > 0 && (
           <ImageCarouselModal
@@ -562,6 +572,7 @@ const TicketItemDesktop = memo(({
   couponConditionsMet?: boolean;
 }) => {
   const hidePricing = useHidePricing();
+  const pick = useTicketPick();
   const [isImageModalOpen, setIsImageModalOpen] = useState(false);
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
   const [currentMainImageIndex, setCurrentMainImageIndex] = useState(0);
@@ -621,8 +632,9 @@ const TicketItemDesktop = memo(({
     return result;
   }, [productItems, currentMainImageIndex]);
 
-  // "+" limitado à quantidade disponível do lote (teto total 20 no stepper).
-  const maxQuantity = ticket.availableQuantity ?? Infinity;
+  // "+" limitado à quantidade disponível do lote e ao máximo por pedido do ingresso
+  // (teto total 20 no stepper).
+  const maxQuantity = ticketQuantityCap(ticket.availableQuantity, ticket.maxPurchaseQuantity);
   const isAtMax = quantity >= maxQuantity || totalQuantity >= 20;
 
   const isBatchSoldOut = ticket.activeBatch?.status === "SOLD_OUT";
@@ -841,6 +853,12 @@ const TicketItemDesktop = memo(({
                 no modo cortesia (hidePricing) mostra o texto "Voucher" no lugar do
                 preço — o controle de quantidade permanece à direita, mantendo a
                 modalidade colada ao título (não vai mais pra linha da modalidade). */}
+            {pick ? (
+              /* Modo seleção (troca de ingresso no admin): sem preço (Figma), checkbox à direita. */
+              <div className="flex items-end justify-end pt-4">
+                <TicketPickControl ticket={ticket} soldOut={isBatchSoldOut} />
+              </div>
+            ) : (
             <div className="flex items-end justify-between">
               {hidePricing ? (
                 <p className="text-xl font-bold text-gray-11 font-manrope leading-[1.1]">
@@ -860,6 +878,7 @@ const TicketItemDesktop = memo(({
                   da modalidade (junto de distância + limite de idade). */}
               {renderQuantityControl(false)}
             </div>
+            )}
           </div>
         </div>
       </div>

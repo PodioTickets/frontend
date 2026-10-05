@@ -123,6 +123,9 @@ export function TicketForm({
   const [minPurchaseQuantity, setMinPurchaseQuantity] = useState(
     initialData?.minPurchaseQuantity || "",
   );
+  const [maxPurchaseQuantity, setMaxPurchaseQuantity] = useState(
+    initialData?.maxPurchaseQuantity || "",
+  );
   /* Configurações adicionais: sempre MINIMIZADO ao abrir o formulário (pedido do
    * usuário). Só abre sozinho quando a validação aponta erro num campo de dentro. */
   const [showAdvanced, setShowAdvanced] = useState(false);
@@ -201,6 +204,7 @@ export function TicketForm({
         minAge,
         maxAge,
         minPurchaseQuantity,
+        maxPurchaseQuantity,
         hasKit,
         selectedGroupId,
         batches,
@@ -217,6 +221,7 @@ export function TicketForm({
       minAge,
       maxAge,
       minPurchaseQuantity,
+      maxPurchaseQuantity,
       hasKit,
       selectedGroupId,
       batches,
@@ -256,8 +261,16 @@ export function TicketForm({
         errors.minPurchaseQuantity = "Informe uma quantidade entre 1 e 20";
       }
     }
+    if (maxPurchaseQuantity.trim()) {
+      const n = parseInt(maxPurchaseQuantity, 10);
+      if (!Number.isFinite(n) || n < 1 || n > 20) {
+        errors.maxPurchaseQuantity = "Informe uma quantidade entre 1 e 20";
+      } else if (!errors.minPurchaseQuantity && minPurchaseQuantity.trim() && parseInt(minPurchaseQuantity, 10) > n) {
+        errors.maxPurchaseQuantity = "A quantidade máxima não pode ser menor que a mínima";
+      }
+    }
     // Erro dentro do painel fechado ficaria invisível → abre.
-    if (errors.ageRange || errors.minPurchaseQuantity) setShowAdvanced(true);
+    if (errors.ageRange || errors.minPurchaseQuantity || errors.maxPurchaseQuantity) setShowAdvanced(true);
     setFormErrors(errors);
     return Object.keys(errors).length === 0;
   };
@@ -303,6 +316,7 @@ export function TicketForm({
         if (parsed.minAge) setMinAge(parsed.minAge);
         if (parsed.maxAge) setMaxAge(parsed.maxAge);
         if (parsed.minPurchaseQuantity) setMinPurchaseQuantity(parsed.minPurchaseQuantity);
+        if (parsed.maxPurchaseQuantity) setMaxPurchaseQuantity(parsed.maxPurchaseQuantity);
         if (parsed.hasKit !== undefined) setHasKit(parsed.hasKit);
         if (parsed.batches && Array.isArray(parsed.batches))
           setBatches(parsed.batches);
@@ -329,6 +343,7 @@ export function TicketForm({
       minAge,
       maxAge,
       minPurchaseQuantity,
+      maxPurchaseQuantity,
       hasKit,
       batches,
       selectedGroupId,
@@ -352,6 +367,7 @@ export function TicketForm({
     minAge,
     maxAge,
     minPurchaseQuantity,
+    maxPurchaseQuantity,
     hasKit,
     batches,
     selectedGroupId,
@@ -374,6 +390,7 @@ export function TicketForm({
         setMinAge,
         setMaxAge,
         setMinPurchaseQuantity,
+        setMaxPurchaseQuantity,
         setHasKit,
         setSelectedGroupId,
         setBatches,
@@ -398,6 +415,7 @@ export function TicketForm({
         minAge,
         maxAge,
         minPurchaseQuantity,
+        maxPurchaseQuantity,
         hasKit,
         selectedGroupId,
         batches,
@@ -490,6 +508,7 @@ export function TicketForm({
             gender?: string;
             ageLimit?: { min?: number; max?: number };
             minPurchaseQuantity?: number | null;
+            maxPurchaseQuantity?: number | null;
             hasKit?: boolean;
             batches?: Array<{
               id?: string;
@@ -524,6 +543,7 @@ export function TicketForm({
             setMaxAge(ticketData.ageLimit.max?.toString() || "");
           }
           setMinPurchaseQuantity(ticketData.minPurchaseQuantity?.toString() || "");
+          setMaxPurchaseQuantity(ticketData.maxPurchaseQuantity?.toString() || "");
 
           setHasKit(ticketData.hasKit || false);
 
@@ -589,6 +609,7 @@ export function TicketForm({
               setMinAge,
               setMaxAge,
               setMinPurchaseQuantity,
+              setMaxPurchaseQuantity,
               setHasKit,
               setSelectedGroupId,
               setBatches,
@@ -784,6 +805,7 @@ export function TicketForm({
         minAge,
         maxAge,
         minPurchaseQuantity,
+        maxPurchaseQuantity,
         hasKit,
         selectedGroupId,
         batches,
@@ -948,6 +970,9 @@ export function TicketForm({
         minPurchaseQuantity: minPurchaseQuantity
           ? parseInt(minPurchaseQuantity, 10)
           : (isEdit ? null : undefined),
+        maxPurchaseQuantity: maxPurchaseQuantity
+          ? parseInt(maxPurchaseQuantity, 10)
+          : (isEdit ? null : undefined),
         hasKit: hasKit || false,
         productIds: products.map((p) => p.productId),
         batches: batches.map((b) => {
@@ -1048,6 +1073,7 @@ export function TicketForm({
           minAge,
           maxAge,
           minPurchaseQuantity,
+          maxPurchaseQuantity,
           hasKit,
           selectedGroupId,
           batches,
@@ -1451,7 +1477,8 @@ export function TicketForm({
                     </div>
                     {hasAgeRestriction && (
                       <>
-                        <div className="flex flex-col gap-3 mt-2 sm:flex-row sm:items-start">
+                        {/* Inputs ocupam 50% da largura (pedido do usuário); mobile empilha. */}
+                        <div className="flex flex-col gap-3 mt-2 sm:flex-row sm:items-start sm:w-1/2">
                           <div className="flex flex-col gap-2 w-full sm:w-max sm:flex-1 sm:min-w-0">
                             <label className="text-gray-12 text-base font-family-dm-sans leading-[1.1]">
                               Idade mínima
@@ -1490,26 +1517,51 @@ export function TicketForm({
                     )}
                   </div>
 
-                  {/* Quantidade mínima exigida (por pedido; vazio = sem mínimo) */}
+                  {/* Quantidade por pedido (vazio = sem limite) — mesmo layout dos inputs de idade. */}
                   <div className="flex flex-col gap-2">
                     <label className="text-gray-12 text-base font-family-dm-sans leading-[1.1]">
-                      Quantidade mínima exigida
+                      Quantidade por pedido
                     </label>
                     <p className="text-gray-11 text-sm font-family-dm-sans leading-[1.3]">
-                      Defina a quantidade mínima necessária para comprar este ingresso.
+                      Defina a quantidade mínima e máxima deste ingresso em um mesmo pedido.
                     </p>
-                    <Input
-                      value={minPurchaseQuantity}
-                      onChange={(e) => {
-                        setMinPurchaseQuantity(e.target.value.replace(/\D/g, "").slice(0, 2));
-                        if (formErrors.minPurchaseQuantity) clearFieldError("minPurchaseQuantity");
-                      }}
-                      placeholder="Ex: 2"
-                      inputMode="numeric"
-                      className={`h-12 mt-2 w-full sm:w-[200px] ${formErrors.minPurchaseQuantity ? "border-red-8 focus-visible:ring-red-8" : ""}`}
-                    />
-                    {formErrors.minPurchaseQuantity && (
-                      <p className="text-red-11 text-sm font-family-dm-sans">{formErrors.minPurchaseQuantity}</p>
+                    <div className="flex flex-col gap-3 mt-2 sm:flex-row sm:items-start sm:w-1/2">
+                      <div className="flex flex-col gap-2 w-full sm:flex-1 sm:min-w-0">
+                        <label className="text-gray-12 text-base font-family-dm-sans leading-[1.1]">
+                          Quantidade mínima
+                        </label>
+                        <Input
+                          value={minPurchaseQuantity}
+                          onChange={(e) => {
+                            setMinPurchaseQuantity(e.target.value.replace(/\D/g, "").slice(0, 2));
+                            if (formErrors.minPurchaseQuantity) clearFieldError("minPurchaseQuantity");
+                            if (formErrors.maxPurchaseQuantity) clearFieldError("maxPurchaseQuantity");
+                          }}
+                          placeholder="Ex: 2"
+                          inputMode="numeric"
+                          className={`h-12 ${formErrors.minPurchaseQuantity ? "border-red-8 focus-visible:ring-red-8" : ""}`}
+                        />
+                      </div>
+                      <div className="flex flex-col gap-2 w-full sm:flex-1 sm:min-w-0">
+                        <label className="text-gray-12 text-base font-family-dm-sans leading-[1.1]">
+                          Quantidade máxima
+                        </label>
+                        <Input
+                          value={maxPurchaseQuantity}
+                          onChange={(e) => {
+                            setMaxPurchaseQuantity(e.target.value.replace(/\D/g, "").slice(0, 2));
+                            if (formErrors.maxPurchaseQuantity) clearFieldError("maxPurchaseQuantity");
+                          }}
+                          placeholder="Ex: 4"
+                          inputMode="numeric"
+                          className={`h-12 ${formErrors.maxPurchaseQuantity ? "border-red-8 focus-visible:ring-red-8" : ""}`}
+                        />
+                      </div>
+                    </div>
+                    {(formErrors.minPurchaseQuantity || formErrors.maxPurchaseQuantity) && (
+                      <p className="text-red-11 text-sm font-family-dm-sans">
+                        {formErrors.minPurchaseQuantity || formErrors.maxPurchaseQuantity}
+                      </p>
                     )}
                   </div>
                 </motion.div>
