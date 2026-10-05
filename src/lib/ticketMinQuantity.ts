@@ -1,5 +1,7 @@
 /**
- * Quantidade mínima por pedido de um ingresso (`Ticket.minPurchaseQuantity`).
+ * Quantidade mínima/máxima por pedido de um ingresso (`Ticket.min/maxPurchaseQuantity`).
+ *
+ * Mínimo (`minPurchaseQuantity`):
  * Quem leva o ingresso leva ao menos N; não é obrigatório levá-lo. Então a
  * quantidade só vale 0 ou ≥ N — o backend recusa 1..N−1 na reserva.
  */
@@ -27,4 +29,17 @@ export function removalBreaksMinQuantity(
 ): boolean {
   const remaining = current - 1;
   return remaining > 0 && remaining < effectiveMin(min);
+}
+
+/**
+ * Teto do "+" de um ingresso: o menor entre as vagas do lote e o máximo por pedido
+ * (`Ticket.maxPurchaseQuantity`; null/0 = sem máximo). O backend recusa acima disso.
+ */
+export function ticketQuantityCap(
+  availableQuantity: number | null | undefined,
+  maxPurchaseQuantity: number | null | undefined,
+): number {
+  const available = availableQuantity ?? Infinity;
+  const max = maxPurchaseQuantity && maxPurchaseQuantity > 0 ? maxPurchaseQuantity : Infinity;
+  return Math.min(available, max);
 }

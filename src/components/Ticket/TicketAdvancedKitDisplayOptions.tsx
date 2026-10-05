@@ -79,7 +79,7 @@ export function TicketAdvancedKitDisplayOptions({
         )}
       >
         <span className="min-w-0 max-md:flex-1 font-family-dm-sans text-sm font-medium leading-[1.3] text-primary-11 md:text-base">
-          Ver configurações adicionais de visualização do ingresso
+          Configurações adicionais
         </span>
         <ArrowButton
           isOpen={advancedOpen}

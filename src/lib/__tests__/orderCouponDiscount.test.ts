@@ -440,3 +440,13 @@ describe("computeTicketPricingWithCoupon", () => {
     expect(r.total).toBeCloseTo(110, 5);
   });
 });
+
+describe("stackedManualDiscount (acúmulo sequencial)", () => {
+  it("manual percentual incide sobre o valor já descontado pelo automático", async () => {
+    const { stackedManualDiscount } = await import("../orderCouponDiscount");
+    // 5km R$89 com auto 10% (R$8,90) + 21km R$189; manual 20% cheio = R$55,60 → R$53,82.
+    expect(stackedManualDiscount(55.6, 8.9, { type: "PERCENTAGE", value: 20 })).toBe(53.82);
+    expect(stackedManualDiscount(30, 8.9, { type: "FIXED", value: 30 })).toBe(30);
+    expect(stackedManualDiscount(55.6, 0, { type: "PERCENTAGE", value: 20 })).toBe(55.6);
+  });
+});
