@@ -110,11 +110,11 @@ export function TicketForm({
     initialData?.distanceUnit || "KM",
   );
   const [gender, setGender] = useState(initialData?.gender || "all");
-  /* Criação de ingresso: a Restrição de idade já vem ATIVA com mínimo de 18 anos
-   * como padrão (regra de produto). Na edição, respeita exatamente o que o
-   * ingresso tem (`??`/`||` preservam `false`/"" vindos do `initialData`). */
+  /* Restrição de idade vem "Não" por padrão; ao marcar "Sim" na criação, a
+   * idade mínima já aparece preenchida com 18. Na edição, respeita exatamente o
+   * que o ingresso tem (`??`/`||` preservam `false`/"" vindos do `initialData`). */
   const [hasAgeRestriction, setHasAgeRestriction] = useState(
-    initialData?.hasAgeRestriction ?? mode === "create",
+    initialData?.hasAgeRestriction ?? false,
   );
   const [minAge, setMinAge] = useState(
     initialData?.minAge || (mode === "create" ? "18" : ""),
@@ -126,6 +126,15 @@ export function TicketForm({
   const [maxPurchaseQuantity, setMaxPurchaseQuantity] = useState(
     initialData?.maxPurchaseQuantity || "",
   );
+  /* "Quantidade por pedido" Sim/Não: derivado dos campos (sem coluna própria).
+   * O efeito liga o "Sim" quando qualquer hidratação (edição, rascunho) traz
+   * valor; o "Não" limpa os campos, então o payload já manda null/undefined. */
+  const [hasPurchaseQuantityLimit, setHasPurchaseQuantityLimit] = useState(
+    !!(initialData?.minPurchaseQuantity || initialData?.maxPurchaseQuantity),
+  );
+  useEffect(() => {
+    if (minPurchaseQuantity || maxPurchaseQuantity) setHasPurchaseQuantityLimit(true);
+  }, [minPurchaseQuantity, maxPurchaseQuantity]);
   /* Configurações adicionais: sempre MINIMIZADO ao abrir o formulário (pedido do
    * usuário). Só abre sozinho quando a validação aponta erro num campo de dentro. */
   const [showAdvanced, setShowAdvanced] = useState(false);
@@ -1517,14 +1526,42 @@ export function TicketForm({
                     )}
                   </div>
 
-                  {/* Quantidade por pedido (vazio = sem limite) — mesmo layout dos inputs de idade. */}
+                  {/* Quantidade por pedido (vazio = sem limite) — mesmo Sim/Não e layout da idade. */}
                   <div className="flex flex-col gap-2">
                     <label className="text-gray-12 text-base font-family-dm-sans leading-[1.1]">
                       Quantidade por pedido
                     </label>
-                    <p className="text-gray-11 text-sm font-family-dm-sans leading-[1.3]">
-                      Defina a quantidade mínima e máxima deste ingresso em um mesmo pedido.
-                    </p>
+                    <div className="flex flex-col gap-2">
+                      <p className="text-gray-11 text-sm font-family-dm-sans leading-[1.3]">
+                        Deseja definir uma quantidade mínima e máxima deste ingresso por pedido?
+                      </p>
+                      <div className="flex gap-4 mt-2">
+                        <div className="flex items-center gap-2">
+                          <Radio
+                            name="purchaseQuantityLimit"
+                            checked={hasPurchaseQuantityLimit}
+                            onChange={() => setHasPurchaseQuantityLimit(true)}
+                          />
+                          <span className="text-gray-12 text-base font-family-dm-sans">Sim</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Radio
+                            name="purchaseQuantityLimit"
+                            checked={!hasPurchaseQuantityLimit}
+                            onChange={() => {
+                              setHasPurchaseQuantityLimit(false);
+                              setMinPurchaseQuantity("");
+                              setMaxPurchaseQuantity("");
+                              clearFieldError("minPurchaseQuantity");
+                              clearFieldError("maxPurchaseQuantity");
+                            }}
+                          />
+                          <span className="text-gray-12 text-base font-family-dm-sans">Não</span>
+                        </div>
+                      </div>
+                    </div>
+                    {hasPurchaseQuantityLimit && (
+                    <>
                     <div className="flex flex-col gap-3 mt-2 sm:flex-row sm:items-start sm:w-1/2">
                       <div className="flex flex-col gap-2 w-full sm:flex-1 sm:min-w-0">
                         <label className="text-gray-12 text-base font-family-dm-sans leading-[1.1]">
@@ -1562,6 +1599,8 @@ export function TicketForm({
                       <p className="text-red-11 text-sm font-family-dm-sans">
                         {formErrors.minPurchaseQuantity || formErrors.maxPurchaseQuantity}
                       </p>
+                    )}
+                    </>
                     )}
                   </div>
                 </motion.div>
