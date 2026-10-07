@@ -99,6 +99,8 @@ export interface RegistrationsViewProps {
   openViewRegistrationModal: (args: ModalTarget) => void;
   openPaymentDetailsModal: (args: ModalTarget) => void;
   openExportDataModal: (args: ExportTarget) => void;
+  /** Só o admin passa: botão "Trocar ingresso" nas inscrições pagas. */
+  onSwapTicket?: (registrationId: string) => void;
 }
 
 export function RegistrationsView({
@@ -131,6 +133,7 @@ export function RegistrationsView({
   openViewRegistrationModal,
   openPaymentDetailsModal,
   openExportDataModal,
+  onSwapTicket,
 }: RegistrationsViewProps) {
   // Registros exibidos na página ATUAL (página cheia, exceto a última).
   const registrosShown = Math.max(
@@ -448,6 +451,7 @@ export function RegistrationsView({
                     const finalStatus = getFinalStatus(registration);
                     const paymentStatus = registration.order?.payment?.status;
                     const isCancelled = finalStatus === "CANCELLED" || paymentStatus === "FAILED";
+                    const isVoided = isCancelled && !!registration.voidedAt;
                     const isRefunded = finalStatus === "REFUNDED";
                     const isChargeback = finalStatus === "CHARGEBACK";
                     // "Pago" só sem estado terminal — senão free order cancelado
@@ -464,8 +468,8 @@ export function RegistrationsView({
                     const isVoucher = isPaid && isVoucherRegistration(registration);
                     // Cortesia (criada pelo organizador) não tem pedido real → sem "Ver pedido".
                     const isCourtesy = registration.order?.isCourtesy === true;
-                    const statusLabel = isVoucher ? "Voucher" : isPaid ? "Pago" : isCancelled ? "Cancelado" : isRefunded ? "Estornado" : isChargeback ? "ChargeBack" : "Pendente";
-                    const statusClass = isVoucher ? "bg-[#21835d] text-primary-1" : isPaid ? "bg-[#21835d] text-primary-1" : isCancelled || isRefunded || isChargeback ? "bg-red-11 text-white" : "bg-yellow-11 text-yellow-1";
+                    const statusLabel = isVoided ? "Trocado" : isVoucher ? "Voucher" : isPaid ? "Pago" : isCancelled ? "Cancelado" : isRefunded ? "Estornado" : isChargeback ? "ChargeBack" : "Pendente";
+                    const statusClass = isVoided ? "bg-gray-11 text-white" : isVoucher ? "bg-[#21835d] text-primary-1" : isPaid ? "bg-[#21835d] text-primary-1" : isCancelled || isRefunded || isChargeback ? "bg-red-11 text-white" : "bg-yellow-11 text-yellow-1";
                     const fullName = `${registration.user?.firstName || ""} ${registration.user?.lastName || ""}`.trim();
                     const createdDate = registration.createdAt ? new Date(registration.createdAt) : null;
                     // registration.createdAt é INSTANTE real → BRT (America/Sao_Paulo).
@@ -552,6 +556,15 @@ export function RegistrationsView({
                                   Ver pedido
                                 </button>
                               )}
+                              {onSwapTicket && isPaid && (
+                                <button
+                                  type="button"
+                                  onClick={() => onSwapTicket(registration.id)}
+                                  className="flex-1 h-11 flex items-center justify-center rounded-lg border border-gray-6 font-manrope font-bold text-base text-gray-12 hover:bg-gray-3 transition-colors"
+                                >
+                                  Trocar
+                                </button>
+                              )}
                             </div>
                           </>
                         )}
@@ -620,7 +633,7 @@ export function RegistrationsView({
                       Status
                     </p>
                   </div>
-                  <div className="flex h-full items-center justify-center p-4 w-[112px]">
+                  <div className={`flex h-full items-center justify-center p-4 ${onSwapTicket ? "w-[148px]" : "w-[112px]"}`}>
                     <p className="font-inter font-medium leading-[1.3] text-sm text-gray-12">
                       Ações
                     </p>
@@ -648,6 +661,7 @@ export function RegistrationsView({
                           eventName: event?.name,
                         });
                       }}
+                      onSwapTicket={onSwapTicket && (() => onSwapTicket(registration.id))}
                     />
                   ))}
                 </div>

@@ -88,7 +88,7 @@ function formatDifference(cents: number): string {
   return cents < 0 ? `- ${abs}` : abs;
 }
 
-export function AdminTicketSwap({ registrationId, userId }: { registrationId: string; userId: string | null }) {
+export function AdminTicketSwap({ registrationId }: { registrationId: string }) {
   const router = useRouter();
   const queryClient = useQueryClient();
 
@@ -151,7 +151,8 @@ export function AdminTicketSwap({ registrationId, userId }: { registrationId: st
   const newPrice = selectedTicket?.activeBatch?.price ?? null;
   const difference = newPrice !== null ? newPrice - currentPrice : 0;
 
-  const registrationsHref = userId ? `/admin/users?user=${userId}` : "/admin/users";
+  // Volta para a lista de inscrições do evento (de onde a troca é aberta).
+  const registrationsHref = eventId ? `/admin/events/${eventId}/registrations` : "/admin/events";
 
   const submit = async () => {
     if (busyRef.current || !selectedTicket) return;
@@ -163,9 +164,8 @@ export function AdminTicketSwap({ registrationId, userId }: { registrationId: st
         products: buildSwapProductsPayload(newProducts, variations),
       });
       setEmailSent(res.emailSent);
-      if (userId) {
-        queryClient.invalidateQueries({ queryKey: [...queryKeys.admin.users.all(), "registrations", userId] });
-      }
+      // Drawer de usuários do admin também lista as inscrições do participante.
+      queryClient.invalidateQueries({ queryKey: [...queryKeys.admin.users.all(), "registrations"] });
       setStep("done");
     } catch (e: unknown) {
       const err = e as { response?: { data?: { message?: string | string[] } }; message?: string };
@@ -337,7 +337,7 @@ export function AdminTicketSwap({ registrationId, userId }: { registrationId: st
           />
         </div>
       ) : (
-        <div className="max-w-[1158px] pt-8">
+        <div className="max-w-[1158px] mx-auto pt-8">
           <div className="flex flex-col gap-4">
             <div className="flex items-center gap-2">
               <button

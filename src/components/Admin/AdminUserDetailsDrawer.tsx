@@ -2,8 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { User, Phone as PhoneIcon, Eye, EyeOff, X, FileText, ArrowLeftRight } from "lucide-react";
-import { useRouter } from "next/navigation";
+import { User, Phone as PhoneIcon, Eye, EyeOff, X, FileText } from "lucide-react";
 import toast from "react-hot-toast";
 import {
   Drawer,
@@ -128,12 +127,6 @@ export function AdminUserDetailsDrawer({ userId, fallback, onClose }: AdminUserD
   const openTicketModal = (registrationId: string) => {
     onClose();
     openViewRegistrationModal({ registrationId });
-  };
-  // Troca de ingresso: página inteira; `userId` volta pra cá ("Ver nas inscrições").
-  const router = useRouter();
-  const openSwap = (registrationId: string) => {
-    onClose();
-    router.push(`/admin/registrations/${registrationId}/swap?userId=${userId}`);
   };
 
   const [form, setForm] = useState<FormState>({
@@ -534,17 +527,6 @@ export function AdminUserDetailsDrawer({ userId, fallback, onClose }: AdminUserD
                                     >
                                       <TicketIcon className="size-4" />
                                     </button>
-                                    {isPaid && (
-                                      <button
-                                        type="button"
-                                        onClick={() => openSwap(r.id)}
-                                        aria-label="Trocar ingresso"
-                                        title="Trocar ingresso"
-                                        className="flex size-9 items-center justify-center rounded-lg border border-gray-6 text-gray-12 hover:bg-gray-3 transition-colors"
-                                      >
-                                        <ArrowLeftRight className="size-4" />
-                                      </button>
-                                    )}
                                   </>
                                 )}
                               </div>
