@@ -11,7 +11,7 @@ import {
   USER_ACTIVITY_SOURCES,
 } from "@/services/admin/AdminService";
 import toast from "react-hot-toast";
-import { formatDateBR, toUtcDate } from "@/utils/datetimeBR";
+import { formatDateBR, toCivilDayBRT, toUtcDate } from "@/utils/datetimeBR";
 import {
   CATEGORY_LABELS,
   SOURCE_LABELS,
@@ -34,15 +34,17 @@ const numberFmt = new Intl.NumberFormat("pt-BR");
  * buracos com 0 sobre a janela pra barra de cada dia existir no gráfico.
  * Cap defensivo de 740 pontos (retenção máx. de 2 anos, alcançável no "Geral")
  * — range malformado não trava o render.
+ * `from`/`to` são instantes das fronteiras do dia BRT → dia civil BRT (o `slice`
+ * do ISO dava o dia UTC e o `to` virava "amanhã").
  */
 function densifyDailySeries(
   series: Array<{ day: string; count: number }>,
-  fromIso: string,
+  fromDay: string,
   toIso: string
 ): Array<{ day: string; count: number }> {
   const byDay = new Map(series.map((p) => [p.day, p.count]));
-  const start = toUtcDate(fromIso.slice(0, 10));
-  const end = toUtcDate(toIso.slice(0, 10));
+  const start = toUtcDate(fromDay);
+  const end = toUtcDate(toCivilDayBRT(toIso));
   if (!start || !end) return series;
   const out: Array<{ day: string; count: number }> = [];
   const cursor = new Date(start.getTime());
@@ -210,19 +212,30 @@ export function AdminUserActivityDashboard() {
   const stats = statsQuery.data;
   const loading = statsQuery.isLoading;
 
+  /* Início do gráfico: o dia do `from`; no "Geral", o 1º dia COM registro — o
+   * `from` fixo (2025-11-01) é anterior à tabela e à retenção de 90 dias, e enchia
+   * o gráfico de meses zerados. Séries vêm ordenadas por dia (ASC). */
+  const seriesStart = useMemo(() => {
+    if (!stats) return "";
+    const fromDay = toCivilDayBRT(stats.range.from);
+    if (period !== "all") return fromDay;
+    const firsts = [stats.perDay[0]?.day, stats.viewsPerDay[0]?.day].filter(Boolean) as string[];
+    return firsts.length ? firsts.sort()[0] : toCivilDayBRT(stats.range.to);
+  }, [stats, period]);
+
   const dailySeries = useMemo(
     () =>
-      stats ? densifyDailySeries(stats.perDay, stats.range.from, stats.range.to) : [],
-    [stats]
+      stats ? densifyDailySeries(stats.perDay, seriesStart, stats.range.to) : [],
+    [stats, seriesStart]
   );
 
   /* Views da página de evento por dia — "quantos eventos (views) deu no dia". */
   const viewsSeries = useMemo(
     () =>
       stats
-        ? densifyDailySeries(stats.viewsPerDay, stats.range.from, stats.range.to)
+        ? densifyDailySeries(stats.viewsPerDay, seriesStart, stats.range.to)
         : [],
-    [stats]
+    [stats, seriesStart]
   );
 
   const categoryMax = stats?.byCategory[0]?.count ?? 0;
@@ -240,7 +253,7 @@ export function AdminUserActivityDashboard() {
   };
 
   const rangeLabel = stats
-    ? `${formatDateBR(stats.range.from)} – ${formatDateBR(stats.range.to)}`
+    ? `${formatDateBR(seriesStart)} – ${formatDateBR(toCivilDayBRT(stats.range.to))}`
     : "";
 
   return (
