@@ -546,7 +546,8 @@ export function TicketForm({
           setDistanceUnit(ticketData.distanceUnit || "KM");
           setGender(ticketData.gender || "");
 
-          if (ticketData.ageLimit) {
+          // A API sempre manda `ageLimit: { min, max }`, mesmo com os dois null.
+          if (ticketData.ageLimit?.min || ticketData.ageLimit?.max) {
             setHasAgeRestriction(true);
             setMinAge(ticketData.ageLimit.min?.toString() || "");
             setMaxAge(ticketData.ageLimit.max?.toString() || "");
