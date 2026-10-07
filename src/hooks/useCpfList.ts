@@ -43,6 +43,9 @@ export function useCpfList() {
     setIsAddingCpf(false);
     setNewCpfInput("");
     setNewCpfError("");
+    // Lista deixou de estar vazia → o erro "Adicione ao menos um CPF" não vale mais
+    // (o import CSV já limpava; a inclusão manual não).
+    setCpfListError("");
   };
 
   const handleNewCpfInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {

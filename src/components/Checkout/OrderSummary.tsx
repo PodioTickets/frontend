@@ -60,6 +60,9 @@ export interface OrderSummaryCoupon {
   type?: "PERCENTAGE" | "FIXED";
   couponType?: "DISCOUNT" | "QUANTITY" | "AGE";
   fixedValue?: number;
+  /** Cupom automático ACUMULADO com o manual (linha própria acima do manual). */
+  autoDiscount?: number;
+  autoPercent?: number;
   error?: string | null;
   isApplied?: boolean;
   isLoading?: boolean;
@@ -112,6 +115,8 @@ export function OrderSummary({
     type: couponValueType,
     couponType,
     fixedValue: couponFixedValue,
+    autoDiscount: autoCouponDiscount = 0,
+    autoPercent: autoCouponPercent,
     error: couponError = null,
     isApplied: isCouponApplied = false,
     isLoading: isCouponLoading = false,
@@ -228,6 +233,20 @@ export function OrderSummary({
             <p className="font-manrope font-medium md:font-semibold">Subtotal:</p>
             <p className="font-manrope font-semibold md:font-bold">{formatPrice(subtotal)}</p>
           </div>
+
+          {/* Cupom automático acumulado com o manual */}
+          {autoCouponDiscount > 0 && (
+            <div className="flex items-center justify-between text-sm text-gray-12">
+              <p className="font-manrope font-medium md:font-semibold">
+                Cupom automático
+                {autoCouponPercent != null && autoCouponPercent > 0 ? ` (${autoCouponPercent}% OFF)` : ""}
+                :
+              </p>
+              <p className="font-manrope font-semibold md:font-bold">
+                -{formatPrice(autoCouponDiscount)}
+              </p>
+            </div>
+          )}
 
           {/* Cupom aplicado */}
           {isCouponApplied && couponDiscount > 0 && (

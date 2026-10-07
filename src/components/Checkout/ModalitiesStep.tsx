@@ -29,6 +29,7 @@ import {
   formatCouponLineLabel,
   formatVoucherLineLabel,
   normalizeCouponAppliesTo,
+  stackedManualDiscount,
 } from "@/lib/orderCouponDiscount";
 import type { CouponPreviewResult } from "@/lib/orderCouponDiscount";
 import { useAuth } from "@/hooks/useAuth";
@@ -353,8 +354,9 @@ export function ModalitiesStep({ event, onNext, onBack, isSubmitting = false, di
   // têm prioridade. O desconto respeita as condições do endpoint (appliesTo +
   // minCartValue) e some se a seleção não as atender.
   const hasManualCoupon = !!appliedCoupon && appliedCoupon.couponType === "DISCOUNT";
+  // Acúmulo (2026-10-02): com cupom manual o automático TAMBÉM vale — só o voucher exclui.
   const ageCoupon =
-    !useVoucher && !hasManualCoupon && ageEligibility?.applicable
+    !useVoucher && ageEligibility?.applicable
       ? ageEligibility.appliedCoupon
       : null;
   const ageDiscount = ageCoupon
@@ -366,7 +368,7 @@ export function ModalitiesStep({ event, onNext, onBack, isSubmitting = false, di
   // aparece assim que a seleção cai na faixa min/max. Voucher e cupom manual/link vêm
   // antes (escolha do usuário).
   const autoChoice =
-    !useVoucher && !hasManualCoupon && !useLinkCoupon
+    !useVoucher
       ? pickBestAutoCoupon(
         [
           ...(ageCoupon
@@ -401,6 +403,18 @@ export function ModalitiesStep({ event, onNext, onBack, isSubmitting = false, di
     ? quantityCouponCardPreview(quantityAuto.coupon)
     : ageCouponPreview;
 
+  // Acúmulo automático + manual (link ou da order): o manual incide sobre o valor já
+  // descontado pelo automático, capado no subtotal — espelha o backend (autoritativo).
+  const autoPreviewDiscount = quantityAuto ? quantityAuto.discount : ageCoupon ? ageDiscount : 0;
+  const manualPreviewDiscount = stackedManualDiscount(
+    linkCouponDiscount ?? orderManualCouponDiscount ?? 0,
+    autoPreviewDiscount,
+    appliedCoupon,
+  );
+  const stackedPreview = hasManualCoupon || useLinkCoupon
+    ? !useVoucher && autoPreviewDiscount > 0 && manualPreviewDiscount > 0
+    : false;
+
   // Taxa de serviço + total calculados client-side com a MESMA regra do
   // SubscriptionStep (`/produtos`): a taxa incide sobre o subtotal JÁ
   // DESCONTADO pelo cupom/voucher. Sem desconto, recai sobre o subtotal cheio.
@@ -412,6 +426,12 @@ export function ModalitiesStep({ event, onNext, onBack, isSubmitting = false, di
           totalPrice,
           event.participantFeePercent ?? 0,
         )
+        : stackedPreview
+          ? computeTicketPricingWithDiscount(
+            Math.min(totalPrice, autoPreviewDiscount + manualPreviewDiscount),
+            totalPrice,
+            event.participantFeePercent ?? 0,
+          )
         : quantityAuto
           ? computeTicketPricingWithDiscount(
             quantityAuto.discount,
@@ -446,7 +466,7 @@ export function ModalitiesStep({ event, onNext, onBack, isSubmitting = false, di
                 totalPrice,
                 event.participantFeePercent ?? 0,
               ),
-    [useVoucher, voucherDiscount, quantityAuto, ageCoupon, ageDiscount, linkCouponDiscount, orderManualCouponDiscount, appliedCoupon, totalPrice, event.participantFeePercent],
+    [useVoucher, voucherDiscount, stackedPreview, autoPreviewDiscount, manualPreviewDiscount, quantityAuto, ageCoupon, ageDiscount, linkCouponDiscount, orderManualCouponDiscount, appliedCoupon, totalPrice, event.participantFeePercent],
   );
   const serviceFee = pricing.serviceFee;
   const totalWithFee = pricing.total;
@@ -455,6 +475,8 @@ export function ModalitiesStep({ event, onNext, onBack, isSubmitting = false, di
   // "Cupom CÓDIGO (...)".
   const discountLineLabel = useVoucher
     ? formatVoucherLineLabel(voucherData?.code ?? orderVoucher?.code)
+    : stackedPreview
+      ? "Descontos"
     : quantityAuto
       ? formatAgeCouponLineLabel(quantityAuto.coupon)
     : ageCoupon

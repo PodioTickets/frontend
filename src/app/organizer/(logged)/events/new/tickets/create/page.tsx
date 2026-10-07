@@ -34,7 +34,9 @@ export default function CreateTicketPage() {
       initialGroupId={groupId || ""}
       backUrl="/organizer/events/new/tickets"
       mode="create"
-      localStorageKey="createTicketFormData"
+      // v2: o autosave antigo guardou "Restrição de idade: Sim" (padrão até 05/10)
+      // e o restaurava para sempre; a chave nova ignora esses dados.
+      localStorageKey="createTicketFormData:v2"
       className="bg-gray-2 flex-1 px-4 pb-0 pt-0 md:pt-4 md:px-5"
     />
   );

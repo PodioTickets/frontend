@@ -208,7 +208,7 @@ export function ExportDataModal() {
       onClick={() => setShowAdvanced((v) => !v)}
       className={`flex items-center gap-0 text-primary-11 font-medium font-family-dm-sans text-base leading-[1.3] hover:text-primary-10 transition-colors ${className}`}
     >
-      Ver opções avançadas
+      Ver configurações adicionais
       <ChevronDown
         className={`size-6 transition-transform duration-200 ${showAdvanced ? "" : "-rotate-90"}`}
       />

@@ -1,13 +1,8 @@
 "use client";
 
-import { Fragment, Suspense, useEffect, useRef, useState } from "react";
+import { Suspense, useEffect, useRef, useState } from "react";
 import { useParams } from "next/navigation";
-import Image from "next/image";
-import { ArrowLeft } from "lucide-react";
 import toast from "react-hot-toast";
-import { cn } from "@/utils/cn";
-import { Button } from "@/components/Button";
-import { ArrowButton } from "@/components/ArrowButton";
 import { Loading } from "@/components/Loading";
 import { CheckoutProvider, useCheckout } from "@/contexts/CheckoutContext";
 import { CheckoutTimerProvider, useCheckoutTimer } from "@/contexts/CheckoutTimerContext";
@@ -15,6 +10,7 @@ import { ModalitiesStep } from "@/components/Checkout/ModalitiesStep";
 import { InformationStep } from "@/components/Checkout/InformationStep";
 import { SubscriptionStep } from "@/components/Checkout/SubscriptionStep";
 import { CheckoutTimer } from "@/components/Checkout/CheckoutTimer";
+import { WizardDoneStep, WizardStepper } from "@/components/Checkout/WizardSteps";
 import { useCheckoutReservation } from "@/hooks/useCheckoutReservation";
 import { useCheckoutProductStep } from "@/hooks/useCheckoutProductStep";
 import { useCourtesyRegistration } from "@/hooks/useCourtesyRegistration";
@@ -192,11 +188,31 @@ function CourtesyFlow() {
 
   return (
     <div className="min-h-screen bg-gray-2">
-      <CourtesyStepper activeStep={activeStepId} currentLabel={stepLabel} onBack={back} showBack={step !== "done"} />
+      {/* Timer da reserva — só nas etapas com pedido ativo (Informações/Produtos),
+          igual ao checkout do comprador. `tickets` ainda não reservou; `done` já consumiu. */}
+      <WizardStepper
+        options={COURTESY_STEPS}
+        activeStep={activeStepId}
+        currentLabel={stepLabel}
+        onBack={back}
+        showBack={step !== "done"}
+        mobileRight={activeStepId > 1 && activeStepId < 4 ? <CheckoutTimer compact /> : undefined}
+        desktopRight={activeStepId > 1 && activeStepId < 4 ? <CheckoutTimer className="ml-2" /> : undefined}
+      />
 
       {step === "done" ? (
         <div className="w-full max-w-[1280px] mx-auto px-4">
-          <DoneStep count={totalRegistrations} onSee={() => orgNav.push(registrationsHref)} />
+          {/* Concordância singular/plural conforme a quantidade de inscrições criadas. */}
+          <WizardDoneStep
+            title={totalRegistrations === 1 ? "Inscrição criada!" : "Inscrições criadas!"}
+            description={
+              totalRegistrations === 1
+                ? "O participante recebeu o ingresso por e-mail."
+                : "Cada participante recebeu o próprio ingresso por e-mail."
+            }
+            actionLabel="Ver nas inscrições"
+            onAction={() => orgNav.push(registrationsHref)}
+          />
         </div>
       ) : (
         <HidePricingProvider>
@@ -237,83 +253,7 @@ function CourtesyFlow() {
   );
 }
 
-/* ── Stepper (Figma: Ingressos → Informações → Produtos → Conclusão) ─────── */
-function CourtesyStepper({ activeStep, currentLabel, onBack, showBack }: { activeStep: number; currentLabel: string; onBack: () => void; showBack: boolean }) {
-  const options = [
-    { id: 1, label: "Ingressos" }, { id: 2, label: "Informações" },
-    { id: 3, label: "Produtos" }, { id: 4, label: "Conclusão" },
-  ];
-  return (
-    <>
-      <div className="md:hidden w-full bg-gray-1 border-b border-gray-6">
-        <div className="flex items-center justify-center px-4 py-4 relative">
-          {showBack && (
-            <button onClick={onBack} aria-label="Voltar" className="absolute left-4 flex items-center justify-center">
-              <ArrowLeft className="size-5 text-gray-12" />
-            </button>
-          )}
-          <h1 className="text-base font-bold text-gray-12">{currentLabel}</h1>
-          {/* Timer da reserva — só nas etapas com pedido ativo (Informações/Produtos),
-              igual ao checkout do comprador. `tickets` ainda não reservou; `done` já consumiu. */}
-          {activeStep > 1 && activeStep < 4 && (
-            <div className="absolute right-4">
-              <CheckoutTimer compact />
-            </div>
-          )}
-        </div>
-      </div>
-      <div className="hidden md:flex w-full items-center justify-between max-w-7xl mx-auto gap-3 px-4 py-6 border-b border-gray-6">
-        <div className="flex items-center gap-3">
-          {options.map((option, index) => (
-            <Fragment key={option.id}>
-              {index > 0 && <ArrowButton isOpen={false} />}
-              <div className={cn("flex items-center gap-2 rounded-4xl px-4 py-2 transition-all", activeStep >= option.id ? "text-primary-2 bg-primary-11" : "text-gray-11 bg-gray-5")}>
-                <span className="font-medium">{option.label}</span>
-              </div>
-            </Fragment>
-          ))}
-        </div>
-        {/* Timer da reserva (Informações/Produtos) — mesmo componente do checkout do comprador. */}
-        {activeStep > 1 && activeStep < 4 && <CheckoutTimer className="ml-2" />}
-      </div>
-    </>
-  );
-}
-
-/* ── Conclusão (Figma 6410:130364) ───────────────────────────────────────── */
-function DoneStep({ count, onSee }: { count: number; onSee: () => void }) {
-  // Concordância singular/plural conforme a quantidade de inscrições criadas.
-  const isSingle = count === 1;
-  return (
-    <div className="w-full flex flex-col items-center text-center">
-      <div className="flex flex-col items-center gap-2">
-        {/* Badge verde (selo + check) com shine suave atrás */}
-        <div className="relative flex items-center justify-center p-6">
-          <div className="absolute inset-2 rounded-full bg-primary-5/50 blur-2xl" aria-hidden />
-          {/* SVG: serve direto (otimizador de raster retornaria 400 sem
-              `dangerouslyAllowSVG`, mantido OFF por segurança). */}
-          <Image src="/images/success-badge.svg" alt="" width={87} height={84} className="relative" priority unoptimized />
-        </div>
-        <div className="flex flex-col items-center gap-4">
-          <h2 className="text-[32px] font-extrabold font-manrope text-gray-12 leading-[1.1]">
-            {isSingle ? "Inscrição criada!" : "Inscrições criadas!"}
-          </h2>
-          <p className="text-lg font-medium font-family-dm-sans text-gray-12 leading-[1.3]">
-            {isSingle
-              ? "O participante recebeu o ingresso por e-mail."
-              : "Cada participante recebeu o próprio ingresso por e-mail."}
-          </p>
-        </div>
-      </div>
-      <div className="pt-8">
-        <Button
-          type="button"
-          onClick={onSee}
-          className="h-[52px] px-16 text-xl font-bold font-manrope rounded-lg"
-        >
-          Ver nas inscrições
-        </Button>
-      </div>
-    </div>
-  );
-}
+const COURTESY_STEPS = [
+  { id: 1, label: "Ingressos" }, { id: 2, label: "Informações" },
+  { id: 3, label: "Produtos" }, { id: 4, label: "Conclusão" },
+];

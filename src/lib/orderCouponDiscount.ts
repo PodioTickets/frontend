@@ -401,3 +401,19 @@ export function computeTicketPricingWithDiscount(
     showCouponDiscount: couponDiscount > 0,
   };
 }
+
+/**
+ * Acúmulo cupom automático + manual (regra 2026-10-05): o manual incide sobre o valor JÁ
+ * descontado pelo automático. Na prévia (só totais), manual percentual = cheio − % do
+ * automático; fixo não muda. Mesma unidade dos argumentos (reais). O backend
+ * (`mergeStackedUnits`) segue autoritativo, por ingresso.
+ */
+export function stackedManualDiscount(
+  manualFull: number,
+  autoDiscount: number,
+  manual: { type?: string; value?: number } | null | undefined,
+): number {
+  if (manual?.type !== "PERCENTAGE" || !manual.value || autoDiscount <= 0) return manualFull;
+  const rebased = manualFull - (autoDiscount * manual.value) / 100;
+  return Math.max(0, Math.round(rebased * 100) / 100);
+}

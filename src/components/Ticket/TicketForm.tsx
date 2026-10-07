@@ -15,6 +15,7 @@ import { ArrowButton } from "@/components/ArrowButton";
 import { Dropdown, DropdownOption } from "@/components/Dropdown";
 import { Input } from "@/components/Input";
 import { Radio } from "@/components/Radio";
+import { motion, AnimatePresence } from "framer-motion";
 import toast from "react-hot-toast";
 import type { ModalityTemplate, ModalityGroup } from "@/services/organizer/OrganizerService";
 import {
@@ -109,16 +110,34 @@ export function TicketForm({
     initialData?.distanceUnit || "KM",
   );
   const [gender, setGender] = useState(initialData?.gender || "all");
-  /* Criação de ingresso: a Restrição de idade já vem ATIVA com mínimo de 18 anos
-   * como padrão (regra de produto). Na edição, respeita exatamente o que o
-   * ingresso tem (`??`/`||` preservam `false`/"" vindos do `initialData`). */
+  /* Restrição de idade vem "Não" por padrão; ao marcar "Sim" na criação, a
+   * idade mínima já aparece preenchida com 18. Na edição, respeita exatamente o
+   * que o ingresso tem (`??`/`||` preservam `false`/"" vindos do `initialData`). */
   const [hasAgeRestriction, setHasAgeRestriction] = useState(
-    initialData?.hasAgeRestriction ?? mode === "create",
+    initialData?.hasAgeRestriction ?? false,
   );
   const [minAge, setMinAge] = useState(
     initialData?.minAge || (mode === "create" ? "18" : ""),
   );
   const [maxAge, setMaxAge] = useState(initialData?.maxAge || "");
+  const [minPurchaseQuantity, setMinPurchaseQuantity] = useState(
+    initialData?.minPurchaseQuantity || "",
+  );
+  const [maxPurchaseQuantity, setMaxPurchaseQuantity] = useState(
+    initialData?.maxPurchaseQuantity || "",
+  );
+  /* "Quantidade por pedido" Sim/Não: derivado dos campos (sem coluna própria).
+   * O efeito liga o "Sim" quando qualquer hidratação (edição, rascunho) traz
+   * valor; o "Não" limpa os campos, então o payload já manda null/undefined. */
+  const [hasPurchaseQuantityLimit, setHasPurchaseQuantityLimit] = useState(
+    !!(initialData?.minPurchaseQuantity || initialData?.maxPurchaseQuantity),
+  );
+  useEffect(() => {
+    if (minPurchaseQuantity || maxPurchaseQuantity) setHasPurchaseQuantityLimit(true);
+  }, [minPurchaseQuantity, maxPurchaseQuantity]);
+  /* Configurações adicionais: sempre MINIMIZADO ao abrir o formulário (pedido do
+   * usuário). Só abre sozinho quando a validação aponta erro num campo de dentro. */
+  const [showAdvanced, setShowAdvanced] = useState(false);
   const [hasKit, setHasKit] = useState(initialData?.hasKit || false);
   const [selectedGroupId, setSelectedGroupId] = useState(
     initialData?.selectedGroupId || initialGroupId || "",
@@ -193,6 +212,8 @@ export function TicketForm({
         hasAgeRestriction,
         minAge,
         maxAge,
+        minPurchaseQuantity,
+        maxPurchaseQuantity,
         hasKit,
         selectedGroupId,
         batches,
@@ -208,6 +229,8 @@ export function TicketForm({
       hasAgeRestriction,
       minAge,
       maxAge,
+      minPurchaseQuantity,
+      maxPurchaseQuantity,
       hasKit,
       selectedGroupId,
       batches,
@@ -240,6 +263,23 @@ export function TicketForm({
         errors.ageRange = "A idade mínima não pode ser maior que a máxima";
       }
     }
+    // Teto 20 = limite de ingressos por pedido do checkout (o backend valida igual).
+    if (minPurchaseQuantity.trim()) {
+      const n = parseInt(minPurchaseQuantity, 10);
+      if (!Number.isFinite(n) || n < 1 || n > 20) {
+        errors.minPurchaseQuantity = "Informe uma quantidade entre 1 e 20";
+      }
+    }
+    if (maxPurchaseQuantity.trim()) {
+      const n = parseInt(maxPurchaseQuantity, 10);
+      if (!Number.isFinite(n) || n < 1 || n > 20) {
+        errors.maxPurchaseQuantity = "Informe uma quantidade entre 1 e 20";
+      } else if (!errors.minPurchaseQuantity && minPurchaseQuantity.trim() && parseInt(minPurchaseQuantity, 10) > n) {
+        errors.maxPurchaseQuantity = "A quantidade máxima não pode ser menor que a mínima";
+      }
+    }
+    // Erro dentro do painel fechado ficaria invisível → abre.
+    if (errors.ageRange || errors.minPurchaseQuantity || errors.maxPurchaseQuantity) setShowAdvanced(true);
     setFormErrors(errors);
     return Object.keys(errors).length === 0;
   };
@@ -284,6 +324,8 @@ export function TicketForm({
           setHasAgeRestriction(parsed.hasAgeRestriction);
         if (parsed.minAge) setMinAge(parsed.minAge);
         if (parsed.maxAge) setMaxAge(parsed.maxAge);
+        if (parsed.minPurchaseQuantity) setMinPurchaseQuantity(parsed.minPurchaseQuantity);
+        if (parsed.maxPurchaseQuantity) setMaxPurchaseQuantity(parsed.maxPurchaseQuantity);
         if (parsed.hasKit !== undefined) setHasKit(parsed.hasKit);
         if (parsed.batches && Array.isArray(parsed.batches))
           setBatches(parsed.batches);
@@ -309,6 +351,8 @@ export function TicketForm({
       hasAgeRestriction,
       minAge,
       maxAge,
+      minPurchaseQuantity,
+      maxPurchaseQuantity,
       hasKit,
       batches,
       selectedGroupId,
@@ -331,6 +375,8 @@ export function TicketForm({
     hasAgeRestriction,
     minAge,
     maxAge,
+    minPurchaseQuantity,
+    maxPurchaseQuantity,
     hasKit,
     batches,
     selectedGroupId,
@@ -352,6 +398,8 @@ export function TicketForm({
         setHasAgeRestriction,
         setMinAge,
         setMaxAge,
+        setMinPurchaseQuantity,
+        setMaxPurchaseQuantity,
         setHasKit,
         setSelectedGroupId,
         setBatches,
@@ -375,6 +423,8 @@ export function TicketForm({
         hasAgeRestriction,
         minAge,
         maxAge,
+        minPurchaseQuantity,
+        maxPurchaseQuantity,
         hasKit,
         selectedGroupId,
         batches,
@@ -466,6 +516,8 @@ export function TicketForm({
             distanceUnit?: string;
             gender?: string;
             ageLimit?: { min?: number; max?: number };
+            minPurchaseQuantity?: number | null;
+            maxPurchaseQuantity?: number | null;
             hasKit?: boolean;
             batches?: Array<{
               id?: string;
@@ -494,11 +546,14 @@ export function TicketForm({
           setDistanceUnit(ticketData.distanceUnit || "KM");
           setGender(ticketData.gender || "");
 
-          if (ticketData.ageLimit) {
+          // A API sempre manda `ageLimit: { min, max }`, mesmo com os dois null.
+          if (ticketData.ageLimit?.min || ticketData.ageLimit?.max) {
             setHasAgeRestriction(true);
             setMinAge(ticketData.ageLimit.min?.toString() || "");
             setMaxAge(ticketData.ageLimit.max?.toString() || "");
           }
+          setMinPurchaseQuantity(ticketData.minPurchaseQuantity?.toString() || "");
+          setMaxPurchaseQuantity(ticketData.maxPurchaseQuantity?.toString() || "");
 
           setHasKit(ticketData.hasKit || false);
 
@@ -563,6 +618,8 @@ export function TicketForm({
               setHasAgeRestriction,
               setMinAge,
               setMaxAge,
+              setMinPurchaseQuantity,
+              setMaxPurchaseQuantity,
               setHasKit,
               setSelectedGroupId,
               setBatches,
@@ -757,6 +814,8 @@ export function TicketForm({
         hasAgeRestriction,
         minAge,
         maxAge,
+        minPurchaseQuantity,
+        maxPurchaseQuantity,
         hasKit,
         selectedGroupId,
         batches,
@@ -917,6 +976,13 @@ export function TicketForm({
               max: maxAge ? parseInt(maxAge) : undefined,
             }
             : (isEdit ? null : undefined),
+        // "" = sem mínimo; na edição manda null pra REMOVER um mínimo salvo.
+        minPurchaseQuantity: minPurchaseQuantity
+          ? parseInt(minPurchaseQuantity, 10)
+          : (isEdit ? null : undefined),
+        maxPurchaseQuantity: maxPurchaseQuantity
+          ? parseInt(maxPurchaseQuantity, 10)
+          : (isEdit ? null : undefined),
         hasKit: hasKit || false,
         productIds: products.map((p) => p.productId),
         batches: batches.map((b) => {
@@ -1016,6 +1082,8 @@ export function TicketForm({
           hasAgeRestriction,
           minAge,
           maxAge,
+          minPurchaseQuantity,
+          maxPurchaseQuantity,
           hasKit,
           selectedGroupId,
           batches,
@@ -1195,75 +1263,6 @@ export function TicketForm({
             </div>
           </div>
 
-          {/* Restrição de idade */}
-          <div className="flex flex-col gap-2">
-            <label className="text-gray-12 text-base font-family-dm-sans leading-[1.1]">
-              Restrição de idade
-            </label>
-            <div className="flex flex-col gap-2">
-              <p className="text-gray-11 text-sm font-family-dm-sans leading-[1.3]">
-                Esse ingresso tem restrição de idade?
-              </p>
-              <div className="flex gap-4 mt-2">
-                <div className="flex items-center gap-2">
-                  <Radio
-                    name="ageRestriction"
-                    checked={hasAgeRestriction}
-                    onChange={() => setHasAgeRestriction(true)}
-                  />
-                  <span className="text-gray-12 text-base font-family-dm-sans">Sim</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Radio
-                    name="ageRestriction"
-                    checked={!hasAgeRestriction}
-                    onChange={() => setHasAgeRestriction(false)}
-                  />
-                  <span className="text-gray-12 text-base font-family-dm-sans">Não</span>
-                </div>
-              </div>
-            </div>
-            {hasAgeRestriction && (
-              <>
-                <div className="flex flex-col gap-3 mt-2 sm:flex-row sm:items-start">
-                  <div className="flex flex-col gap-2 w-full sm:w-max sm:flex-1 sm:min-w-0">
-                    <label className="text-gray-12 text-base font-family-dm-sans leading-[1.1]">
-                      Idade mínima
-                    </label>
-                    <Input
-                      value={minAge}
-                      onChange={(e) => {
-                        setMinAge(e.target.value.replace(/\D/g, ""));
-                        if (formErrors.ageRange) clearFieldError("ageRange");
-                      }}
-                      placeholder="Ex: 18 anos"
-                      inputMode="numeric"
-                      className={`h-12 ${formErrors.ageRange ? "border-red-8 focus-visible:ring-red-8" : ""}`}
-                    />
-                  </div>
-                  <div className="flex flex-col gap-2 w-full sm:w-max sm:flex-1 sm:min-w-0">
-                    <label className="text-gray-12 text-base font-family-dm-sans leading-[1.1]">
-                      Idade máxima
-                    </label>
-                    <Input
-                      value={maxAge}
-                      onChange={(e) => {
-                        setMaxAge(e.target.value.replace(/\D/g, ""));
-                        if (formErrors.ageRange) clearFieldError("ageRange");
-                      }}
-                      placeholder="Ex: 35 anos"
-                      inputMode="numeric"
-                      className={`h-12 ${formErrors.ageRange ? "border-red-8 focus-visible:ring-red-8" : ""}`}
-                    />
-                  </div>
-                </div>
-                {formErrors.ageRange && (
-                  <p className="text-red-11 text-sm font-family-dm-sans">{formErrors.ageRange}</p>
-                )}
-              </>
-            )}
-          </div>
-
           <div className="flex flex-col gap-4 md:flex-row md:flex-wrap md:items-start">
             {/* Modalidades */}
             <div className="flex flex-col gap-2 w-full shrink-0 md:w-auto">
@@ -1434,6 +1433,181 @@ export function TicketForm({
               readOnly={readOnly}
             />
           )}
+
+          {/* Configurações adicionais — mesmo markup do formulário do evento
+              (`InformationForm`). Abre sozinho se o ingresso já tem alguma ativa. */}
+          <div className="flex flex-col gap-5">
+            <button
+              type="button"
+              onClick={() => setShowAdvanced(!showAdvanced)}
+              className="flex items-center gap-2 text-primary-11 hover:text-primary-12 transition-colors self-start"
+            >
+              <span className="text-base font-medium font-family-dm-sans leading-[1.3]">
+                Configurações adicionais
+              </span>
+              <ArrowButton isOpen={showAdvanced} />
+            </button>
+
+            <AnimatePresence>
+              {showAdvanced && (
+                <motion.div
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: "auto", opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  transition={{ duration: 0.2 }}
+                  className="overflow-hidden flex flex-col gap-9"
+                >
+                  {/* Restrição de idade */}
+                  <div className="flex flex-col gap-2">
+                    <label className="text-gray-12 text-base font-family-dm-sans leading-[1.1]">
+                      Restrição de idade
+                    </label>
+                    <div className="flex flex-col gap-2">
+                      <p className="text-gray-11 text-sm font-family-dm-sans leading-[1.3]">
+                        Esse ingresso tem restrição de idade?
+                      </p>
+                      <div className="flex gap-4 mt-2">
+                        <div className="flex items-center gap-2">
+                          <Radio
+                            name="ageRestriction"
+                            checked={hasAgeRestriction}
+                            onChange={() => setHasAgeRestriction(true)}
+                          />
+                          <span className="text-gray-12 text-base font-family-dm-sans">Sim</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Radio
+                            name="ageRestriction"
+                            checked={!hasAgeRestriction}
+                            onChange={() => setHasAgeRestriction(false)}
+                          />
+                          <span className="text-gray-12 text-base font-family-dm-sans">Não</span>
+                        </div>
+                      </div>
+                    </div>
+                    {hasAgeRestriction && (
+                      <>
+                        {/* Inputs ocupam 50% da largura (pedido do usuário); mobile empilha. */}
+                        <div className="flex flex-col gap-3 mt-2 sm:flex-row sm:items-start sm:w-1/2">
+                          <div className="flex flex-col gap-2 w-full sm:w-max sm:flex-1 sm:min-w-0">
+                            <label className="text-gray-12 text-base font-family-dm-sans leading-[1.1]">
+                              Idade mínima
+                            </label>
+                            <Input
+                              value={minAge}
+                              onChange={(e) => {
+                                setMinAge(e.target.value.replace(/\D/g, ""));
+                                if (formErrors.ageRange) clearFieldError("ageRange");
+                              }}
+                              placeholder="Ex: 18 anos"
+                              inputMode="numeric"
+                              className={`h-12 ${formErrors.ageRange ? "border-red-8 focus-visible:ring-red-8" : ""}`}
+                            />
+                          </div>
+                          <div className="flex flex-col gap-2 w-full sm:w-max sm:flex-1 sm:min-w-0">
+                            <label className="text-gray-12 text-base font-family-dm-sans leading-[1.1]">
+                              Idade máxima
+                            </label>
+                            <Input
+                              value={maxAge}
+                              onChange={(e) => {
+                                setMaxAge(e.target.value.replace(/\D/g, ""));
+                                if (formErrors.ageRange) clearFieldError("ageRange");
+                              }}
+                              placeholder="Ex: 35 anos"
+                              inputMode="numeric"
+                              className={`h-12 ${formErrors.ageRange ? "border-red-8 focus-visible:ring-red-8" : ""}`}
+                            />
+                          </div>
+                        </div>
+                        {formErrors.ageRange && (
+                          <p className="text-red-11 text-sm font-family-dm-sans">{formErrors.ageRange}</p>
+                        )}
+                      </>
+                    )}
+                  </div>
+
+                  {/* Quantidade por pedido (vazio = sem limite) — mesmo Sim/Não e layout da idade. */}
+                  <div className="flex flex-col gap-2">
+                    <label className="text-gray-12 text-base font-family-dm-sans leading-[1.1]">
+                      Quantidade por pedido
+                    </label>
+                    <div className="flex flex-col gap-2">
+                      <p className="text-gray-11 text-sm font-family-dm-sans leading-[1.3]">
+                        Deseja definir uma quantidade mínima e máxima deste ingresso por pedido?
+                      </p>
+                      <div className="flex gap-4 mt-2">
+                        <div className="flex items-center gap-2">
+                          <Radio
+                            name="purchaseQuantityLimit"
+                            checked={hasPurchaseQuantityLimit}
+                            onChange={() => setHasPurchaseQuantityLimit(true)}
+                          />
+                          <span className="text-gray-12 text-base font-family-dm-sans">Sim</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Radio
+                            name="purchaseQuantityLimit"
+                            checked={!hasPurchaseQuantityLimit}
+                            onChange={() => {
+                              setHasPurchaseQuantityLimit(false);
+                              setMinPurchaseQuantity("");
+                              setMaxPurchaseQuantity("");
+                              clearFieldError("minPurchaseQuantity");
+                              clearFieldError("maxPurchaseQuantity");
+                            }}
+                          />
+                          <span className="text-gray-12 text-base font-family-dm-sans">Não</span>
+                        </div>
+                      </div>
+                    </div>
+                    {hasPurchaseQuantityLimit && (
+                    <>
+                    <div className="flex flex-col gap-3 mt-2 sm:flex-row sm:items-start sm:w-1/2">
+                      <div className="flex flex-col gap-2 w-full sm:flex-1 sm:min-w-0">
+                        <label className="text-gray-12 text-base font-family-dm-sans leading-[1.1]">
+                          Quantidade mínima
+                        </label>
+                        <Input
+                          value={minPurchaseQuantity}
+                          onChange={(e) => {
+                            setMinPurchaseQuantity(e.target.value.replace(/\D/g, "").slice(0, 2));
+                            if (formErrors.minPurchaseQuantity) clearFieldError("minPurchaseQuantity");
+                            if (formErrors.maxPurchaseQuantity) clearFieldError("maxPurchaseQuantity");
+                          }}
+                          placeholder="Ex: 2"
+                          inputMode="numeric"
+                          className={`h-12 ${formErrors.minPurchaseQuantity ? "border-red-8 focus-visible:ring-red-8" : ""}`}
+                        />
+                      </div>
+                      <div className="flex flex-col gap-2 w-full sm:flex-1 sm:min-w-0">
+                        <label className="text-gray-12 text-base font-family-dm-sans leading-[1.1]">
+                          Quantidade máxima
+                        </label>
+                        <Input
+                          value={maxPurchaseQuantity}
+                          onChange={(e) => {
+                            setMaxPurchaseQuantity(e.target.value.replace(/\D/g, "").slice(0, 2));
+                            if (formErrors.maxPurchaseQuantity) clearFieldError("maxPurchaseQuantity");
+                          }}
+                          placeholder="Ex: 4"
+                          inputMode="numeric"
+                          className={`h-12 ${formErrors.maxPurchaseQuantity ? "border-red-8 focus-visible:ring-red-8" : ""}`}
+                        />
+                      </div>
+                    </div>
+                    {(formErrors.minPurchaseQuantity || formErrors.maxPurchaseQuantity) && (
+                      <p className="text-red-11 text-sm font-family-dm-sans">
+                        {formErrors.minPurchaseQuantity || formErrors.maxPurchaseQuantity}
+                      </p>
+                    )}
+                    </>
+                    )}
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
         </div>
       </div>
 

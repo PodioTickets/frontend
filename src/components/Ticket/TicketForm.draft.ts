@@ -13,6 +13,8 @@ export type TicketDraftStoredForm = {
   hasAgeRestriction: boolean;
   minAge: string;
   maxAge: string;
+  minPurchaseQuantity?: string;
+  maxPurchaseQuantity?: string;
   hasKit: boolean;
   selectedGroupId: string;
   batches: Batch[];
@@ -105,6 +107,8 @@ export function applyTicketDraftForm(
     setHasAgeRestriction: (v: boolean) => void;
     setMinAge: (v: string) => void;
     setMaxAge: (v: string) => void;
+    setMinPurchaseQuantity?: (v: string) => void;
+    setMaxPurchaseQuantity?: (v: string) => void;
     setHasKit: (v: boolean) => void;
     setSelectedGroupId: (v: string) => void;
     setBatches: (v: Batch[]) => void;
@@ -120,6 +124,8 @@ export function applyTicketDraftForm(
   a.setHasAgeRestriction(!!draft.hasAgeRestriction);
   a.setMinAge(draft.minAge ?? "");
   a.setMaxAge(draft.maxAge ?? "");
+  a.setMinPurchaseQuantity?.(draft.minPurchaseQuantity ?? "");
+  a.setMaxPurchaseQuantity?.(draft.maxPurchaseQuantity ?? "");
   a.setHasKit(!!draft.hasKit);
   a.setSelectedGroupId(draft.selectedGroupId ?? "");
   if (Array.isArray(draft.batches) && draft.batches.length > 0) {

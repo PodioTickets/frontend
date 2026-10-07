@@ -21,6 +21,10 @@ export interface TicketFormData {
   hasAgeRestriction: boolean;
   minAge: string;
   maxAge: string;
+  /** Quantidade mínima por pedido ("" = sem mínimo). */
+  minPurchaseQuantity?: string;
+  /** Quantidade máxima por pedido ("" = sem máximo). */
+  maxPurchaseQuantity?: string;
   hasKit: boolean;
   selectedGroupId: string;
   batches: Batch[];
