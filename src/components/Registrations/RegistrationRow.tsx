@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Image from "next/image";
-import { FileText } from "lucide-react";
+import { ArrowLeftRight, FileText } from "lucide-react";
 import { TicketIcon } from "@/components/Icons/TicketIcon";
 import { Tooltip } from "@/components/Tooltip";
 import { getAvatarUrl } from "@/utils/avatar";
@@ -24,11 +24,14 @@ export function RegistrationRow({
   registration,
   onViewRegistration,
   onViewPaymentDetails,
+  onSwapTicket,
   getStatusBadge,
 }: {
   registration: RegistrationListRow;
   onViewRegistration: () => void;
   onViewPaymentDetails: () => void;
+  /** Só o admin passa: troca de ingresso de inscrição paga. */
+  onSwapTicket?: () => void;
   getStatusBadge: (status: string) => RegistrationStatusBadge;
 }) {
   const [imageError, setImageError] = useState(false);
@@ -41,6 +44,7 @@ export function RegistrationRow({
 
   const statusBadge = getStatusBadge(finalStatus);
   const isCancelled = finalStatus === "CANCELLED" || paymentStatus === "FAILED";
+  const isVoided = isCancelled && !!registration.voidedAt;
   const isRefunded = finalStatus === "REFUNDED" || paymentStatus === "REFUNDED" || (paymentMetadata && refundType === "REFUND");
   const isChargeback = finalStatus === "CHARGEBACK" || paymentStatus === "CHARGEBACK" || (paymentMetadata && refundType === "CHARGEBACK");
   // "Pago" só quando NÃO há estado terminal de cancelamento/estorno/chargeback.
@@ -145,7 +149,9 @@ export function RegistrationRow({
       {/* Status */}
       <div className="flex h-full items-center justify-center text-center p-4 w-[120px]">
         <span
-          className={`inline-flex items-center justify-center gap-1 px-3 py-1 rounded text-xs font-medium ${isVoucher
+          className={`inline-flex items-center justify-center gap-1 px-3 py-1 rounded text-xs font-medium ${isVoided
+            ? "bg-gray-11 text-white"
+            : isVoucher
             ? "bg-primary-11 text-white"
             : isPaid
               ? "bg-primary-11 text-white"
@@ -158,7 +164,9 @@ export function RegistrationRow({
                     : statusBadge?.className || "bg-gray-10/20 text-gray-11"
             }`}
         >
-          {isVoucher
+          {isVoided
+            ? "Trocado"
+            : isVoucher
             ? "Voucher"
             : isPaid
               ? "Pago"
@@ -173,7 +181,7 @@ export function RegistrationRow({
       </div>
 
       {/* Ações */}
-      <div className="flex gap-1 h-full items-center justify-center px-4 py-2 w-[112px]">
+      <div className={`flex gap-1 h-full items-center justify-center px-4 py-2 ${onSwapTicket ? "w-[148px]" : "w-[112px]"}`}>
         {!isCancelled && (
           <>
             {!isCourtesy && (
@@ -196,6 +204,17 @@ export function RegistrationRow({
             >
               <TicketIcon className="size-4 text-gray-11" />
             </button>
+            {onSwapTicket && isPaid && (
+              <button
+                onClick={onSwapTicket}
+                name="swap-ticket"
+                aria-label="Trocar ingresso"
+                title="Trocar ingresso"
+                className="bg-gray-2 border border-gray-6 rounded-lg size-8 flex items-center justify-center hover:bg-gray-3 transition-colors cursor-pointer"
+              >
+                <ArrowLeftRight className="size-4 text-gray-11" />
+              </button>
+            )}
           </>
         )}
       </div>
