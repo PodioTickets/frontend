@@ -279,11 +279,6 @@ export function AdminTicketSwap({ registrationId }: { registrationId: string }) 
         <p className="text-base text-gray-11 font-family-dm-sans leading-[1.3]">Ingresso atual:</p>
         <div className="flex flex-col gap-3">
           <p className="text-base font-semibold font-manrope text-gray-12 leading-[1.1]">{currentTicketLabel}</p>
-          <p className="flex flex-wrap items-center gap-2 text-sm text-gray-11 font-family-dm-sans leading-[1.3]">
-            {registration.orderId && <span>Pedido {formatShortId(registration.orderId)}</span>}
-            {registration.orderId && paidLabel && <span className="size-1 rounded-full bg-gray-11" aria-hidden />}
-            {paidLabel && <span>{paidLabel}</span>}
-          </p>
         </div>
       </div>
       {step === "products" && selectedTicket && (

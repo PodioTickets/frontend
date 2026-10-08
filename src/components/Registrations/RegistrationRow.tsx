@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Image from "next/image";
-import { ArrowLeftRight, FileText } from "lucide-react";
+import { FileText } from "lucide-react";
 import { TicketIcon } from "@/components/Icons/TicketIcon";
 import { Tooltip } from "@/components/Tooltip";
 import { getAvatarUrl } from "@/utils/avatar";
@@ -24,14 +24,11 @@ export function RegistrationRow({
   registration,
   onViewRegistration,
   onViewPaymentDetails,
-  onSwapTicket,
   getStatusBadge,
 }: {
   registration: RegistrationListRow;
   onViewRegistration: () => void;
   onViewPaymentDetails: () => void;
-  /** Só o admin passa: troca de ingresso de inscrição paga. */
-  onSwapTicket?: () => void;
   getStatusBadge: (status: string) => RegistrationStatusBadge;
 }) {
   const [imageError, setImageError] = useState(false);
@@ -181,7 +178,7 @@ export function RegistrationRow({
       </div>
 
       {/* Ações */}
-      <div className={`flex gap-1 h-full items-center justify-center px-4 py-2 ${onSwapTicket ? "w-[148px]" : "w-[112px]"}`}>
+      <div className="flex gap-1 h-full items-center justify-center px-4 py-2 w-[112px]">
         {!isCancelled && (
           <>
             {!isCourtesy && (
@@ -204,17 +201,6 @@ export function RegistrationRow({
             >
               <TicketIcon className="size-4 text-gray-11" />
             </button>
-            {onSwapTicket && isPaid && (
-              <button
-                onClick={onSwapTicket}
-                name="swap-ticket"
-                aria-label="Trocar ingresso"
-                title="Trocar ingresso"
-                className="bg-gray-2 border border-gray-6 rounded-lg size-8 flex items-center justify-center hover:bg-gray-3 transition-colors cursor-pointer"
-              >
-                <ArrowLeftRight className="size-4 text-gray-11" />
-              </button>
-            )}
           </>
         )}
       </div>

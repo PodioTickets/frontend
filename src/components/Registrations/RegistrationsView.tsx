@@ -99,8 +99,6 @@ export interface RegistrationsViewProps {
   openViewRegistrationModal: (args: ModalTarget) => void;
   openPaymentDetailsModal: (args: ModalTarget) => void;
   openExportDataModal: (args: ExportTarget) => void;
-  /** Só o admin passa: botão "Trocar ingresso" nas inscrições pagas. */
-  onSwapTicket?: (registrationId: string) => void;
 }
 
 export function RegistrationsView({
@@ -133,7 +131,6 @@ export function RegistrationsView({
   openViewRegistrationModal,
   openPaymentDetailsModal,
   openExportDataModal,
-  onSwapTicket,
 }: RegistrationsViewProps) {
   // Registros exibidos na página ATUAL (página cheia, exceto a última).
   const registrosShown = Math.max(
@@ -556,15 +553,6 @@ export function RegistrationsView({
                                   Ver pedido
                                 </button>
                               )}
-                              {onSwapTicket && isPaid && (
-                                <button
-                                  type="button"
-                                  onClick={() => onSwapTicket(registration.id)}
-                                  className="flex-1 h-11 flex items-center justify-center rounded-lg border border-gray-6 font-manrope font-bold text-base text-gray-12 hover:bg-gray-3 transition-colors"
-                                >
-                                  Trocar
-                                </button>
-                              )}
                             </div>
                           </>
                         )}
@@ -633,7 +621,7 @@ export function RegistrationsView({
                       Status
                     </p>
                   </div>
-                  <div className={`flex h-full items-center justify-center p-4 ${onSwapTicket ? "w-[148px]" : "w-[112px]"}`}>
+                  <div className="flex h-full items-center justify-center p-4 w-[112px]">
                     <p className="font-inter font-medium leading-[1.3] text-sm text-gray-12">
                       Ações
                     </p>
@@ -661,7 +649,6 @@ export function RegistrationsView({
                           eventName: event?.name,
                         });
                       }}
-                      onSwapTicket={onSwapTicket && (() => onSwapTicket(registration.id))}
                     />
                   ))}
                 </div>

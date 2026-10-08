@@ -8,6 +8,7 @@ import {
 import { motion, AnimatePresence } from "framer-motion";
 import { X, ChevronLeft, Check } from "lucide-react";
 import { createPortal } from "react-dom";
+import { useRouter } from "next/navigation";
 import { cn } from "@/utils/cn";
 import {
   useState,
@@ -512,6 +513,18 @@ export function ViewRegistrationModal() {
    * VERDADE é o backend: os endpoints de edição rejeitam não-admin (403). */
   const isAdmin = getCurrentSurface() === "admin";
 
+  /* Troca de ingresso (só admin): inscrição confirmada e ainda não trocada. O backend
+   * revalida (pedido pago, elegibilidade). Página inteira → fecha o modal antes. */
+  const router = useRouter();
+  const canSwapTicket =
+    isAdmin && currentRegistration?.status === "CONFIRMED" && !currentRegistration?.voidedAt;
+  const openSwapTicket = () => {
+    const id = currentRegistration?.id;
+    if (!id) return;
+    closeViewRegistrationModal();
+    router.push(`/admin/registrations/${id}/swap`);
+  };
+
   const getGenderLabel = (gender?: string) => {
     if (!gender) return "";
     const labels: Record<string, string> = {
@@ -800,7 +813,7 @@ export function ViewRegistrationModal() {
    * vez e reutilizado nos rodapés mobile e desktop. O reenvio abre o
    * `ResendTicketsModal` (mesmo do modal de pedido). */
   const footerActions = (
-    <div className="flex items-center gap-2 w-full md:w-auto">
+    <div className="flex flex-wrap md:flex-nowrap items-center gap-2 w-full md:w-auto">
       <Button
         type="button"
         variant={"outline"}
@@ -818,6 +831,16 @@ export function ViewRegistrationModal() {
       >
         Reenviar ingresso
       </Button>
+      {canSwapTicket && (
+        <Button
+          type="button"
+          variant={"outline"}
+          onClick={openSwapTicket}
+          className="flex basis-full md:basis-auto md:flex-none border-gray-6 text-gray-12 items-center justify-center gap-2 px-5 py-2.5 font-family-dm-sans cursor-pointer"
+        >
+          Trocar ingresso
+        </Button>
+      )}
     </div>
   );
 
