@@ -54,7 +54,6 @@ export default function EventRegistrationsPage() {
         />
       }
       {...viewProps}
-      onSwapTicket={(registrationId) => router.push(`/admin/registrations/${registrationId}/swap`)}
     />
   );
 }

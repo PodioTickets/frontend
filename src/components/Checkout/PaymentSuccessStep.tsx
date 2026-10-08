@@ -36,7 +36,7 @@ export function PaymentSuccessStep() {
             Pagamento aprovado
           </h1>
           <p className="font-family-dm-sans text-base font-medium leading-[1.3] md:text-lg">
-            Sua inscrição foi confirmada. Enviamos o comprovante para o seu e-mail.
+            Sua inscrição foi confirmada! Enviamos o comprovante para o seu e-mail.
           </p>
         </div>
       </div>
