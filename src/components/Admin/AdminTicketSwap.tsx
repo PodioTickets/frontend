@@ -311,15 +311,16 @@ export function AdminTicketSwap({ registrationId }: { registrationId: string }) 
 
   return (
     <div className="pb-10">
-      {/* Pílulas de etapa sangram até as bordas do <main> do admin (Figma: faixa com borda). */}
-      <div className="-mx-4 sm:-mx-6 lg:-mx-8 -mt-4 md:-mt-8">
+      {/* Faixa com borda sangra até as bordas do <main> do admin (Figma); as pílulas ficam
+          na mesma coluna centralizada (1158px) do conteúdo — o sangramento é simétrico. */}
+      <div className="-mx-4 sm:-mx-6 lg:-mx-8 -mt-4 md:-mt-8 md:px-6 lg:px-8 md:border-b md:border-gray-6">
         <WizardStepper
           options={SWAP_STEPS}
           activeStep={activeStepId}
           currentLabel={stepLabel}
           onBack={back}
           showBack={step !== "done"}
-          className="max-w-none mx-0 px-8 py-5"
+          className="max-w-[1158px] mx-auto px-0 py-5 border-b-0"
         />
       </div>
 
