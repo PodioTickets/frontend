@@ -37,7 +37,7 @@ interface Props {
   data: SalesByPaymentMethodData;
 }
 
-const METHOD_LABEL: Record<string, string> = {
+export const METHOD_LABEL: Record<string, string> = {
   PIX: "PIX",
   CREDIT_CARD: "Cartão de crédito",
   DEBIT_CARD: "Cartão de débito",

@@ -2,8 +2,10 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Activity, Users, Link2, Ghost, Eye, BadgeCheck } from "lucide-react";
+import { Activity, Users, Link2, Ghost, Eye, BadgeCheck, Receipt, Repeat } from "lucide-react";
 import { cn } from "@/utils/cn";
+import { formatBRLFromCents } from "@/lib/money";
+import { METHOD_LABEL } from "@/components/Organizer/SalesByPaymentMethod";
 import { adminService } from "@/services";
 import { queryKeys } from "@/services/cache/QueryClient";
 import {
@@ -114,7 +116,8 @@ function StatCard({
 }: {
   icon: React.ReactNode;
   label: string;
-  value: number;
+  /** Número = contagem formatada; string = já formatado (ex.: moeda). */
+  value: number | string;
   hint?: string;
 }) {
   return (
@@ -126,7 +129,7 @@ function StatCard({
         </p>
       </div>
       <p className="mt-2 text-2xl font-extrabold font-manrope leading-[1.1] text-gray-12 tabular-nums">
-        {numberFmt.format(value)}
+        {typeof value === "number" ? numberFmt.format(value) : value}
       </p>
       {hint ? (
         <p className="mt-1 text-xs text-gray-11 font-family-dm-sans">{hint}</p>
@@ -376,6 +379,18 @@ export function AdminUserActivityDashboard() {
                   : undefined
               }
             />
+            <StatCard
+              icon={<Receipt className="size-4" />}
+              label="Ticket médio"
+              value={formatBRLFromCents(stats.totals.averageTicket)}
+              hint="Por pedido pago"
+            />
+            <StatCard
+              icon={<Repeat className="size-4" />}
+              label="Compraram mais de uma vez"
+              value={stats.totals.repeatBuyers}
+              hint="Desde sempre, na Pódio"
+            />
           </div>
 
           {/* Série diária — todas as atividades */}
@@ -440,6 +455,29 @@ export function AdminUserActivityDashboard() {
                 </div>
               )}
             </div>
+          </div>
+
+          {/* Pedidos pagos por forma de pagamento (sem gratuito/voucher/estorno) */}
+          <div className="rounded-xl border border-gray-6 bg-gray-1 p-4 ">
+            <p className="text-sm font-bold text-gray-12 font-manrope mb-4">
+              Por forma de pagamento
+            </p>
+            {stats.byPaymentMethod.length === 0 ? (
+              <p className="py-6 text-center text-sm text-gray-11 font-family-dm-sans">
+                Sem dados no período.
+              </p>
+            ) : (
+              <div className="flex flex-col gap-3">
+                {stats.byPaymentMethod.map((g) => (
+                  <DistributionRow
+                    key={g.method}
+                    label={METHOD_LABEL[g.method] ?? g.method}
+                    count={g.count}
+                    max={stats.byPaymentMethod[0].count}
+                  />
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Top ações */}
