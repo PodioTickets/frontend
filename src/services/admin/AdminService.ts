@@ -109,7 +109,13 @@ export interface AdminUserActivityStats {
     eventPageViews: number;
     /** Pagamentos confirmados (action `order.paid`) no período. */
     paymentsConfirmed: number;
+    /** Centavos: valor cobrado ÷ pedidos pagos (sem gratuito/voucher/estorno) no período. */
+    averageTicket: number;
+    /** Compradores com 2+ pedidos pagos desde sempre (ignora os filtros). */
+    repeatBuyers: number;
   };
+  /** Pedidos pagos por forma de pagamento (PIX, CREDIT_CARD…) no período. */
+  byPaymentMethod: Array<{ method: string; count: number }>;
   byCategory: Array<{ category: string; count: number }>;
   bySource: Array<{ source: string; count: number }>;
   topActions: Array<{ action: string; count: number }>;
@@ -1131,7 +1137,13 @@ export class AdminService {
         anonymousEvents: n(totals.anonymousEvents),
         eventPageViews: n(totals.eventPageViews),
         paymentsConfirmed: n(totals.paymentsConfirmed),
+        averageTicket: n(totals.averageTicket),
+        repeatBuyers: n(totals.repeatBuyers),
       },
+      byPaymentMethod: arr(data.byPaymentMethod).map((g) => ({
+        method: s(g.method),
+        count: n(g.count),
+      })),
       byCategory: arr(data.byCategory).map((g) => ({
         category: s(g.category),
         count: n(g.count),
