@@ -41,6 +41,7 @@ export function RegistrationRow({
 
   const statusBadge = getStatusBadge(finalStatus);
   const isCancelled = finalStatus === "CANCELLED" || paymentStatus === "FAILED";
+  const isVoided = isCancelled && !!registration.voidedAt;
   const isRefunded = finalStatus === "REFUNDED" || paymentStatus === "REFUNDED" || (paymentMetadata && refundType === "REFUND");
   const isChargeback = finalStatus === "CHARGEBACK" || paymentStatus === "CHARGEBACK" || (paymentMetadata && refundType === "CHARGEBACK");
   // "Pago" só quando NÃO há estado terminal de cancelamento/estorno/chargeback.
@@ -145,7 +146,9 @@ export function RegistrationRow({
       {/* Status */}
       <div className="flex h-full items-center justify-center text-center p-4 w-[120px]">
         <span
-          className={`inline-flex items-center justify-center gap-1 px-3 py-1 rounded text-xs font-medium ${isVoucher
+          className={`inline-flex items-center justify-center gap-1 px-3 py-1 rounded text-xs font-medium ${isVoided
+            ? "bg-gray-11 text-white"
+            : isVoucher
             ? "bg-primary-11 text-white"
             : isPaid
               ? "bg-primary-11 text-white"
@@ -158,7 +161,9 @@ export function RegistrationRow({
                     : statusBadge?.className || "bg-gray-10/20 text-gray-11"
             }`}
         >
-          {isVoucher
+          {isVoided
+            ? "Trocado"
+            : isVoucher
             ? "Voucher"
             : isPaid
               ? "Pago"

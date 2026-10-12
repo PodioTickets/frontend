@@ -40,6 +40,8 @@ export type RegistrationListRow = Omit<Registration, "user"> & {
   user: Registration["user"] & { cpf?: string; avatarUrl?: string };
   ticketId?: string;
   createdAt?: string;
+  /** Substituída por troca de ingresso: CANCELLED no banco, "Trocado" na tela. */
+  voidedAt?: string | null;
   ticket?: {
     name?: string;
     price?: number;

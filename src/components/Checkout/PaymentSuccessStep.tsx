@@ -19,12 +19,16 @@ export function PaymentSuccessStep() {
   return (
     <div className="flex w-full flex-1 flex-col items-center px-4 pt-16 pb-24 text-center md:pt-24">
       <div className="flex flex-col items-center gap-4">
+        {/* SVG (mesmo selo do WizardDoneStep): nítido em qualquer densidade — o PNG
+            antigo tinha 88x84 e era esticado para 96x96. `unoptimized` porque o
+            otimizador recusa SVG (`dangerouslyAllowSVG` OFF). */}
         <Image
-          src="/images/approved-payment-badge.png"
+          src="/images/success-badge.svg"
           alt="Pagamento aprovado"
           width={96}
-          height={96}
+          height={92}
           priority
+          unoptimized
           draggable={false}
         />
         <div className="flex max-w-[560px] flex-col items-center gap-4 text-gray-12">
@@ -32,7 +36,7 @@ export function PaymentSuccessStep() {
             Pagamento aprovado
           </h1>
           <p className="font-family-dm-sans text-base font-medium leading-[1.3] md:text-lg">
-            Sua inscrição foi confirmada. Enviamos o comprovante para o seu e-mail.
+            Sua inscrição foi confirmada! Enviamos o comprovante para o seu e-mail.
           </p>
         </div>
       </div>

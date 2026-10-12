@@ -88,7 +88,7 @@ function formatDifference(cents: number): string {
   return cents < 0 ? `- ${abs}` : abs;
 }
 
-export function AdminTicketSwap({ registrationId, userId }: { registrationId: string; userId: string | null }) {
+export function AdminTicketSwap({ registrationId }: { registrationId: string }) {
   const router = useRouter();
   const queryClient = useQueryClient();
 
@@ -151,7 +151,8 @@ export function AdminTicketSwap({ registrationId, userId }: { registrationId: st
   const newPrice = selectedTicket?.activeBatch?.price ?? null;
   const difference = newPrice !== null ? newPrice - currentPrice : 0;
 
-  const registrationsHref = userId ? `/admin/users?user=${userId}` : "/admin/users";
+  // Volta para a lista de inscrições do evento (de onde a troca é aberta).
+  const registrationsHref = eventId ? `/admin/events/${eventId}/registrations` : "/admin/events";
 
   const submit = async () => {
     if (busyRef.current || !selectedTicket) return;
@@ -163,9 +164,8 @@ export function AdminTicketSwap({ registrationId, userId }: { registrationId: st
         products: buildSwapProductsPayload(newProducts, variations),
       });
       setEmailSent(res.emailSent);
-      if (userId) {
-        queryClient.invalidateQueries({ queryKey: [...queryKeys.admin.users.all(), "registrations", userId] });
-      }
+      // Drawer de usuários do admin também lista as inscrições do participante.
+      queryClient.invalidateQueries({ queryKey: [...queryKeys.admin.users.all(), "registrations"] });
       setStep("done");
     } catch (e: unknown) {
       const err = e as { response?: { data?: { message?: string | string[] } }; message?: string };
@@ -279,11 +279,6 @@ export function AdminTicketSwap({ registrationId, userId }: { registrationId: st
         <p className="text-base text-gray-11 font-family-dm-sans leading-[1.3]">Ingresso atual:</p>
         <div className="flex flex-col gap-3">
           <p className="text-base font-semibold font-manrope text-gray-12 leading-[1.1]">{currentTicketLabel}</p>
-          <p className="flex flex-wrap items-center gap-2 text-sm text-gray-11 font-family-dm-sans leading-[1.3]">
-            {registration.orderId && <span>Pedido {formatShortId(registration.orderId)}</span>}
-            {registration.orderId && paidLabel && <span className="size-1 rounded-full bg-gray-11" aria-hidden />}
-            {paidLabel && <span>{paidLabel}</span>}
-          </p>
         </div>
       </div>
       {step === "products" && selectedTicket && (
@@ -311,15 +306,16 @@ export function AdminTicketSwap({ registrationId, userId }: { registrationId: st
 
   return (
     <div className="pb-10">
-      {/* Pílulas de etapa sangram até as bordas do <main> do admin (Figma: faixa com borda). */}
-      <div className="-mx-4 sm:-mx-6 lg:-mx-8 -mt-4 md:-mt-8">
+      {/* Faixa com borda sangra até as bordas do <main> do admin (Figma); as pílulas ficam
+          na mesma coluna centralizada (1158px) do conteúdo — o sangramento é simétrico. */}
+      <div className="-mx-4 sm:-mx-6 lg:-mx-8 -mt-4 md:-mt-8 md:px-6 lg:px-8 md:border-b md:border-gray-6">
         <WizardStepper
           options={SWAP_STEPS}
           activeStep={activeStepId}
           currentLabel={stepLabel}
           onBack={back}
           showBack={step !== "done"}
-          className="max-w-none mx-0 px-8 py-5"
+          className="max-w-[1158px] mx-auto px-0 py-5 border-b-0"
         />
       </div>
 
@@ -337,7 +333,7 @@ export function AdminTicketSwap({ registrationId, userId }: { registrationId: st
           />
         </div>
       ) : (
-        <div className="max-w-[1158px] pt-8">
+        <div className="max-w-[1158px] mx-auto pt-8">
           <div className="flex flex-col gap-4">
             <div className="flex items-center gap-2">
               <button

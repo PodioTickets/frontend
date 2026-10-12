@@ -14,7 +14,8 @@ export interface TicketPickValue {
   selectedTicketId: string | null;
   /** Ingresso que o participante já tem: mostra "Ingresso atual" e não é selecionável. */
   currentTicketId: string | null;
-  onPick: (ticketId: string) => void;
+  /** `null` = desmarcou o ingresso selecionado. */
+  onPick: (ticketId: string | null) => void;
   /** Motivo de bloqueio (ex.: idade/gênero do participante); null = pode escolher. */
   blockedReason?: (ticket: Ticket) => string | null;
 }
@@ -56,11 +57,12 @@ export function TicketPickControl({ ticket, soldOut }: { ticket: Ticket; soldOut
       {blocked && (
         <p className="text-xs font-medium text-red-11 font-family-dm-sans text-right">{blocked}</p>
       )}
-      {/* Checkbox padrão do projeto (mesmo do checkout/cupons) — seleção única via onPick. */}
+      {/* Checkbox padrão do projeto (mesmo do checkout/cupons) — seleção única via onPick;
+          clicar no marcado desmarca. */}
       <Checkbox
         checked={checked}
         disabled={!!blocked}
-        onCheckedChange={() => pick.onPick(ticket.id)}
+        onCheckedChange={() => pick.onPick(checked ? null : ticket.id)}
         aria-label={`Selecionar ${ticket.name}`}
       />
     </div>

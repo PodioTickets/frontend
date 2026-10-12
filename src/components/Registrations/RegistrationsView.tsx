@@ -448,6 +448,7 @@ export function RegistrationsView({
                     const finalStatus = getFinalStatus(registration);
                     const paymentStatus = registration.order?.payment?.status;
                     const isCancelled = finalStatus === "CANCELLED" || paymentStatus === "FAILED";
+                    const isVoided = isCancelled && !!registration.voidedAt;
                     const isRefunded = finalStatus === "REFUNDED";
                     const isChargeback = finalStatus === "CHARGEBACK";
                     // "Pago" só sem estado terminal — senão free order cancelado
@@ -464,8 +465,8 @@ export function RegistrationsView({
                     const isVoucher = isPaid && isVoucherRegistration(registration);
                     // Cortesia (criada pelo organizador) não tem pedido real → sem "Ver pedido".
                     const isCourtesy = registration.order?.isCourtesy === true;
-                    const statusLabel = isVoucher ? "Voucher" : isPaid ? "Pago" : isCancelled ? "Cancelado" : isRefunded ? "Estornado" : isChargeback ? "ChargeBack" : "Pendente";
-                    const statusClass = isVoucher ? "bg-[#21835d] text-primary-1" : isPaid ? "bg-[#21835d] text-primary-1" : isCancelled || isRefunded || isChargeback ? "bg-red-11 text-white" : "bg-yellow-11 text-yellow-1";
+                    const statusLabel = isVoided ? "Trocado" : isVoucher ? "Voucher" : isPaid ? "Pago" : isCancelled ? "Cancelado" : isRefunded ? "Estornado" : isChargeback ? "ChargeBack" : "Pendente";
+                    const statusClass = isVoided ? "bg-gray-11 text-white" : isVoucher ? "bg-[#21835d] text-primary-1" : isPaid ? "bg-[#21835d] text-primary-1" : isCancelled || isRefunded || isChargeback ? "bg-red-11 text-white" : "bg-yellow-11 text-yellow-1";
                     const fullName = `${registration.user?.firstName || ""} ${registration.user?.lastName || ""}`.trim();
                     const createdDate = registration.createdAt ? new Date(registration.createdAt) : null;
                     // registration.createdAt é INSTANTE real → BRT (America/Sao_Paulo).
