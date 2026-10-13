@@ -2,8 +2,19 @@
 
 import { useExportDataModal } from "@/stores/modalStore";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Check, ChevronDown, Loader2 } from "lucide-react";
+import { X, Check, ChevronDown, Loader2, GripVertical } from "lucide-react";
 import { useState } from "react";
+import {
+  DndContext,
+  closestCenter,
+  MouseSensor,
+  TouchSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from "@dnd-kit/core";
+import { SortableContext, arrayMove, rectSortingStrategy, useSortable } from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import { Button } from "@/components/Button";
 import { ExcelIcon } from "../Icons/ExcelIcon";
 import { TxtIcon } from "../Icons/TxtIcon";
@@ -57,26 +68,37 @@ const ALL_FIELDS = [
 ];
 
 const DEFAULT_SELECTED = new Set(ALL_FIELDS.map((f) => f.id));
+const FIELD_LABELS = new Map(ALL_FIELDS.map((f) => [f.id, f.label]));
 
 function FieldChip({
+  id,
   label,
   selected,
   onToggle,
 }: {
+  id: string;
   label: string;
   selected: boolean;
   onToggle: () => void;
 }) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });
   return (
     <button
+      ref={setNodeRef}
       type="button"
       onClick={onToggle}
-      className={`inline-flex items-center gap-1 px-3 py-2 rounded-full text-sm font-medium font-family-dm-sans transition-colors ${
+      style={{ transform: CSS.Transform.toString(transform), transition }}
+      {...attributes}
+      {...listeners}
+      className={`inline-flex items-center gap-1 px-3 py-2 rounded-full text-sm font-medium font-family-dm-sans transition-colors cursor-grab active:cursor-grabbing touch-manipulation ${
+        isDragging ? "relative z-10 shadow-lg" : ""
+      } ${
         selected
           ? "bg-primary-11 text-primary-1"
           : "bg-gray-2 border border-gray-6 text-gray-11 hover:border-gray-8"
       }`}
     >
+      <GripVertical className="size-3.5 -ml-1 shrink-0 opacity-60" />
       {selected && (
         <span className="size-4 flex items-center justify-center shrink-0">
           <Check className="size-3" strokeWidth={2.5} />
@@ -88,16 +110,35 @@ function FieldChip({
 }
 
 function AdvancedFields({
+  fieldOrder,
+  onReorder,
   selectedFields,
   onToggle,
   onSelectAll,
   onClearAll,
 }: {
+  fieldOrder: string[];
+  onReorder: (order: string[]) => void;
   selectedFields: Set<string>;
   onToggle: (id: string) => void;
   onSelectAll: () => void;
   onClearAll: () => void;
 }) {
+  // Mouse: arrasta só após 8px, senão o clique (marcar/desmarcar) vira drag.
+  // Toque: segurar 250ms — arrastar direto travaria a rolagem do modal no mobile.
+  // Sem KeyboardSensor: Enter/Espaço ativariam o drag em vez de marcar o chip.
+  const sensors = useSensors(
+    useSensor(MouseSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 250, tolerance: 5 } }),
+  );
+
+  const handleDragEnd = ({ active, over }: DragEndEvent) => {
+    if (!over || active.id === over.id) return;
+    onReorder(
+      arrayMove(fieldOrder, fieldOrder.indexOf(String(active.id)), fieldOrder.indexOf(String(over.id))),
+    );
+  };
+
   return (
     <div className="flex flex-col gap-6 pt-4 pb-2">
       <p className="font-manrope font-bold text-base text-gray-12 leading-[1.1]">
@@ -124,16 +165,21 @@ function AdvancedFields({
           </button>
         </div>
       </div>
-      <div className="flex flex-wrap gap-2">
-        {ALL_FIELDS.map((field) => (
-          <FieldChip
-            key={field.id}
-            label={field.label}
-            selected={selectedFields.has(field.id)}
-            onToggle={() => onToggle(field.id)}
-          />
-        ))}
-      </div>
+      <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+        <SortableContext items={fieldOrder} strategy={rectSortingStrategy}>
+          <div className="flex flex-wrap gap-2">
+            {fieldOrder.map((id) => (
+              <FieldChip
+                key={id}
+                id={id}
+                label={FIELD_LABELS.get(id) ?? id}
+                selected={selectedFields.has(id)}
+                onToggle={() => onToggle(id)}
+              />
+            ))}
+          </div>
+        </SortableContext>
+      </DndContext>
     </div>
   );
 }
@@ -143,6 +189,8 @@ export function ExportDataModal() {
   const [selectedFormat, setSelectedFormat] = useState<ExportFormat>("txt");
   const [showAdvanced, setShowAdvanced] = useState(true);
   const [selectedFields, setSelectedFields] = useState<Set<string>>(new Set(DEFAULT_SELECTED));
+  // Ordem das colunas no arquivo — o backend respeita a ordem de `fields`.
+  const [fieldOrder, setFieldOrder] = useState<string[]>(() => ALL_FIELDS.map((f) => f.id));
   const [isExporting, setIsExporting] = useState(false);
 
   const eventId = data?.eventId as string | undefined;
@@ -183,7 +231,7 @@ export function ExportDataModal() {
       const { blob, filename } = await organizerService.exportEventRegistrations(
         eventId,
         selectedFormat,
-        ALL_FIELDS.filter((f) => selectedFields.has(f.id)).map((f) => f.id),
+        fieldOrder.filter((id) => selectedFields.has(id)),
         exportFilters,
       );
       const url = URL.createObjectURL(blob);
@@ -314,6 +362,8 @@ export function ExportDataModal() {
 
               {showAdvanced && (
                 <AdvancedFields
+                  fieldOrder={fieldOrder}
+                  onReorder={setFieldOrder}
                   selectedFields={selectedFields}
                   onToggle={toggleField}
                   onSelectAll={selectAll}
@@ -417,6 +467,8 @@ export function ExportDataModal() {
                 <AdvancedToggle />
                 {showAdvanced && (
                   <AdvancedFields
+                    fieldOrder={fieldOrder}
+                    onReorder={setFieldOrder}
                     selectedFields={selectedFields}
                     onToggle={toggleField}
                     onSelectAll={selectAll}
