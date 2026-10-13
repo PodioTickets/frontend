@@ -463,7 +463,11 @@ export function ViewRegistrationModal() {
     const prev = document.body.style.pointerEvents;
     document.body.style.pointerEvents = "auto";
     return () => {
-      document.body.style.pointerEvents = prev;
+      // Só devolve o valor salvo se ninguém mexeu no body enquanto o modal estava aberto.
+      // Pela aba Usuários o drawer FECHA ao abrir o modal: salvamos o "none" dele e depois o
+      // vaul devolve o body (""). Restaurar aquele "none" travava a tela toda (inclusive a
+      // página da troca de ingresso, que é aberta por este modal).
+      if (document.body.style.pointerEvents === "auto") document.body.style.pointerEvents = prev;
     };
   }, [isOpen, isMdUp]);
 

@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Activity, Users, Link2, Ghost, Eye, BadgeCheck, Receipt, Repeat } from "lucide-react";
+import { Activity, Users, Link2, Ghost, Eye, BadgeCheck, Receipt, Repeat, Wallet } from "lucide-react";
 import { cn } from "@/utils/cn";
 import { formatBRLFromCents } from "@/lib/money";
 import { METHOD_LABEL } from "@/components/Organizer/SalesByPaymentMethod";
@@ -390,6 +390,13 @@ export function AdminUserActivityDashboard() {
               label="Compraram mais de uma vez"
               value={stats.totals.repeatBuyers}
               hint="Desde sempre, na Pódio"
+            />
+            {/* 9º card: cai na 1ª coluna, logo abaixo de "Views de evento" no desktop (4 col). */}
+            <StatCard
+              icon={<Wallet className="size-4" />}
+              label="Valor total pago"
+              value={formatBRLFromCents(stats.totals.totalPaid)}
+              hint="Pedidos pagos no período"
             />
           </div>
 

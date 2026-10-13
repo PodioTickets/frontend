@@ -129,7 +129,9 @@ export default function BannerPage() {
       <BannerSection
         bannerUrl={formData.bannerUrl}
         eventName={formData.name}
-        eventDate={formData.eventDate}
+        // Data e hora ficam SEPARADAS no form; sem compor, o card da prévia perde o
+        // "às HH:MM" que a tela do evento mostra. Mesmo helper do save.
+        eventDate={composeRegistrationDateTime(formData.eventDate, formData.eventTime)}
         // O form guarda data e hora SEPARADAS; o card lê o ISO do `Event`. Compomos
         // com o mesmo helper do save pra prévia e evento salvo baterem.
         registrationStartDate={composeRegistrationDateTime(
