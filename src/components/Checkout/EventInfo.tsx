@@ -188,11 +188,8 @@ export function EventInfo({ event, onNext, isSubmitting = false, tickets = [], c
   // Cupom AUTOMÁTICO de idade — só quando não há voucher nem cupom manual (link).
   // Espelha o ModalitiesStep pra desktop e mobile mostrarem o mesmo desconto.
   const hasManualCoupon = !!resolvedCoupon && resolvedCoupon.couponType === "DISCOUNT";
-  // Acúmulo (2026-10-02): com cupom manual o automático TAMBÉM vale — só o voucher exclui.
-  const ageCoupon =
-    !useVoucher && ageEligibility?.applicable
-      ? ageEligibility.appliedCoupon
-      : null;
+  // Cupom de IDADE fora da prévia desde 2026-10-14 — ver o comentário no ModalitiesStep.
+  const ageCoupon = null as NonNullable<typeof ageEligibility>["appliedCoupon"];
   const ageDiscount = useMemo(() => {
     if (!ageCoupon) return 0;
     const selected: Array<{ id: string; price: number; quantity: number }> = [];
