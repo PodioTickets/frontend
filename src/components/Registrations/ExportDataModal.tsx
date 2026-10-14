@@ -4,17 +4,20 @@ import { useExportDataModal } from "@/stores/modalStore";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, Check, ChevronDown, Loader2, GripVertical } from "lucide-react";
 import { useState } from "react";
+import { createPortal } from "react-dom";
 import {
   DndContext,
-  closestCenter,
+  DragOverlay,
+  pointerWithin,
   MouseSensor,
   TouchSensor,
   useSensor,
   useSensors,
-  type DragEndEvent,
+  type DragMoveEvent,
+  type DragStartEvent,
 } from "@dnd-kit/core";
-import { SortableContext, arrayMove, rectSortingStrategy, useSortable } from "@dnd-kit/sortable";
-import { CSS } from "@dnd-kit/utilities";
+import { SortableContext, arrayMove, useSortable, type SortingStrategy } from "@dnd-kit/sortable";
+import { CSS, getEventCoordinates } from "@dnd-kit/utilities";
 import { Button } from "@/components/Button";
 import { ExcelIcon } from "../Icons/ExcelIcon";
 import { TxtIcon } from "../Icons/TxtIcon";
@@ -70,6 +73,34 @@ const ALL_FIELDS = [
 const DEFAULT_SELECTED = new Set(ALL_FIELDS.map((f) => f.id));
 const FIELD_LABELS = new Map(ALL_FIELDS.map((f) => [f.id, f.label]));
 
+// Os vizinhos não são deslocados pela estratégia: a lista é reordenada ao vivo no
+// `onDragOver` e o flex-wrap recalcula o layout. O `rectSortingStrategy` supõe itens do
+// mesmo tamanho e esticava cada chip (scaleX) para a largura do vizinho.
+const noShift: SortingStrategy = () => null;
+
+const chipClass = (selected: boolean) =>
+  `inline-flex items-center gap-1 px-3 py-2 rounded-full text-sm font-medium font-family-dm-sans transition-colors touch-manipulation ${
+    selected
+      ? "bg-primary-11 text-primary-1 cursor-grab active:cursor-grabbing"
+      : "bg-gray-2 border border-gray-6 text-gray-11 hover:border-gray-8 cursor-pointer"
+  }`;
+
+function ChipContent({ label, selected }: { label: string; selected: boolean }) {
+  return (
+    <>
+      {selected && (
+        <>
+          <GripVertical className="size-3.5 -ml-1 shrink-0 opacity-60" />
+          <span className="size-4 flex items-center justify-center shrink-0">
+            <Check className="size-3" strokeWidth={2.5} />
+          </span>
+        </>
+      )}
+      {label}
+    </>
+  );
+}
+
 function FieldChip({
   id,
   label,
@@ -81,30 +112,23 @@ function FieldChip({
   selected: boolean;
   onToggle: () => void;
 }) {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });
+  // Desmarcado não arrasta nem recebe drop: fica sempre no fim da fila (fora do arquivo).
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id,
+    disabled: !selected,
+  });
   return (
     <button
       ref={setNodeRef}
       type="button"
       onClick={onToggle}
-      style={{ transform: CSS.Transform.toString(transform), transition }}
+      // Translate só (sem scale): anima o chip até a posição nova quando a ordem muda.
+      style={{ transform: isDragging ? undefined : CSS.Translate.toString(transform), transition }}
       {...attributes}
       {...listeners}
-      className={`inline-flex items-center gap-1 px-3 py-2 rounded-full text-sm font-medium font-family-dm-sans transition-colors cursor-grab active:cursor-grabbing touch-manipulation ${
-        isDragging ? "relative z-10 shadow-lg" : ""
-      } ${
-        selected
-          ? "bg-primary-11 text-primary-1"
-          : "bg-gray-2 border border-gray-6 text-gray-11 hover:border-gray-8"
-      }`}
+      className={`${chipClass(selected)} ${isDragging ? "opacity-40" : ""}`}
     >
-      <GripVertical className="size-3.5 -ml-1 shrink-0 opacity-60" />
-      {selected && (
-        <span className="size-4 flex items-center justify-center shrink-0">
-          <Check className="size-3" strokeWidth={2.5} />
-        </span>
-      )}
-      {label}
+      <ChipContent label={label} selected={selected} />
     </button>
   );
 }
@@ -132,11 +156,34 @@ function AdvancedFields({
     useSensor(TouchSensor, { activationConstraint: { delay: 250, tolerance: 5 } }),
   );
 
-  const handleDragEnd = ({ active, over }: DragEndEvent) => {
+  const [activeId, setActiveId] = useState<string | null>(null);
+  // Ordem de antes do arraste, para desfazer no Esc.
+  const [orderBeforeDrag, setOrderBeforeDrag] = useState<string[]>([]);
+
+  const handleDragStart = ({ active }: DragStartEvent) => {
+    setActiveId(String(active.id));
+    setOrderBeforeDrag(fieldOrder);
+  };
+
+  // Troca só quando o ponteiro passa do MEIO do chip-alvo no sentido do movimento. Com
+  // larguras diferentes, trocar ao simplesmente entrar no alvo deixava o alvo de volta sob
+  // o ponteiro → troca de novo → loop ("Maximum update depth exceeded"). Passado o meio, a
+  // troca afasta o alvo do ponteiro e fica estável. `onDragMove` (não `onDragOver`): só
+  // reage a movimento real do ponteiro, nunca a uma nova medição do layout.
+  const handleDragMove = ({ active, over, activatorEvent, delta }: DragMoveEvent) => {
     if (!over || active.id === over.id) return;
-    onReorder(
-      arrayMove(fieldOrder, fieldOrder.indexOf(String(active.id)), fieldOrder.indexOf(String(over.id))),
-    );
+    const start = getEventCoordinates(activatorEvent);
+    if (!start) return;
+    const from = fieldOrder.indexOf(String(active.id));
+    const to = fieldOrder.indexOf(String(over.id));
+    const pastCenter = start.x + delta.x > over.rect.left + over.rect.width / 2;
+    if (from < to ? !pastCenter : pastCenter) return;
+    onReorder(arrayMove(fieldOrder, from, to));
+  };
+
+  const handleDragCancel = () => {
+    onReorder(orderBeforeDrag);
+    setActiveId(null);
   };
 
   return (
@@ -165,8 +212,15 @@ function AdvancedFields({
           </button>
         </div>
       </div>
-      <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-        <SortableContext items={fieldOrder} strategy={rectSortingStrategy}>
+      <DndContext
+        sensors={sensors}
+        collisionDetection={pointerWithin}
+        onDragStart={handleDragStart}
+        onDragMove={handleDragMove}
+        onDragEnd={() => setActiveId(null)}
+        onDragCancel={handleDragCancel}
+      >
+        <SortableContext items={fieldOrder} strategy={noShift}>
           <div className="flex flex-wrap gap-2">
             {fieldOrder.map((id) => (
               <FieldChip
@@ -179,6 +233,18 @@ function AdvancedFields({
             ))}
           </div>
         </SortableContext>
+        {/* Portal no body: os painéis do modal usam transform (framer-motion), o que
+            deslocaria o overlay `position: fixed`. z acima do modal (z-99999). */}
+        {createPortal(
+          <DragOverlay zIndex={100000}>
+            {activeId && (
+              <div className={`${chipClass(true)} shadow-lg cursor-grabbing`}>
+                <ChipContent label={FIELD_LABELS.get(activeId) ?? activeId} selected />
+              </div>
+            )}
+          </DragOverlay>,
+          document.body,
+        )}
       </DndContext>
     </div>
   );
@@ -205,13 +271,17 @@ export function ExportDataModal() {
   const { hasPermission } = useOrganizerPermissions();
   const eventTabs = eventId ? getEventTabs(eventId, hasPermission) : [];
 
+  // Desmarcado vai para o fim da fila; marcado entra logo após o último marcado.
+  // Assim a fila é sempre [marcados na ordem do arquivo] + [desmarcados].
   const toggleField = (id: string) => {
-    setSelectedFields((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
+    const next = new Set(selectedFields);
+    if (next.has(id)) next.delete(id);
+    else next.add(id);
+    const rest = fieldOrder.filter((f) => f !== id);
+    const firstUnselected = rest.findIndex((f) => !next.has(f));
+    rest.splice(next.has(id) && firstUnselected !== -1 ? firstUnselected : rest.length, 0, id);
+    setSelectedFields(next);
+    setFieldOrder(rest);
   };
 
   const selectAll = () => setSelectedFields(new Set(ALL_FIELDS.map((f) => f.id)));
