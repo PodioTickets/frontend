@@ -287,11 +287,14 @@ export function AdminTicketSwap({ registrationId }: { registrationId: string }) 
           <p className="text-base font-semibold font-manrope text-gray-12 leading-[1.1]">{newTicketLabel}</p>
         </div>
       )}
-      <div className="flex items-center justify-between px-4 py-4 text-base text-gray-12 font-manrope leading-[1.1]">
-        <p className="font-semibold">Diferença de valor:</p>
-        <p className="font-bold">{selectedTicket ? formatDifference(difference) : "—"}</p>
-      </div>
-      <div className="px-4 pt-1">
+      {/* Só aparece com diferença real; sem ela o CTA ganha o respiro que a linha dava. */}
+      {difference !== 0 && (
+        <div className="flex items-center justify-between px-4 py-4 text-base text-gray-12 font-manrope leading-[1.1]">
+          <p className="font-semibold">Diferença de valor:</p>
+          <p className="font-bold">{formatDifference(difference)}</p>
+        </div>
+      )}
+      <div className={difference !== 0 ? "px-4 pt-1" : "px-4 pt-4"}>
         <Button
           type="button"
           onClick={step === "products" ? submit : handleTicketsNext}
