@@ -111,6 +111,8 @@ export interface AdminUserActivityStats {
     paymentsConfirmed: number;
     /** Centavos: valor cobrado ÷ pedidos pagos (sem gratuito/voucher/estorno) no período. */
     averageTicket: number;
+    /** Centavos: soma do valor cobrado dos pedidos pagos (mesma base do ticket médio) no período. */
+    totalPaid: number;
     /** Compradores com 2+ pedidos pagos desde sempre (ignora os filtros). */
     repeatBuyers: number;
   };
@@ -1138,6 +1140,7 @@ export class AdminService {
         eventPageViews: n(totals.eventPageViews),
         paymentsConfirmed: n(totals.paymentsConfirmed),
         averageTicket: n(totals.averageTicket),
+        totalPaid: n(totals.totalPaid),
         repeatBuyers: n(totals.repeatBuyers),
       },
       byPaymentMethod: arr(data.byPaymentMethod).map((g) => ({

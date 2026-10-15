@@ -5,6 +5,7 @@ import { organizerService } from "@/services";
 import { useEditEvent } from "@/contexts/EditEventContext";
 import { BannerSection, type BannerSectionOrganizerData } from "@/components/Organizer/BannerSection";
 import { WizardStepLayout } from "@/components/Organizer/WizardStepLayout";
+import { composeRegistrationDateTime } from "@/lib/createEventDraftSync";
 import { organizerEventEditClientPage } from "@/lib/organizerAudit";
 import { getEventOrganizer } from "@/utils/organization";
 import { getAvatarUrl } from "@/utils/avatar";
@@ -49,7 +50,9 @@ export default function EditBannerPage() {
       <BannerSection
         bannerUrl={formData.bannerUrl}
         eventName={formData.name}
-        eventDate={formData.eventDate}
+        // Data e hora ficam SEPARADAS no form; sem compor, o card da prévia perde o
+        // "às HH:MM" que a tela do evento mostra. Mesmo helper do save.
+        eventDate={composeRegistrationDateTime(formData.eventDate, formData.eventTime)}
         street={formData.street}
         locationName={formData.locationName}
         city={formData.city}

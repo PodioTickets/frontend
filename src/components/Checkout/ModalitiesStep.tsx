@@ -354,11 +354,10 @@ export function ModalitiesStep({ event, onNext, onBack, isSubmitting = false, di
   // têm prioridade. O desconto respeita as condições do endpoint (appliesTo +
   // minCartValue) e some se a seleção não as atender.
   const hasManualCoupon = !!appliedCoupon && appliedCoupon.couponType === "DISCOUNT";
-  // Acúmulo (2026-10-02): com cupom manual o automático TAMBÉM vale — só o voucher exclui.
-  const ageCoupon =
-    !useVoucher && ageEligibility?.applicable
-      ? ageEligibility.appliedCoupon
-      : null;
+  // Desligado em 2026-10-14 (regra do usuário): o cupom de IDADE só vale depois que o
+  // participante é preenchido em Informações (o backend aplica no PATCH /participants).
+  // Prévia aqui pela idade do COMPRADOR mostrava um desconto que sumia na etapa seguinte.
+  const ageCoupon = null as NonNullable<typeof ageEligibility>["appliedCoupon"];
   const ageDiscount = ageCoupon
     ? computeAgeCouponTicketDiscount(ageCoupon, selectedTickets, totalPrice)
     : 0;
