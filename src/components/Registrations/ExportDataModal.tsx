@@ -112,10 +112,11 @@ function FieldChip({
   selected: boolean;
   onToggle: () => void;
 }) {
-  // Desmarcado não arrasta nem recebe drop: fica sempre no fim da fila (fora do arquivo).
+  // Desmarcado não arrasta (fica fora do arquivo), mas recebe drop: ele fica no meio da fila
+  // e um marcado pode passar por cima dele.
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id,
-    disabled: !selected,
+    disabled: { draggable: !selected, droppable: false },
   });
   return (
     <button
@@ -271,17 +272,12 @@ export function ExportDataModal() {
   const { hasPermission } = useOrganizerPermissions();
   const eventTabs = eventId ? getEventTabs(eventId, hasPermission) : [];
 
-  // Desmarcado vai para o fim da fila; marcado entra logo após o último marcado.
-  // Assim a fila é sempre [marcados na ordem do arquivo] + [desmarcados].
+  // Marcar/desmarcar não mexe na fila: o chip fica onde o usuário o colocou.
   const toggleField = (id: string) => {
     const next = new Set(selectedFields);
     if (next.has(id)) next.delete(id);
     else next.add(id);
-    const rest = fieldOrder.filter((f) => f !== id);
-    const firstUnselected = rest.findIndex((f) => !next.has(f));
-    rest.splice(next.has(id) && firstUnselected !== -1 ? firstUnselected : rest.length, 0, id);
     setSelectedFields(next);
-    setFieldOrder(rest);
   };
 
   const selectAll = () => setSelectedFields(new Set(ALL_FIELDS.map((f) => f.id)));
