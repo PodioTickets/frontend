@@ -117,6 +117,57 @@ export function DashboardView({
     return `${selectedTicketIds.length} ingressos selecionados`;
   };
 
+  // Sem perguntas, o ranking ocupa o lugar da listagem (meia largura) e a coluna do nome estica.
+  const noQuestions = questionsListing.length === 0;
+  const rankingCols = noQuestions ? "grid-cols-[1fr_81px_112px]" : "grid-cols-[199px_81px_112px]";
+  const desktopTicketRanking = (
+    <div className="bg-gray-1 border border-gray-6 rounded-xl">
+      <div className="px-4 py-5 border-b border-gray-6 flex items-center justify-between">
+        <p className="font-family-dm-sans font-normal text-[16px] leading-[1.3] text-gray-11">Ranking de ingressos</p>
+      </div>
+      <div>
+        {/* Header */}
+        <div className={`grid ${rankingCols} border-b border-gray-6 bg-gray-4`}>
+          <div className="px-4 py-4">
+            <p className="font-inter font-medium text-[14px] leading-[1.3] text-gray-12">Nome</p>
+          </div>
+          <div className="px-4 py-4 flex items-center justify-center">
+            <p className="font-inter font-medium text-[14px] leading-[1.3] text-gray-12">Qt</p>
+          </div>
+          <div className="px-4 py-4 flex items-center justify-end">
+            <p className="font-inter font-medium text-[14px] leading-[1.3] text-gray-12">Total</p>
+          </div>
+        </div>
+        {/* Rows */}
+        {paginatedTicketRanking.map((ticket, index) => (
+          <div
+            key={ticketRankingSliceStart + index}
+            className={`grid ${rankingCols} border-b border-gray-6 last:border-b-0 bg-gray-1`}
+          >
+            <div className="px-4 py-3 flex flex-col gap-2 justify-center">
+              <DashboardRankingCategoryLabel category={ticket.category} />
+              <DashboardRankingTicketNameLabel name={ticket.name} />
+            </div>
+            <div className="px-4 py-3 flex items-center justify-center">
+              <p className="font-inter font-semibold text-[14px] leading-[1.3] text-gray-12">{ticket.quantity.toLocaleString("pt-BR")}</p>
+            </div>
+            <div className="px-4 py-3 flex items-center justify-end">
+              <p className="font-inter font-semibold text-[14px] leading-[1.3] text-gray-12">
+                R$ {(ticket.total / 100).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </p>
+            </div>
+          </div>
+        ))}
+      </div>
+      <Pagination
+        currentPage={ticketRankingPage}
+        totalPages={ticketRankingTotalPages}
+        onPageChange={setTicketRankingPage}
+        variant="compact"
+      />
+    </div>
+  );
+
   return (
     <div className="min-h-screen bg-gray-2">
       {header}
@@ -250,8 +301,8 @@ export function DashboardView({
 
         {/* Charts Section */}
         <div className="flex gap-3 mb-8 w-full">
-          {/* Tendência de Inscrições */}
-          <div className="bg-gray-1 border border-gray-6 rounded-xl p-4 w-3/4">
+          {/* Tendência de Inscrições — largura total quando o ranking desce para o lugar das perguntas */}
+          <div className={`bg-gray-1 border border-gray-6 rounded-xl p-4 ${noQuestions ? "w-full" : "w-3/4"}`}>
             <div className="mb-4">
               <p className="font-family-dm-sans font-normal text-[16px] leading-[1.3] text-gray-11">Tendência de inscrições</p>
             </div>
@@ -273,52 +324,7 @@ export function DashboardView({
             />
           </div>
 
-          {/* Ranking de Ingressos */}
-          <div className="bg-gray-1 border border-gray-6 rounded-xl">
-            <div className="px-4 py-5 border-b border-gray-6 flex items-center justify-between">
-              <p className="font-family-dm-sans font-normal text-[16px] leading-[1.3] text-gray-11">Ranking de ingressos</p>
-            </div>
-            <div>
-              {/* Header */}
-              <div className="grid grid-cols-[199px_81px_112px] border-b border-gray-6 bg-gray-4">
-                <div className="px-4 py-4">
-                  <p className="font-inter font-medium text-[14px] leading-[1.3] text-gray-12">Nome</p>
-                </div>
-                <div className="px-4 py-4 flex items-center justify-center">
-                  <p className="font-inter font-medium text-[14px] leading-[1.3] text-gray-12">Qt</p>
-                </div>
-                <div className="px-4 py-4 flex items-center justify-end">
-                  <p className="font-inter font-medium text-[14px] leading-[1.3] text-gray-12">Total</p>
-                </div>
-              </div>
-              {/* Rows */}
-              {paginatedTicketRanking.map((ticket, index) => (
-                <div
-                  key={ticketRankingSliceStart + index}
-                  className="grid grid-cols-[199px_81px_112px] border-b border-gray-6 last:border-b-0 bg-gray-1"
-                >
-                  <div className="px-4 py-3 flex flex-col gap-2 justify-center">
-                    <DashboardRankingCategoryLabel category={ticket.category} />
-                    <DashboardRankingTicketNameLabel name={ticket.name} />
-                  </div>
-                  <div className="px-4 py-3 flex items-center justify-center">
-                    <p className="font-inter font-semibold text-[14px] leading-[1.3] text-gray-12">{ticket.quantity.toLocaleString("pt-BR")}</p>
-                  </div>
-                  <div className="px-4 py-3 flex items-center justify-end">
-                    <p className="font-inter font-semibold text-[14px] leading-[1.3] text-gray-12">
-                      R$ {(ticket.total / 100).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                    </p>
-                  </div>
-                </div>
-              ))}
-            </div>
-            <Pagination
-              currentPage={ticketRankingPage}
-              totalPages={ticketRankingTotalPages}
-              onPageChange={setTicketRankingPage}
-              variant="compact"
-            />
-          </div>
+          {!noQuestions && desktopTicketRanking}
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 mb-8 w-full">
@@ -326,12 +332,16 @@ export function DashboardView({
             <SalesByPaymentMethod data={dashboardData.salesByPaymentMethod} />
           </div>
           <div className="min-h-[311px]">
-            <QuestionsListing
-              items={questionsListing}
-              onItemClick={(item) => {
-                setSelectedQuestionId(item.id);
-              }}
-            />
+            {noQuestions ? (
+              desktopTicketRanking
+            ) : (
+              <QuestionsListing
+                items={questionsListing}
+                onItemClick={(item) => {
+                  setSelectedQuestionId(item.id);
+                }}
+              />
+            )}
           </div>
         </div>
 
