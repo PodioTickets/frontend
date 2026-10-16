@@ -2,7 +2,7 @@
 
 import { useExportDataModal } from "@/stores/modalStore";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Check, ChevronDown, Loader2, GripVertical } from "lucide-react";
+import { X, Check, ChevronDown, Loader2 } from "lucide-react";
 import { useState } from "react";
 import { createPortal } from "react-dom";
 import {
@@ -89,12 +89,9 @@ function ChipContent({ label, selected }: { label: string; selected: boolean }) 
   return (
     <>
       {selected && (
-        <>
-          <GripVertical className="size-3.5 -ml-1 shrink-0 opacity-60" />
-          <span className="size-4 flex items-center justify-center shrink-0">
-            <Check className="size-3" strokeWidth={2.5} />
-          </span>
-        </>
+        <span className="size-4 flex items-center justify-center shrink-0">
+          <Check className="size-3" strokeWidth={2.5} />
+        </span>
       )}
       {label}
     </>
