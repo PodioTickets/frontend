@@ -205,6 +205,19 @@ input[type="number"] {
   }
 }
 
+/* Inscrição nova ao voltar da troca: o verde claro entra rápido, segura e se dissolve (3s).
+   Sem 0%/100% → começa e termina no fundo original do elemento. */
+@keyframes swap-highlight {
+  12%,
+  55% {
+    background-color: var(--primary-3);
+  }
+}
+
+.swap-highlight {
+  animation: swap-highlight 3s ease-in-out;
+}
+
 @keyframes spin-dots {
   0% {
     transform: rotate(0deg) translateX(16px) rotate(0deg);

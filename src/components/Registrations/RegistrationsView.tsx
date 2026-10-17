@@ -99,6 +99,8 @@ export interface RegistrationsViewProps {
   openViewRegistrationModal: (args: ModalTarget) => void;
   openPaymentDetailsModal: (args: ModalTarget) => void;
   openExportDataModal: (args: ExportTarget) => void;
+  /** Inscrição recém-criada por uma troca de ingresso — anima a linha/card ao montar. */
+  highlightedRegistrationId?: string | null;
 }
 
 export function RegistrationsView({
@@ -131,6 +133,7 @@ export function RegistrationsView({
   openViewRegistrationModal,
   openPaymentDetailsModal,
   openExportDataModal,
+  highlightedRegistrationId,
 }: RegistrationsViewProps) {
   // Registros exibidos na página ATUAL (página cheia, exceto a última).
   const registrosShown = Math.max(
@@ -474,7 +477,10 @@ export function RegistrationsView({
                     const dateStr = createdDate ? formatDateBRT(registration.createdAt, { day: "2-digit", month: "2-digit", year: "numeric" }) : "—";
                     const price = registration?.order?.finalAmount != null ? (registration?.order?.finalAmount / 100).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "0,00";
                     return (
-                      <div key={registration.id} className="bg-gray-1 border border-gray-6 rounded-lg">
+                      <div
+                        key={registration.id}
+                        className={`bg-gray-1 border border-gray-6 rounded-lg ${registration.id === highlightedRegistrationId ? "swap-highlight" : ""}`}
+                      >
                         <div className="flex flex-col gap-5 px-3 py-4">
                           <div className="flex items-center justify-between">
                             <div className="flex gap-2 items-center min-w-0 flex-1">
@@ -634,6 +640,7 @@ export function RegistrationsView({
                     <RegistrationRow
                       key={registration.id}
                       registration={registration}
+                      highlighted={registration.id === highlightedRegistrationId}
                       getStatusBadge={getStatusBadge}
                       onViewRegistration={() => {
                         openViewRegistrationModal({
