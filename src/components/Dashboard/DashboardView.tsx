@@ -121,11 +121,13 @@ export function DashboardView({
   const noQuestions = questionsListing.length === 0;
   const rankingCols = noQuestions ? "grid-cols-[1fr_81px_112px]" : "grid-cols-[199px_81px_112px]";
   const desktopTicketRanking = (
-    <div className="bg-gray-1 border border-gray-6 rounded-xl">
+    // overflow-hidden: no lugar das perguntas o card termina na última linha, cujo fundo cobria os cantos arredondados.
+    // h-full: acompanha a altura do card vizinho (ex.: "Vendas por forma de pagamento" com muitos itens); a paginação desce para o rodapé.
+    <div className="bg-gray-1 border border-gray-6 rounded-xl overflow-hidden h-full flex flex-col">
       <div className="px-4 py-5 border-b border-gray-6 flex items-center justify-between">
         <p className="font-family-dm-sans font-normal text-[16px] leading-[1.3] text-gray-11">Ranking de ingressos</p>
       </div>
-      <div>
+      <div className="flex-1">
         {/* Header */}
         <div className={`grid ${rankingCols} border-b border-gray-6 bg-gray-4`}>
           <div className="px-4 py-4">

@@ -111,6 +111,7 @@ export function AdminTicketSwap({ registrationId }: { registrationId: string }) 
   const [variations, setVariations] = useState<Record<string, string | null>>({});
   const [submitting, setSubmitting] = useState(false);
   const [emailSent, setEmailSent] = useState(true);
+  const [newRegistrationId, setNewRegistrationId] = useState("");
   const busyRef = useRef(false);
 
   useEffect(() => {
@@ -165,6 +166,7 @@ export function AdminTicketSwap({ registrationId }: { registrationId: string }) 
         products: buildSwapProductsPayload(newProducts, variations),
       });
       setEmailSent(res.emailSent);
+      setNewRegistrationId(res.registrationId);
       // Drawer de usuários do admin também lista as inscrições do participante.
       queryClient.invalidateQueries({ queryKey: [...queryKeys.admin.users.all(), "registrations"] });
       setStep("done");
@@ -342,7 +344,10 @@ export function AdminTicketSwap({ registrationId }: { registrationId: string }) 
                 : "Ingresso trocado, mas o e-mail não foi enviado. Reenvie pelo ingresso."
             }
             actionLabel="Ver nas inscrições"
-            onAction={() => router.push(registrationsHref)}
+            // `swapped`: a lista destaca a inscrição nova (ver `.swap-highlight` no globals.css).
+            onAction={() =>
+              router.push(newRegistrationId ? `${registrationsHref}?swapped=${newRegistrationId}` : registrationsHref)
+            }
           />
         </div>
       ) : (
