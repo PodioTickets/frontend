@@ -2069,11 +2069,12 @@ export function InformationStep({
                         >
                           <div className="flex flex-col gap-3">
                             <div className="flex flex-col">
-                              <p className="text-sm font-medium text-gray-12">
-                                {participant.name ||
-                                  `Participante ${index + 1}`}
-                              </p>
-                              <p className="text-sm text-gray-11 font-family-dm-sans mt-2">
+                              {participant.name && (
+                                <p className="text-sm font-medium text-gray-12 mb-2">
+                                  {participant.name}
+                                </p>
+                              )}
+                              <p className="text-sm text-gray-11 font-family-dm-sans">
                                 {categoryName.trim() || "Ingresso avulso"}
                               </p>
                               <p className="font-bold text-md md:text-2xl text-gray-12 mb-2">
@@ -2193,9 +2194,6 @@ export function InformationStep({
                           }}
                         >
                           <div className="flex flex-col gap-2 pb-3">
-                            <p className="text-sm font-medium text-gray-12">
-                              Participante {index + 1}
-                            </p>
                             <div>
                               <p className="text-sm text-gray-11 font-family-dm-sans">
                                 {categoryName.trim() || "Ingresso avulso"}

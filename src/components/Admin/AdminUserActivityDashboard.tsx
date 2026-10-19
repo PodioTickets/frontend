@@ -389,7 +389,7 @@ export function AdminUserActivityDashboard() {
               icon={<Repeat className="size-4" />}
               label="Compraram mais de uma vez"
               value={stats.totals.repeatBuyers}
-              hint="Desde sempre, na Pódio"
+              hint="Pedidos pagos no período"
             />
             {/* 9º card: cai na 1ª coluna, logo abaixo de "Views de evento" no desktop (4 col). */}
             <StatCard
