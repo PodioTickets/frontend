@@ -117,9 +117,8 @@ export function DashboardView({
     return `${selectedTicketIds.length} ingressos selecionados`;
   };
 
-  // Sem perguntas, o ranking ocupa o lugar da listagem (meia largura) e a coluna do nome estica.
   const noQuestions = questionsListing.length === 0;
-  const rankingCols = noQuestions ? "grid-cols-[1fr_81px_112px]" : "grid-cols-[199px_81px_112px]";
+  const rankingCols = "grid-cols-[1fr_81px_112px]";
   const desktopTicketRanking = (
     // overflow-hidden: no lugar das perguntas o card termina na última linha, cujo fundo cobria os cantos arredondados.
     // h-full: acompanha a altura do card vizinho (ex.: "Vendas por forma de pagamento" com muitos itens); a paginação desce para o rodapé.
@@ -304,7 +303,7 @@ export function DashboardView({
         {/* Charts Section */}
         <div className="flex gap-3 mb-8 w-full">
           {/* Tendência de Inscrições — largura total quando o ranking desce para o lugar das perguntas */}
-          <div className={`bg-gray-1 border border-gray-6 rounded-xl p-4 ${noQuestions ? "w-full" : "w-3/4"}`}>
+          <div className={`bg-gray-1 border border-gray-6 rounded-xl p-4 ${noQuestions ? "w-full" : "w-2/3"}`}>
             <div className="mb-4">
               <p className="font-family-dm-sans font-normal text-[16px] leading-[1.3] text-gray-11">Tendência de inscrições</p>
             </div>
@@ -326,13 +325,10 @@ export function DashboardView({
             />
           </div>
 
-          {!noQuestions && desktopTicketRanking}
+          {!noQuestions && <div className="flex-1">{desktopTicketRanking}</div>}
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 mb-8 w-full">
-          <div className="min-h-[311px]">
-            <SalesByPaymentMethod data={dashboardData.salesByPaymentMethod} />
-          </div>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 mb-8 w-full items-start">
           <div className="min-h-[311px]">
             {noQuestions ? (
               desktopTicketRanking
@@ -344,6 +340,9 @@ export function DashboardView({
                 }}
               />
             )}
+          </div>
+          <div className="min-h-[311px]">
+            <SalesByPaymentMethod data={dashboardData.salesByPaymentMethod} />
           </div>
         </div>
 

@@ -39,6 +39,7 @@ import {
   maskCPF,
   formatDate,
   isVariationSoldOut,
+  isVariationEffectivelySoldOut,
   canConfirmProductStep,
 } from "./SubscriptionStep.utils";
 
@@ -314,7 +315,7 @@ export function ProductsSection({
   participantIndex: number;
   selectedVariations: Record<string, string | null>;
   onVariationSelect: (participantIndex: number, productId: string) => (opt: DropdownOption) => void;
-  getVariationOptions: (product: Product) => DropdownOption[];
+  getVariationOptions: (product: Product, participantIndex: number) => DropdownOption[];
   getSelectedVariation: (participantIndex: number, product: Product) => Product["variations"][number] | null;
   variant: "mobile" | "desktop";
   requiredSection?: boolean;
@@ -332,7 +333,7 @@ export function ProductsSection({
             key={product.id}
             product={product}
             selectedVariationId={selectedVariations[getVariationKey(participantIndex, product.id)]}
-            variationOptions={getVariationOptions(product)}
+            variationOptions={getVariationOptions(product, participantIndex)}
             onSelect={onVariationSelect(participantIndex, product.id)}
             selectedVariation={getSelectedVariation(participantIndex, product)}
             variant={variant}
@@ -565,6 +566,7 @@ export function SubscriptionStep({
 
     setSelectedVariations((prev) => {
       const additions: Record<string, string> = {};
+      const merged = { ...prev };
 
       for (const { participantIndex, ticketId } of participantsWithTickets) {
         const ticketProductIds = ticketProductsMap[ticketId] || [];
@@ -578,14 +580,20 @@ export function SubscriptionStep({
           if (product.variations.length !== 1) continue;
 
           const key = getVariationKey(participantIndex, product.id);
-          const current = prev[key];
+          const current = merged[key];
           if (current != null && String(current).trim() !== "") continue;
 
           const v = product.variations[0];
-          // Não auto-seleciona variação única se ela estiver esgotada — o
-          // usuário não conseguiria trocar e o PATCH /products seria rejeitado.
-          if (isVariationSoldOut(product, v)) continue;
-          additions[key] = v.id || `${product.id}-0`;
+          const vid = v.id || `${product.id}-0`;
+          let othersUsing = 0;
+          for (const { participantIndex: pi } of participantsWithTickets) {
+            if (pi === participantIndex) continue;
+            const k = getVariationKey(pi, product.id);
+            if (merged[k] === vid) othersUsing++;
+          }
+          if (isVariationEffectivelySoldOut(product, v, othersUsing)) continue;
+          additions[key] = vid;
+          merged[key] = vid;
         }
       }
 
@@ -594,15 +602,28 @@ export function SubscriptionStep({
     });
   }, [loading, participantsWithTickets, allProducts, ticketProductsMap]);
 
-  const getVariationOptions = (product: Product): DropdownOption[] => {
+  const countOthersUsingVariation = (
+    participantIndex: number,
+    product: Product,
+    variationId: string,
+  ): number => {
+    let count = 0;
+    for (const { participantIndex: pi } of participantsWithTickets) {
+      if (pi === participantIndex) continue;
+      const key = getVariationKey(pi, product.id);
+      if (selectedVariations[key] === variationId) count++;
+    }
+    return count;
+  };
+
+  const getVariationOptions = (product: Product, forParticipantIndex: number): DropdownOption[] => {
     if (!product.variations || product.variations.length === 0) return [];
     return product.variations.map((variation, index) => {
-      // Esgotado: estoque limitado sem disponível (regra do backend). Renderiza
-      // a opção apagada + "Esgotado" e bloqueia a seleção (o `disabled` no
-      // Dropdown). Sem preço à direita quando indisponível.
-      const soldOut = isVariationSoldOut(product, variation);
+      const vid = variation.id || `${product.id}-${index}`;
+      const othersUsing = countOthersUsingVariation(forParticipantIndex, product, vid);
+      const soldOut = isVariationEffectivelySoldOut(product, variation, othersUsing);
       return {
-        id: variation.id || `${product.id}-${index}`,
+        id: vid,
         label: variation.name,
         suffix: soldOut || hidePricing
           ? undefined
@@ -972,10 +993,6 @@ export function SubscriptionStep({
             key={participantIndex}
             className={`${index > 0 ? "border-t border-gray-6 pt-4" : "pb-4"}`}
           >
-            <p className="text-sm font-semibold text-gray-12 mb-4 font-family-dm-sans">
-              Participante {participantIndex + 1}
-            </p>
-
             {/* Card do participante */}
             <div className="border border-gray-6 rounded-xl p-2 mb-4 w-full">
               <div className="flex items-center gap-2">
@@ -1028,7 +1045,7 @@ export function SubscriptionStep({
             {/* Ingresso — categoria acima do nome */}
             <div className="flex items-end justify-between gap-3 mb-3">
               <div className="flex flex-col gap-0.5 min-w-0">
-                <p className="font-family-dm-sans font-normal text-xs leading-[1.3] text-gray-11 truncate">
+                <p className="font-family-dm-sans font-normal text-xs leading-[1.3] text-gray-11">
                   {categoryName || "Ingresso Avulso"}
                 </p>
                 <p className="font-manrope font-bold text-sm leading-[1.2] text-gray-12 truncate">
@@ -1221,7 +1238,7 @@ export function SubscriptionStep({
                     <div className="flex items-center justify-between gap-3">
                       <span className="flex flex-col gap-0.5 min-w-0">
                         {ticket.groupId && categories.find((c) => c.id === ticket.groupId)?.name ? (
-                          <span className="text-xs font-normal text-gray-11 truncate">
+                          <span className="text-xs font-normal text-gray-11">
                             {categories.find((c) => c.id === ticket.groupId)?.name}
                           </span>
                         ) : (
@@ -1257,13 +1274,7 @@ export function SubscriptionStep({
                   className={`transition-all duration-300 ease-in-out ${isExpanded ? "max-h-[5000px] opacity-100" : "max-h-0 opacity-0 overflow-hidden pointer-events-none"}`}
                 >
                   <div className="p-4 border-b border-gray-6">
-                    <div className="flex items-center">
-                      <h2 className="text-lg font-extrabold text-gray-12">
-                        Participante {participantIndex + 1}
-                      </h2>
-                    </div>
-
-                    <div className="pb-4 pt-2 border-b border-gray-6">
+                    <div className="pb-4 border-b border-gray-6">
                       {getAdditionalProductsCount(participantIndex) > 0 && (
                         <div className="flex items-center justify-between mb-2">
                           <p className="text-sm font-semibold text-gray-12">
@@ -1277,7 +1288,7 @@ export function SubscriptionStep({
                       <div className="flex items-center justify-between gap-3">
                         <span className="flex flex-col gap-0.5 min-w-0">
                           {ticket.groupId && categories.find((c) => c.id === ticket.groupId)?.name ? (
-                            <span className="text-xs font-normal text-gray-11 truncate">
+                            <span className="text-xs font-normal text-gray-11">
                               {categories.find((c) => c.id === ticket.groupId)?.name}
                             </span>
                           ) : (
@@ -1391,9 +1402,6 @@ export function SubscriptionStep({
           </div>
 
           <div className="rounded-lg border border-gray-5 p-4">
-            <h2 className="text-xl font-extrabold mb-4">
-              Participante {selectedParticipant + 1}
-            </h2>
             <div className="flex items-center gap-3 rounded-lg p-3 border border-gray-6 mb-6">
               <div className="w-12 h-12 rounded-full bg-gray-5 flex items-center justify-center shrink-0 overflow-hidden relative">
                 {currentParticipant.name ? (
@@ -1534,7 +1542,7 @@ export function SubscriptionStep({
                         <p className="text-sm font-medium text-gray-12 flex items-center justify-between">
                           <span className="flex flex-col gap-0.5">
                             {ticket.groupId && categories.find((c) => c.id === ticket.groupId)?.name ? (
-                              <span className="text-xs font-normal text-gray-11 truncate max-w-[50%]">
+                              <span className="text-xs font-normal text-gray-11">
                                 {categories.find((c) => c.id === ticket.groupId)?.name}
                               </span>
                             ) : (

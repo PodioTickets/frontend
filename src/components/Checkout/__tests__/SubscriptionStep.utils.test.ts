@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import {
   variationHoldsStock,
   isVariationSoldOut,
+  isVariationEffectivelySoldOut,
   previewVariationListPriceLabelForProduct,
   billableReaisForProductSelection,
   canConfirmProductStep,
@@ -40,6 +41,30 @@ describe("SubscriptionStep.utils — regra de estoque", () => {
       expect(
         isVariationSoldOut({ isIncludedInTicket: false, isRequired: false }, { stock: 5, availableStock: 0 }),
       ).toBe(true);
+    });
+  });
+
+  describe("isVariationEffectivelySoldOut", () => {
+    const prod = { isIncludedInTicket: false, isRequired: true };
+
+    it("última unidade disponível + outro participante usando → esgotado", () => {
+      expect(isVariationEffectivelySoldOut(prod, { stock: 5, availableStock: 1 }, 1)).toBe(true);
+    });
+    it("2 disponíveis + 1 outro usando → NÃO esgotado", () => {
+      expect(isVariationEffectivelySoldOut(prod, { stock: 5, availableStock: 2 }, 1)).toBe(false);
+    });
+    it("sem ninguém usando → mesma regra que isVariationSoldOut", () => {
+      expect(isVariationEffectivelySoldOut(prod, { stock: 5, availableStock: 0 }, 0)).toBe(true);
+      expect(isVariationEffectivelySoldOut(prod, { stock: 5, availableStock: 3 }, 0)).toBe(false);
+    });
+    it("estoque ilimitado (stock 0) nunca esgota mesmo com outros usando", () => {
+      expect(isVariationEffectivelySoldOut(prod, { stock: 0, availableStock: 0 }, 5)).toBe(false);
+    });
+    it("3 disponíveis + 3 outros usando → esgotado", () => {
+      expect(isVariationEffectivelySoldOut(prod, { stock: 10, availableStock: 3 }, 3)).toBe(true);
+    });
+    it("3 disponíveis + 2 outros usando → NÃO esgotado (sobra 1)", () => {
+      expect(isVariationEffectivelySoldOut(prod, { stock: 10, availableStock: 3 }, 2)).toBe(false);
     });
   });
 });
