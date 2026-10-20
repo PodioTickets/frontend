@@ -1531,10 +1531,6 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
             key={participantIndex}
             className={`${index > 0 ? "border-t border-gray-6 pt-4" : "pb-4"}`}
           >
-            <p className="text-sm font-semibold text-gray-12 mb-4 font-family-dm-sans">
-              Participante {participantIndex + 1}
-            </p>
-
             {/* Card do participante */}
             <div className="border border-gray-6 rounded-xl p-2 mb-4 w-full">
               <div className="flex items-center gap-2">

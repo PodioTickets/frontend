@@ -210,7 +210,7 @@ export function AdminTicketSwap({ registrationId }: { registrationId: string }) 
   const activeStepId = step === "tickets" ? 1 : step === "products" ? 2 : 3;
   const stepLabel = SWAP_STEPS[activeStepId - 1].label;
 
-  const getVariationOptions = (product: Product): DropdownOption[] =>
+  const getVariationOptions = (product: Product, _participantIndex?: number): DropdownOption[] =>
     (product.variations ?? []).map((v, i) => {
       const soldOut = isVariationSoldOut(product, v);
       return { id: v.id || `${product.id}-${i}`, label: v.name, suffix: soldOut ? "Esgotado" : undefined, disabled: soldOut };

@@ -52,6 +52,22 @@ export function isVariationSoldOut(
   return (variation.availableStock ?? 0) <= 0;
 }
 
+/**
+ * Variação esgotada considerando também as seleções dos OUTROS participantes
+ * no mesmo pedido. `othersUsing` é quantos outros participantes já escolheram
+ * esta variação — desconta do `availableStock` antes de avaliar.
+ */
+export function isVariationEffectivelySoldOut(
+  product: Pick<Product, "isIncludedInTicket" | "isRequired">,
+  variation: Pick<Product["variations"][number], "stock" | "availableStock">,
+  othersUsing: number,
+): boolean {
+  if (!variationHoldsStock(product)) return false;
+  const stock = variation.stock ?? 0;
+  if (stock <= 0) return false;
+  return (variation.availableStock ?? 0) - othersUsing <= 0;
+}
+
 export const VARIATION_KEY_SEPARATOR = "::";
 
 /** API envia valores monetários em centavos (inteiro ou string numérica). */

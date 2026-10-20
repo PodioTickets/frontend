@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Activity, Users, Link2, Ghost, Eye, BadgeCheck, Receipt, Repeat, Wallet } from "lucide-react";
+import { Activity, Users, Link2, Ghost, Eye, BadgeCheck, Receipt, Repeat, Wallet, Building2, Building } from "lucide-react";
 import { cn } from "@/utils/cn";
 import { formatBRLFromCents } from "@/lib/money";
 import { METHOD_LABEL } from "@/components/Organizer/SalesByPaymentMethod";
@@ -179,6 +179,12 @@ export function AdminUserActivityDashboard() {
 
   const { from, to } = useMemo(() => activityPeriodRange(period), [period]);
 
+  const orgStatsQuery = useQuery({
+    queryKey: queryKeys.admin.organizations.stats(),
+    queryFn: () => adminService.getAdminOrganizationStats(),
+    staleTime: 60_000,
+  });
+
   const statsQuery = useQuery({
     queryKey: queryKeys.admin.userActivity.stats({
       from,
@@ -261,6 +267,22 @@ export function AdminUserActivityDashboard() {
 
   return (
     <div className="flex flex-col gap-4 md:gap-5">
+      {/* Cards de organizadores (independentes das métricas de atividade) */}
+      <div className="grid grid-cols-2 gap-3 md:gap-4">
+        <StatCard
+          icon={<Building2 className="size-4" />}
+          label="Orgs com eventos"
+          value={orgStatsQuery.data?.organizersWithEvents ?? 0}
+          hint="Organizadores que criaram pelo menos 1 evento"
+        />
+        <StatCard
+          icon={<Building className="size-4" />}
+          label="Orgs sem eventos"
+          value={orgStatsQuery.data?.organizersWithoutEvents ?? 0}
+          hint="Organizadores que ainda não criaram eventos"
+        />
+      </div>
+
       {/* Filtros do dashboard */}
       <div className="rounded-xl border border-gray-6 bg-gray-1 p-3 md:p-4 ">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-stretch sm:flex-wrap">

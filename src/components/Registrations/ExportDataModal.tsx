@@ -2,22 +2,22 @@
 
 import { useExportDataModal } from "@/stores/modalStore";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Check, ChevronDown, Loader2 } from "lucide-react";
-import { useState } from "react";
+import { X, Check, ChevronDown, Loader2, GripVertical } from "lucide-react";
+import { useState, useCallback } from "react";
 import { createPortal } from "react-dom";
 import {
   DndContext,
   DragOverlay,
-  pointerWithin,
+  closestCenter,
   MouseSensor,
   TouchSensor,
   useSensor,
   useSensors,
-  type DragMoveEvent,
+  type DragEndEvent,
   type DragStartEvent,
 } from "@dnd-kit/core";
-import { SortableContext, arrayMove, useSortable, type SortingStrategy } from "@dnd-kit/sortable";
-import { CSS, getEventCoordinates } from "@dnd-kit/utilities";
+import { SortableContext, arrayMove, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import { Button } from "@/components/Button";
 import { ExcelIcon } from "../Icons/ExcelIcon";
 import { TxtIcon } from "../Icons/TxtIcon";
@@ -72,178 +72,228 @@ const ALL_FIELDS = [
 
 const DEFAULT_SELECTED = new Set(ALL_FIELDS.map((f) => f.id));
 const FIELD_LABELS = new Map(ALL_FIELDS.map((f) => [f.id, f.label]));
+const DEFAULT_ORDER = ALL_FIELDS.map((f) => f.id);
 
-// Os vizinhos não são deslocados pela estratégia: a lista é reordenada ao vivo no
-// `onDragOver` e o flex-wrap recalcula o layout. O `rectSortingStrategy` supõe itens do
-// mesmo tamanho e esticava cada chip (scaleX) para a largura do vizinho.
-const noShift: SortingStrategy = () => null;
-
-const chipClass = (selected: boolean) =>
-  `inline-flex items-center gap-1 px-3 py-2 rounded-full text-sm font-medium font-family-dm-sans transition-colors touch-manipulation ${
-    selected
-      ? "bg-primary-11 text-primary-1 cursor-grab active:cursor-grabbing"
-      : "bg-gray-2 border border-gray-6 text-gray-11 hover:border-gray-8 cursor-pointer"
-  }`;
-
-function ChipContent({ label, selected }: { label: string; selected: boolean }) {
-  return (
-    <>
-      {selected && (
-        <span className="size-4 flex items-center justify-center shrink-0">
-          <Check className="size-3" strokeWidth={2.5} />
-        </span>
-      )}
-      {label}
-    </>
-  );
+function columnLetter(index: number): string {
+  let result = "";
+  let n = index;
+  do {
+    result = String.fromCharCode(65 + (n % 26)) + result;
+    n = Math.floor(n / 26) - 1;
+  } while (n >= 0);
+  return result;
 }
 
-function FieldChip({
-  id,
-  label,
-  selected,
-  onToggle,
-}: {
-  id: string;
-  label: string;
-  selected: boolean;
-  onToggle: () => void;
-}) {
-  // Desmarcado não arrasta (fica fora do arquivo), mas recebe drop: ele fica no meio da fila
-  // e um marcado pode passar por cima dele.
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
-    id,
-    disabled: { draggable: !selected, droppable: false },
-  });
+function ToggleSwitch({ checked, onChange }: { checked: boolean; onChange: () => void }) {
   return (
     <button
-      ref={setNodeRef}
       type="button"
-      onClick={onToggle}
-      // Translate só (sem scale): anima o chip até a posição nova quando a ordem muda.
-      style={{ transform: isDragging ? undefined : CSS.Translate.toString(transform), transition }}
-      {...attributes}
-      {...listeners}
-      className={`${chipClass(selected)} ${isDragging ? "opacity-40" : ""}`}
+      role="switch"
+      aria-checked={checked}
+      onClick={onChange}
+      className={`relative inline-flex h-6 w-10 shrink-0 items-center rounded-full transition-colors cursor-pointer ${
+        checked ? "bg-primary-11" : "bg-gray-7"
+      }`}
     >
-      <ChipContent label={label} selected={selected} />
+      <span
+        className={`inline-block size-[18px] rounded-full bg-white shadow transition-transform ${
+          checked ? "translate-x-[19px]" : "translate-x-[3px]"
+        }`}
+      />
     </button>
   );
 }
 
-function AdvancedFields({
+function SortableFieldRow({
+  id,
+  label,
+  columnIndex,
+  onToggle,
+}: {
+  id: string;
+  label: string;
+  columnIndex: number;
+  onToggle: () => void;
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });
+  return (
+    <div
+      ref={setNodeRef}
+      style={{ transform: CSS.Transform.toString(transform), transition }}
+      className={`flex items-center gap-3 h-14 px-4 pr-3.5 border-t border-gray-4 bg-gray-1 ${isDragging ? "opacity-40 z-10" : ""}`}
+    >
+      <button
+        type="button"
+        className="shrink-0 text-gray-8 cursor-grab active:cursor-grabbing touch-manipulation"
+        {...attributes}
+        {...listeners}
+      >
+        <GripVertical className="size-4" />
+      </button>
+      <div className="shrink-0 size-[26px] rounded-md bg-primary-11 flex items-center justify-center overflow-hidden">
+        <span className="font-mono text-xs font-medium text-gray-1 leading-none">
+          {columnLetter(columnIndex)}
+        </span>
+      </div>
+      <div className="flex-1 min-w-0 flex flex-col gap-1">
+        <span className="font-family-dm-sans text-base text-gray-12 leading-[1.3] truncate">{label}</span>
+        <span className="font-family-dm-sans text-xs text-gray-10 leading-[1.3]">Coluna {columnIndex + 1}</span>
+      </div>
+      <ToggleSwitch checked onChange={onToggle} />
+    </div>
+  );
+}
+
+function DisabledFieldRow({
+  label,
+  onToggle,
+}: {
+  label: string;
+  onToggle: () => void;
+}) {
+  return (
+    <div className="flex items-center gap-3 h-14 px-4 pr-3.5 border-t border-gray-4 bg-gray-1">
+      <span className="shrink-0 text-gray-6 w-4">
+        <GripVertical className="size-4" />
+      </span>
+      <div className="shrink-0 size-[26px] rounded-md border-[1.5px] border-dashed border-gray-7" />
+      <div className="flex-1 min-w-0">
+        <span className="font-family-dm-sans text-base text-gray-11 leading-[1.3] truncate">{label}</span>
+      </div>
+      <ToggleSwitch checked={false} onChange={onToggle} />
+    </div>
+  );
+}
+
+function AdvancedFieldsList({
   fieldOrder,
   onReorder,
   selectedFields,
   onToggle,
   onSelectAll,
-  onClearAll,
+  onResetOrder,
 }: {
   fieldOrder: string[];
   onReorder: (order: string[]) => void;
   selectedFields: Set<string>;
   onToggle: (id: string) => void;
   onSelectAll: () => void;
-  onClearAll: () => void;
+  onResetOrder: () => void;
 }) {
-  // Mouse: arrasta só após 8px, senão o clique (marcar/desmarcar) vira drag.
-  // Toque: segurar 250ms — arrastar direto travaria a rolagem do modal no mobile.
-  // Sem KeyboardSensor: Enter/Espaço ativariam o drag em vez de marcar o chip.
   const sensors = useSensors(
     useSensor(MouseSensor, { activationConstraint: { distance: 8 } }),
     useSensor(TouchSensor, { activationConstraint: { delay: 250, tolerance: 5 } }),
   );
 
   const [activeId, setActiveId] = useState<string | null>(null);
-  // Ordem de antes do arraste, para desfazer no Esc.
-  const [orderBeforeDrag, setOrderBeforeDrag] = useState<string[]>([]);
+
+  const includedFields = fieldOrder.filter((id) => selectedFields.has(id));
+  const excludedFields = fieldOrder.filter((id) => !selectedFields.has(id));
 
   const handleDragStart = ({ active }: DragStartEvent) => {
     setActiveId(String(active.id));
-    setOrderBeforeDrag(fieldOrder);
   };
 
-  // Troca só quando o ponteiro passa do MEIO do chip-alvo no sentido do movimento. Com
-  // larguras diferentes, trocar ao simplesmente entrar no alvo deixava o alvo de volta sob
-  // o ponteiro → troca de novo → loop ("Maximum update depth exceeded"). Passado o meio, a
-  // troca afasta o alvo do ponteiro e fica estável. `onDragMove` (não `onDragOver`): só
-  // reage a movimento real do ponteiro, nunca a uma nova medição do layout.
-  const handleDragMove = ({ active, over, activatorEvent, delta }: DragMoveEvent) => {
-    if (!over || active.id === over.id) return;
-    const start = getEventCoordinates(activatorEvent);
-    if (!start) return;
-    const from = fieldOrder.indexOf(String(active.id));
-    const to = fieldOrder.indexOf(String(over.id));
-    const pastCenter = start.x + delta.x > over.rect.left + over.rect.width / 2;
-    if (from < to ? !pastCenter : pastCenter) return;
-    onReorder(arrayMove(fieldOrder, from, to));
-  };
-
-  const handleDragCancel = () => {
-    onReorder(orderBeforeDrag);
+  const handleDragEnd = ({ active, over }: DragEndEvent) => {
     setActiveId(null);
+    if (!over || active.id === over.id) return;
+    const oldIndex = fieldOrder.indexOf(String(active.id));
+    const newIndex = fieldOrder.indexOf(String(over.id));
+    if (oldIndex !== -1 && newIndex !== -1) {
+      onReorder(arrayMove(fieldOrder, oldIndex, newIndex));
+    }
   };
+
+  const isDefaultOrder = fieldOrder.every((id, i) => id === DEFAULT_ORDER[i]);
+  const allSelected = selectedFields.size === ALL_FIELDS.length;
 
   return (
-    <div className="flex flex-col gap-6 pt-4 pb-2">
+    <div className="flex flex-col gap-5">
       <p className="font-manrope font-bold text-base text-gray-12 leading-[1.1]">
-        Selecione os campos que deseja incluir na exportação de dados.
+        Selecione as colunas que deseja incluir ou remover do arquivo.
       </p>
-      <div className="flex items-center justify-between">
-        <span className="text-sm font-family-dm-sans text-gray-11">
-          {selectedFields.size}/{ALL_FIELDS.length}
-        </span>
-        <div className="flex items-center gap-3">
+      <div className="border border-gray-5 rounded-lg overflow-hidden">
+        {/* Included section header */}
+        <div className="flex items-center justify-between px-4 py-3 bg-gray-3 text-sm">
+          <span className="font-family-dm-sans font-semibold text-gray-11 leading-[1.3]">Incluir coluna</span>
           <button
             type="button"
-            onClick={onSelectAll}
-            className="text-sm font-medium font-family-dm-sans text-primary-10 hover:text-primary-11 transition-colors"
+            onClick={onResetOrder}
+            disabled={isDefaultOrder}
+            className={`font-family-dm-sans font-medium leading-[1.3] transition-colors ${
+              isDefaultOrder ? "text-gray-11 cursor-default" : "text-primary-11 hover:text-primary-12 cursor-pointer"
+            }`}
           >
-            Selecionar tudo
-          </button>
-          <button
-            type="button"
-            onClick={onClearAll}
-            className="text-sm font-medium font-family-dm-sans text-gray-11 hover:text-gray-12 transition-colors"
-          >
-            Limpar tudo
+            Ordem padrão
           </button>
         </div>
-      </div>
-      <DndContext
-        sensors={sensors}
-        collisionDetection={pointerWithin}
-        onDragStart={handleDragStart}
-        onDragMove={handleDragMove}
-        onDragEnd={() => setActiveId(null)}
-        onDragCancel={handleDragCancel}
-      >
-        <SortableContext items={fieldOrder} strategy={noShift}>
-          <div className="flex flex-wrap gap-2">
-            {fieldOrder.map((id) => (
-              <FieldChip
+
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCenter}
+          onDragStart={handleDragStart}
+          onDragEnd={handleDragEnd}
+        >
+          <SortableContext items={includedFields} strategy={verticalListSortingStrategy}>
+            {includedFields.map((id, i) => (
+              <SortableFieldRow
                 key={id}
                 id={id}
                 label={FIELD_LABELS.get(id) ?? id}
-                selected={selectedFields.has(id)}
+                columnIndex={i}
                 onToggle={() => onToggle(id)}
               />
             ))}
+          </SortableContext>
+          {createPortal(
+            <DragOverlay zIndex={100000}>
+              {activeId && (
+                <div className="flex items-center gap-3 h-14 px-4 pr-3.5 bg-gray-1 shadow-lg rounded-lg border border-gray-5">
+                  <GripVertical className="size-4 text-gray-8 shrink-0" />
+                  <div className="shrink-0 size-[26px] rounded-md bg-primary-11 flex items-center justify-center overflow-hidden">
+                    <span className="font-mono text-xs font-medium text-gray-1 leading-none">
+                      {columnLetter(includedFields.indexOf(activeId))}
+                    </span>
+                  </div>
+                  <span className="font-family-dm-sans text-base text-gray-12 leading-[1.3]">
+                    {FIELD_LABELS.get(activeId) ?? activeId}
+                  </span>
+                </div>
+              )}
+            </DragOverlay>,
+            document.body,
+          )}
+        </DndContext>
+
+        {/* Excluded section header */}
+        <div className="flex items-center justify-between px-4 py-3 bg-gray-3 text-sm">
+          <span className="font-family-dm-sans font-semibold text-gray-11 leading-[1.3]">Remover coluna</span>
+          <button
+            type="button"
+            onClick={onSelectAll}
+            disabled={allSelected}
+            className={`font-family-dm-sans font-medium leading-[1.3] transition-colors ${
+              allSelected ? "text-gray-8 cursor-default" : "text-primary-11 hover:text-primary-10 cursor-pointer"
+            }`}
+          >
+            Ligar todos
+          </button>
+        </div>
+
+        {excludedFields.length === 0 ? (
+          <div className="flex items-center justify-center h-14 border-t border-gray-4 bg-gray-1">
+            <span className="font-family-dm-sans text-sm text-gray-9">Todos os campos estão incluídos</span>
           </div>
-        </SortableContext>
-        {/* Portal no body: os painéis do modal usam transform (framer-motion), o que
-            deslocaria o overlay `position: fixed`. z acima do modal (z-99999). */}
-        {createPortal(
-          <DragOverlay zIndex={100000}>
-            {activeId && (
-              <div className={`${chipClass(true)} shadow-lg cursor-grabbing`}>
-                <ChipContent label={FIELD_LABELS.get(activeId) ?? activeId} selected />
-              </div>
-            )}
-          </DragOverlay>,
-          document.body,
+        ) : (
+          excludedFields.map((id) => (
+            <DisabledFieldRow
+              key={id}
+              label={FIELD_LABELS.get(id) ?? id}
+              onToggle={() => onToggle(id)}
+            />
+          ))
         )}
-      </DndContext>
+      </div>
     </div>
   );
 }
@@ -251,9 +301,8 @@ function AdvancedFields({
 export function ExportDataModal() {
   const { isOpen, closeExportDataModal, data } = useExportDataModal();
   const [selectedFormat, setSelectedFormat] = useState<ExportFormat>("txt");
-  const [showAdvanced, setShowAdvanced] = useState(true);
+  const [showAdvanced, setShowAdvanced] = useState(false);
   const [selectedFields, setSelectedFields] = useState<Set<string>>(new Set(DEFAULT_SELECTED));
-  // Ordem das colunas no arquivo — o backend respeita a ordem de `fields`.
   const [fieldOrder, setFieldOrder] = useState<string[]>(() => ALL_FIELDS.map((f) => f.id));
   const [isExporting, setIsExporting] = useState(false);
 
@@ -269,16 +318,17 @@ export function ExportDataModal() {
   const { hasPermission } = useOrganizerPermissions();
   const eventTabs = eventId ? getEventTabs(eventId, hasPermission) : [];
 
-  // Marcar/desmarcar não mexe na fila: o chip fica onde o usuário o colocou.
-  const toggleField = (id: string) => {
-    const next = new Set(selectedFields);
-    if (next.has(id)) next.delete(id);
-    else next.add(id);
-    setSelectedFields(next);
-  };
+  const toggleField = useCallback((id: string) => {
+    setSelectedFields((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }, []);
 
-  const selectAll = () => setSelectedFields(new Set(ALL_FIELDS.map((f) => f.id)));
-  const clearAll = () => setSelectedFields(new Set());
+  const selectAll = useCallback(() => setSelectedFields(new Set(ALL_FIELDS.map((f) => f.id))), []);
+  const resetOrder = useCallback(() => setFieldOrder([...DEFAULT_ORDER]), []);
 
   const handleExport = async () => {
     if (!eventId) {
@@ -317,11 +367,11 @@ export function ExportDataModal() {
     <button
       type="button"
       onClick={() => setShowAdvanced((v) => !v)}
-      className={`flex items-center gap-0 text-primary-11 font-medium font-family-dm-sans text-base leading-[1.3] hover:text-primary-10 transition-colors ${className}`}
+      className={`flex items-center gap-1 text-primary-11 font-medium font-family-dm-sans text-base leading-[1.3] hover:text-primary-10 transition-colors ${className}`}
     >
-      Ver configurações adicionais
+      {showAdvanced ? "Ocultar opções avançadas" : "Ver opções avançadas"}
       <ChevronDown
-        className={`size-6 transition-transform duration-200 ${showAdvanced ? "" : "-rotate-90"}`}
+        className={`size-6 transition-transform duration-200 ${showAdvanced ? "rotate-180" : ""}`}
       />
     </button>
   );
@@ -366,8 +416,6 @@ export function ExportDataModal() {
                   activeHref={`/organizer/events/${eventId}/registrations`}
                   onLinkClick={closeExportDataModal}
                   eventId={eventId}
-                  // Este modal é z-99999: o menu (portalado no body) precisa vencê-lo.
-                  // Antes era `z-100` fixo, ou seja, o dropdown abria ATRÁS do modal.
                   menuZClass="z-[100000]"
                 />
               )}
@@ -424,14 +472,16 @@ export function ExportDataModal() {
               <AdvancedToggle />
 
               {showAdvanced && (
-                <AdvancedFields
-                  fieldOrder={fieldOrder}
-                  onReorder={setFieldOrder}
-                  selectedFields={selectedFields}
-                  onToggle={toggleField}
-                  onSelectAll={selectAll}
-                  onClearAll={clearAll}
-                />
+                <div className="mt-5">
+                  <AdvancedFieldsList
+                    fieldOrder={fieldOrder}
+                    onReorder={setFieldOrder}
+                    selectedFields={selectedFields}
+                    onToggle={toggleField}
+                    onSelectAll={selectAll}
+                    onResetOrder={resetOrder}
+                  />
+                </div>
               )}
             </div>
 
@@ -447,7 +497,7 @@ export function ExportDataModal() {
               <Button
                 type="button"
                 onClick={handleExport}
-                disabled={isExporting}
+                disabled={isExporting || selectedFields.size === 0}
                 className="flex-1 h-11 bg-primary-11 text-primary-2 font-manrope font-bold text-base hover:bg-primary-10 disabled:opacity-60"
               >
                 {isExporting ? <Loader2 className="size-4 animate-spin" /> : "Exportar"}
@@ -462,10 +512,10 @@ export function ExportDataModal() {
             exit={{ opacity: 0, scale: 0.95, y: 20 }}
             transition={{ duration: 0.2, ease: "easeOut" }}
             onClick={(e) => e.stopPropagation()}
-            className="hidden md:flex flex-col bg-gray-1 rounded-xl shadow-2xl w-full max-w-[731px] mx-4 relative overflow-hidden max-h-[90vh]"
+            className="hidden md:flex flex-col bg-gray-1 rounded-xl shadow-2xl w-full max-w-[760px] mx-4 relative overflow-hidden max-h-[90vh]"
           >
             {/* Header */}
-            <div className="flex items-center justify-between px-5 py-3 border-b border-gray-6 shrink-0">
+            <div className="flex items-center justify-between pl-6 pr-5 py-4 border-b border-gray-6 shrink-0">
               <h2 className="font-family-dm-sans font-semibold text-xl leading-[1.3] text-gray-12">
                 Exportar dados
               </h2>
@@ -473,18 +523,18 @@ export function ExportDataModal() {
                 onClick={closeExportDataModal}
                 className="size-9 flex items-center justify-center rounded-lg hover:bg-gray-3 transition-colors cursor-pointer"
               >
-                <X className="size-5 text-gray-11" />
+                <X className="size-7 text-gray-11" />
               </button>
             </div>
 
             {/* Body — scrollable */}
-            <div className="flex-1 overflow-y-auto min-h-0 px-5 pt-5 pb-8 flex flex-col gap-8">
+            <div className="flex-1 overflow-y-auto min-h-0 px-6 pt-5 pb-6 flex flex-col gap-6">
               {/* Format cards */}
               <div className="flex flex-col gap-4">
                 <p className="font-family-dm-sans font-normal text-base leading-[1.3] text-gray-11">
                   Escolha o formato que deseja exportar
                 </p>
-                <div className="flex gap-2">
+                <div className="flex gap-3">
                   {exportOptions.map((option) => {
                     const Icon = option.icon;
                     const isSelected = selectedFormat === option.id;
@@ -526,23 +576,23 @@ export function ExportDataModal() {
               </div>
 
               {/* Advanced toggle + section */}
-              <div className="flex flex-col rounded-lg">
+              <div className="flex flex-col gap-5">
                 <AdvancedToggle />
                 {showAdvanced && (
-                  <AdvancedFields
+                  <AdvancedFieldsList
                     fieldOrder={fieldOrder}
                     onReorder={setFieldOrder}
                     selectedFields={selectedFields}
                     onToggle={toggleField}
                     onSelectAll={selectAll}
-                    onClearAll={clearAll}
+                    onResetOrder={resetOrder}
                   />
                 )}
               </div>
             </div>
 
             {/* Footer */}
-            <div className="shrink-0 flex items-center justify-end gap-2 px-4 py-3 bg-gray-2 border-t border-gray-6">
+            <div className="shrink-0 flex items-center justify-end gap-2 px-6 py-4 bg-gray-2 border-t border-gray-6">
               <Button
                 onClick={closeExportDataModal}
                 variant="outline"
@@ -552,7 +602,7 @@ export function ExportDataModal() {
               </Button>
               <Button
                 onClick={handleExport}
-                disabled={isExporting}
+                disabled={isExporting || selectedFields.size === 0}
                 className="h-11 font-manrope font-bold disabled:opacity-60"
               >
                 {isExporting ? <Loader2 className="size-4 animate-spin" /> : "Exportar"}
