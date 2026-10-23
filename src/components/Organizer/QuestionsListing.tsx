@@ -46,7 +46,7 @@ export function QuestionsListing({ items, onItemClick }: QuestionsListingProps) 
             </p>
           </div>
         ) : (
-          <>
+          <div>
             {displayItems.map((item) => (
               <div
                 key={item.id}
@@ -76,18 +76,19 @@ export function QuestionsListing({ items, onItemClick }: QuestionsListingProps) 
                 </div>
               </div>
             ))}
-            {showPagination && (
-              <Pagination
-                currentPage={currentPage}
-                totalPages={totalPages}
-                onPageChange={setCurrentPage}
-                variant="card-footer"
-                className="shrink-0"
-              />
-            )}
-          </>
+          </div>
         )}
       </div>
+      {/* Fora da lista, igual aos outros cards do dashboard: senão a última linha mantém o border-b e duplica o divisor. */}
+      {showPagination && (
+        <Pagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          onPageChange={setCurrentPage}
+          variant="compact"
+          className="shrink-0"
+        />
+      )}
     </div>
   );
 }

@@ -372,11 +372,6 @@ export function OrderSummary({
                   {/* Conteúdo do Card */}
                   <div className="flex items-center px-4 py-6 w-full">
                     <div className="flex flex-1 flex-col gap-5 items-start">
-                      <div className="flex items-center w-full">
-                        <p className="font-family-dm-sans font-normal text-base leading-[1.3] text-gray-12">
-                          Participante {participantData.participantIndex + 1}
-                        </p>
-                      </div>
                       <div className="flex flex-col gap-1">
                         <p className="font-family-dm-sans font-normal text-sm text-gray-11 max-w-[200px] truncate">
                           {participantData.categoryName || "Ingresso Avulso"}
