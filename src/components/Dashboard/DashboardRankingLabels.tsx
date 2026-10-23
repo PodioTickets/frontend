@@ -63,7 +63,12 @@ export function DashboardRankingTruncatedLabel({
   );
 }
 
+// O backend (dashboard.service) devolve este texto quando o ingresso não tem categoria.
+const NO_CATEGORY = "Sem categoria";
+
 export function DashboardRankingCategoryLabel({ category }: { category: string }) {
+  // Sem categoria: a linha mostra só o nome do ingresso.
+  if (!category?.trim() || category === NO_CATEGORY) return null;
   return (
     <DashboardRankingTruncatedLabel
       text={category}

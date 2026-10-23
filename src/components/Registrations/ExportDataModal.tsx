@@ -72,7 +72,6 @@ const ALL_FIELDS = [
 
 const DEFAULT_SELECTED = new Set(ALL_FIELDS.map((f) => f.id));
 const FIELD_LABELS = new Map(ALL_FIELDS.map((f) => [f.id, f.label]));
-const DEFAULT_ORDER = ALL_FIELDS.map((f) => f.id);
 
 function columnLetter(index: number): string {
   let result = "";
@@ -171,14 +170,14 @@ function AdvancedFieldsList({
   selectedFields,
   onToggle,
   onSelectAll,
-  onResetOrder,
+  onDeselectAll,
 }: {
   fieldOrder: string[];
   onReorder: (order: string[]) => void;
   selectedFields: Set<string>;
   onToggle: (id: string) => void;
   onSelectAll: () => void;
-  onResetOrder: () => void;
+  onDeselectAll: () => void;
 }) {
   const sensors = useSensors(
     useSensor(MouseSensor, { activationConstraint: { distance: 8 } }),
@@ -204,7 +203,7 @@ function AdvancedFieldsList({
     }
   };
 
-  const isDefaultOrder = fieldOrder.every((id, i) => id === DEFAULT_ORDER[i]);
+  const noneSelected = selectedFields.size === 0;
   const allSelected = selectedFields.size === ALL_FIELDS.length;
 
   return (
@@ -218,13 +217,13 @@ function AdvancedFieldsList({
           <span className="font-family-dm-sans font-semibold text-gray-11 leading-[1.3]">Incluir coluna</span>
           <button
             type="button"
-            onClick={onResetOrder}
-            disabled={isDefaultOrder}
+            onClick={onDeselectAll}
+            disabled={noneSelected}
             className={`font-family-dm-sans font-medium leading-[1.3] transition-colors ${
-              isDefaultOrder ? "text-gray-11 cursor-default" : "text-primary-11 hover:text-primary-12 cursor-pointer"
+              noneSelected ? "text-gray-8 cursor-default" : "text-primary-11 hover:text-primary-10 cursor-pointer"
             }`}
           >
-            Ordem padrão
+            Remover todas
           </button>
         </div>
 
@@ -276,7 +275,7 @@ function AdvancedFieldsList({
               allSelected ? "text-gray-8 cursor-default" : "text-primary-11 hover:text-primary-10 cursor-pointer"
             }`}
           >
-            Ligar todos
+            Adicionar todas
           </button>
         </div>
 
@@ -328,7 +327,7 @@ export function ExportDataModal() {
   }, []);
 
   const selectAll = useCallback(() => setSelectedFields(new Set(ALL_FIELDS.map((f) => f.id))), []);
-  const resetOrder = useCallback(() => setFieldOrder([...DEFAULT_ORDER]), []);
+  const deselectAll = useCallback(() => setSelectedFields(new Set()), []);
 
   const handleExport = async () => {
     if (!eventId) {
@@ -479,7 +478,7 @@ export function ExportDataModal() {
                     selectedFields={selectedFields}
                     onToggle={toggleField}
                     onSelectAll={selectAll}
-                    onResetOrder={resetOrder}
+                    onDeselectAll={deselectAll}
                   />
                 </div>
               )}
@@ -585,7 +584,7 @@ export function ExportDataModal() {
                     selectedFields={selectedFields}
                     onToggle={toggleField}
                     onSelectAll={selectAll}
-                    onResetOrder={resetOrder}
+                    onDeselectAll={deselectAll}
                   />
                 )}
               </div>
