@@ -24,6 +24,7 @@ import { ImageWithInitialFallback } from "@/components/ImageWithInitialFallback"
 import { withAdminPathPrefix } from "@/lib/adminPathPresentation";
 import { useAdminAppSurface } from "@/contexts/AdminAppSurfaceContext";
 import { YoutubeIcon } from "../Icons/YoutubeIcon";
+import { cn } from "@/utils/cn";
 
 export function Header() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -39,6 +40,9 @@ export function Header() {
   const isOrganizer =
     organizerPath.startsWith("/organizer") || isOrganizerShortSurfacePath(pathname);
   const isAdmin = adminPath.includes("/admin");
+  // Home e /search já têm o card "Procure seu evento" no mobile — a barra do header
+  // sairia duplicada ali. Desktop mantém (é a única busca por texto).
+  const hideSearchOnMobile = pathname === "/" || pathname === "/search";
   const { push } = useRouter();
   const { isAuthenticated, user, logout } = useAuth();
   const { openModal } = useModalStore();
@@ -151,7 +155,7 @@ export function Header() {
               </div>
             </Link>
           </div>
-          <div className="flex w-full max-w-[560px] px-4 md:px-0">
+          <div className={cn("flex w-full max-w-[560px] px-4 md:px-0", hideSearchOnMobile && "hidden md:flex")}>
             <SearchBar
               search={search}
               setSearch={setSearch}
@@ -240,7 +244,24 @@ export function Header() {
               </>
             )}
           </div>
-          <div className="flex items-center z-50 shrink-0 md:hidden">
+          <div className="flex items-center gap-2 z-50 shrink-0 md:hidden">
+            {/* Foto de perfil ao lado do menu (Figma 7397:65766, 28px) — só logado. */}
+            {isAuthenticated && user && (
+              <Link href="/user" aria-label="Perfil e configurações" className="shrink-0">
+                <ImageWithInitialFallback
+                  src={user.avatarUrl?.trim() ? getAvatarUrl(user.avatarUrl) : null}
+                  alt={userDisplayName}
+                  name={userDisplayName}
+                  fallbackId={user.id}
+                  width={28}
+                  height={28}
+                  nativeImg
+                  className="size-7 rounded-full shrink-0 overflow-hidden bg-primary-10"
+                  imgClassName="object-cover rounded-full"
+                  letterClassName="text-xs font-semibold text-gray-12 uppercase"
+                />
+              </Link>
+            )}
             <button
               className="flex items-center justify-center w-10 h-10 relative transition-all duration-300 hover:opacity-80"
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
