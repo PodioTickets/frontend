@@ -1,4 +1,5 @@
 "use client";
+import Image from "next/image";
 import { modalitiesColumns } from "@/constants";
 import { resolveLegacyLocationSlug } from "@/constants/legacyLocationSlugs";
 import { Dropdown } from "../Dropdown";
@@ -300,20 +301,22 @@ export function HomeFilters({
 
   return (
     <div className={cn("w-full md:px-0", !hero && "mt-6 md:mt-14")}>
-      {/* Mobile Layout — card que abre o bottom-sheet de filtros (home E /search) */}
+      {/* Mobile Layout — card que abre o bottom-sheet de filtros (home E /search).
+          Figma 7397:65774 ("busca · resumo"). */}
       <button
         type="button"
         onClick={() => setMobileFiltersOpen(true)}
-        className="w-full flex md:hidden text-left active:scale-[0.99] transition"
+        className="w-full flex md:hidden items-center gap-3 overflow-hidden rounded-2xl border border-gray-5 bg-gray-1 px-3 py-2 text-left active:scale-[0.99] transition"
         aria-label="Abrir filtros de busca"
       >
-        <div className="w-full rounded-full border border-gray-6 p-3 px-4 flex items-center gap-4">
-          <SearchIcon className="size-5 text-gray-11 shrink-0" />
-          <div className="flex flex-col min-w-0">
-            <h1 className="text-sm font-medium">Encontre sua próxima corrida</h1>
-            <p className="text-xs text-gray-11 truncate">{mobileSummary}</p>
+        <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+          <p className="font-family-manrope text-[15px] font-semibold text-gray-12">Procure seu evento</p>
+          <div className="flex min-w-0 items-center gap-1">
+            <Image src="/images/search-summary-location.svg" alt="" width={16} height={16} unoptimized className="shrink-0" />
+            <p className="font-family-dm-sans text-xs leading-[1.3] text-gray-11 truncate">{mobileSummary}</p>
           </div>
         </div>
+        <Image src="/images/search-summary-search.svg" alt="" width={24} height={24} unoptimized className="shrink-0" />
       </button>
 
       <MobileFiltersSheet
