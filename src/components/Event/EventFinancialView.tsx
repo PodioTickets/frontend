@@ -241,9 +241,12 @@ export function EventFinancialView({
                       {((financialData.awaitingRelease + financialData.installmentsToReceive) / 100).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </p>
                   </div>
-                  <button onClick={() => setIsAwaitingReleaseOpen(true)} className="text-sm text-gray-11 underline font-family-dm-sans font-normal pb-3 pt-1 px-3">
-                    Ver detalhes
-                  </button>
+                  {/* Valor zerado → nada a detalhar; esconde o botão (vale para os 4 cards, mobile e desktop). */}
+                  {financialData.awaitingRelease + financialData.installmentsToReceive > 0 && (
+                    <button onClick={() => setIsAwaitingReleaseOpen(true)} className="text-sm text-gray-11 underline font-family-dm-sans font-normal pb-3 pt-1 px-3">
+                      Ver detalhes
+                    </button>
+                  )}
                 </div>
                 {/* Total já repassado */}
                 <div className="bg-gray-1 border border-gray-6 rounded-lg min-w-[157px] w-[157px] shrink-0 snap-start">
@@ -258,9 +261,11 @@ export function EventFinancialView({
                       {(financialData.totalTransferred / 100).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </p>
                   </div>
-                  <button onClick={() => setIsTransferHistoryOpen(true)} className="text-sm text-gray-11 underline font-family-dm-sans font-normal pb-3 pt-1 px-3">
-                    Ver detalhes
-                  </button>
+                  {financialData.totalTransferred > 0 && (
+                    <button onClick={() => setIsTransferHistoryOpen(true)} className="text-sm text-gray-11 underline font-family-dm-sans font-normal pb-3 pt-1 px-3">
+                      Ver detalhes
+                    </button>
+                  )}
                 </div>
                 {/* Estornado */}
                 <div className="bg-gray-1 border border-gray-6 rounded-lg min-w-[157px] w-[157px] shrink-0 snap-start">
@@ -275,9 +280,11 @@ export function EventFinancialView({
                       {(financialData.refunded / 100).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </p>
                   </div>
-                  <button onClick={() => setIsRefundedOpen(true)} className="text-sm text-gray-11 underline font-family-dm-sans font-normal pb-3 pt-1 px-3">
-                    Ver detalhes
-                  </button>
+                  {financialData.refunded > 0 && (
+                    <button onClick={() => setIsRefundedOpen(true)} className="text-sm text-gray-11 underline font-family-dm-sans font-normal pb-3 pt-1 px-3">
+                      Ver detalhes
+                    </button>
+                  )}
                 </div>
                 {/* Chargebacks */}
                 <div className="bg-gray-1 border border-gray-6 rounded-lg min-w-[157px] w-[157px] shrink-0 snap-start">
@@ -292,9 +299,11 @@ export function EventFinancialView({
                       {(financialData.chargebacks / 100).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </p>
                   </div>
-                  <button onClick={() => setIsChargebackOpen(true)} className="text-sm text-gray-11 underline font-family-dm-sans font-normal pb-3 pt-1 px-3">
-                    Ver detalhes
-                  </button>
+                  {financialData.chargebacks > 0 && (
+                    <button onClick={() => setIsChargebackOpen(true)} className="text-sm text-gray-11 underline font-family-dm-sans font-normal pb-3 pt-1 px-3">
+                      Ver detalhes
+                    </button>
+                  )}
                 </div>
               </div>
               {/* Carousel dots */}
@@ -358,12 +367,14 @@ export function EventFinancialView({
                 <p className="font-family-dm-sans font-bold text-[20px] text-gray-12">
                   R${((financialData.awaitingRelease + financialData.installmentsToReceive) / 100).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </p>
-                <button
-                  onClick={() => setIsAwaitingReleaseOpen(true)}
-                  className="text-[14px] text-gray-11 underline font-family-dm-sans font-medium cursor-pointer"
-                >
-                  Ver detalhes
-                </button>
+                {financialData.awaitingRelease + financialData.installmentsToReceive > 0 && (
+                  <button
+                    onClick={() => setIsAwaitingReleaseOpen(true)}
+                    className="text-[14px] text-gray-11 underline font-family-dm-sans font-medium cursor-pointer"
+                  >
+                    Ver detalhes
+                  </button>
+                )}
               </div>
             </div>
 
@@ -382,12 +393,14 @@ export function EventFinancialView({
                 <p className="font-family-dm-sans font-bold text-[20px] text-gray-12">
                   R${(financialData.totalTransferred / 100).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </p>
-                <button
-                  onClick={() => setIsTransferHistoryOpen(true)}
-                  className="text-[14px] text-gray-11 underline font-family-dm-sans font-medium cursor-pointer"
-                >
-                  Ver detalhes
-                </button>
+                {financialData.totalTransferred > 0 && (
+                  <button
+                    onClick={() => setIsTransferHistoryOpen(true)}
+                    className="text-[14px] text-gray-11 underline font-family-dm-sans font-medium cursor-pointer"
+                  >
+                    Ver detalhes
+                  </button>
+                )}
               </div>
             </div>
 
@@ -405,12 +418,14 @@ export function EventFinancialView({
                 <p className="font-family-dm-sans font-bold text-[20px] text-gray-12">
                   R${(financialData.refunded / 100).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </p>
-                <button
-                  onClick={() => setIsRefundedOpen(true)}
-                  className="text-[14px] text-gray-11 underline font-family-dm-sans font-medium cursor-pointer"
-                >
-                  Ver detalhes
-                </button>
+                {financialData.refunded > 0 && (
+                  <button
+                    onClick={() => setIsRefundedOpen(true)}
+                    className="text-[14px] text-gray-11 underline font-family-dm-sans font-medium cursor-pointer"
+                  >
+                    Ver detalhes
+                  </button>
+                )}
               </div>
             </div>
 
@@ -429,12 +444,14 @@ export function EventFinancialView({
                 <p className="font-family-dm-sans font-bold text-[20px] text-gray-12">
                   R${(financialData.chargebacks / 100).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </p>
-                <button
-                  onClick={() => setIsChargebackOpen(true)}
-                  className="text-[14px] text-gray-11 underline font-family-dm-sans font-medium cursor-pointer"
-                >
-                  Ver detalhes
-                </button>
+                {financialData.chargebacks > 0 && (
+                  <button
+                    onClick={() => setIsChargebackOpen(true)}
+                    className="text-[14px] text-gray-11 underline font-family-dm-sans font-medium cursor-pointer"
+                  >
+                    Ver detalhes
+                  </button>
+                )}
               </div>
             </div>
           </div>

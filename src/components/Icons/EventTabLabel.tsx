@@ -1,7 +1,7 @@
 import type { ComponentType } from "react";
 import { DashboardIcon } from "@/components/Icons/Organizer/DashboardIcon";
 import { PencilIcon } from "@/components/Icons/PencilIcon";
-import { PackageBoxIcon } from "@/components/Icons/PackageBoxIcon";
+import { UsersIcon } from "@/components/Icons/Organizer/UsersIcon";
 import { CoinDollarIcon } from "@/components/Icons/CoinDollarIcon";
 import { BadgePercentIcon } from "@/components/Icons/BadgePercentIcon";
 import { AnnouncementIcon } from "@/components/Icons/AnnouncementIcon";
@@ -15,7 +15,8 @@ import { NotificationIcon } from "@/components/Icons/NotificationIcon";
  */
 const EVENT_TAB_ICON: Record<string, ComponentType<{ className?: string }>> = {
   Dashboard: DashboardIcon,
-  Inscrições: PackageBoxIcon,
+  // Mesmo ícone do botão "Ver inscritos" da lista de eventos.
+  Inscrições: UsersIcon,
   Financeiro: CoinDollarIcon,
   Editar: PencilIcon,
   Desconto: BadgePercentIcon,

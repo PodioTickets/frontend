@@ -36,6 +36,7 @@ export function useEventSearch(params: SearchEventsParams = {}) {
         modalities: modalitiesKey,
         minPrice: params.minPrice,
         maxPrice: params.maxPrice,
+        featuredFirst: params.featuredFirst,
         limit,
       },
     ],
@@ -50,6 +51,7 @@ export function useEventSearch(params: SearchEventsParams = {}) {
       modalitiesKey,
       params.minPrice,
       params.maxPrice,
+      params.featuredFirst,
       limit,
     ],
   );

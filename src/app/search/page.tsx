@@ -12,8 +12,20 @@ import { statusOptions, orderOptions } from "@/constants";
 import { resolveLegacyLocationSlug } from "@/constants/legacyLocationSlugs";
 import type { DateRange } from "react-day-picker";
 
+/** Filtros da busca na URL (busca, local, datas, modalidade, preço, status, ordenação). */
+const SEARCH_FILTER_KEYS = [
+  "q", "country", "state", "city", "location", "dateFrom", "dateTo", "includePast",
+  "modalities", "priceMin", "priceMax", "status", "orderBy",
+];
+
+/** Destaque primeiro SÓ sem nenhum filtro; com filtro, destacado ordena como os demais
+ *  (o backend pagina só por data com `featuredFirst=false`). Mesma regra no mobile e desktop. */
+const isFeaturedFirst = (sp: { get(key: string): string | null }) =>
+  !SEARCH_FILTER_KEYS.some((key) => sp.get(key));
+
 function MobileAdvancedSearch() {
   const searchParams = useSearchParams();
+  const featuredFirst = isFeaturedFirst(searchParams);
 
   const legacyLocation = searchParams.get("location");
   const stateFromUrl = searchParams.get("state");
@@ -62,6 +74,7 @@ function MobileAdvancedSearch() {
     // mexeu no slider (piso > 0 / teto < 1000), então é seguro repassar direto.
     minPrice: priceMin ? parseFloat(priceMin) : undefined,
     maxPrice: priceMax ? parseFloat(priceMax) : undefined,
+    featuredFirst,
     limit: 20,
   });
 
@@ -204,6 +217,7 @@ function SearchContent() {
   const priceMax = searchParams.get("priceMax");
   const statusFilter = searchParams.get("status") || null;
   const orderBy = searchParams.get("orderBy") || "date-asc";
+  const featuredFirst = isFeaturedFirst(searchParams);
 
   // Converter datas para formato ISO se necessário
   const startDate = dateFrom
@@ -235,6 +249,7 @@ function SearchContent() {
     // client-side antigo, que comparava `event.price` (nunca retornado) e não funcionava.
     minPrice: priceMin ? parseFloat(priceMin) : undefined,
     maxPrice: priceMax ? parseFloat(priceMax) : undefined,
+    featuredFirst,
     limit: 20,
   });
 
@@ -292,7 +307,7 @@ function SearchContent() {
       });
     }
 
-    // Destaque PRIMEIRO só na ordem PADRÃO (data crescente). Ordenações explícitas
+    // Destaque PRIMEIRO só sem nenhum filtro (`featuredFirst`). Ordenações explícitas
     // do usuário (nome, data-desc) respeitam a escolha dele. `featuredOrder` nulo =
     // não destacado → vai para o fim (Infinity). O backend já pagina destaque-primeiro,
     // então a página atual traz os destacados; aqui só garantimos a ordem dentro dela.
@@ -321,7 +336,7 @@ function SearchContent() {
       const cb = isCompleted(b);
       if (ca !== cb) return ca ? 1 : -1;
       if (ca) return time(b.eventDate) - time(a.eventDate);
-      const f = byFeatured(a, b);
+      const f = featuredFirst ? byFeatured(a, b) : 0;
       if (f !== 0) return f;
       if (!a.eventDate || !b.eventDate) return 0;
       return time(a.eventDate) - time(b.eventDate);
@@ -343,7 +358,7 @@ function SearchContent() {
           return byDefaultOrder(a, b);
       }
     });
-  }, [events, priceMin, priceMax, statusFilter, orderBy]);
+  }, [events, priceMin, priceMax, statusFilter, orderBy, featuredFirst]);
 
   const hasFilters = useMemo(() => {
     return !!(

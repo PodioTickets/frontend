@@ -21,6 +21,8 @@ export interface SearchEventsParams {
    *  ingresso/lote no intervalo. Omitidos quando o slider está no padrão. */
   minPrice?: number;
   maxPrice?: number;
+  /** `false` = backend pagina só por data (busca com filtro). Omitido = destaque primeiro. */
+  featuredFirst?: boolean;
   page?: number;
   limit?: number;
 }
@@ -93,6 +95,7 @@ export class EventService {
       modalities,
       minPrice,
       maxPrice,
+      featuredFirst,
       page = 1,
       limit = 20,
     } = params || {};
@@ -115,6 +118,7 @@ export class EventService {
         modalities: modalities && modalities.length > 0 ? modalities.join(",") : undefined,
         minPrice: toCents(minPrice),
         maxPrice: toCents(maxPrice),
+        featuredFirst: featuredFirst === false ? "false" : undefined,
         page,
         limit,
       },
