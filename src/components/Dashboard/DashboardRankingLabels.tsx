@@ -73,7 +73,7 @@ export function DashboardRankingCategoryLabel({ category }: { category: string }
     <DashboardRankingTruncatedLabel
       text={category}
       mobileTapAriaLabel="Toque para ver o nome completo da categoria"
-      lineClassName="font-family-dm-sans font-normal text-[14px] leading-[1.3] text-gray-11 overflow-hidden text-ellipsis whitespace-nowrap w-full max-w-full min-w-0"
+      lineClassName="font-family-dm-sans font-normal text-[12px] leading-[1.3] text-gray-11 overflow-hidden text-ellipsis whitespace-nowrap w-full max-w-full min-w-0"
     />
   );
 }

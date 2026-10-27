@@ -63,6 +63,7 @@ import Image from "next/image";
 
 interface InformationStepProps {
   event: Event;
+  /** Pode ser async e rejeitar com `OrderApiError` de documento — o step marca o card. */
   onNext: () => void;
   onBack: () => void;
   isSubmitting?: boolean;
@@ -519,20 +520,29 @@ export function InformationStep({
         // localmente por getDuplicateDocError; o que só chega aqui é o documento
         // que já tem inscrição em OUTRO pedido do evento — o front não tem como
         // saber disso sozinho. Marca o card em vez de falhar em silêncio.
-        if (
-          err instanceof OrderApiError &&
-          err.code === "ONE_TICKET_PER_DOCUMENT"
-        ) {
-          const slots = err.slots?.length
-            ? err.slots
-            : savedIndexes.map((_, k) => k);
-          slots.forEach((slot) => {
-            const participantIndex = savedIndexes[slot];
-            if (participantIndex === undefined) return;
-            setParticipantFieldError(participantIndex, "cpf", err.message);
-          });
-        }
+        showServerDocumentError(err, savedIndexes);
       });
+  };
+
+  /* Erro de documento do servidor → marca o CPF no(s) card(s) e ABRE o 1º: o
+   * card costuma estar fechado (acabou de salvar), e o erro no input ficaria
+   * escondido. `indexes[slot]` traduz o slot do payload pro índice real.
+   * Retorna se tratou (o chamador decide o que fazer com os outros erros). */
+  const showServerDocumentError = (err: unknown, indexes: number[]): boolean => {
+    if (!(err instanceof OrderApiError) || err.code !== "ONE_TICKET_PER_DOCUMENT") return false;
+    const slots = err.slots?.length ? err.slots : indexes.map((_, k) => k);
+    const invalid = slots.map((slot) => indexes[slot]).filter((i) => i !== undefined);
+    invalid.forEach((i) => setParticipantFieldError(i, "cpf", err.message));
+    if (invalid.length > 0) setExpandedParticipants({ [invalid[0]]: true });
+    return true;
+  };
+
+  /* "Próximo": o PATCH final manda a lista completa (slot = índice). Erro de
+   * documento volta rejeitado do `onNext` pra cair no input, não só no toast. */
+  const confirmParticipants = () => {
+    Promise.resolve(onNext()).catch((err) =>
+      showServerDocumentError(err, participantsWithRaces.map(({ participantIndex }) => participantIndex)),
+    );
   };
 
   // Detecta remoção de todos os ingressos: cancela reserva no servidor e volta
@@ -2784,7 +2794,7 @@ export function InformationStep({
                   toast.error("Clique em \"Salvar e próximo\" em cada participante antes de confirmar.");
                   return;
                 }
-                onNext();
+                confirmParticipants();
               }}
               disabled={previewMode || isSubmitting || !allParticipantsSaved || anyCardOpen}
               isLoading={isSubmitting}
@@ -2847,7 +2857,7 @@ export function InformationStep({
               toast.error("Clique em \"Salvar e próximo\" em cada participante antes de confirmar.");
               return;
             }
-            onNext();
+            confirmParticipants();
           },
         } : undefined}
       />

@@ -81,6 +81,11 @@ function CheckoutInformacoesContent() {
           router.push(`/checkout/ingressos?eventId=${eventId}`);
           return;
         }
+        if (err.code === "ONE_TICKET_PER_DOCUMENT") {
+          // O InformationStep abre o card e marca o CPF (ver `confirmParticipants`).
+          toast.error(err.message);
+          throw err;
+        }
         if (err.code === "VALIDATION_ERROR" && err.fields?.length) {
           toast.error(err.fields[0].message);
           return;

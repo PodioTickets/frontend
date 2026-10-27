@@ -145,7 +145,7 @@ export function DashboardView({
             key={ticketRankingSliceStart + index}
             className={`grid ${rankingCols} border-b border-gray-6 last:border-b-0 bg-gray-1`}
           >
-            <div className="px-4 py-3 flex flex-col gap-2 justify-center">
+            <div className="px-4 py-3 flex flex-col gap-1 justify-center">
               <DashboardRankingCategoryLabel category={ticket.category} />
               <DashboardRankingTicketNameLabel name={ticket.name} />
             </div>
