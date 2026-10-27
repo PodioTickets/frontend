@@ -25,13 +25,19 @@ const EVENT_TAB_ICON: Record<string, ComponentType<{ className?: string }>> = {
   Notificações: NotificationIcon,
 };
 
+/** O `UsersIcon` tem viewBox 24 com margem (os demais, 20): em `size-4` ele sai
+ * menor e com traço mais fino. Em 20px a escala fica igual à dos outros (~0,8). */
+const EVENT_TAB_ICON_SIZE: Record<string, string> = {
+  Inscrições: "size-5",
+};
+
 /** Conteúdo de uma tab de evento: ícone + label, alinhados. Usado tanto nos
  * `Link` quanto nos botões com dropdown (Editar/Desconto). */
 export function EventTabLabel({ label }: { label: string }) {
   const Icon = EVENT_TAB_ICON[label];
   return (
     <span className="inline-flex items-center gap-2">
-      {Icon ? <Icon className="size-4 shrink-0" /> : null}
+      {Icon ? <Icon className={`${EVENT_TAB_ICON_SIZE[label] ?? "size-4"} shrink-0`} /> : null}
       <span>{label}</span>
     </span>
   );

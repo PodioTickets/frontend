@@ -10,6 +10,12 @@ import { TrashIcon } from "../Icons/TrashIcon";
 import { sanitizeVariationTypeLabelInput } from "@/lib/productValidation";
 import type { ProductVariation } from "@/components/Product/CreateProductModal.types";
 
+// Larguras (px) das colunas fixas da tabela desktop e a largura dela no modal.
+// Sem a coluna de preço (produto incluso), viram pesos de flex-grow: as demais
+// crescem na mesma proporção em vez de o Nome absorver o espaço sozinho.
+const COL_WIDTH = { price: 188, stock: 132, sold: 150, actions: 74 } as const;
+const TABLE_REF_WIDTH = 1140;
+
 /**
  * Editor de variações do `CreateProductModal`: input do tipo de variação +
  * tabela (desktop, edição inline) / cards (mobile, edição via bottom-sheet) +
@@ -49,6 +55,19 @@ export function ProductVariations({
   openMobileAddVariation: () => void;
   setMobileMoreMenuVariationId: (v: string | null) => void;
 }) {
+  // Incluso no ingresso: todas as linhas diriam "Incluso" → coluna de preço some.
+  const showPriceColumn = !isIncludedInTicket;
+  const nameWeight =
+    TABLE_REF_WIDTH -
+    COL_WIDTH.price -
+    COL_WIDTH.actions -
+    (productHoldsStock ? COL_WIDTH.stock : 0) -
+    (showSoldColumn ? COL_WIDTH.sold : 0);
+  // Base = a própria largura (padding incluso, border-box) e grow = largura →
+  // cada coluna escala pelo mesmo fator. Com base 0 o px-4 entraria fora da conta.
+  const colStyle = (weight: number) =>
+    showPriceColumn ? undefined : { flex: `${weight} 1 ${weight}px` };
+
   return (
     <>
       {/* Variation Name Input */}
@@ -77,58 +96,60 @@ export function ProductVariations({
       >
         {/* Table Header — desktop */}
         <div className="hidden h-11 items-center rounded-t-lg border-b border-gray-6 bg-gray-3 md:flex">
-          <div className="flex-1 px-4">
+          <div className="flex-1 px-4" style={colStyle(nameWeight)}>
             <span className="text-sm font-medium font-inter leading-[1.3] text-gray-12">
               {variationTypeName.trim() || "Variações"}
             </span>
           </div>
-          <div className="flex w-[188px] items-center justify-center px-4 border-r h-full border-gray-6">
-            <span className="flex items-center gap-1 text-sm font-medium font-inter leading-[1.3] text-gray-12">
-              Preço específico{" "}
-              <Tooltip
-                content={
-                  <div className="flex w-full flex-col gap-2 text-left font-family-dm-sans text-sm font-normal leading-[1.4] text-gray-12">
-                    <p>
-                      Defina um preço específico para esta variação, caso ela
-                      tenha um valor diferente do produto principal.
-                    </p>
-                    <p>
-                      Por exemplo: a camiseta custa R$50, mas a variação na cor
-                      azul pode custar R$60.
-                    </p>
-                    <p>
-                      Se este campo não for preenchido, o sistema utilizará
-                      automaticamente o preço padrão do produto.
-                    </p>
-                  </div>
-                }
-                position="topLeft"
-              >
-                <button
-                  type="button"
-                  className="inline-flex cursor-help rounded text-gray-12 hover:text-gray-11 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-8"
-                  aria-label="Informação: preço específico da variação"
+          {showPriceColumn && (
+            <div className="flex w-[188px] items-center justify-center px-4 border-r h-full border-gray-6">
+              <span className="flex items-center gap-1 text-sm font-medium font-inter leading-[1.3] text-gray-12">
+                Preço específico{" "}
+                <Tooltip
+                  content={
+                    <div className="flex w-full flex-col gap-2 text-left font-family-dm-sans text-sm font-normal leading-[1.4] text-gray-12">
+                      <p>
+                        Defina um preço específico para esta variação, caso ela
+                        tenha um valor diferente do produto principal.
+                      </p>
+                      <p>
+                        Por exemplo: a camiseta custa R$50, mas a variação na cor
+                        azul pode custar R$60.
+                      </p>
+                      <p>
+                        Se este campo não for preenchido, o sistema utilizará
+                        automaticamente o preço padrão do produto.
+                      </p>
+                    </div>
+                  }
+                  position="topLeft"
                 >
-                  <BookIcon className="size-5 shrink-0" />
-                </button>
-              </Tooltip>
-            </span>
-          </div>
+                  <button
+                    type="button"
+                    className="inline-flex cursor-help rounded text-gray-12 hover:text-gray-11 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-8"
+                    aria-label="Informação: preço específico da variação"
+                  >
+                    <BookIcon className="size-5 shrink-0" />
+                  </button>
+                </Tooltip>
+              </span>
+            </div>
+          )}
           {productHoldsStock && (
-            <div className="flex w-[132px] items-center justify-center px-4">
+            <div className="flex w-[132px] items-center justify-center px-4" style={colStyle(COL_WIDTH.stock)}>
               <span className="text-sm font-medium font-inter leading-[1.3] text-gray-12">
                 Estoque
               </span>
             </div>
           )}
           {showSoldColumn && (
-            <div className="flex w-[150px] items-center justify-center px-4">
+            <div className="flex w-[150px] items-center justify-center px-4" style={colStyle(COL_WIDTH.sold)}>
               <span className="text-sm w-max font-medium font-inter leading-[1.3] text-gray-12">
                 Total vendidos
               </span>
             </div>
           )}
-          <div className="flex h-full w-[74px] items-center justify-center border-l border-gray-6 px-4">
+          <div className="flex h-full w-[74px] items-center justify-center border-l border-gray-6 px-4" style={colStyle(COL_WIDTH.actions)}>
             <span className="text-sm font-medium font-inter leading-[1.3] text-gray-12">
               Ações
             </span>
@@ -195,7 +216,7 @@ export function ProductVariations({
 
               {/* Desktop — linha da tabela */}
               <div className="hidden border-b border-gray-6 md:flex md:h-[52px] md:items-center">
-                <div className="flex flex-1 px-4">
+                <div className="flex flex-1 px-4" style={colStyle(nameWeight)}>
                   <input
                     type="text"
                     value={variation.name}
@@ -206,12 +227,8 @@ export function ProductVariations({
                     className="h-auto w-full border-0 bg-transparent px-0 text-sm font-medium font-inter text-gray-12 focus:border-0 focus:outline-none focus:ring-0"
                   />
                 </div>
-                <div className="flex w-[188px] items-center justify-center px-4">
-                  {isIncludedInTicket ? (
-                    <span className="flex items-center gap-1 text-sm font-medium font-inter text-gray-11">
-                      Incluso
-                    </span>
-                  ) : (
+                {showPriceColumn && (
+                  <div className="flex w-[188px] items-center justify-center px-4">
                     <div className="flex items-center gap-0.5 text-sm font-semibold font-inter text-gray-12">
                       <span>R$</span>
                       <input
@@ -225,10 +242,10 @@ export function ProductVariations({
                         placeholder="0,00"
                       />
                     </div>
-                  )}
-                </div>
+                  </div>
+                )}
                 {productHoldsStock && (
-                  <div className="flex w-[132px] items-center justify-center px-4">
+                  <div className="flex w-[132px] items-center justify-center px-4" style={colStyle(COL_WIDTH.stock)}>
                     <input
                       type="number"
                       value={variation.stock}
@@ -245,13 +262,13 @@ export function ProductVariations({
                   </div>
                 )}
                 {showSoldColumn && (
-                  <div className="flex w-[150px] items-center justify-center px-4">
+                  <div className="flex w-[150px] items-center justify-center px-4" style={colStyle(COL_WIDTH.sold)}>
                     <span className="text-sm font-semibold font-inter text-gray-11 tabular-nums w-max">
                       {variation.soldCount ?? 0}
                     </span>
                   </div>
                 )}
-                <div className="flex w-[74px] items-center justify-center px-4">
+                <div className="flex w-[74px] items-center justify-center px-4" style={colStyle(COL_WIDTH.actions)}>
                   <button
                     type="button"
                     title="Remover variação"

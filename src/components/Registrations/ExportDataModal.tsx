@@ -204,7 +204,6 @@ function AdvancedFieldsList({
   };
 
   const noneSelected = selectedFields.size === 0;
-  const allSelected = selectedFields.size === ALL_FIELDS.length;
 
   return (
     <div className="flex flex-col gap-5">
@@ -264,33 +263,27 @@ function AdvancedFieldsList({
           )}
         </DndContext>
 
-        {/* Excluded section header */}
-        <div className="flex items-center justify-between px-4 py-3 bg-gray-3 text-sm">
-          <span className="font-family-dm-sans font-semibold text-gray-11 leading-[1.3]">Remover coluna</span>
-          <button
-            type="button"
-            onClick={onSelectAll}
-            disabled={allSelected}
-            className={`font-family-dm-sans font-medium leading-[1.3] transition-colors ${
-              allSelected ? "text-gray-8 cursor-default" : "text-primary-11 hover:text-primary-10 cursor-pointer"
-            }`}
-          >
-            Adicionar todas
-          </button>
-        </div>
-
-        {excludedFields.length === 0 ? (
-          <div className="flex items-center justify-center h-14 border-t border-gray-4 bg-gray-1">
-            <span className="font-family-dm-sans text-sm text-gray-9">Todos os campos estão incluídos</span>
-          </div>
-        ) : (
-          excludedFields.map((id) => (
-            <DisabledFieldRow
-              key={id}
-              label={FIELD_LABELS.get(id) ?? id}
-              onToggle={() => onToggle(id)}
-            />
-          ))
+        {/* Seção "Remover coluna" só existe com alguma coluna desmarcada. */}
+        {excludedFields.length > 0 && (
+          <>
+            <div className="flex items-center justify-between px-4 py-3 bg-gray-3 text-sm">
+              <span className="font-family-dm-sans font-semibold text-gray-11 leading-[1.3]">Remover coluna</span>
+              <button
+                type="button"
+                onClick={onSelectAll}
+                className="font-family-dm-sans font-medium leading-[1.3] transition-colors text-primary-11 hover:text-primary-10 cursor-pointer"
+              >
+                Adicionar todas
+              </button>
+            </div>
+            {excludedFields.map((id) => (
+              <DisabledFieldRow
+                key={id}
+                label={FIELD_LABELS.get(id) ?? id}
+                onToggle={() => onToggle(id)}
+              />
+            ))}
+          </>
         )}
       </div>
     </div>

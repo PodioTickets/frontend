@@ -1085,13 +1085,10 @@ export function CreateProductModal() {
                         </h3>
                         <p className="text-base font-normal font-family-dm-sans leading-[1.3] text-gray-11">
                           <span className="md:hidden">
-                            Crie opções como tamanhos e controle estoque por
-                            variação.
+                            Crie variações, como tamanhos e cores, e controle o estoque de cada opção.
                           </span>
                           <span className="hidden md:inline">
-                            Crie opções como tamanhos e controle estoque por
-                            variação. Você pode reaproveitar um conjunto de
-                            variações para não repetir trabalho.
+                            Crie variações, como tamanhos e cores, e controle o estoque de cada opção.
                           </span>
                         </p>
                       </div>
