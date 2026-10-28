@@ -2070,7 +2070,9 @@ export function InformationStep({
                       <div
                         className={`transition-all duration-300 ease-in-out ${!isExpanded
                           ? "max-h-[200px] opacity-100"
-                          : "max-h-0 opacity-0"
+                          // Escondido: sem overflow-hidden o resumo (min-h 100px com nome) vaza
+                          // invisível por cima da 1ª linha do formulário e engole os cliques.
+                          : "max-h-0 opacity-0 overflow-hidden pointer-events-none"
                           }`}
                       >
                         <div
