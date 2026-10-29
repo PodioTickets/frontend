@@ -25,6 +25,9 @@ export interface TicketFormData {
   minPurchaseQuantity?: string;
   /** Quantidade máxima por pedido ("" = sem máximo). */
   maxPurchaseQuantity?: string;
+  /** Esgotamento automático: data "YYYY-MM-DD" e hora "HH:mm" ("" = sem esgotamento). */
+  autoSoldOutDate?: string;
+  autoSoldOutTime?: string;
   hasKit: boolean;
   selectedGroupId: string;
   batches: Batch[];

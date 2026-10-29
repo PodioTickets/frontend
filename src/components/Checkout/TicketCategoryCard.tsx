@@ -25,6 +25,12 @@ import type { CouponPreviewResult } from "@/lib/orderCouponDiscount";
 import { isAgeWithinTicketLimit } from "@/lib/ageCoupon";
 import { stepTicketQuantity, ticketQuantityCap } from "@/lib/ticketMinQuantity";
 import { TicketPickControl, useTicketPick } from "@/contexts/TicketPickContext";
+import { ticketAutoCouponBadges, type AgeDisplayCoupon } from "@/lib/autoCouponBadges";
+import type { QuantityAutoCoupon } from "@/lib/quantityCoupon";
+import { AutoCouponBadges } from "./AutoCouponBadges";
+
+/** Cupons automáticos do evento para os selos dos cards (null/ausente = sem selos). */
+export type AutoCouponsForBadges = { quantity: QuantityAutoCoupon[]; age: AgeDisplayCoupon[] } | null;
 
 /* Aplica preview de cupom (`?coupon=` na URL) ao preço base do ticket pra
  * exibir "R$ X (com desconto)  R$ Y (riscado)" nos cards. Backend é fonte
@@ -109,6 +115,7 @@ interface TicketCategoryCardProps {
    *  `false` suprime o strike-through nos cards — o appliesTo (quais ingressos)
    *  já vem no próprio preview. Default `true` (sem cupom de link gated). */
   couponConditionsMet?: boolean;
+  autoCoupons?: AutoCouponsForBadges;
 }
 
 const formatPrice = (price: number) => {
@@ -162,6 +169,7 @@ const TicketItemMobile = memo(({
   userAge,
   voucherFreeTicketId,
   couponConditionsMet,
+  autoCoupons,
 }: {
   ticket: Ticket;
   event: Event;
@@ -176,6 +184,7 @@ const TicketItemMobile = memo(({
   voucherFreeTicketId?: string | null;
   /** Condições globais do cupom de link atendidas (suprime strike se false). */
   couponConditionsMet?: boolean;
+  autoCoupons?: AutoCouponsForBadges;
 }) => {
   const [isImageModalOpen, setIsImageModalOpen] = useState(false);
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
@@ -252,13 +261,20 @@ const TicketItemMobile = memo(({
 
   const hasDescription = !!ticket.description?.trim();
 
+  const couponBadges = useMemo(
+    () => (autoCoupons ? ticketAutoCouponBadges(ticket, autoCoupons.quantity, autoCoupons.age) : []),
+    [ticket, autoCoupons],
+  );
+  const showCouponBadges = !pick && !hidePricing && !isBatchSoldOut;
+
   return (
     // Wrapper: card + descrição empilhados. A descrição fica FORA do card,
     // logo abaixo dele (respiro do `gap-2`), em vez de dentro junto ao título.
     // Com descrição, um respiro extra embaixo (`mb-2`) separa melhor do próximo
     // ticket — sem ele, a descrição encostaria no card seguinte (lista `gap-3`).
     <div className={cn("flex flex-col gap-2", hasDescription && "mb-2")}>
-      <div className="bg-gray-2 border border-gray-6 rounded-xl p-4 flex flex-col gap-2 md:gap-6">
+      <div className="relative bg-gray-2 border border-gray-6 rounded-xl p-4 flex flex-col gap-2 md:gap-6">
+        {showCouponBadges && <AutoCouponBadges badges={couponBadges} tooltipTrigger="click" alwaysCompact />}
         {isSingleImageLayout ? (
           <div className="flex gap-3 items-start w-full">
             {/* Imagem principal */}
@@ -556,6 +572,7 @@ const TicketItemDesktop = memo(({
   userAge,
   voucherFreeTicketId,
   couponConditionsMet,
+  autoCoupons,
 }: {
   ticket: Ticket;
   event: Event;
@@ -570,6 +587,7 @@ const TicketItemDesktop = memo(({
   voucherFreeTicketId?: string | null;
   /** Condições globais do cupom de link atendidas (suprime strike se false). */
   couponConditionsMet?: boolean;
+  autoCoupons?: AutoCouponsForBadges;
 }) => {
   const hidePricing = useHidePricing();
   const pick = useTicketPick();
@@ -672,6 +690,12 @@ const TicketItemDesktop = memo(({
   const imagesColWidthPx = productItems.length > 1 ? 176 : 136;
 
   const hasDescription = !!ticket.description?.trim();
+
+  const couponBadges = useMemo(
+    () => (autoCoupons ? ticketAutoCouponBadges(ticket, autoCoupons.quantity, autoCoupons.age) : []),
+    [ticket, autoCoupons],
+  );
+  const showCouponBadges = !pick && !hidePricing && !isBatchSoldOut;
 
   // Controle de quantidade (esgotado OU aviso de estoque + stepper). Função pra
   // ser reusada em DOIS lugares: na linha de preço (checkout normal) ou, no modo
@@ -798,7 +822,8 @@ const TicketItemDesktop = memo(({
         {/* Card: `flex-1` ocupa o resto da largura ao lado das imagens; sem
           imagens, `w-full`. */}
         <div className={cn("min-w-0 flex flex-col", productItems.length > 0 ? "flex-1" : "w-full")}>
-          <div className="bg-gray-2 border border-gray-6 rounded-xl p-5 flex flex-col gap-2 w-full">
+          <div className="relative bg-gray-2 border border-gray-6 rounded-xl p-5 flex flex-col gap-2 w-full">
+            {showCouponBadges && <AutoCouponBadges badges={couponBadges} tooltipTrigger="hover" />}
             <div className="flex flex-col justify-center gap-1">
               <h2 className="text-xl font-bold font-manrope leading-[1.1] text-gray-12">
                 {ticket.name}
@@ -924,6 +949,7 @@ export function TicketCategoryCard({
   couponPreviewOverride,
   voucherFreeTicketId,
   couponConditionsMet = true,
+  autoCoupons,
 }: TicketCategoryCardProps) {
   const kitSelectionDisplay = kitSelectionDisplayProp ?? defaultEventKitSelectionDisplay();
   const [isExpanded, setIsExpanded] = useState(expandedByDefault ?? index === 0);
@@ -1049,6 +1075,7 @@ export function TicketCategoryCard({
               userAge={userAge}
               voucherFreeTicketId={voucherFreeTicketId}
               couponConditionsMet={couponConditionsMet}
+              autoCoupons={autoCoupons}
             />
           ))}
         </div>
@@ -1068,6 +1095,7 @@ export function TicketCategoryCard({
               userAge={userAge}
               voucherFreeTicketId={voucherFreeTicketId}
               couponConditionsMet={couponConditionsMet}
+              autoCoupons={autoCoupons}
             />
           ))}
         </div>
@@ -1155,6 +1183,7 @@ export function TicketCategoryCard({
                     userAge={userAge}
                     voucherFreeTicketId={voucherFreeTicketId}
                     couponConditionsMet={couponConditionsMet}
+                    autoCoupons={autoCoupons}
                   />
                 ))}
               </div>
@@ -1241,6 +1270,7 @@ export function TicketCategoryCard({
                     userAge={userAge}
                     voucherFreeTicketId={voucherFreeTicketId}
                     couponConditionsMet={couponConditionsMet}
+                    autoCoupons={autoCoupons}
                   />
                 ))}
               </div>
