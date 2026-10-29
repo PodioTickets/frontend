@@ -12,6 +12,7 @@
  * `minCartValue` (valor mínimo do carrinho).
  */
 import type { QuantityAutoCoupon } from "./quantityCoupon";
+import type { AgeDisplayCoupon } from "./autoCouponBadges";
 
 /** Cupom de idade que será aplicado (shape do `appliedCoupon` do endpoint). */
 export interface AgeAppliedCoupon {
@@ -41,6 +42,8 @@ export interface AgeCouponEligibility {
   appliedCoupon: AgeAppliedCoupon | null;
   /** Cupons automáticos por quantidade do evento (vêm na mesma resposta; ver `quantityCoupon.ts`). */
   quantityCoupons: QuantityAutoCoupon[];
+  /** Faixas de TODOS os cupons de idade exibíveis — só para os selos dos cards (`autoCouponBadges.ts`). */
+  ageCoupons: AgeDisplayCoupon[];
 }
 
 /** Label inline do cupom de idade pras linhas de resumo (paralelo ao cupom/voucher). */

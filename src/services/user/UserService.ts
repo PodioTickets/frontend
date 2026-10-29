@@ -204,6 +204,17 @@ export class UserService extends AuthService {
             createdAt: typeof q.createdAt === "string" ? q.createdAt : null,
           }))
           : [],
+        ageCoupons: Array.isArray(d.ageCoupons)
+          ? d.ageCoupons.map((a: any) => ({
+            id: String(a.id),
+            type: a.type === "FIXED" ? "FIXED" : "PERCENTAGE",
+            value: Number(a.value) || 0,
+            appliesTo: typeof a.appliesTo === "string" ? a.appliesTo : null,
+            // Chave ausente (interceptor tira null) = sem limite naquele lado.
+            minAge: typeof a.minAge === "number" ? a.minAge : null,
+            maxAge: typeof a.maxAge === "number" ? a.maxAge : null,
+          }))
+          : [],
       };
     } catch {
       return null;

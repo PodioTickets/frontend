@@ -15,6 +15,9 @@ import { ArrowButton } from "@/components/ArrowButton";
 import { Dropdown, DropdownOption } from "@/components/Dropdown";
 import { Input } from "@/components/Input";
 import { Radio } from "@/components/Radio";
+import { DatePicker } from "@/components/DatePicker";
+import { TimePicker } from "@/components/TimePicker";
+import { FieldHelpTooltip } from "@/components/Organizer/FieldHelpTooltip";
 import { motion, AnimatePresence } from "framer-motion";
 import toast from "react-hot-toast";
 import type { ModalityTemplate, ModalityGroup } from "@/services/organizer/OrganizerService";
@@ -135,6 +138,13 @@ export function TicketForm({
   useEffect(() => {
     if (minPurchaseQuantity || maxPurchaseQuantity) setHasPurchaseQuantityLimit(true);
   }, [minPurchaseQuantity, maxPurchaseQuantity]);
+  /* "Esgotamento automático" Sim/Não: mesmo padrão derivado da quantidade por pedido. */
+  const [autoSoldOutDate, setAutoSoldOutDate] = useState(initialData?.autoSoldOutDate || "");
+  const [autoSoldOutTime, setAutoSoldOutTime] = useState(initialData?.autoSoldOutTime || "");
+  const [hasAutoSoldOut, setHasAutoSoldOut] = useState(!!initialData?.autoSoldOutDate);
+  useEffect(() => {
+    if (autoSoldOutDate) setHasAutoSoldOut(true);
+  }, [autoSoldOutDate]);
   /* Configurações adicionais: sempre MINIMIZADO ao abrir o formulário (pedido do
    * usuário). Só abre sozinho quando a validação aponta erro num campo de dentro. */
   const [showAdvanced, setShowAdvanced] = useState(false);
@@ -214,6 +224,8 @@ export function TicketForm({
         maxAge,
         minPurchaseQuantity,
         maxPurchaseQuantity,
+        autoSoldOutDate,
+        autoSoldOutTime,
         hasKit,
         selectedGroupId,
         batches,
@@ -231,6 +243,8 @@ export function TicketForm({
       maxAge,
       minPurchaseQuantity,
       maxPurchaseQuantity,
+      autoSoldOutDate,
+      autoSoldOutTime,
       hasKit,
       selectedGroupId,
       batches,
@@ -278,8 +292,11 @@ export function TicketForm({
         errors.maxPurchaseQuantity = "A quantidade máxima não pode ser menor que a mínima";
       }
     }
+    if (hasAutoSoldOut && !autoSoldOutDate) {
+      errors.autoSoldOut = "Informe a data do esgotamento";
+    }
     // Erro dentro do painel fechado ficaria invisível → abre.
-    if (errors.ageRange || errors.minPurchaseQuantity || errors.maxPurchaseQuantity) setShowAdvanced(true);
+    if (errors.ageRange || errors.minPurchaseQuantity || errors.maxPurchaseQuantity || errors.autoSoldOut) setShowAdvanced(true);
     setFormErrors(errors);
     return Object.keys(errors).length === 0;
   };
@@ -326,6 +343,8 @@ export function TicketForm({
         if (parsed.maxAge) setMaxAge(parsed.maxAge);
         if (parsed.minPurchaseQuantity) setMinPurchaseQuantity(parsed.minPurchaseQuantity);
         if (parsed.maxPurchaseQuantity) setMaxPurchaseQuantity(parsed.maxPurchaseQuantity);
+        if (parsed.autoSoldOutDate) setAutoSoldOutDate(parsed.autoSoldOutDate);
+        if (parsed.autoSoldOutTime) setAutoSoldOutTime(parsed.autoSoldOutTime);
         if (parsed.hasKit !== undefined) setHasKit(parsed.hasKit);
         if (parsed.batches && Array.isArray(parsed.batches))
           setBatches(parsed.batches);
@@ -353,6 +372,8 @@ export function TicketForm({
       maxAge,
       minPurchaseQuantity,
       maxPurchaseQuantity,
+      autoSoldOutDate,
+      autoSoldOutTime,
       hasKit,
       batches,
       selectedGroupId,
@@ -377,6 +398,8 @@ export function TicketForm({
     maxAge,
     minPurchaseQuantity,
     maxPurchaseQuantity,
+    autoSoldOutDate,
+    autoSoldOutTime,
     hasKit,
     batches,
     selectedGroupId,
@@ -400,6 +423,8 @@ export function TicketForm({
         setMaxAge,
         setMinPurchaseQuantity,
         setMaxPurchaseQuantity,
+        setAutoSoldOutDate,
+        setAutoSoldOutTime,
         setHasKit,
         setSelectedGroupId,
         setBatches,
@@ -425,6 +450,8 @@ export function TicketForm({
         maxAge,
         minPurchaseQuantity,
         maxPurchaseQuantity,
+        autoSoldOutDate,
+        autoSoldOutTime,
         hasKit,
         selectedGroupId,
         batches,
@@ -518,6 +545,7 @@ export function TicketForm({
             ageLimit?: { min?: number; max?: number };
             minPurchaseQuantity?: number | null;
             maxPurchaseQuantity?: number | null;
+            autoSoldOutAt?: string | null;
             hasKit?: boolean;
             batches?: Array<{
               id?: string;
@@ -554,6 +582,9 @@ export function TicketForm({
           }
           setMinPurchaseQuantity(ticketData.minPurchaseQuantity?.toString() || "");
           setMaxPurchaseQuantity(ticketData.maxPurchaseQuantity?.toString() || "");
+          // Wall-clock gravado como UTC — mesma leitura das datas do lote (abaixo).
+          setAutoSoldOutDate(ticketData.autoSoldOutAt ? ticketData.autoSoldOutAt.split("T")[0] : "");
+          setAutoSoldOutTime(ticketData.autoSoldOutAt ? formatTimeBR(ticketData.autoSoldOutAt) : "");
 
           setHasKit(ticketData.hasKit || false);
 
@@ -620,6 +651,8 @@ export function TicketForm({
               setMaxAge,
               setMinPurchaseQuantity,
               setMaxPurchaseQuantity,
+              setAutoSoldOutDate,
+              setAutoSoldOutTime,
               setHasKit,
               setSelectedGroupId,
               setBatches,
@@ -816,6 +849,8 @@ export function TicketForm({
         maxAge,
         minPurchaseQuantity,
         maxPurchaseQuantity,
+        autoSoldOutDate,
+        autoSoldOutTime,
         hasKit,
         selectedGroupId,
         batches,
@@ -983,6 +1018,10 @@ export function TicketForm({
         maxPurchaseQuantity: maxPurchaseQuantity
           ? parseInt(maxPurchaseQuantity, 10)
           : (isEdit ? null : undefined),
+        // Wall-clock como UTC explícito (`Z`), igual ao lote; sem hora = fim do dia.
+        autoSoldOutAt: autoSoldOutDate
+          ? `${autoSoldOutDate}T${autoSoldOutTime || "23:59"}:00.000Z`
+          : (isEdit ? null : undefined),
         hasKit: hasKit || false,
         productIds: products.map((p) => p.productId),
         batches: batches.map((b) => {
@@ -1084,6 +1123,8 @@ export function TicketForm({
           maxAge,
           minPurchaseQuantity,
           maxPurchaseQuantity,
+          autoSoldOutDate,
+          autoSoldOutTime,
           hasKit,
           selectedGroupId,
           batches,
@@ -1602,6 +1643,69 @@ export function TicketForm({
                       </p>
                     )}
                     </>
+                    )}
+                  </div>
+
+                  {/* Esgotamento automático (vazio = não esgota por data) — mesmo Sim/Não; data/hora como no lote. */}
+                  <div className="flex flex-col gap-2">
+                    <div className="flex items-center gap-1.5">
+                      <label className="text-gray-12 text-base font-family-dm-sans leading-[1.1]">
+                        Esgotamento automático
+                      </label>
+                      <FieldHelpTooltip
+                        label="Esgotamento automático"
+                        text="Defina uma data e horário para esgotar automaticamente este ingresso, mesmo que ainda haja vagas disponíveis."
+                      />
+                    </div>
+                    <div className="flex flex-col gap-2">
+                      <p className="text-gray-11 text-sm font-family-dm-sans leading-[1.3]">
+                        Deseja programar uma data para esgotar este ingresso?
+                      </p>
+                      <div className="flex gap-4 mt-2">
+                        <div className="flex items-center gap-2">
+                          <Radio
+                            name="autoSoldOut"
+                            checked={hasAutoSoldOut}
+                            onChange={() => setHasAutoSoldOut(true)}
+                          />
+                          <span className="text-gray-12 text-base font-family-dm-sans">Sim</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Radio
+                            name="autoSoldOut"
+                            checked={!hasAutoSoldOut}
+                            onChange={() => {
+                              setHasAutoSoldOut(false);
+                              setAutoSoldOutDate("");
+                              setAutoSoldOutTime("");
+                              clearFieldError("autoSoldOut");
+                            }}
+                          />
+                          <span className="text-gray-12 text-base font-family-dm-sans">Não</span>
+                        </div>
+                      </div>
+                    </div>
+                    {hasAutoSoldOut && (
+                      <>
+                        <div className="flex gap-2 mt-2">
+                          <DatePicker
+                            value={autoSoldOutDate}
+                            onChange={(value) => {
+                              setAutoSoldOutDate(value ?? "");
+                              clearFieldError("autoSoldOut");
+                            }}
+                            className="w-max"
+                          />
+                          <TimePicker
+                            value={autoSoldOutTime}
+                            onChange={(value) => setAutoSoldOutTime(value ?? "")}
+                            className="w-max"
+                          />
+                        </div>
+                        {formErrors.autoSoldOut && (
+                          <p className="text-red-11 text-sm font-family-dm-sans">{formErrors.autoSoldOut}</p>
+                        )}
+                      </>
                     )}
                   </div>
                 </motion.div>

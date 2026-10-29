@@ -1,6 +1,6 @@
 "use client";
 
-import { TicketCategoryCard } from "./TicketCategoryCard";
+import { TicketCategoryCard, type AutoCouponsForBadges } from "./TicketCategoryCard";
 import { hasDisplayableDistance } from "@/utils/checkoutModalityDisplay";
 import { EventInfo } from "./EventInfo";
 import type { Event } from "@/interfaces/event";
@@ -401,6 +401,11 @@ export function ModalitiesStep({ event, onNext, onBack, isSubmitting = false, di
   const autoCouponCardPreview: CouponPreviewResult | null = quantityAuto
     ? quantityCouponCardPreview(quantityAuto.coupon)
     : ageCouponPreview;
+  // Selos dos cards: cupons automáticos do evento (voucher é exclusivo → sem selos).
+  const autoCouponsForBadges: AutoCouponsForBadges =
+    !useVoucher && ageEligibility
+      ? { quantity: ageEligibility.quantityCoupons, age: ageEligibility.ageCoupons }
+      : null;
 
   // Acúmulo automático + manual (link ou da order): o manual incide sobre o valor já
   // descontado pelo automático, capado no subtotal — espelha o backend (autoritativo).
@@ -569,6 +574,7 @@ export function ModalitiesStep({ event, onNext, onBack, isSubmitting = false, di
                   kitSelectionDisplay={kitSelectionDisplay}
                   userAge={userAge}
                   couponPreviewOverride={autoCouponCardPreview}
+                  autoCoupons={autoCouponsForBadges}
                   voucherFreeTicketId={voucherFreeTicketId}
                   couponConditionsMet={linkCouponConditionsMet}
                 />
@@ -587,6 +593,7 @@ export function ModalitiesStep({ event, onNext, onBack, isSubmitting = false, di
                   kitSelectionDisplay={kitSelectionDisplay}
                   userAge={userAge}
                   couponPreviewOverride={autoCouponCardPreview}
+                  autoCoupons={autoCouponsForBadges}
                   voucherFreeTicketId={voucherFreeTicketId}
                   couponConditionsMet={linkCouponConditionsMet}
                 />
@@ -669,6 +676,7 @@ export function ModalitiesStep({ event, onNext, onBack, isSubmitting = false, di
                         kitSelectionDisplay={kitSelectionDisplay}
                         userAge={userAge}
                         couponPreviewOverride={autoCouponCardPreview}
+                        autoCoupons={autoCouponsForBadges}
                         voucherFreeTicketId={voucherFreeTicketId}
                         couponConditionsMet={linkCouponConditionsMet}
                       />
@@ -693,6 +701,7 @@ export function ModalitiesStep({ event, onNext, onBack, isSubmitting = false, di
                         kitSelectionDisplay={kitSelectionDisplay}
                         userAge={userAge}
                         couponPreviewOverride={autoCouponCardPreview}
+                        autoCoupons={autoCouponsForBadges}
                         voucherFreeTicketId={voucherFreeTicketId}
                         couponConditionsMet={linkCouponConditionsMet}
                       />

@@ -102,6 +102,8 @@ export function buildTicketFormSnapshot(p: {
   maxAge: string;
   minPurchaseQuantity?: string;
   maxPurchaseQuantity?: string;
+  autoSoldOutDate?: string;
+  autoSoldOutTime?: string;
   hasKit: boolean;
   selectedGroupId: string;
   batches: Batch[];
@@ -131,6 +133,8 @@ export function buildTicketFormSnapshot(p: {
     maxAge: p.maxAge,
     minPurchaseQuantity: p.minPurchaseQuantity ?? "",
     maxPurchaseQuantity: p.maxPurchaseQuantity ?? "",
+    autoSoldOutDate: p.autoSoldOutDate ?? "",
+    autoSoldOutTime: p.autoSoldOutTime ?? "",
     hasKit: p.hasKit,
     selectedGroupId: p.selectedGroupId,
     batches: batchesNorm,
