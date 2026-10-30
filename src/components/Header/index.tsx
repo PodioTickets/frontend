@@ -245,50 +245,57 @@ export function Header() {
             )}
           </div>
           <div className="flex items-center gap-2 z-50 shrink-0 md:hidden">
-            {/* Foto de perfil ao lado do menu (Figma 7397:65766, 28px) — só logado. */}
-            {isAuthenticated && user && (
-              <Link href="/user" aria-label="Perfil e configurações" className="shrink-0">
+            {/* Logado: a foto de perfil (32px) É o botão do menu; aberto, vira o "X" do hambúrguer
+                pra fechar. Deslogado: só o hambúrguer. */}
+            {isAuthenticated && user && !mobileMenuOpen ? (
+              <button
+                type="button"
+                className="flex items-center justify-center w-10 h-10 shrink-0 transition-opacity hover:opacity-80"
+                onClick={() => setMobileMenuOpen(true)}
+                aria-label="Menu"
+              >
                 <ImageWithInitialFallback
                   src={user.avatarUrl?.trim() ? getAvatarUrl(user.avatarUrl) : null}
                   alt={userDisplayName}
                   name={userDisplayName}
                   fallbackId={user.id}
-                  width={28}
-                  height={28}
+                  width={32}
+                  height={32}
                   nativeImg
-                  className="size-7 rounded-full shrink-0 overflow-hidden bg-primary-10"
+                  className="size-8 rounded-full shrink-0 overflow-hidden bg-primary-10"
                   imgClassName="object-cover rounded-full"
-                  letterClassName="text-xs font-semibold text-gray-12 uppercase"
+                  letterClassName="text-sm font-semibold text-gray-12 uppercase"
                 />
-              </Link>
+              </button>
+            ) : (
+              <button
+                className="flex items-center justify-center w-10 h-10 relative transition-all duration-300 hover:opacity-80"
+                onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+                aria-label="Menu"
+                role="button"
+              >
+                <div className="w-6 h-5 flex flex-col items-center justify-center gap-1.5 relative">
+                  <span
+                    className={`w-6 h-[2px] rounded-full transition-all duration-300 ease-in-out ${mobileMenuOpen
+                      ? "bg-gray-4 rotate-45 translate-y-[10px]"
+                      : "bg-gray-4"
+                      }`}
+                  />
+                  <span
+                    className={`w-6 h-[2px] rounded-full transition-all duration-300 ease-in-out ${mobileMenuOpen
+                      ? "opacity-0 scale-0"
+                      : "bg-gray-4 opacity-100 scale-100"
+                      }`}
+                  />
+                  <span
+                    className={`w-6 h-[2px] rounded-full transition-all duration-300 ease-in-out ${mobileMenuOpen
+                      ? "bg-gray-4 -rotate-45 -translate-y-[6px]"
+                      : "bg-gray-4"
+                      }`}
+                  />
+                </div>
+              </button>
             )}
-            <button
-              className="flex items-center justify-center w-10 h-10 relative transition-all duration-300 hover:opacity-80"
-              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              aria-label="Menu"
-              role="button"
-            >
-              <div className="w-6 h-5 flex flex-col items-center justify-center gap-1.5 relative">
-                <span
-                  className={`w-6 h-[2px] rounded-full transition-all duration-300 ease-in-out ${mobileMenuOpen
-                    ? "bg-gray-4 rotate-45 translate-y-[10px]"
-                    : "bg-gray-4"
-                    }`}
-                />
-                <span
-                  className={`w-6 h-[2px] rounded-full transition-all duration-300 ease-in-out ${mobileMenuOpen
-                    ? "opacity-0 scale-0"
-                    : "bg-gray-4 opacity-100 scale-100"
-                    }`}
-                />
-                <span
-                  className={`w-6 h-[2px] rounded-full transition-all duration-300 ease-in-out ${mobileMenuOpen
-                    ? "bg-gray-4 -rotate-45 -translate-y-[6px]"
-                    : "bg-gray-4"
-                    }`}
-                />
-              </div>
-            </button>
           </div>
         </div>
       </header>
@@ -364,7 +371,7 @@ export function Header() {
                           Meus ingressos
                         </span>
                       </button>
-                     {/*  <button className="w-full flex gap-2 items-center h-[52px] px-4 border-b border-[#3a3a3a] text-[#EEE] hover:bg-[#2a2a2a] transition-colors">
+                      {/*  <button className="w-full flex gap-2 items-center h-[52px] px-4 border-b border-[#3a3a3a] text-[#EEE] hover:bg-[#2a2a2a] transition-colors">
                         <InfoIcon className="w-5 h-5 text-[#EEE]" />
                         <span className="text-base font-medium text-[#EEE]">
                           Central de ajuda
