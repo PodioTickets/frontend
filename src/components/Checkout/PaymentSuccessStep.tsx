@@ -3,6 +3,7 @@
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { Button } from "../Button";
+import { useT } from "@/i18n/client";
 
 /**
  * Tela de "Pagamento aprovado" (checkout/sucesso).
@@ -15,6 +16,7 @@ import { Button } from "../Button";
  */
 export function PaymentSuccessStep() {
   const router = useRouter();
+  const t = useT("checkout");
 
   return (
     <div className="flex w-full flex-1 flex-col items-center px-4 pt-16 pb-24 text-center md:pt-24">
@@ -24,7 +26,7 @@ export function PaymentSuccessStep() {
             otimizador recusa SVG (`dangerouslyAllowSVG` OFF). */}
         <Image
           src="/images/success-badge.svg"
-          alt="Pagamento aprovado"
+          alt={t("successTitle")}
           width={96}
           height={92}
           priority
@@ -33,10 +35,10 @@ export function PaymentSuccessStep() {
         />
         <div className="flex max-w-[560px] flex-col items-center gap-4 text-gray-12">
           <h1 className="font-manrope text-2xl font-extrabold leading-[1.1] md:text-[32px]">
-            Pagamento aprovado
+            {t("successTitle")}
           </h1>
           <p className="font-family-dm-sans text-base font-medium leading-[1.3] md:text-lg">
-            Sua inscrição foi confirmada! Enviamos o comprovante para o seu e-mail.
+            {t("successSubtitle")}
           </p>
         </div>
       </div>
@@ -45,7 +47,7 @@ export function PaymentSuccessStep() {
         onClick={() => router.push("/user/tickets")}
         className="mt-10 h-[52px] rounded-lg px-16 text-xl font-bold"
       >
-        Ver meus ingressos
+        {t("successViewTickets")}
       </Button>
     </div>
   );

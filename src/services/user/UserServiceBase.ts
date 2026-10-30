@@ -1,5 +1,6 @@
 import type { ApiClient } from "../base/ApiClient";
 import type { AuthError } from "./UserService.types";
+import { serviceMessage } from "@/i18n/serviceMessages";
 
 /**
  * Base da cadeia de servicos de usuario. Segura o `apiClient` (protected, herdado
@@ -18,21 +19,21 @@ export class UserServiceBase {
     if (
       /user\s+with\s+this\s+document\s+number\s+already\s+exists/i.test(m)
     ) {
-      return "Já existe um usuário cadastrado com este documento.";
+      return serviceMessage("documentExists");
     }
     if (
       httpStatus === 409 &&
       /document/i.test(m) &&
       /already\s+exists|already registered/i.test(m)
     ) {
-      return "Já existe um usuário cadastrado com este documento.";
+      return serviceMessage("documentExists");
     }
     if (
       httpStatus === 409 &&
       /email/i.test(m) &&
       /already\s+exists|already registered|already\s+in\s+use/i.test(m)
     ) {
-      return "Este e-mail já está cadastrado.";
+      return serviceMessage("emailExists");
     }
     return message;
   }

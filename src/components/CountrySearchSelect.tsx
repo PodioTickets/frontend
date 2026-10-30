@@ -4,15 +4,9 @@ import { useMemo, useState, useEffect, useRef } from "react";
 import { Search } from "lucide-react";
 import { ArrowButton } from "@/components/ArrowButton";
 import { FlagIcon } from "@/components/Icons/FlagIcon";
-import { COUNTRIES_PT_BR } from "@/data/countries";
 import { cn } from "@/utils/cn";
-
-function normalizeForSearch(s: string) {
-  return s
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/\p{Diacritic}/gu, "");
-}
+import { useT, useLocale } from "@/i18n/client";
+import { countryDisplayName, countryMatches, countryOptions } from "@/i18n/countryName";
 
 export interface CountrySearchSelectProps {
   /** Nome do país em português (ex.: "Brasil"), igual ao modal de cadastro */
@@ -30,33 +24,21 @@ export function CountrySearchSelect({
   onChange,
   className,
   triggerClassName,
-  placeholder = "Selecione",
+  placeholder,
   "aria-invalid": ariaInvalid,
   id,
 }: CountrySearchSelectProps) {
   const [open, setOpen] = useState(false);
+  const t = useT("ui");
+  const { intl } = useLocale();
   const [search, setSearch] = useState("");
   const rootRef = useRef<HTMLDivElement>(null);
 
-  const options = useMemo(
-    () =>
-      COUNTRIES_PT_BR.map((name) => ({
-        id: name
-          .toLowerCase()
-          .normalize("NFD")
-          .replace(/\p{Diacritic}/gu, "")
-          .replace(/\s+/g, "-"),
-        label: name,
-      })),
-    []
-  );
+  const options = useMemo(() => countryOptions(intl), [intl]);
 
   const filtered = useMemo(() => {
     if (!search.trim()) return options;
-    const q = normalizeForSearch(search);
-    return options.filter((opt) =>
-      normalizeForSearch(opt.label).includes(q)
-    );
+    return options.filter((opt) => countryMatches(opt, search));
   }, [options, search]);
 
   useEffect(() => {
@@ -94,7 +76,7 @@ export function CountrySearchSelect({
               value ? "text-gray-12" : "text-gray-11"
             )}
           >
-            {value || placeholder}
+            {countryDisplayName(value, intl) || (placeholder ?? t("select"))}
           </span>
         </div>
         <div className="flex-none shrink-0">
@@ -108,7 +90,7 @@ export function CountrySearchSelect({
               <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-11" />
               <input
                 type="text"
-                placeholder="Pesquisar país"
+                placeholder={t("searchCountry")}
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 onMouseDown={(e) => e.stopPropagation()}
@@ -122,7 +104,7 @@ export function CountrySearchSelect({
           >
             {filtered.length === 0 ? (
               <div className="px-3 py-4 text-sm text-gray-11 font-family-dm-sans text-center">
-                Nenhum país encontrado
+                {t("noCountryFound")}
               </div>
             ) : (
               filtered.map((option) => (
@@ -137,7 +119,7 @@ export function CountrySearchSelect({
                   }}
                   className="w-full px-3 py-2.5 text-left text-sm font-family-dm-sans text-gray-12 hover:bg-gray-3 transition-colors"
                 >
-                  {option.label}
+                  {option.display}
                 </button>
               ))
             )}

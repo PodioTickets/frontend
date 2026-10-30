@@ -24,11 +24,14 @@ import { shortId } from "@/utils/shortId";
 import { EventCardContent } from "@/components/Event/Card/EventCardContent";
 import Link from "next/link";
 import { FileText } from "lucide-react";
+import { useLocale, useT } from "@/i18n/client";
 
 export default function TicketDetailsPage() {
   const params = useParams();
   const router = useRouter();
   const orderId = params.id as string;
+  const t = useT("user");
+  const { intl } = useLocale();
 
   const [orderData, setOrderData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -135,10 +138,10 @@ export default function TicketDetailsPage() {
   const getGenderLabel = (gender?: string) => {
     if (!gender) return "";
     const map: Record<string, string> = {
-      MALE: "Masculino",
-      FEMALE: "Feminino",
-      OTHER: "Outro",
-      PREFER_NOT_TO_SAY: "Prefiro não dizer",
+      MALE: t("genderMale"),
+      FEMALE: t("genderFemale"),
+      OTHER: t("genderOther"),
+      PREFER_NOT_TO_SAY: t("genderPreferNotToSayShort"),
     };
     return map[gender] || gender;
   };
@@ -220,8 +223,8 @@ export default function TicketDetailsPage() {
 
   // "Acontece no sábado, 25 de julho" — helper compartilhado com o card de ingresso.
   const dateLabel = useMemo(
-    () => (event ? formatEventHappensLabel(event.eventDate) : ""),
-    [event],
+    () => (event ? formatEventHappensLabel(event.eventDate, intl) : ""),
+    [event, intl],
   );
 
   /* Agrupa ingressos IDÊNTICOS (mesma categoria + nome + preço) numa linha
@@ -232,9 +235,9 @@ export default function TicketDetailsPage() {
       { categoryName?: string; ticketName: string; quantity: number; total: number }
     >();
     for (const participant of participants as any[]) {
-      const t = participant.ticket || {};
-      const categoryName = t?.category?.name ?? undefined;
-      const ticketName = t.name || "Ingresso";
+      const tk = participant.ticket || {};
+      const categoryName = tk?.category?.name ?? undefined;
+      const ticketName = tk.name || t("ticket");
       const unit = participant.ticketPrice ?? 0;
       const key = `${categoryName ?? ""}|${ticketName}|${unit}`;
       const existing = map.get(key);
@@ -246,7 +249,7 @@ export default function TicketDetailsPage() {
       }
     }
     return Array.from(map.values());
-  }, [participants]);
+  }, [participants, t]);
 
   /* Mantém o skeleton enquanto o fetch da order roda — o `loading.tsx` do Next
    * só cobre a navegação; após o RSC chegar, o estado client começa em loading
@@ -267,18 +270,18 @@ export default function TicketDetailsPage() {
               <div className="rotate-180"><ArrowButton isOpen={false} /></div>
             </button>
             <h1 className="text-[28px] font-bold text-gray-12 font-manrope leading-[1.1]">
-              Detalhes do seu ingresso
+              {t("yourTicketDetails")}
             </h1>
           </div>
           <div className="bg-gray-1 border border-gray-6 rounded-xl p-8 text-center">
             <p className="text-gray-11 mb-4 font-family-dm-sans">
-              Pedido não encontrado ou erro ao carregar os dados.
+              {t("orderNotFound")}
             </p>
             <button
               onClick={() => router.push("/user/tickets")}
               className="text-primary-11 hover:text-primary-12 font-family-dm-sans"
             >
-              Voltar para meus ingressos
+              {t("backToMyTickets")}
             </button>
           </div>
         </div>
@@ -297,13 +300,13 @@ export default function TicketDetailsPage() {
   // Rótulo humano da forma de pagamento (usado no chip do card de detalhes).
   const paymentMethodLabel =
     payment.method === "CREDIT_CARD"
-      ? "Cartão de crédito"
+      ? t("creditCard")
       : payment.method === "DEBIT_CARD"
-        ? "Cartão de débito"
+        ? t("debitCard")
         : payment.method === "PIX"
           ? "PIX"
           : payment.method === "BOLETO"
-            ? "Boleto"
+            ? t("boleto")
             : payment.method || "";
 
   return (
@@ -314,14 +317,14 @@ export default function TicketDetailsPage() {
           <button
             onClick={() => router.back()}
             className="cursor-pointer size-8 flex items-center justify-center"
-            aria-label="Voltar"
+            aria-label={t("back")}
           >
             <div className="rotate-180 size-8 flex items-center justify-center">
               <ArrowButton isOpen={false} />
             </div>
           </button>
           <p className="font-family-dm-sans font-medium text-base leading-[1.3] text-gray-12">
-            Detalhes do ingresso
+            {t("ticketDetails")}
           </p>
           {/* Spacer pra centralizar o título (mesma largura do botão de voltar) */}
           <div className="size-8" aria-hidden />
@@ -335,23 +338,23 @@ export default function TicketDetailsPage() {
             <button
               onClick={() => router.back()}
               className="cursor-pointer size-9 flex items-center justify-center rounded-full hover:bg-gray-3 transition-colors"
-              aria-label="Voltar"
+              aria-label={t("back")}
             >
               <div className="rotate-180"><ArrowButton isOpen={false} /></div>
             </button>
             <h1 className="text-xl font-bold text-gray-12 font-manrope leading-[1.1]">
-              Detalhes do seu ingresso
+              {t("yourTicketDetails")}
             </h1>
           </div>
           <p className="text-base text-gray-11 font-family-dm-sans leading-[1.3]">
-            Apresente este QR Code na retirada do kit ou na entrada do evento para validar sua inscrição.
+            {t("qrInstructions")}
           </p>
         </div>
 
         {/* Mobile: descrição (card-resumo do evento fica fora do bloco, compartilhado com desktop) */}
         <div className="md:hidden mb-6">
           <p className="text-sm text-gray-11 font-family-dm-sans leading-[1.3]">
-            Apresente este QR Code na retirada do kit ou na entrada do evento para validar sua inscrição.
+            {t("qrInstructions")}
           </p>
         </div>
 
@@ -371,7 +374,7 @@ export default function TicketDetailsPage() {
             bannerOverlay={event.bannerUrl}
           >
             <Link href={`/events/${event.slug}`} className="[text-box-trim:trim-both] font-family-dm-sans self-start font-bold text-base text-primary-11 cursor-pointer max-md:hidden underline absolute bottom-0 right-0">
-              Página do evento
+              {t("eventPage")}
             </Link>
           </EventCardContent>
         </div>
@@ -380,7 +383,7 @@ export default function TicketDetailsPage() {
 
         <div className="w-full flex items-center md:hidden">
           <Link href={`/events/${event.slug}`} className="[text-box-trim:trim-both] font-family-dm-sans text-end font-bold text-base text-primary-11 cursor-pointer w-full underline -mt-8 mb-6">
-            Página do evento
+            {t("eventPage")}
           </Link>
         </div>
 
@@ -388,7 +391,7 @@ export default function TicketDetailsPage() {
         {participants.length === 0 ? (
           <div className="bg-gray-1 border border-gray-6 rounded-xl p-8 text-center">
             <p className="text-gray-11 font-family-dm-sans">
-              Nenhum participante encontrado para este pedido.
+              {t("noParticipants")}
             </p>
           </div>
         ) : (
@@ -425,10 +428,10 @@ export default function TicketDetailsPage() {
 
                         <div className="flex flex-col items-start gap-1">
                           <p className="text-sm text-gray-11 font-family-dm-sans truncate max-w-full md:max-w-[400px]">
-                            {ticket?.category?.name ?? "Ingresso avulso"}
+                            {ticket?.category?.name ?? t("singleTicket")}
                           </p>
                           <Tooltip
-                            content={ticket.name || "Ingresso"}
+                            content={ticket.name || t("ticket")}
                             position="topRight"
                             trigger="click"
                             usePortal
@@ -436,7 +439,7 @@ export default function TicketDetailsPage() {
                             contentClassName="!w-auto max-w-[calc(100vw-32px)] text-left text-sm text-gray-12 font-family-dm-sans !py-2 !px-3"
                           >
                             <h2 className="text-lg md:text-2xl font-bold text-gray-12 text-left font-manrope line-clamp-3 cursor-pointer">
-                              {ticket.name || "Ingresso"}
+                              {ticket.name || t("ticket")}
                             </h2>
                           </Tooltip>
                         </div>
@@ -470,7 +473,7 @@ export default function TicketDetailsPage() {
                         </div>
                         <div className="flex flex-col min-w-0">
                           <p className="text-sm font-semibold text-gray-12 font-family-dm-sans truncate">
-                            {participant.name || `Participante ${index + 1}`}
+                            {participant.name || t("participantN", { n: index + 1 })}
                           </p>
                           <div className="flex flex-wrap gap-1.5 items-center text-xs md:text-sm text-gray-11 font-family-dm-sans">
                             {participant.birthDate && (
@@ -508,7 +511,7 @@ export default function TicketDetailsPage() {
                         className={`px-4 py-3 rounded-[32px] font-semibold text-base font-manrope leading-[1.1] transition-colors ${tab === "info" ? "bg-primary-11 text-primary-2" : "bg-gray-5 text-gray-11"
                           }`}
                       >
-                        Informações
+                        {t("tabInfo")}
                       </button>
                       {hasProducts && (
                         <button
@@ -516,7 +519,7 @@ export default function TicketDetailsPage() {
                           className={`px-4 py-3 rounded-[32px] font-semibold text-base font-manrope leading-[1.1] transition-colors ${tab === "products" ? "bg-primary-11 text-primary-2" : "bg-gray-5 text-gray-11"
                             }`}
                         >
-                          Produtos
+                          {t("tabProducts")}
                         </button>
                       )}
                       {hasQuestions && (
@@ -525,7 +528,7 @@ export default function TicketDetailsPage() {
                           className={`px-4 py-3 rounded-[32px] font-semibold text-base font-manrope leading-[1.1] transition-colors ${tab === "questions" ? "bg-primary-11 text-primary-2" : "bg-gray-5 text-gray-11"
                             }`}
                         >
-                          Questionário
+                          {t("tabQuestions")}
                         </button>
                       )}
                     </div>
@@ -538,24 +541,24 @@ export default function TicketDetailsPage() {
                         <div className="flex flex-col gap-8">
                           <div>
                             <h3 className="text-xl font-bold text-gray-12 font-manrope leading-[1.1] mb-5">
-                              Informações do participante
+                              {t("participantInfo")}
                             </h3>
                             <div className="grid grid-cols-1 md:grid-cols-2">
                               <div className="flex flex-col py-4">
-                                <label className="text-base text-gray-12 font-family-dm-sans">Nome</label>
+                                <label className="text-base text-gray-12 font-family-dm-sans">{t("name")}</label>
                                 <p className="text-base font-medium text-gray-12 font-family-dm-sans">
                                   {participant.name || "-"}
                                 </p>
                               </div>
                               <div className="flex flex-col py-4">
-                                <label className="text-base text-gray-12 font-family-dm-sans">Email</label>
+                                <label className="text-base text-gray-12 font-family-dm-sans">{t("email")}</label>
                                 <p className="text-base font-medium text-gray-12 font-family-dm-sans">
                                   {participant.email || "-"}
                                 </p>
                               </div>
                               <div className="flex flex-col py-4">
                                 <label className="text-base text-gray-12 font-family-dm-sans">
-                                  {isParticipantBr(participant) ? "CPF" : "Documento"}
+                                  {isParticipantBr(participant) ? "CPF" : t("document")}
                                 </label>
                                 <p className="text-base font-medium text-gray-12 font-family-dm-sans">
                                   {participant.cpf
@@ -567,20 +570,20 @@ export default function TicketDetailsPage() {
                               </div>
                               <div className="flex flex-col py-4">
                                 <label className="text-base text-gray-12 font-family-dm-sans">
-                                  Data de nascimento
+                                  {t("birthDate")}
                                 </label>
                                 <p className="text-base font-medium text-gray-12 font-family-dm-sans">
                                   {participant.birthDate ? formatDate(participant.birthDate) : "-"}
                                 </p>
                               </div>
                               <div className="flex flex-col py-4">
-                                <label className="text-base text-gray-12 font-family-dm-sans">Telefone</label>
+                                <label className="text-base text-gray-12 font-family-dm-sans">{t("phone")}</label>
                                 <p className="text-base font-medium text-gray-12 font-family-dm-sans">
                                   {participant.phone ? formatPhone(participant.phone, participant.country) : "-"}
                                 </p>
                               </div>
                               <div className="flex flex-col py-4">
-                                <label className="text-base text-gray-12 font-family-dm-sans">Sexo</label>
+                                <label className="text-base text-gray-12 font-family-dm-sans">{t("sex")}</label>
                                 <p className="text-base font-medium text-gray-12 font-family-dm-sans">
                                   {getGenderLabel(participant.gender) || "-"}
                                 </p>
@@ -588,7 +591,7 @@ export default function TicketDetailsPage() {
                               {participant.emergencyContact && (
                                 <div className="flex flex-col py-4">
                                   <label className="text-base text-gray-12 font-family-dm-sans">
-                                    Contato de emergência
+                                    {t("emergencyContact")}
                                   </label>
                                   <p className="text-base font-medium text-gray-12 font-family-dm-sans">
                                     {participant.emergencyContact.name || "-"} -{" "}
@@ -615,7 +618,7 @@ export default function TicketDetailsPage() {
                       {tab === "questions" && (
                         <div className="flex flex-col gap-4">
                           <h3 className="text-xl font-bold text-gray-12 font-manrope leading-[1.1]">
-                            Perguntas do Organizador
+                            {t("organizerQuestions")}
                           </h3>
                           {participant.questionAnswers.length > 0 ? (
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -626,17 +629,17 @@ export default function TicketDetailsPage() {
                                         ex.: getOrderDetails) ou OBJETO ({question}). */}
                                     {(typeof qa.question === "string"
                                       ? qa.question
-                                      : qa.question?.question) || "Pergunta"}
+                                      : qa.question?.question) || t("question")}
                                   </label>
                                   <p className="text-base font-medium text-gray-12 font-family-dm-sans mt-2">
-                                    R: {formatAnswer(qa.answer)}
+                                    {t("answerPrefix")} {formatAnswer(qa.answer)}
                                   </p>
                                 </div>
                               ))}
                             </div>
                           ) : (
                             <p className="text-base text-gray-11 font-family-dm-sans">
-                              Nenhuma pergunta do organizador para este participante.
+                              {t("noOrganizerQuestions")}
                             </p>
                           )}
                         </div>
@@ -662,7 +665,7 @@ export default function TicketDetailsPage() {
               <span className="flex items-center gap-2 min-w-0">
                 <FileText className="size-5 shrink-0 text-gray-12" />
                 <span className="text-base font-bold text-gray-12 font-manrope leading-[1.1] truncate">
-                  Detalhes do pedido
+                  {t("orderDetails")}
                 </span>
               </span>
               <span className="shrink-0">
@@ -685,7 +688,7 @@ export default function TicketDetailsPage() {
                     </span>
                   )}
                   <span className="bg-gray-4 rounded-lg px-3 py-2 text-base font-medium text-gray-12 font-family-dm-sans leading-[1.3] whitespace-nowrap">
-                    {participants.length} {participants.length === 1 ? "participante" : "participantes"}
+                    {t(participants.length === 1 ? "participantsOne" : "participantsOther", { count: participants.length })}
                   </span>
                 </div>
 
@@ -693,7 +696,7 @@ export default function TicketDetailsPage() {
                 <div className="flex flex-col">
                   <div className="flex items-center justify-between gap-8 py-2">
                     <p className="text-base font-normal text-gray-12 font-family-dm-sans leading-[1.3]">
-                      Número do pedido:
+                      {t("orderNumber")}
                     </p>
                     <p className="text-base font-semibold text-gray-12 font-family-dm-sans leading-[1.3] text-right break-words">
                       #{shortId(order.id) || "N/A"}
@@ -701,7 +704,7 @@ export default function TicketDetailsPage() {
                   </div>
                   <div className="flex items-center justify-between gap-8 py-2">
                     <p className="text-base font-normal text-gray-12 font-family-dm-sans leading-[1.3] whitespace-nowrap">
-                      Nome do evento:
+                      {t("eventName")}
                     </p>
                     <p className="flex-1 min-w-0 text-base font-semibold text-gray-12 font-family-dm-sans leading-[1.3] text-right break-words">
                       {event?.name || "N/A"}
@@ -709,7 +712,7 @@ export default function TicketDetailsPage() {
                   </div>
                   <div className="flex items-center justify-between gap-8 py-2">
                     <p className="text-base font-normal text-gray-12 font-family-dm-sans leading-[1.3]">
-                      Número de participantes:
+                      {t("participantsCount")}
                     </p>
                     <p className="text-base font-semibold text-gray-12 font-family-dm-sans leading-[1.3] text-right">
                       {participants.length}
@@ -719,7 +722,7 @@ export default function TicketDetailsPage() {
                   {(pricing.productsSubtotal ?? 0) > 0 && (
                     <div className="flex items-center justify-between gap-8 py-2">
                       <p className="text-base font-normal text-gray-12 font-family-dm-sans leading-[1.3]">
-                        Produtos adicionais:
+                        {t("additionalProducts")}
                       </p>
                       <p className="text-base font-semibold text-gray-12 font-family-dm-sans leading-[1.3] text-right">
                         {formatPrice(pricing.productsSubtotal ?? 0)}
@@ -738,7 +741,7 @@ export default function TicketDetailsPage() {
                     <div key={lineIndex} className="flex items-center justify-between gap-8 py-2">
                       <span className="flex flex-col min-w-0">
                         <span className="text-xs text-gray-12 font-family-dm-sans truncate">
-                          {line.categoryName ?? "Ingresso avulso"}
+                          {line.categoryName ?? t("singleTicket")}
                         </span>
                         <span className="text-base text-gray-12 font-family-dm-sans break-words">
                           {line.quantity > 1 ? `(${line.quantity}x) ` : ""}{line.ticketName}
@@ -752,7 +755,7 @@ export default function TicketDetailsPage() {
 
                   <div className="flex items-center justify-between gap-8 py-2">
                     <p className="text-base font-normal text-gray-12 font-family-dm-sans leading-[1.3]">
-                      Subtotal:
+                      {t("subtotal")}
                     </p>
                     <p className="text-base font-semibold text-gray-12 font-family-dm-sans leading-[1.3] text-right">
                       {formatPrice(pricing.subtotal ?? 0)}
@@ -769,12 +772,12 @@ export default function TicketDetailsPage() {
                     const isAutomaticCoupon = coupon?.couponType === "QUANTITY" || coupon?.couponType === "AGE";
                     const couponPercent = coupon?.type === "PERCENTAGE" && coupon?.value > 0 ? coupon.value : undefined;
                     const discountLabel = isVoucher
-                      ? `${voucher?.code ? `Voucher ${voucher.code}` : "Voucher"}:`
+                      ? `${voucher?.code ? t("voucherCode", { code: voucher.code }) : t("voucher")}:`
                       : `${isAutomaticCoupon
-                        ? "Cupom automático"
+                        ? t("automaticCoupon")
                         : coupon?.code
-                          ? `Cupom ${coupon.code}`
-                          : "Cupom"
+                          ? t("couponCode", { code: coupon.code })
+                          : t("coupon")
                       }${couponPercent != null && couponPercent > 0 ? ` (-${couponPercent}%)` : ""}:`;
 
                     return (
@@ -791,7 +794,7 @@ export default function TicketDetailsPage() {
 
                   <div className="flex items-center justify-between gap-8 py-2">
                     <p className="text-base font-normal text-gray-12 font-family-dm-sans leading-[1.3]">
-                      Taxa de serviço:
+                      {t("serviceFee")}
                     </p>
                     <p className="text-base font-semibold text-gray-12 font-family-dm-sans leading-[1.3] text-right">
                       {formatPrice(pricing.serviceFee ?? 0)}
@@ -800,7 +803,7 @@ export default function TicketDetailsPage() {
 
                   <div className="flex items-center justify-between gap-8 py-2">
                     <p className="text-base font-normal text-gray-12 font-family-dm-sans leading-[1.3]">
-                      Total do pedido:
+                      {t("orderTotal")}
                     </p>
                     <p className="text-base font-semibold text-gray-12 font-family-dm-sans leading-[1.3] text-right">
                       {formatPrice(pricing.total ?? 0)}

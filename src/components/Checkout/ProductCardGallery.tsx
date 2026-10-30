@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { ArrowButton } from "../ArrowButton";
 import { ImageCarouselModal } from "./ImageCarouselModal";
 import { ImageWithInitialFallback } from "@/components/ImageWithInitialFallback";
+import { useT } from "@/i18n/client";
 
 interface ProductCardGalleryProps {
   productId: string;
@@ -31,6 +32,7 @@ export function ProductCardGallery({
   containerClassName = "w-[100px] h-[100px]",
   sizes = "100px",
 }: ProductCardGalleryProps) {
+  const t = useT("checkoutInfo");
   const allImages = useMemo(() => {
     const seen = new Set<string>();
     const out: string[] = [];
@@ -92,7 +94,7 @@ export function ProductCardGallery({
               type="button"
               onClick={handlePrev}
               className="absolute left-0 top-0 h-full w-7 flex items-center justify-center"
-              aria-label="Imagem anterior"
+              aria-label={t("previousImage")}
             >
               <div className="rotate-180 scale-75 size-6 bg-gray-4 hover:bg-gray-1 transition-all duration-300 ease-in-out flex items-center justify-center rounded-full">
                 <ArrowButton isOpen={false} />
@@ -102,7 +104,7 @@ export function ProductCardGallery({
               type="button"
               onClick={handleNext}
               className="absolute right-0 top-0 h-full w-7 flex items-center justify-center"
-              aria-label="Próxima imagem"
+              aria-label={t("nextImage")}
             >
               <div className="scale-75 size-6 bg-gray-4 hover:bg-gray-1 transition-all duration-300 ease-in-out flex items-center justify-center rounded-full">
                 <ArrowButton isOpen={false} />

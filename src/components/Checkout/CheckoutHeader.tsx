@@ -8,6 +8,15 @@ import { ArrowLeft } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { CheckoutTimer } from "./CheckoutTimer";
 import { useCheckoutProductStep } from "@/hooks/useCheckoutProductStep";
+import { useT } from "@/i18n/client";
+
+/** Rótulo traduzido de cada etapa (`checkoutHeaderOptions` guarda o texto pt-BR). */
+const STEP_LABEL_KEYS = {
+  1: "stepTickets",
+  2: "stepInformation",
+  3: "stepProducts",
+  4: "stepPayment",
+} as const;
 
 export interface CheckoutHeaderProps {
   activeStep: number;
@@ -26,6 +35,9 @@ export default function CheckoutHeader({
 }: CheckoutHeaderProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const t = useT("checkout");
+  const stepLabel = (id: number) =>
+    t(STEP_LABEL_KEYS[id as keyof typeof STEP_LABEL_KEYS] ?? "stepTickets");
   const eventId = searchParams.get("eventId");
 
   // Esconde a etapa de Produtos quando nenhum ingresso selecionado tem produto
@@ -36,9 +48,7 @@ export default function CheckoutHeader({
       ? checkoutHeaderOptions.filter((opt) => opt.path !== "produtos")
       : checkoutHeaderOptions;
 
-  const currentStepLabel = checkoutHeaderOptions.find(
-    (opt) => opt.id === activeStep
-  )?.label || "Ingressos";
+  const currentStepLabel = stepLabel(activeStep);
 
   // "Voltar" navega para a etapa visível anterior — assim pula Produtos
   // automaticamente quando ela está oculta (ex.: Pagamento → Informações).
@@ -67,7 +77,7 @@ export default function CheckoutHeader({
           {showBackButton && (
             <button
               onClick={handleBack}
-              aria-label="Voltar"
+              aria-label={t("back")}
               className="absolute left-4 flex items-center justify-center"
             >
               <ArrowLeft className="size-5 text-gray-12" />
@@ -97,7 +107,7 @@ export default function CheckoutHeader({
                     : "text-gray-11 bg-gray-5"
                 )}
               >
-                <span>{option.label}</span>
+                <span>{stepLabel(option.id)}</span>
               </button>
             </Fragment>
           ))}

@@ -1,0 +1,230 @@
+export default {
+  // Counter
+  counterDecrease: "Diminuir quantidade",
+  counterIncrease: "Aumentar quantidade",
+
+  // CheckoutTimer
+  timerAriaLabel: "Tempo restante da reserva",
+  timerCompactLabel: "Tempo:",
+  timerLabel: "Tempo restante:",
+
+  // PaymentSuccessStep
+  successTitle: "Pagamento aprovado",
+  successSubtitle: "Sua inscrição foi confirmada! Enviamos o comprovante para o seu e-mail.",
+  successViewTickets: "Ver meus ingressos",
+
+  // CheckoutCardErrorModal
+  cardErrorTitle: "Pagamento não aprovado",
+  cardErrorDescription: "Sua transação não foi autorizada pela operadora do cartão. Verifique os dados informados ou tente outro método de pagamento",
+  cardErrorRetry: "Tentar novamente",
+
+  // CheckoutExpiredModal
+  expiredTitle: "Tempo esgotado!",
+  expiredDescription: "O tempo para finalizar sua inscrição expirou e os itens foram liberados. Você pode iniciar uma nova inscrição, sujeita à disponibilidade de vagas",
+  expiredBackToEvent: "Voltar para o evento",
+
+  // autoCouponBadges ({d} = desconto já formatado: "20%" / "R$ 10,00")
+  couponQtyFullMin: "Compre {min} ou mais ingressos e ganhe {d} de desconto!",
+  couponQtyFullExact: "Compre {min} ingressos e ganhe {d} de desconto!",
+  couponQtyFullRange: "Compre de {min} a {max} ingressos e ganhe {d} de desconto!",
+  couponAgeFullRange: "{d} de desconto para idades de {min} a {max} anos.",
+  couponAgeFullMax: "{d} de desconto até {max} anos de idade.",
+  couponAgeFullMin: "{d} de desconto a partir dos {min} anos de idade.",
+  couponQtyShort: "Cupom por quantidade {d}",
+  couponQtyTiny: "Quantidade {d}",
+  couponAgeShort: "Cupom por idade {d}",
+  couponAgeTiny: "Idade {d}",
+
+  // Navegação / etapas
+  back: "Voltar",
+  stepTickets: "Ingressos",
+  stepInformation: "Informações",
+  stepProducts: "Produtos",
+  stepPayment: "Pagamento",
+
+  // PaymentMethodParts (endereço de cobrança)
+  billingAddressTitle: "Endereço",
+  billingAddressEdit: "Alterar endereço",
+  billingPostalCode: "Código postal {cep} · {country}",
+  billingCep: "CEP {cep}",
+
+  // PaymentCardForms
+  cardNameLabel: "Nome impresso no cartão",
+  cardNamePlaceholder: "Ex: João Ribeiro",
+  cardNumberLabel: "Número do cartão",
+  cardNumberPlaceholder: "Ex: 5400 7975 6026 4737",
+  cardExpiryLabel: "Data de validade",
+  cardExpiryPlaceholder: "MM/AA",
+  cardCvv4Digits: "4 dígitos",
+  cardCvv3Digits: "3 dígitos",
+  installmentsLabel: "Parcelas",
+  installmentsPlaceholder: "Quanto deseja parcelar?",
+
+  // PixModal / PixForm
+  pixPaymentConfirmed: "Pagamento confirmado!",
+  pixCodeCopied: "Código PIX copiado!",
+  pixGeneratedTitle: "Pix gerado com sucesso",
+  pixKeepPageOpen: "Mantenha esta página aberta. Assim que o banco confirmar o pagamento, vamos atualizar automaticamente o status do seu pedido",
+  pixTimeToPay: "Tempo para conclusão do pagamento",
+  pixQrCodeAlt: "QR Code PIX",
+  pixCopy: "Copiar pix",
+  pixCashValue: "Valor à vista:",
+  pixClearingTime: "Prazo de até 30 minutos para compensar",
+  pixGenerateQrCode: "Gerar QR Code",
+
+  // OrderSummary
+  genderMale: "Masculino",
+  genderFemale: "Feminino",
+  genderOther: "Outro",
+  participantsLabel: "Participantes:",
+  singleTicket: "Ingresso avulso",
+  singleTicketTitle: "Ingresso Avulso",
+  additionalItems: "Itens adicionais",
+  additionalItem: "Item adicional",
+  subtotalLabel: "Subtotal:",
+  couponAutomatic: "Cupom automático",
+  couponNamed: "Cupom {name}",
+  couponApplied: "Cupom aplicado",
+  voucherApplied: "Voucher aplicado",
+  serviceFeeLabel: "Taxa de serviço:",
+  seeDetails: "Ver detalhes",
+  totalLabel: "Total:",
+  couponCodePlaceholder: "Código de cupom",
+  couponApply: "Aplicar",
+  purchaseSummaryTitle: "Resumo da sua compra",
+  ticketPriceLabel: "Valor do ingresso:",
+  additionalProducts: "Produtos adicionais",
+  additionalProduct: "Produto adicional",
+  participantN: "Participante {n}",
+  couponCodeBadge: "Cupom: {code}",
+  voucherCourtesy: "100% Cortesia",
+
+  // MobileSummaryBar
+  onContinue: "ao continuar",
+  serviceFee: "Taxa de serviço",
+  hideDetails: "Ocultar detalhes",
+  participants: "Participantes",
+  participant: "Participante",
+  total: "Total",
+  subtotal: "Subtotal",
+  orderDetails: "Detalhes do pedido",
+  close: "Fechar",
+  ticketsInOrder: "Ingressos no pedido",
+
+  // lib/orderCouponDiscount (rótulos de linha)
+  voucherNamed: "Voucher {code}",
+
+  // EventInfo
+  discounts: "Descontos",
+  yourOrder: "Seu pedido:",
+  noTicketSelected: "Nenhum ingresso selecionado",
+  nextUnaccented: "Proximo",
+
+  // ModalitiesStep
+  selectTicketsHint: "Escolha seus ingressos e defina a quantidade. Você pode ajustar depois em Informações.",
+  noTicketsAvailable: "Nenhum ingresso disponível para este evento.",
+  select: "Selecionar",
+  backToEventPage: "Voltar para a página do evento",
+  selectTicketsTitle: "Selecione seus ingressos",
+
+  // TicketCategoryCard
+  ageRangeBetween: "de {min} a {max} anos",
+  ageRangeFrom: "a partir de {min} anos",
+  ageRangeUpTo: "até {max} anos",
+  ageLimitLabel: "Limite de idade: {range}",
+  viewFeaturedImage: "Ver imagem em destaque",
+  viewMoreImages: "Ver mais {n} imagens",
+  viewImage: "Ver imagem",
+  batchSoldOut: "Lote esgotado",
+  spotsLeftOne: "Restam apenas {n} vaga!",
+  spotsLeftOther: "Restam apenas {n} vagas!",
+  previousImage: "Imagem anterior",
+  nextImage: "Próxima imagem",
+  startingFrom: "A partir de:",
+
+  // Páginas /checkout/ingressos e /checkout/pagamento
+  eventNotSpecifiedTitle: "Evento não especificado",
+  eventNotSpecifiedDescription: "Por favor, selecione um evento para continuar com o checkout.",
+  backToHome: "Voltar para a página inicial",
+  eventNotFoundTitle: "Evento não encontrado",
+  eventNotFoundDescription: "O evento que você está procurando não existe ou foi removido.",
+  selectAtLeastOneTicket: "Selecione pelo menos um ingresso para continuar.",
+  voucherApplyFailed: "Não foi possível aplicar o voucher.",
+  batchSoldOutToast: "Lote esgotado. Escolha outro ingresso.",
+  eventSoldOutToast: "Evento esgotado. Não há vagas suficientes.",
+  tooManyPendingOrders: "Você já tem reservas em andamento. Finalize uma antes de começar outra.",
+  rateLimitExceeded: "Muitas tentativas. Aguarde um minuto e tente de novo.",
+  reserveFailed: "Não foi possível reservar os ingressos.",
+  reserveFailedRetry: "Não foi possível reservar os ingressos. Tente novamente.",
+
+  // PaymentStep — erros de cupom/voucher (código do backend → texto)
+  couponErrNotFound: "Cupom inválido ou não encontrado.",
+  couponErrExpired: "Cupom expirado.",
+  couponErrMinValue: "Pedido abaixo do valor mínimo do cupom.",
+  voucherErrNotFound: "Voucher inválido ou não encontrado.",
+  voucherErrExpired: "Voucher expirado.",
+  voucherErrAlreadyUsed: "Este voucher já foi utilizado.",
+  discountConflict: "Cupom e voucher não podem ser usados juntos.",
+  couponEnterCode: "Digite um código de cupom.",
+  couponInvalid: "Cupom inválido.",
+  couponApplyError: "Erro ao aplicar cupom. Tente novamente.",
+  autoDiscount: "Desconto automático",
+  coupon: "Cupom",
+
+  // PaymentStep — parcelas
+  installmentCash: "1x de {value} (à vista)",
+  installmentInterestFree: "{n}x de {value} sem juros",
+
+  // PaymentStep — reserva / endereço de cobrança
+  reservationExpiredGoBack: "Sua reserva expirou. Volte para selecionar os ingressos.",
+  reservationExpired: "Sua reserva expirou.",
+  billingSelectCountry: "Selecione o país no endereço de cobrança.",
+  billingInvalidPostalCode: "Informe um código postal válido no endereço de cobrança.",
+  billingInvalidCep: "Informe um CEP válido (8 dígitos) no endereço de cobrança.",
+  billingSelectState: "Selecione o estado no endereço de cobrança.",
+  billingMissingFieldsForeign: "Preencha rua, número e cidade no endereço de cobrança.",
+  billingMissingFields: "Preencha rua, número, bairro e cidade no endereço de cobrança.",
+  billingSaveError: "Erro ao salvar endereço.",
+  confirmBillingBeforePay: "Confirme o endereço de cobrança antes de pagar.",
+  confirmBillingBeforeFinish: "Confirme o endereço de cobrança antes de finalizar.",
+  fillParticipantsBeforePay: "Preencha os dados dos participantes antes de pagar.",
+
+  // PaymentStep — pagamento
+  paymentNotApprovedRetry: "Pagamento não aprovado. Tente novamente.",
+  paymentProcessError: "Erro ao processar pagamento. Tente novamente.",
+  paymentApproved: "Pagamento aprovado!",
+  tryAgain: "Tente novamente.",
+  pixGenerateError: "Erro ao gerar QR Code PIX. Tente novamente.",
+  orderCompleted: "Pedido finalizado!",
+  cardNameRequired: "Informe o nome impresso no cartão.",
+  cardNumberRequired: "Informe o número do cartão.",
+  cardNumberInvalid: "Número do cartão inválido.",
+  cardExpiryRequired: "Informe a data de validade.",
+  cardExpiryInvalid: "Cartão expirado ou data inválida.",
+  cardCvvRequired: "Informe o CVV.",
+  cardCvvInvalid: "CVV inválido.",
+  cardFixFields: "Por favor, corrija os campos do cartão.",
+  threeDsUnsupportedBrand: "Bandeira do cartão não suportada para autenticação de débito.",
+  threeDsTokenError: "Erro ao iniciar autenticação 3DS. Tente novamente.",
+  threeDsDisabled: "Autenticação 3DS desabilitada para este estabelecimento.",
+  threeDsSdkError: "Erro no 3DS: {message}",
+  threeDsReturnCode: " (cod. {code})",
+  threeDsGenericError: "Erro na autenticação 3DS. Tente novamente.",
+
+  // PaymentStep — tela
+  includedItems: "Itens inclusos",
+  includedItem: "Item incluso",
+  included: "Incluso",
+  sizeLabel: "Tamanho:",
+  showLess: "Mostrar menos",
+  showMore: "Mostrar mais",
+  paymentHintAddress: "Informe e confirme o endereço de cobrança para escolher a forma de pagamento.",
+  paymentHintFree: "Clique em Finalizar pedido para confirmar. Os ingressos serão liberados imediatamente.",
+  paymentHintReview: "Revise seu pedido e finalize com cartão ou Pix. Os ingressos serão liberados após a aprovação do pagamento.",
+  finishOrder: "Finalizar pedido",
+  card: "Cartão",
+  credit: "Crédito",
+  debit: "Débito",
+  finishPurchase: "Finalizar compra",
+  generateQrCodeUpper: "Gerar QR CODE",
+};

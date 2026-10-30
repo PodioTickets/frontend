@@ -60,6 +60,7 @@ import { useAgeCouponEligibility } from "@/hooks/useAgeCouponEligibility";
 import { isAgeWithinTicketLimit } from "@/lib/ageCoupon";
 import { removalBreaksMinQuantity } from "@/lib/ticketMinQuantity";
 import Image from "next/image";
+import { useT } from "@/i18n/client";
 
 interface InformationStepProps {
   event: Event;
@@ -76,6 +77,13 @@ interface InformationStepProps {
    */
   nextLabel?: string;
 }
+
+/** Mensagens fixas (pt-BR) de `getCpfValidationMessage` → chave de tradução. */
+const CPF_MESSAGE_KEYS: Record<string, "cpfRequired" | "cpfDigits" | "cpfInvalid"> = {
+  "CPF é obrigatório": "cpfRequired",
+  "CPF deve ter 11 dígitos": "cpfDigits",
+  "CPF inválido": "cpfInvalid",
+};
 
 interface ParticipantWithTicket {
   ticketId: string;
@@ -95,8 +103,11 @@ export function InformationStep({
   isSubmitting = false,
   previewQuestions,
   previewMode = false,
-  nextLabel = "Confirmar dados",
+  nextLabel: nextLabelProp,
 }: InformationStepProps) {
+  const t = useT("checkoutInfo");
+  const tCheckout = useT("checkout");
+  const nextLabel = nextLabelProp ?? t("confirmData");
   const {
     raceQuantities,
     participants,
@@ -794,7 +805,7 @@ export function InformationStep({
     if (isCurrentlyExpanded && isParticipantComplete(index) && participantIsBr) {
       const cleanCPF = (participant.cpf || "").replace(/\D/g, "");
       if (cleanCPF.length === 11 && !isValidCPF(participant.cpf || "")) {
-        toast.error("CPF inválido");
+        toast.error(t("cpfInvalid"));
         return;
       }
     }
@@ -916,12 +927,12 @@ export function InformationStep({
     if (!reason) return null;
     if (reason === "same-ticket") {
       return isBr
-        ? "Você selecionou dois ingressos iguais para o mesmo CPF."
-        : "Você selecionou dois ingressos iguais para o mesmo documento.";
+        ? t("duplicateTicketSameCpf")
+        : t("duplicateTicketSameDocument");
     }
     return isBr
-      ? "Este evento permite apenas um ingresso por CPF."
-      : "Este evento permite apenas um ingresso por documento.";
+      ? t("oneTicketPerCpf")
+      : t("oneTicketPerDocument");
   };
 
   const handleInputChange = (
@@ -1097,13 +1108,13 @@ export function InformationStep({
   const formatAgeLimit = (ageLimit?: { min?: number; max?: number }) => {
     if (!ageLimit) return null;
     if (ageLimit.min && ageLimit.max) {
-      return `de ${ageLimit.min} a ${ageLimit.max} anos`;
+      return t("ageRangeBetween", { min: ageLimit.min, max: ageLimit.max });
     }
     if (ageLimit.min) {
-      return `a partir de ${ageLimit.min} anos`;
+      return t("ageRangeFrom", { min: ageLimit.min });
     }
     if (ageLimit.max) {
-      return `até ${ageLimit.max} anos`;
+      return t("ageRangeUpTo", { max: ageLimit.max });
     }
     return null;
   };
@@ -1240,18 +1251,18 @@ export function InformationStep({
     const participantIsBr = isBrazilianCountry(participant.nationality);
 
     if (!name) {
-      errors.name = "Nome completo é obrigatório";
+      errors.name = t("nameRequired");
     } else {
       const nameParts = name.split(/\s+/).filter(Boolean);
       if (nameParts.length < 2) {
-        errors.name = "Informe nome completo";
+        errors.name = t("nameFull");
       }
     }
 
     if (!email) {
-      errors.email = "Email é obrigatório";
+      errors.email = t("emailRequired");
     } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      errors.email = "Informe um email válido";
+      errors.email = t("emailInvalid");
     }
 
     /* Brasileiros: valida formato CPF. Estrangeiros: aceita 4-30 chars
@@ -1259,15 +1270,17 @@ export function InformationStep({
     if (participantIsBr) {
       const cpfMsg = getCpfValidationMessage(cpf);
       if (cpfMsg) {
-        errors.cpf = cpfMsg;
+        // `getCpfValidationMessage` (utils/cpf, compartilhado) devolve texto pt-BR fixo.
+        const cpfKey = CPF_MESSAGE_KEYS[cpfMsg];
+        errors.cpf = cpfKey ? t(cpfKey) : cpfMsg;
       }
     } else {
       if (!cpf) {
-        errors.cpf = "Documento é obrigatório";
+        errors.cpf = t("documentRequired");
       } else if (cpf.length < 4) {
-        errors.cpf = "Documento deve ter pelo menos 4 caracteres";
+        errors.cpf = t("documentMin");
       } else if (cpf.length > 30) {
-        errors.cpf = "Documento deve ter no máximo 30 caracteres";
+        errors.cpf = t("documentMax");
       }
     }
 
@@ -1280,7 +1293,7 @@ export function InformationStep({
     }
 
     if (!birthDate) {
-      errors.birthDate = "Data de nascimento é obrigatória";
+      errors.birthDate = t("birthDateRequired");
     } else if (ageLimit && (ageLimit.min || ageLimit.max)) {
       // A REGRA de idade vale SEMPRE (inclusive na cortesia/adicionar inscrito): o erro
       // aparece no input de data de nascimento. `ignoreAgeLimit` esconde apenas o BADGE
@@ -1312,23 +1325,23 @@ export function InformationStep({
           age--;
         }
         if (ageLimit.min && age < ageLimit.min) {
-          errors.birthDate = `Idade mínima para este ingresso é ${ageLimit.min} anos no dia do evento`;
+          errors.birthDate = t("minAgeError", { min: ageLimit.min });
         } else if (ageLimit.max && age > ageLimit.max) {
-          errors.birthDate = `Idade máxima para este ingresso é ${ageLimit.max} anos no dia do evento`;
+          errors.birthDate = t("maxAgeError", { max: ageLimit.max });
         }
       }
     }
 
     if (!phone) {
-      errors.phone = "Telefone é obrigatório";
+      errors.phone = t("phoneRequired");
     } else if (!isPhoneValidForCountry(phone, participant.nationality)) {
       // Validação por país (libphonenumber-js) — substitui o `< 10` fixo, que
       // barrava números válidos de países com menos dígitos (Portugal=9, etc.).
-      errors.phone = "Informe um telefone válido";
+      errors.phone = t("phoneInvalid");
     }
 
     if (!gender) {
-      errors.gender = "Selecione o sexo";
+      errors.gender = t("genderRequired");
     } else if (ticketGender && ticketGender.toLowerCase() !== "all") {
       const tg = ticketGender.toLowerCase();
       const pg = gender.toLowerCase();
@@ -1337,9 +1350,9 @@ export function InformationStep({
       const participantIsMale = pg.startsWith("m");
       const participantIsFemale = pg.startsWith("f");
       if (isMaleTicket && !participantIsMale) {
-        errors.gender = "Este ingresso é exclusivo para participantes do sexo masculino";
+        errors.gender = t("ticketMaleOnly");
       } else if (isFemaleTicket && !participantIsFemale) {
-        errors.gender = "Este ingresso é exclusivo para participantes do sexo feminino";
+        errors.gender = t("ticketFemaleOnly");
       }
     }
 
@@ -1347,8 +1360,8 @@ export function InformationStep({
       (field) => {
         errors[field] =
           field === "emergencyContactName"
-            ? "Nome do contato de emergência é obrigatório"
-            : "Telefone de emergência é obrigatório";
+            ? t("emergencyNameRequired")
+            : t("emergencyPhoneRequired");
       },
     );
     /* Telefone preenchido mas malformado: mesma checagem por país do telefone
@@ -1359,7 +1372,7 @@ export function InformationStep({
       participant.emergencyPhone?.trim() &&
       !isPhoneValidForCountry(participant.emergencyPhone, participant.nationality)
     ) {
-      errors.emergencyPhone = "Informe um telefone válido";
+      errors.emergencyPhone = t("phoneInvalid");
     }
 
     // Perguntas obrigatórias DO INGRESSO deste participante
@@ -1370,7 +1383,7 @@ export function InformationStep({
         ? answer.length === 0
         : typeof answer !== "string" || answer.trim() === "";
       if (isEmpty) {
-        errors[`question_${question.id}`] = "Campo obrigatório";
+        errors[`question_${question.id}`] = t("fieldRequired");
       }
     });
 
@@ -1435,7 +1448,10 @@ export function InformationStep({
     const minTicket = tickets.find((t) => t.id === ticketId);
     if (removalBreaksMinQuantity(raceQuantities[ticketId] || 0, minTicket?.minPurchaseQuantity)) {
       toast.error(
-        `O ingresso "${minTicket?.name}" exige no mínimo ${minTicket?.minPurchaseQuantity} participantes.`,
+        t("ticketMinParticipants", {
+          name: minTicket?.name ?? "",
+          min: minTicket?.minPurchaseQuantity ?? 0,
+        }),
       );
       return;
     }
@@ -1481,14 +1497,14 @@ export function InformationStep({
           const code = err instanceof OrderApiError ? err.code : null;
           if (code === "LAST_TICKET") {
             toast.error(
-              "Este é o último ingresso do pedido. Para remover, cancele o pedido inteiro.",
+              t("lastTicketError"),
             );
           } else if (code === "ORDER_NOT_PENDING") {
-            toast.error("Este pedido não está mais pendente.");
+            toast.error(t("orderNotPending"));
           } else if (code === "INVALID_SLOT") {
-            toast.error("Não foi possível identificar o ingresso. Recarregue a página e tente de novo.");
+            toast.error(t("invalidSlot"));
           } else {
-            toast.error("Erro ao remover o participante. Tente novamente.");
+            toast.error(t("removeParticipantError"));
           }
         }
       },
@@ -1528,19 +1544,23 @@ export function InformationStep({
     { id: "feminino", label: "Feminino" },
     { id: "outro", label: "Outro" },
   ];
+  // Valor PERSISTIDO segue o rótulo pt-BR (snapshot/backend); só a exibição é traduzida.
+  const genderLabel = (label: string) =>
+    label === "Masculino" ? t("genderMale") : label === "Feminino" ? t("genderFemale") : t("genderOther");
+  const sexoDisplayOptions = sexoOptions.map((opt) => ({ ...opt, label: genderLabel(opt.label) }));
 
   // Helper to get gender display value (handles both old IDs and new labels)
   const getGenderDisplayValue = (gender: string) => {
     if (!gender) return "";
     // Check if it's already a label
     const option = sexoOptions.find((opt) => opt.label === gender);
-    if (option) return option.label;
+    if (option) return genderLabel(option.label);
     // Check if it's an old ID format
     const optionById = sexoOptions.find((opt) => opt.id === gender);
-    if (optionById) return optionById.label;
+    if (optionById) return genderLabel(optionById.label);
     // Handle old "prefiro-nao-informar" format
-    if (gender === "prefiro-nao-informar") {
-      return "Prefiro não dizer";
+    if (gender === "prefiro-nao-informar" || gender === "Prefiro não dizer") {
+      return t("genderPreferNotToSay");
     }
     return gender;
   };
@@ -1682,7 +1702,7 @@ export function InformationStep({
                 updateQuestionAnswer(participantIndex, question.id, e.target.value);
               }}
               className={`w-full h-12 px-3 rounded-lg border bg-transparent text-gray-12 focus:outline-none focus:bg-gray-3 transition-colors font-family-dm-sans text-base placeholder:text-gray-11 ${questionError ? "border-red-6 focus:border-red-10" : "border-gray-6 focus:border-primary-10"}`}
-              placeholder="Digite sua resposta"
+              placeholder={t("answerPlaceholder")}
             />
             {questionError && <p className="text-sm text-red-11">{questionError}</p>}
           </div>
@@ -1814,7 +1834,7 @@ export function InformationStep({
                       }}
                     />
                     <span className="text-sm text-gray-12 font-family-dm-sans">
-                      {option}
+                      {option === "Verdadeiro" ? t("answerTrue") : t("answerFalse")}
                     </span>
                   </label>
                 );
@@ -1858,13 +1878,13 @@ export function InformationStep({
                   updateQuestionAnswer(participantIndex, question.id, digits);
                 }}
                 className={`[grid-area:1/1] w-full min-w-0 h-12 px-3 rounded-lg border bg-transparent text-gray-12 focus:outline-none focus:bg-gray-3 transition-colors font-family-dm-sans text-base placeholder:text-gray-11 ${questionError ? "border-red-6 focus:border-red-10" : "border-gray-6 focus:border-primary-10"}`}
-                placeholder="Digite um número"
+                placeholder={t("questionNumberPlaceholder")}
               />
               <span
                 aria-hidden
                 className="[grid-area:1/1] pointer-events-none invisible h-12 px-3 border border-transparent whitespace-pre font-family-dm-sans text-base"
               >
-                Digite um número
+                {t("questionNumberPlaceholder")}
               </span>
             </div>
             {questionError && <p className="text-sm text-red-11">{questionError}</p>}
@@ -1895,10 +1915,10 @@ export function InformationStep({
                 >
                   <ArrowButton isOpen={false} />
                 </button>
-                <p className="text-2xl font-bold">Informações básicas</p>
+                <p className="text-2xl font-bold">{t("basicInfo")}</p>
               </div>
               <p className="text-sm text-gray-11 md:mt-4">
-                Quem vai participar? Preencha os dados de cada participante.
+                {t("basicInfoHint")}
               </p>
             </div>
           )}
@@ -1922,7 +1942,7 @@ export function InformationStep({
                     sobre imagens claras (transparente no topo → escuro embaixo). */}
                 <div className="absolute inset-0 rounded-r-2xl bg-linear-to-b from-transparent from-50% to-black/70" />
                 <div className="absolute bottom-4 left-4 right-4 flex flex-col gap-1">
-                  <p className="text-sm text-gray-2 font-family-dm-sans">Seu pedido:</p>
+                  <p className="text-sm text-gray-2 font-family-dm-sans">{t("yourOrder")}</p>
                   <h1 className="text-lg font-bold text-gray-1 leading-tight line-clamp-3 wrap-break-word">
                     {event.name}
                   </h1>
@@ -1939,7 +1959,7 @@ export function InformationStep({
                     >
                       <div className="flex flex-col min-w-0">
                         <p className="text-sm text-gray-11 font-family-dm-sans truncate line-clamp-1">
-                          {ticket.categoryName || "Ingresso avulso"}
+                          {ticket.categoryName || t("standaloneTicketLower")}
                         </p>
                         <p className="text-sm font-semibold text-gray-12 truncate">
                           ({ticket.quantity}x)
@@ -1959,37 +1979,39 @@ export function InformationStep({
                       onClick={() => setShowAllTicketsModal(true)}
                       className="text-sm font-semibold text-primary-11 hover:text-primary-12 transition-colors text-left"
                     >
-                      Ver mais ingresso{groupedTickets.length - 2 > 1 ? "s" : ""} ({groupedTickets.length - 2})
+                      {groupedTickets.length - 2 > 1
+                        ? t("seeMoreTicketsOther", { n: groupedTickets.length - 2 })
+                        : t("seeMoreTicketsOne", { n: groupedTickets.length - 2 })}
                     </button>
                   )}
 
                   {!hidePricing && (
                     <div className="flex items-center justify-between w-full text-sm text-gray-12">
-                      <p className="font-semibold">Subtotal:</p>
+                      <p className="font-semibold">{t("subtotal")}</p>
                       <p className="font-semibold font-family-dm-sans">{formatPrice(totalPrice)}</p>
                     </div>
                   )}
                   {!hidePricing && hasAutoCouponLine && (
                     <div className="flex items-center justify-between w-full text-sm text-gray-12">
-                      <p className="font-semibold">{formatCouponLineLabel(autoCoupon!)}:</p>
+                      <p className="font-semibold">{formatCouponLineLabel(autoCoupon!, tCheckout)}:</p>
                       <p className="font-semibold font-family-dm-sans">- {formatPrice(autoCouponDiscountAmount)}</p>
                     </div>
                   )}
                   {!hidePricing && appliedCoupon && showCouponDiscount && couponDiscountAmount > 0 && (
                     <div className="flex items-center justify-between w-full text-sm text-gray-12">
-                      <p className="font-semibold">{formatCouponLineLabel(appliedCoupon)}:</p>
+                      <p className="font-semibold">{formatCouponLineLabel(appliedCoupon, tCheckout)}:</p>
                       <p className="font-semibold font-family-dm-sans">- {formatPrice(couponDiscountAmount)}</p>
                     </div>
                   )}
                   {!hidePricing && hasVoucherLine && (
                     <div className="flex items-center justify-between w-full text-sm text-gray-12">
-                      <p className="font-semibold">{formatVoucherLineLabel(appliedVoucher!.code)}:</p>
+                      <p className="font-semibold">{formatVoucherLineLabel(appliedVoucher!.code, tCheckout)}:</p>
                       <p className="font-semibold font-family-dm-sans">- {formatPrice(voucherDiscountAmount)}</p>
                     </div>
                   )}
                   {!hidePricing && displayedServiceFee > 0 && (
                     <div className="flex items-center justify-between w-full text-sm text-gray-12">
-                      <p className="font-semibold">Taxa de serviço:</p>
+                      <p className="font-semibold">{t("serviceFee")}</p>
                       <p className="font-semibold font-family-dm-sans">{formatPrice(displayedServiceFee)}</p>
                     </div>
                   )}
@@ -1997,7 +2019,7 @@ export function InformationStep({
 
                 {!hidePricing && (
                   <div className="flex items-center justify-between border-t border-gray-6 pt-5 text-base font-bold text-gray-12">
-                    <p>Total:</p>
+                    <p>{t("total")}</p>
                     <p>{formatPrice(totalAmountWithAge)}</p>
                   </div>
                 )}
@@ -2021,7 +2043,7 @@ export function InformationStep({
                 hasEmergencyContact: false,
               };
               const participantIsBr = isBrazilianCountry(participant.nationality);
-              const docLabel = participantIsBr ? "CPF" : "Documento";
+              const docLabel = participantIsBr ? "CPF" : t("document");
               const docPlaceholder = participantIsBr ? "000.000.000-00" : "12345...";
               const docMaxLength = participantIsBr ? 14 : 30;
               const isExpanded =
@@ -2087,7 +2109,7 @@ export function InformationStep({
                                 </p>
                               )}
                               <p className="text-sm text-gray-11 font-family-dm-sans">
-                                {categoryName.trim() || "Ingresso avulso"}
+                                {categoryName.trim() || t("standaloneTicketLower")}
                               </p>
                               <p className="font-bold text-md md:text-2xl text-gray-12 mb-2">
                                 {ticket.name}
@@ -2117,7 +2139,7 @@ export function InformationStep({
                                     {participant.gender && (
                                       <>
                                         <span className="size-1 bg-gray-11 rounded-full" />
-                                        {participant.gender.charAt(0).toUpperCase()}
+                                        {getGenderDisplayValue(participant.gender).charAt(0).toUpperCase()}
                                       </>
                                     )}
                                     {participant.cpf && (
@@ -2142,11 +2164,11 @@ export function InformationStep({
                                   : "bg-yellow-3 text-yellow-12"
                                   }`}
                               >
-                                {isComplete ? "Concluído" : "Pendente"}
+                                {isComplete ? t("completed") : t("pending")}
                               </div>
                               <button
                                 type="button"
-                                title="Editar"
+                                title={t("edit")}
                                 onClick={(e) => {
                                   e.stopPropagation();
                                   toggleParticipant(participantIndex);
@@ -2157,7 +2179,7 @@ export function InformationStep({
                               </button>
                               <button
                                 type="button"
-                                title="Deletar"
+                                title={t("delete")}
                                 onClick={(e) => {
                                   e.stopPropagation();
                                   handleDeleteParticipant(
@@ -2208,13 +2230,13 @@ export function InformationStep({
                           <div className="flex flex-col gap-2 pb-3">
                             <div>
                               <p className="text-sm text-gray-11 font-family-dm-sans">
-                                {categoryName.trim() || "Ingresso avulso"}
+                                {categoryName.trim() || t("standaloneTicketLower")}
                               </p>
                               <h1 className="text-lg font-bold">{ticket.name}</h1>
                             </div>
                             {showAgeBadge && (
                               <div className="bg-yellow-3 text-yellow-12 rounded-full px-3 py-2 w-fit text-xs">
-                                Limite de idade: {ageLimitText}
+                                {t("ageLimitLabel")} {ageLimitText}
                               </div>
                             )}
                           </div>
@@ -2230,7 +2252,7 @@ export function InformationStep({
                               }}
                               className="p-2 rounded-lg border border-red-6 hover:bg-red-1 active:bg-red-1 transition-colors cursor-pointer touch-manipulation"
                               type="button"
-                              title="Deletar"
+                              title={t("delete")}
                             >
                               <TrashIcon className="size-4 text-red-6 cursor-pointer pointer-events-none" />
                             </button>
@@ -2240,7 +2262,7 @@ export function InformationStep({
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-2 mg:gap-4 mt-4">
                           <div className="flex flex-col gap-2">
                             <label className="text-sm font-medium text-gray-12">
-                              Nome completo
+                              {t("fullName")}
                             </label>
                             <div className="relative">
                               <UserAutocomplete
@@ -2248,7 +2270,7 @@ export function InformationStep({
                                 disabled={previewMode}
                                 onDeleteUser={async (userId) => {
                                   await userService.removeLinkedUser(userId);
-                                  toast.success("Perfil removido da sua lista!")
+                                  toast.success(t("profileRemoved"))
                                   queryClient.invalidateQueries({ queryKey: ["linked-users"] });
                                 }}
                                 onChange={(value) => {
@@ -2362,7 +2384,7 @@ export function InformationStep({
                                     }
                                   }
                                 }}
-                                placeholder="Digite seu nome completo"
+                                placeholder={t("fullNamePlaceholder")}
                                 className={`w-full ${selectedLinkedUserIds[participantIndex] ? "pr-9" : ""} ${fieldErrors[participantIndex]?.name ? "border-red-6 rounded-lg" : ""}`}
                               />
                             </div>
@@ -2395,7 +2417,7 @@ export function InformationStep({
                           </div>
                           <div className="flex flex-col gap-2">
                             <label className="text-sm font-medium text-gray-12">
-                              Data de nascimento
+                              {t("birthDate")}
                             </label>
                             <div className={previewMode ? "opacity-50 pointer-events-none" : ""}>
                               <DatePickerWithConfirm
@@ -2416,7 +2438,7 @@ export function InformationStep({
                           </div>
                           <div className="flex flex-col gap-2">
                             <label className="text-sm font-medium text-gray-12">
-                              Sexo
+                              {t("gender")}
                             </label>
                             <div className={`w-full ${previewMode ? "opacity-50 pointer-events-none" : ""}`}>
                               <Dropdown
@@ -2428,17 +2450,17 @@ export function InformationStep({
                                       <span className="font-normal text-base leading-[1.3] text-gray-11 font-family-dm-sans truncate">
                                         {getGenderDisplayValue(
                                           participant.gender
-                                        ) || "Selecione"}
+                                        ) || t("select")}
                                       </span>
                                     </div>
                                     <ArrowButton isOpen={open} />
                                   </div>
                                 )}
-                                options={sexoOptions}
+                                options={sexoDisplayOptions}
                                 onSelect={(option) => {
                                   clearParticipantFieldError(participantIndex, "gender");
                                   updateParticipant(participantIndex, {
-                                    gender: option.label,
+                                    gender: sexoOptions.find((opt) => opt.id === option.id)?.label ?? option.label,
                                   });
                                 }}
                               />
@@ -2449,7 +2471,7 @@ export function InformationStep({
                           </div>
                           <div className="flex flex-col gap-2">
                             <label className="text-sm font-medium text-gray-12">
-                              Email
+                              {t("email")}
                             </label>
                             <input
                               type="email"
@@ -2460,7 +2482,7 @@ export function InformationStep({
                                 handleInputChange(participantIndex, e)
                               }
                               className={`w-full px-4 py-3 rounded-lg border bg-gray-2 text-gray-12 focus:outline-none transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${fieldErrors[participantIndex]?.email ? "border-red-6 focus:border-red-10" : "border-gray-6 focus:border-primary-10"}`}
-                              placeholder="Digite seu email"
+                              placeholder={t("emailPlaceholder")}
                             />
                             {fieldErrors[participantIndex]?.email && (
                               <p className="text-sm text-red-11">{fieldErrors[participantIndex].email}</p>
@@ -2468,7 +2490,7 @@ export function InformationStep({
                           </div>
                           <div className="flex flex-col gap-2">
                             <label className="text-sm font-medium text-gray-12">
-                              Nacionalidade
+                              {t("nationality")}
                             </label>
                             <NationalitySelect
                               value={participant.nationality || "Brasil"}
@@ -2478,7 +2500,7 @@ export function InformationStep({
                           </div>
                           <div className="flex flex-col gap-2">
                             <label className="text-sm font-medium text-gray-12">
-                              Telefone
+                              {t("phone")}
                             </label>
                             <input
                               type="tel"
@@ -2511,8 +2533,8 @@ export function InformationStep({
                         <div className={`flex flex-col gap-3 w-full ${emergencyContactRequired ? "mt-6 max-md:mt-6" : "mt-4"} ${previewMode ? "opacity-50 pointer-events-none" : ""}`}>
                           <p className={`text-base text-gray-12 font-family-dm-sans leading-[1.3] ${emergencyContactRequired ? "-mb-2 md:-mb-4 font-bold" : "font-normal"}`}>
                             {emergencyContactRequired
-                              ? "Contato de emergência"
-                              : "Deseja adicionar um número de emergência ?"}
+                              ? t("emergencyContact")
+                              : t("addEmergencyContactQuestion")}
                           </p>
                           <div
                             className={
@@ -2540,7 +2562,7 @@ export function InformationStep({
                                   });
                                 }}
                               >
-                                Sim
+                                {t("yes")}
                               </label>
                             </div>
                             <div className="flex gap-2 items-center">
@@ -2564,7 +2586,7 @@ export function InformationStep({
                                   });
                                 }}
                               >
-                                Não
+                                {t("no")}
                               </label>
                             </div>
                           </div>
@@ -2575,7 +2597,7 @@ export function InformationStep({
                             <div className={`grid grid-cols-1 md:grid-cols-2 gap-2 md:gap-4 mt-4 ${emergencyContactRequired ? "max-md:mt-1" : ""}`}>
                               <div className="flex flex-col gap-2">
                                 <label className="text-sm font-medium text-gray-12 font-family-manrope">
-                                  Nome do contato de emergência
+                                  {t("emergencyContactName")}
                                 </label>
                                 <input
                                   type="text"
@@ -2588,7 +2610,7 @@ export function InformationStep({
                                     handleInputChange(participantIndex, e)
                                   }
                                   className={`w-full h-12 px-3 rounded-lg border bg-transparent text-gray-12 focus:outline-none transition-colors font-family-dm-sans text-base placeholder:text-gray-11 ${fieldErrors[participantIndex]?.emergencyContactName ? "border-red-6 focus:border-red-10" : "border-gray-6 focus:border-primary-10"}`}
-                                  placeholder="Nome do contato"
+                                  placeholder={t("emergencyContactNamePlaceholder")}
                                 />
                                 {fieldErrors[participantIndex]?.emergencyContactName && (
                                   <p className="text-xs text-red-11">
@@ -2598,7 +2620,7 @@ export function InformationStep({
                               </div>
                               <div className="flex flex-col gap-2">
                                 <label className="text-sm font-medium text-gray-12 font-family-manrope">
-                                  Telefone de emergência
+                                  {t("emergencyPhone")}
                                 </label>
                                 <input
                                   type="tel"
@@ -2631,7 +2653,7 @@ export function InformationStep({
                             <div className="w-full h-px bg-gray-6 my-6" />
                             <div className="flex flex-col gap-6">
                               <h2 className="text-2xl font-extrabold text-gray-12 font-manrope">
-                                Perguntas do Organizador
+                                {t("organizerQuestions")}
                               </h2>
                               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 items-start">
                                 {(questionsByTicketId.get(ticketId) ?? []).map((question) => (
@@ -2670,7 +2692,7 @@ export function InformationStep({
                                 setFieldErrors((prev) => ({ ...prev, [participantIndex]: errors }));
                                 // Accordion: mantém só este aberto.
                                 setExpandedParticipants({ [participantIndex]: true });
-                                toast.error("Preencha todos os campos obrigatórios corretamente.");
+                                toast.error(t("fillRequiredFieldsCorrectly"));
                                 return;
                               }
                               setFieldErrors((prev) => {
@@ -2748,7 +2770,7 @@ export function InformationStep({
                             variant="default"
                             className="font-bold"
                           >
-                            Salvar e próximo
+                            {t("saveAndNext")}
                           </Button>
                         </div>
                       </div>
@@ -2789,11 +2811,11 @@ export function InformationStep({
                     // Accordion: abre só o 1º inválido, minimiza os demais.
                     setExpandedParticipants({ [firstInvalidIndex]: true });
                   }
-                  toast.error("Preencha todos os campos obrigatórios de todos os participantes.");
+                  toast.error(t("fillAllParticipantsRequired"));
                   return;
                 }
                 if (!participantsWithRaces.every(({ participantIndex }) => savedParticipants[participantIndex])) {
-                  toast.error("Clique em \"Salvar e próximo\" em cada participante antes de confirmar.");
+                  toast.error(t("clickSaveEachParticipant", { button: t("saveAndNext") }));
                   return;
                 }
                 confirmParticipants();
@@ -2823,10 +2845,10 @@ export function InformationStep({
         discount={
           appliedCoupon && showCouponDiscount && couponDiscountAmount > 0
             ? hasAutoCouponLine
-              ? { label: "Descontos", amount: couponDiscountAmount + autoCouponDiscountAmount }
-              : { label: formatCouponLineLabel(appliedCoupon), amount: couponDiscountAmount }
+              ? { label: t("discounts"), amount: couponDiscountAmount + autoCouponDiscountAmount }
+              : { label: formatCouponLineLabel(appliedCoupon, tCheckout), amount: couponDiscountAmount }
             : hasVoucherLine
-              ? { label: formatVoucherLineLabel(appliedVoucher!.code), amount: voucherDiscountAmount }
+              ? { label: formatVoucherLineLabel(appliedVoucher!.code, tCheckout), amount: voucherDiscountAmount }
               : null
         }
         serviceFee={displayedServiceFee}
@@ -2852,11 +2874,11 @@ export function InformationStep({
                 // Accordion: abre só o 1º inválido, minimiza os demais.
                 setExpandedParticipants({ [firstInvalidIndex]: true });
               }
-              toast.error("Preencha todos os campos obrigatórios de todos os participantes.");
+              toast.error(t("fillAllParticipantsRequired"));
               return;
             }
             if (!participantsWithRaces.every(({ participantIndex }) => savedParticipants[participantIndex])) {
-              toast.error("Clique em \"Salvar e próximo\" em cada participante antes de confirmar.");
+              toast.error(t("clickSaveEachParticipant", { button: t("saveAndNext") }));
               return;
             }
             confirmParticipants();
@@ -2890,7 +2912,7 @@ export function InformationStep({
               <div className="bg-gray-1 rounded-xl border border-gray-6 w-full max-w-[600px] max-h-[90vh] flex flex-col shadow-2xl">
                 {/* Header */}
                 <div className="flex items-center justify-between p-6 border-b border-gray-6">
-                  <h2 className="text-xl font-bold text-gray-12">Todos os ingressos</h2>
+                  <h2 className="text-xl font-bold text-gray-12">{t("allTickets")}</h2>
                   <button
                     onClick={() => setShowAllTicketsModal(false)}
                     className="p-2 hover:bg-gray-3 rounded-lg transition-colors"
@@ -2924,13 +2946,13 @@ export function InformationStep({
                       </div>
                     ))}
                     <div className="flex items-center justify-between text-base text-gray-12">
-                      <p className="font-semibold">Subtotal:</p>
+                      <p className="font-semibold">{t("subtotal")}</p>
                       <p className="font-bold">{formatPrice(totalPrice)}</p>
                     </div>
                     {hasAutoCouponLine && (
                       <div className="flex items-center justify-between text-base text-gray-12">
                         <p className="font-semibold">
-                          {formatCouponLineLabel(autoCoupon!)}:
+                          {formatCouponLineLabel(autoCoupon!, tCheckout)}:
                         </p>
                         <p className="font-bold">
                           -{formatPrice(autoCouponDiscountAmount)}
@@ -2940,7 +2962,7 @@ export function InformationStep({
                     {appliedCoupon && showCouponDiscount && couponDiscountAmount > 0 && (
                       <div className="flex items-center justify-between text-base text-gray-12">
                         <p className="font-semibold">
-                          {formatCouponLineLabel(appliedCoupon)}:
+                          {formatCouponLineLabel(appliedCoupon, tCheckout)}:
                         </p>
                         <p className="font-bold">
                           -{formatPrice(couponDiscountAmount)}
@@ -2950,7 +2972,7 @@ export function InformationStep({
                     {hasVoucherLine && (
                       <div className="flex items-center justify-between text-base text-gray-12">
                         <p className="font-semibold">
-                          {formatVoucherLineLabel(appliedVoucher!.code)}:
+                          {formatVoucherLineLabel(appliedVoucher!.code, tCheckout)}:
                         </p>
                         <p className="font-bold">
                           -{formatPrice(voucherDiscountAmount)}
@@ -2959,14 +2981,14 @@ export function InformationStep({
                     )}
                     {displayedServiceFee > 0 && (
                       <div className="flex items-center justify-between text-base text-gray-12">
-                        <p className="font-semibold">Taxa de serviço:</p>
+                        <p className="font-semibold">{t("serviceFee")}</p>
                         <p className="font-bold">
                           {formatPrice(displayedServiceFee)}
                         </p>
                       </div>
                     )}
                     <div className="flex items-center justify-between text-xl font-bold text-gray-12 pt-4 border-t border-gray-6">
-                      <p>Total:</p>
+                      <p>{t("total")}</p>
                       <p>{formatPrice(totalAmountWithAge)}</p>
                     </div>
                   </div>
@@ -2978,7 +3000,7 @@ export function InformationStep({
                     onClick={() => setShowAllTicketsModal(false)}
                     className="w-full"
                   >
-                    Fechar
+                    {t("close")}
                   </Button>
                 </div>
               </div>

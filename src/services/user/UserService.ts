@@ -2,6 +2,7 @@ import { AuthService } from "./AuthService";
 import type { CouponPreviewResult } from "@/lib/orderCouponDiscount";
 import type { AgeCouponEligibility } from "@/lib/ageCoupon";
 import { normalizeNationality } from "@/utils/nationality";
+import { serviceMessage } from "@/i18n/serviceMessages";
 
 /**
  * Dominio de dados do usuario (perfil, ingressos/pedidos, cupom/voucher preview,
@@ -448,7 +449,7 @@ export class UserService extends AuthService {
 
       return response.data;
     } catch (error: any) {
-      let errorMessage = "Erro ao salvar usuário. Tente novamente.";
+      let errorMessage = serviceMessage("saveUserError");
       if (error?.response?.data?.message) {
         errorMessage = error.response.data.message;
       } else if (error?.response?.data?.error) {

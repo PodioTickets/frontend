@@ -125,8 +125,11 @@ export const previewVariationListPriceLabelForProduct = (
 };
 
 /** Preço exibido no card do produto (preço geral / base), alinhado à prévia do modal. */
-export const formatProductCardBasePriceLabel = (product: Product): string => {
-  if (product.isIncludedInTicket) return "Incluso no ingresso";
+export const formatProductCardBasePriceLabel = (
+  product: Product,
+  includedLabel = "Incluso no ingresso",
+): string => {
+  if (product.isIncludedInTicket) return includedLabel;
   return formatPrice(product.basePrice);
 };
 
@@ -135,8 +138,8 @@ export const formatProductCardBasePriceLabel = (product: Product): string => {
  * é o título completo (ex.: "Escolha o tamanho da camisa"); vazio cai no rótulo
  * padrão "Escolha a variação". Espelha o preview do CreateProductModal.
  */
-export const variationSectionTitle = (product: Product) =>
-  product.variationType?.trim() || "Escolha a variação";
+export const variationSectionTitle = (product: Product, fallback = "Escolha a variação") =>
+  product.variationType?.trim() || fallback;
 
 /**
  * Valor em reais a somar no total do pedido.

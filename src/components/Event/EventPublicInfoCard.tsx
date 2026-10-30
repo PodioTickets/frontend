@@ -24,6 +24,7 @@ import { getEventOrganizer } from "@/utils/organization";
 import { buildGoogleMapsPlaceLink } from "@/utils/googleMapsGeo";
 import { useMemo, useState } from "react";
 import { useNowAtBoundaries } from "@/hooks/useNowAtBoundaries";
+import { useLocale, useT } from "@/i18n/client";
 
 /**
  * Card de informações do evento — FONTE ÚNICA usada tanto na página pública real
@@ -88,6 +89,7 @@ function OrganizerAvatar({
 const ONE_DAY_MS = 24 * 60 * 60 * 1000;
 
 function useEventRegistrationUiState(event: Event) {
+  const { intl } = useLocale();
   // Re-renderiza no instante em que a inscrição abre, encerra ou o evento vira
   // "realizado" — senão o botão só mudava ao recarregar a página.
   const now = useNowAtBoundaries([
@@ -119,7 +121,7 @@ function useEventRegistrationUiState(event: Event) {
           ...(now !== null && registrationOpensAt.getUTCFullYear() !== new Date(now).getUTCFullYear()
             ? { year: "numeric" }
             : {}),
-        })
+        }, intl)
         : "";
 
     const registrationSlotsSoldOut =
@@ -147,7 +149,7 @@ function useEventRegistrationUiState(event: Event) {
       ? formatDateTimeBR(new Date(event.registrationEndDate), {
         day: "numeric",
         month: "long",
-      })
+      }, intl)
       : "";
 
     return {
@@ -162,7 +164,7 @@ function useEventRegistrationUiState(event: Event) {
       registrationPeriodEnded,
       eventSuspendedByOrganizer,
     };
-  }, [event, now]);
+  }, [event, now, intl]);
 }
 
 /**
@@ -224,6 +226,7 @@ function RegistrationCtaBlock({
     registrationPeriodEnded,
     eventSuspendedByOrganizer,
   } = useEventRegistrationUiState(event);
+  const t = useT("event");
 
   const mt = desktopSpacing ? "mt-8" : "mb-3";
   // Espaço botão → texto de apoio.
@@ -242,7 +245,7 @@ function RegistrationCtaBlock({
   if (clockPending) {
     return (
       <Button className={disabledBtn} disabled variant="outline">
-        Inscreva-se
+        {t("register")}
       </Button>
     );
   }
@@ -251,10 +254,10 @@ function RegistrationCtaBlock({
     return (
       <>
         <Button className={disabledBtn} disabled variant="outline">
-          Evento realizado
+          {t("eventHappened")}
         </Button>
         <p className={cn("text-center text-sm text-gray-11", textMt)}>
-          Este evento já foi realizado.
+          {t("eventHappenedText")}
         </p>
       </>
     );
@@ -263,10 +266,10 @@ function RegistrationCtaBlock({
     return (
       <>
         <Button className={disabledBtn} disabled variant="outline">
-          Inscrições encerradas!
+          {t("registrationClosed")}
         </Button>
         <p className={cn("text-center text-sm text-gray-11", textMt)}>
-          O prazo de inscrições para este evento foi encerrado.
+          {t("registrationClosedText")}
         </p>
       </>
     );
@@ -275,10 +278,10 @@ function RegistrationCtaBlock({
     return (
       <>
         <Button className={disabledBtn} disabled variant="outline">
-          Inscreva-se
+          {t("register")}
         </Button>
         <p className={cn("text-center text-sm text-gray-11", textMt)}>
-          As inscrições para este evento não estão disponíveis no momento.
+          {t("registrationUnavailableText")}
         </p>
       </>
     );
@@ -287,10 +290,10 @@ function RegistrationCtaBlock({
     return (
       <>
         <Button className={disabledBtn} disabled variant="outline">
-          Esgotado
+          {t("soldOut")}
         </Button>
         <p className={cn("text-center text-sm text-gray-11", textMt)}>
-          Este evento não possui mais vagas disponíveis.
+          {t("soldOutText")}
         </p>
       </>
     );
@@ -299,12 +302,12 @@ function RegistrationCtaBlock({
     return (
       <>
         <Button className={disabledBtn} disabled variant="outline">
-          Em breve!
+          {t("comingSoon")}
         </Button>
         <p className={cn("text-center text-sm text-gray-11", textMt)}>
           {live ? (
             <>
-              Inscrições abrem em <br />{" "}
+              {t("registrationOpensIn")} <br />{" "}
               <RegistrationCountdown
                 targetDate={live.registrationOpensInstant}
                 fallbackText={live.registrationOpensDateText}
@@ -313,7 +316,7 @@ function RegistrationCtaBlock({
               />
             </>
           ) : (
-            <>Inscrições abrem em {registrationOpensDateText}</>
+            <>{t("registrationOpensOn", { date: registrationOpensDateText })}</>
           )}
         </p>
       </>
@@ -328,7 +331,7 @@ function RegistrationCtaBlock({
         variant="default"
         type="button"
       >
-        Inscreva-se
+        {t("register")}
       </Button>
     );
   }
@@ -340,13 +343,13 @@ function RegistrationCtaBlock({
         onClick={onRegisterClick}
         className={cn("w-full", mt)}
       >
-        Inscreva-se
+        {t("register")}
       </Button>
       {/* Contagem até o encerramento (card mobile e desktop; a barra fixa não tem),
           no mesmo formato do "Em breve!". Ao zerar, o botão troca sozinho. */}
       {live && registrationEndsInstant && (
         <p className={cn("text-center text-sm text-gray-11", textMt)}>
-          Encerramento das inscrições <br />{" "}
+          {t("registrationClosesIn")} <br />{" "}
           <RegistrationCountdown
             targetDate={registrationEndsInstant}
             fallbackText={registrationEndsDateText}
@@ -361,6 +364,7 @@ function RegistrationCtaBlock({
 
 /** Linhas de data + endereço — espelha a página pública do evento. */
 function EventMetaRows({ event, mobile }: { event: Event; mobile?: boolean }) {
+  const { intl } = useLocale();
   // Clique no endereço mostra o NOME do local (não as coordenadas). Sem
   // `locationName` (legado) cai no `googleMapsLink` por coordenadas.
   const mapsUrl =
@@ -388,7 +392,7 @@ function EventMetaRows({ event, mobile }: { event: Event; mobile?: boolean }) {
         <CalendarIcon className="size-5 shrink-0" />
         {/* "Sábado, 25 de julho às 20:00", sem "Acontece" e sem a linha
             "Inscrições até" — mobile e desktop (igual à barra fixa mobile). */}
-        <span>{formatEventDateWithTimeBR(event.eventDate)}</span>
+        <span>{formatEventDateWithTimeBR(event.eventDate, intl)}</span>
       </div>
       <div className={cn("flex items-center gap-2 font-medium", textColor)}>
         <LocationIcon className="size-5 shrink-0" />
@@ -418,6 +422,7 @@ function OrganizerBlock({
   mobile?: boolean;
   live?: EventPublicInfoCardLive;
 }) {
+  const t = useT("event");
   const organizer = getEventOrganizer(event);
   const boxClass = mobile
     ? "mb-4 rounded-lg border border-gray-6 bg-gray-3 p-4"
@@ -434,7 +439,7 @@ function OrganizerBlock({
 
   return (
     <div className={boxClass}>
-      <p className="mb-3 text-sm font-medium text-gray-11">Organizador</p>
+      <p className="mb-3 text-sm font-medium text-gray-11">{t("organizer")}</p>
       {organizer ? (
         <div className="space-y-3">
           <div className="flex items-center gap-3">
@@ -473,11 +478,11 @@ function OrganizerBlock({
             )}
             type="button"
           >
-            Falar com o organizador
+            {t("contactOrganizer")}
           </Button>
         </div>
       ) : (
-        <p className="text-xs text-gray-11">Informações não disponíveis</p>
+        <p className="text-xs text-gray-11">{t("infoUnavailable")}</p>
       )}
     </div>
   );
@@ -492,6 +497,7 @@ function ShareAndReport({
   onShare: () => void;
   live?: EventPublicInfoCardLive;
 }) {
+  const t = useT("event");
   // "Denunciar evento": live vira link real (WhatsApp); prévia é span desabilitado.
   const reportNode = live ? (
     <a
@@ -500,11 +506,11 @@ function ShareAndReport({
       rel="noopener noreferrer"
       className="cursor-pointer text-sm font-semibold text-gray-11 underline transition-colors hover:text-gray-12"
     >
-      Denunciar evento
+      {t("reportEvent")}
     </a>
   ) : (
     <span className="cursor-not-allowed text-sm font-semibold text-gray-11 underline">
-      Denunciar evento
+      {t("reportEvent")}
     </span>
   );
 
@@ -521,7 +527,7 @@ function ShareAndReport({
           onClick={onShare}
         >
           <ShareIcon className="size-5" />
-          Compartilhar
+          {t("share")}
         </Button>
         {reportNode}
       </div>
@@ -538,7 +544,7 @@ function ShareAndReport({
         onClick={onShare}
       >
         <ShareIcon className="size-5" />
-        Compartilhar
+        {t("share")}
       </Button>
       {reportNode}
     </div>

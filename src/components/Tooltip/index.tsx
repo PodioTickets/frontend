@@ -4,6 +4,7 @@ import { useState, useRef, useEffect, useLayoutEffect, useCallback } from "react
 import { createPortal } from "react-dom";
 import { cn } from "@/utils/cn";
 import Image from "next/image";
+import { useT } from "@/i18n/client";
 
 interface TooltipProps {
   children: React.ReactNode;
@@ -272,12 +273,13 @@ interface CVVTooltipProps {
 export function CVVTooltip({
   cardImageUrl = "/images/card_tooltip.png",
 }: CVVTooltipProps) {
+  const t = useT("ui");
   return (
     <div className="flex flex-col gap-4 items-center w-full">
       <div className="relative w-full h-[137px] flex items-center justify-center shrink-0">
         <Image
           src={cardImageUrl}
-          alt="Cartão de crédito"
+          alt={t("cvvCardAlt")}
           width={100000}
           height={100000}
           className="object-contain rounded-[22px] w-full h-full"
@@ -286,8 +288,7 @@ export function CVVTooltip({
 
       {/* Explanation text */}
       <p className="font-family-dm-sans font-normal text-sm leading-[1.3] text-gray-12 text-center shrink-0">
-        Este é um número especial de 3 ou 4 dígitos que fica no verso do seu
-        cartão de débito ou crédito, próximo à área de assinatura
+        {t("cvvHelp")}
       </p>
     </div>
   );

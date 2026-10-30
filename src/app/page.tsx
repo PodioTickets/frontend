@@ -5,6 +5,7 @@ import { HomeEventsGrid } from "@/components/HomeEventsGrid";
 import { HomeHero } from "@/components/HomeHero";
 import { Button } from "@/components/Button";
 import Link from "next/link";
+import { getT } from "@/i18n/server";
 
 /**
  * Metadata Open Graph / Twitter da HOME. Diferente da página do evento (que
@@ -18,10 +19,13 @@ import Link from "next/link";
  * defaults herdados do root layout para esta rota.
  */
 const OG_TITLE = "PódioTicket";
-const OG_DESCRIPTION = "Grandes conquistas começam com uma inscrição.";
 const OG_IMAGE = "/images/logo_graph.jpeg";
 
-export const metadata: Metadata = {
+// `generateMetadata` (e não `metadata` estático) só para a descrição seguir o idioma.
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getT("home");
+  const OG_DESCRIPTION = t("metaDescription");
+  return {
   title: OG_TITLE,
   description: OG_DESCRIPTION,
   alternates: { canonical: "/" },
@@ -39,9 +43,11 @@ export const metadata: Metadata = {
     description: OG_DESCRIPTION,
     images: [OG_IMAGE],
   },
-};
+  };
+}
 
-export default function Home() {
+export default async function Home() {
+  const t = await getT("home");
   return (
     <section className="flex flex-col min-h-screen w-full px-4 md:px-0 max-w-[1280px] mx-auto mb-12">
       {/* Hero (Figma 6731:58998): faixa gray-3 full-bleed com a busca + banners em destaque. */}
@@ -66,15 +72,15 @@ export default function Home() {
         <div className="md:bg-[url('/banners/banner_2.png')] bg-[url('/banners/banner_2_mobile.png')] md:bg-cover bg-cover md:bg-center bg-no-repeat w-full h-auto lg:h-[256px] rounded-lg p-5 md:p-10 flex flex-col justify-between">
           <div className="flex flex-col gap-2 md:gap-1">
             <h1 className="font-manrope text-base md:text-[28px] font-extrabold text-gray-1">
-              Organize eventos com a PódioTicket!
+              {t("organizerBannerTitle")}
             </h1>
             <p className="font-manrope text-[12px] md:text-lg md:font-medium text-gray-1">
-              Venda ingressos online, acompanhe inscrições e simplifique <br className="hidden md:block" /> a gestão do seu evento esportivo
+              {t("organizerBannerTextStart")} <br className="hidden md:block" /> {t("organizerBannerTextEnd")}
             </p>
           </div>
           <Link href={"/crie-seu-evento-na-podioticket"}>
             <Button className="w-max px-8 py-5 font-bold mt-10 md:mt-0">
-              Saiba mais
+              {t("organizerBannerCta")}
             </Button>
           </Link>
         </div>

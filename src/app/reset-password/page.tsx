@@ -4,11 +4,13 @@ import { Suspense, useEffect, useRef } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { useLoginModal } from "@/stores/modalStore";
 import toast from "react-hot-toast";
+import { useT } from "@/i18n/client";
 
 function OpenResetPasswordModal() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const { openLoginModal } = useLoginModal();
+  const t = useT("auth");
   const handledRef = useRef(false);
 
   useEffect(() => {
@@ -19,7 +21,7 @@ function OpenResetPasswordModal() {
     if (token.length > 0) {
       openLoginModal({ passwordResetToken: token });
     } else {
-      toast.error("Link inválido ou incompleto.");
+      toast.error(t("resetLinkIncomplete"));
     }
     router.replace("/", { scroll: false });
   }, [searchParams, openLoginModal, router]);

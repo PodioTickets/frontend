@@ -7,6 +7,11 @@
  */
 import { formatBRLFromCents } from "./money";
 import { parseAppliesToIds, type QuantityAutoCoupon } from "./quantityCoupon";
+import { ptBR } from "@/i18n/messages/pt-BR";
+import { createTranslator, type Translator } from "@/i18n/translate";
+
+/** Default pt-BR (testes / chamadas sem idioma); o card passa o `t` do idioma ativo. */
+const ptT = createTranslator(ptBR, "checkout");
 
 /** Regras públicas de um cupom AGE (`ageCoupons` do age-eligibility). */
 export interface AgeDisplayCoupon {
@@ -39,20 +44,20 @@ function coversTicket(appliesTo: string | null, ticketId: string): boolean {
   return !ids || ids.includes(ticketId);
 }
 
-function quantityFullText(c: QuantityAutoCoupon, d: string): string {
+function quantityFullText(c: QuantityAutoCoupon, d: string, t: Translator<"checkout">): string {
   const min = c.minQuantity && c.minQuantity > 0 ? c.minQuantity : 1;
   const max = c.maxQuantity && c.maxQuantity > 0 ? c.maxQuantity : null;
-  if (max == null) return `Compre ${min} ou mais ingressos e ganhe ${d} de desconto!`;
-  if (max === min) return `Compre ${min} ingressos e ganhe ${d} de desconto!`;
-  return `Compre de ${min} a ${max} ingressos e ganhe ${d} de desconto!`;
+  if (max == null) return t("couponQtyFullMin", { min, d });
+  if (max === min) return t("couponQtyFullExact", { min, d });
+  return t("couponQtyFullRange", { min, max, d });
 }
 
-function ageFullText(c: AgeDisplayCoupon, d: string): string | null {
+function ageFullText(c: AgeDisplayCoupon, d: string, t: Translator<"checkout">): string | null {
   const min = c.minAge && c.minAge > 0 ? c.minAge : null;
   const max = c.maxAge != null ? c.maxAge : null;
-  if (min != null && max != null) return `${d} de desconto para idades de ${min} a ${max} anos.`;
-  if (max != null) return `${d} de desconto até ${max} anos de idade.`;
-  if (min != null) return `${d} de desconto a partir dos ${min} anos de idade.`;
+  if (min != null && max != null) return t("couponAgeFullRange", { min, max, d });
+  if (max != null) return t("couponAgeFullMax", { max, d });
+  if (min != null) return t("couponAgeFullMin", { min, d });
   return null;
 }
 
@@ -70,6 +75,7 @@ export function ticketAutoCouponBadges(
   ticket: { id: string; ageLimit?: { min?: number; max?: number } },
   quantityCoupons: QuantityAutoCoupon[] | null | undefined,
   ageCoupons: AgeDisplayCoupon[] | null | undefined,
+  t: Translator<"checkout"> = ptT,
 ): AutoCouponBadge[] {
   const out: AutoCouponBadge[] = [];
   for (const c of quantityCoupons ?? []) {
@@ -78,16 +84,16 @@ export function ticketAutoCouponBadges(
     out.push({
       id: c.id,
       kind: "QUANTITY",
-      shortText: `Cupom por quantidade ${d}`,
-      tinyText: `Quantidade ${d}`,
-      fullText: quantityFullText(c, d),
+      shortText: t("couponQtyShort", { d }),
+      tinyText: t("couponQtyTiny", { d }),
+      fullText: quantityFullText(c, d, t),
     });
   }
   for (const c of ageCoupons ?? []) {
     if (c.value <= 0 || !coversTicket(c.appliesTo, ticket.id) || !ageRangeFitsTicket(c, ticket.ageLimit)) continue;
     const d = discountLabel(c);
-    const fullText = ageFullText(c, d);
-    if (fullText) out.push({ id: c.id, kind: "AGE", shortText: `Cupom por idade ${d}`, tinyText: `Idade ${d}`, fullText });
+    const fullText = ageFullText(c, d, t);
+    if (fullText) out.push({ id: c.id, kind: "AGE", shortText: t("couponAgeShort", { d }), tinyText: t("couponAgeTiny", { d }), fullText });
   }
   return out;
 }

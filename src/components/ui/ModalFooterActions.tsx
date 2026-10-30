@@ -1,5 +1,6 @@
 import { Button } from "@/components/Button";
 import { cn } from "@/utils/cn";
+import { useT } from "@/i18n/client";
 
 /**
  * Rodapé canônico de modal: botão "Cancelar" (outline) + botão de ação
@@ -41,17 +42,19 @@ export interface ModalFooterActionsProps {
 
 export function ModalFooterActions({
   submitLabel,
-  submitLoadingLabel = "Salvando...",
+  submitLoadingLabel,
   onCancel,
   isSubmitting = false,
   submitDisabled = false,
   formId,
   onSubmit,
-  cancelLabel = "Cancelar",
+  cancelLabel,
   className,
   submitClassName,
   cancelClassName,
 }: ModalFooterActionsProps) {
+  // Defaults traduzidos (no painel o provider força pt-BR → "Cancelar"/"Salvando...").
+  const t = useT("ui");
   return (
     <div className={cn("flex gap-2 w-full", className)}>
       <Button
@@ -64,7 +67,7 @@ export function ModalFooterActions({
           cancelClassName,
         )}
       >
-        {cancelLabel}
+        {cancelLabel ?? t("cancel")}
       </Button>
       <Button
         type={formId ? "submit" : "button"}
@@ -73,7 +76,7 @@ export function ModalFooterActions({
         disabled={isSubmitting || submitDisabled}
         className={cn("flex-1 h-12 font-bold text-base font-manrope", submitClassName)}
       >
-        {isSubmitting ? submitLoadingLabel : submitLabel}
+        {isSubmitting ? (submitLoadingLabel ?? t("saving")) : submitLabel}
       </Button>
     </div>
   );

@@ -6,6 +6,7 @@ import { Button } from "@/components/Button";
 import { X } from "lucide-react";
 import Image from "next/image";
 import toast from "react-hot-toast";
+import { useT } from "@/i18n/client";
 
 // Ícone customizado baseado no design do Figma
 const LockIcon = () => (
@@ -49,12 +50,13 @@ const LockIcon = () => (
 export function DeleteParticipantModal() {
   const { isOpen, closeDeleteParticipantModal, data } =
     useDeleteParticipantModal();
+  const t = useT("checkoutInfo");
 
   const handleConfirm = () => {
     if (data?.onConfirm) {
       data.onConfirm();
     }
-    toast.success("Participante removido com sucesso");
+    toast.success(t("participantRemoved"));
     closeDeleteParticipantModal();
   };
 
@@ -107,10 +109,10 @@ export function DeleteParticipantModal() {
                 {/* Conteúdo */}
                 <div className="flex flex-col gap-4 items-center justify-center w-full">
                   <p className="font-semibold text-xl leading-[1.3] text-gray-12 font-family-dm-sans text-center">
-                    Remover participante da inscrição?
+                    {t("removeParticipantTitle")}
                   </p>
                   <p className="font-normal text-base leading-[1.3] text-gray-11 font-family-dm-sans text-center max-w-[400px]">
-                    Ao remover este participante, seus ingressos e produtos serão excluídos do pedido e o valor total será atualizado.
+                    {t("removeParticipantDescription")}
                   </p>
                 </div>
               </div>
@@ -122,13 +124,13 @@ export function DeleteParticipantModal() {
                   onClick={closeDeleteParticipantModal}
                   className="md:flex-1 w-full h-12 border-gray-6 text-gray-12 font-bold text-base font-manrope hover:bg-gray-2"
                 >
-                  Fechar
+                  {t("close")}
                 </Button>
                 <button
                   onClick={handleConfirm}
                   className="md:flex-1 w-full h-12 bg-red-10 cursor-pointer text-red-2 font-bold text-base font-manrope hover:bg-red-11 rounded-lg transition-colors duration-200 flex items-center justify-center"
                 >
-                  Remover participante
+                  {t("removeParticipant")}
                 </button>
               </div>
             </div>

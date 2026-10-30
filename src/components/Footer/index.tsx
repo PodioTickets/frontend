@@ -11,6 +11,7 @@ import { withOrganizerPathPrefix } from "@/lib/organizerPathPresentation";
 import { useAdminAppSurface } from "@/contexts/AdminAppSurfaceContext";
 import { withAdminPathPrefix } from "@/lib/adminPathPresentation";
 import { YoutubeIcon } from "../Icons/YoutubeIcon";
+import { useT } from "@/i18n/client";
 
 export function Footer() {
   const pathname = usePathname();
@@ -20,6 +21,8 @@ export function Footer() {
   const adminPath = withAdminPathPrefix(pathname, adminSurface)
   const isOrganizer = organizerPath.startsWith("/organizer");
   const isAdmin = adminPath.includes("/admin");
+  const t = useT("footer");
+  const tc = useT("common");
 
   if (isOrganizer || isAdmin) {
     return null;
@@ -75,14 +78,14 @@ export function Footer() {
 
         {/* Introductory Text */}
         <p className="font-family-dm-sans text-white text-sm text-center leading-relaxed">
-          A PódioTicket é o ponto de encontro de quem vive o esporte. Aqui você encontra seu próximo desafio, reúne os amigos, combina a largada e transforma cada chegada em uma história que merece ser lembrada.
+          {tc("aboutText")}
         </p>
 
         {/* Social Media Section */}
         <div className="text-white flex items-center gap-10 w-full my-4 mb-6">
           <div className="flex-1 h-px bg-[#606060] min-w-0" />
           <p className="text-start whitespace-nowrap shrink-0">
-            Saiba mais sobre nós
+            {tc("learnMore")}
           </p>
           <div className="flex-1 h-px bg-[#606060] min-w-0" />
         </div>
@@ -110,20 +113,20 @@ export function Footer() {
             href="/privacy"
             className="text-gray-2 text-xs underline hover:text-white transition-colors"
           >
-            Política de privacidade
+            {t("privacy")}
           </Link>
           <Link
             href="/terms"
             className="text-gray-2 text-xs underline hover:text-white transition-colors"
           >
-            Termos de Utilização
+            {t("terms")}
           </Link>
         </div>
 
         {/* Copyright Mobile */}
         <p className="text-white text-xs text-center">
-          © {currentYear} - Todos os direitos reservados para PódioTicket
-          <br /> Atendimento: suporte@podioticket.com.br | +55 11 94086-8733
+          © {currentYear} - {t("rights")}
+          <br /> {t("support")}: suporte@podioticket.com.br | +55 11 94086-8733
           <br /> CNPJ: 65.174.909/0001-01
         </p>
       </div>
@@ -157,13 +160,13 @@ export function Footer() {
           />
 
           <p className="font-family-dm-sans text-center text-[#B4B4B4] mt-6">
-            A PódioTicket é o ponto de encontro de quem vive o esporte. Aqui você encontra seu próximo desafio, reúne os amigos, combina a largada e transforma cada chegada em uma história que merece ser lembrada.
+            {tc("aboutText")}
           </p>
         </div>
 
         <div className="text-[#B4B4B4] flex items-center gap-10 w-full my-20">
           <p className="text-start whitespace-nowrap shrink-0">
-            Saiba mais sobre nós
+            {tc("learnMore")}
           </p>
           <div className="flex-1 h-px bg-[#606060] min-w-0" />
           <div className="flex items-center justify-end gap-2 whitespace-nowrap shrink-0">
@@ -190,19 +193,19 @@ export function Footer() {
             href="/privacy"
             className="text-[#B4B4B4] text-sm underline hover:text-white transition-colors"
           >
-            Política de privacidade
+            {t("privacy")}
           </Link>
           <Link
             href="/terms"
             className="text-[#B4B4B4] text-sm underline hover:text-white transition-colors"
           >
-            Termos de Utilização
+            {t("terms")}
           </Link>
         </div>
 
         <p className="text-[#B4B4B4] text-sm text-center mt-6">
-          © {currentYear} - Todos os direitos reservados para PódioTicket
-          <br /> Atendimento: suporte@podioticket.com.br | +55 11 94086-8733
+          © {currentYear} - {t("rights")}
+          <br /> {t("support")}: suporte@podioticket.com.br | +55 11 94086-8733
           <br /> CNPJ: 65.174.909/0001-01
         </p>
       </div>

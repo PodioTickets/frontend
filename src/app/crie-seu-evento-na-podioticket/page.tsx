@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { LandingPage } from "@/components/Landing/LandingPage";
+import { getT } from "@/i18n/server";
 
 /**
  * Landing page institucional pública da PódioTicket (node Figma 3558:55343).
@@ -11,12 +12,14 @@ import { LandingPage } from "@/components/Landing/LandingPage";
  * (ex.: `sobre.podioticket.com.br`) para esta rota, basta um rewrite no proxy
  * (`src/proxy.ts`) no mesmo padrão dos hosts de organizer/admin — me avise.
  */
-const OG_TITLE = "PódioTicket — Plataforma feita para o esporte";
-const OG_DESCRIPTION =
-  "Venda mais inscrições e reduza o trabalho da sua equipe. Inscrições, participantes, financeiro e comunicação em uma única plataforma.";
 const OG_IMAGE = "/images/logo_graph.jpeg";
 
-export const metadata: Metadata = {
+// `generateMetadata` (e não `metadata` estático) só para título/descrição seguirem o idioma.
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getT("landing");
+  const OG_TITLE = t("metaTitle");
+  const OG_DESCRIPTION = t("metaDescription");
+  return {
   title: OG_TITLE,
   description: OG_DESCRIPTION,
   openGraph: {
@@ -30,7 +33,8 @@ export const metadata: Metadata = {
     description: OG_DESCRIPTION,
     images: [OG_IMAGE],
   },
-};
+  };
+}
 
 // Pixel da plataforma (mesmo id do disparo JS). Fallback p/ navegadores sem JS.
 const META_PIXEL_ID = process.env.NEXT_PUBLIC_META_PIXEL_ID || "4668633066757382";

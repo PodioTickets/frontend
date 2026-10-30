@@ -10,6 +10,7 @@ import {
 import { createPortal } from "react-dom";
 import { Search } from "lucide-react";
 import { ArrowButton } from "@/components/ArrowButton";
+import { useT } from "@/i18n/client";
 
 export interface SearchableSelectOption {
   id: string;
@@ -45,16 +46,17 @@ export function SearchableSelect({
   options,
   value,
   onChange,
-  placeholder = "Selecione",
-  searchPlaceholder = "Pesquisar...",
+  placeholder,
+  searchPlaceholder,
   disabled = false,
   loading = false,
-  loadingText = "Carregando...",
-  emptyText = "Nenhum resultado encontrado",
+  loadingText,
+  emptyText,
   error = false,
   searchable = true,
 }: SearchableSelectProps) {
   const [open, setOpen] = useState(false);
+  const t = useT("ui");
   const [search, setSearch] = useState("");
   const [mounted, setMounted] = useState(false);
   const triggerRef = useRef<HTMLButtonElement>(null);
@@ -148,7 +150,7 @@ export function SearchableSelect({
                 <input
                   ref={searchInputRef}
                   type="text"
-                  placeholder={searchPlaceholder}
+                  placeholder={searchPlaceholder ?? t("searchEllipsis")}
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
                   onMouseDown={(e) => e.stopPropagation()}
@@ -160,7 +162,7 @@ export function SearchableSelect({
           <div className="max-h-[220px] overflow-y-auto overscroll-contain [-webkit-overflow-scrolling:touch] [touch-action:pan-y] [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-gray-6 [&::-webkit-scrollbar]:w-2">
             {filtered.length === 0 ? (
               <div className="px-3 py-4 text-center font-family-dm-sans text-sm text-gray-11">
-                {emptyText}
+                {emptyText ?? t("noResultsFound")}
               </div>
             ) : (
               filtered.map((option) => (
@@ -197,7 +199,7 @@ export function SearchableSelect({
         <span
           className={`truncate font-family-dm-sans text-base leading-[1.3] ${value && !loading ? "text-gray-12" : "text-gray-11"}`}
         >
-          {loading ? loadingText : value || placeholder}
+          {loading ? (loadingText ?? t("loading")) : value || (placeholder ?? t("select"))}
         </span>
         <ArrowButton isOpen={open} />
       </button>

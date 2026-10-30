@@ -6,6 +6,7 @@ import { Tooltip, CVVTooltip } from "../Tooltip";
 import { maskCardExpiry } from "@/utils/cardValidation";
 import { formatCardNumber, cvvMaxLengthForCard } from "@/lib/paymentValidation";
 import type { CardErrors } from "@/interfaces/payment";
+import { useT } from "@/i18n/client";
 
 export const CreditCardForm = memo(function CreditCardForm({
   installmentOptions,
@@ -38,6 +39,7 @@ export const CreditCardForm = memo(function CreditCardForm({
   isMobile?: boolean;
   errors?: CardErrors;
 }) {
+  const t = useT("checkout");
   const handleCardNumberChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (setCardNumber) setCardNumber(formatCardNumber(e.target.value));
   };
@@ -60,7 +62,7 @@ export const CreditCardForm = memo(function CreditCardForm({
     <div className={`${isMobile ? "flex flex-col gap-4" : "space-y-4"}`}>
       <div className="flex flex-col gap-2 w-full">
         <label className="text-base text-gray-12 font-family-dm-sans">
-          Nome impresso no cartão
+          {t("cardNameLabel")}
         </label>
         <div className="relative">
           <Input
@@ -68,7 +70,7 @@ export const CreditCardForm = memo(function CreditCardForm({
             value={cardName || ""}
             onChange={(e) => setCardName && setCardName(e.target.value)}
             className="bg-gray-2"
-            placeholder="Ex: João Ribeiro"
+            placeholder={t("cardNamePlaceholder")}
             aria-invalid={!!errors?.cardName}
           />
         </div>
@@ -77,7 +79,7 @@ export const CreditCardForm = memo(function CreditCardForm({
 
       <div className="flex flex-col gap-2 w-full">
         <label className="text-base text-gray-12 font-family-dm-sans">
-          Número do cartão
+          {t("cardNumberLabel")}
         </label>
         <div className="relative">
           <Input
@@ -86,7 +88,7 @@ export const CreditCardForm = memo(function CreditCardForm({
             onChange={handleCardNumberChange}
             className="bg-gray-2"
             maxLength={19}
-            placeholder="Ex: 5400 7975 6026 4737"
+            placeholder={t("cardNumberPlaceholder")}
             aria-invalid={!!errors?.cardNumber}
           />
         </div>
@@ -101,7 +103,7 @@ export const CreditCardForm = memo(function CreditCardForm({
           className={`${isMobile ? "w-full" : "flex-1"} flex flex-col gap-2`}
         >
           <label className="text-base text-gray-12 font-family-dm-sans">
-            Data de validade
+            {t("cardExpiryLabel")}
           </label>
           <Input
             type="text"
@@ -109,7 +111,7 @@ export const CreditCardForm = memo(function CreditCardForm({
             onChange={handleExpiryChange}
             className="bg-gray-2"
             maxLength={5}
-            placeholder="MM/AA"
+            placeholder={t("cardExpiryPlaceholder")}
             aria-invalid={!!errors?.cardExpiry}
           />
           {errors?.cardExpiry && <p className="text-sm text-red-11">{errors.cardExpiry}</p>}
@@ -140,7 +142,7 @@ export const CreditCardForm = memo(function CreditCardForm({
               onChange={handleCVVChange}
               maxLength={cvvMaxLength}
               className="bg-gray-2"
-              placeholder={isAmex ? "4 dígitos" : "3 dígitos"}
+              placeholder={isAmex ? t("cardCvv4Digits") : t("cardCvv3Digits")}
               aria-invalid={!!errors?.cardCVV}
             />
           </div>
@@ -149,7 +151,7 @@ export const CreditCardForm = memo(function CreditCardForm({
       </div>
 
       <div className="flex flex-col gap-2">
-        <label className="text-base text-gray-12 font-family-dm-sans">Parcelas</label>
+        <label className="text-base text-gray-12 font-family-dm-sans">{t("installmentsLabel")}</label>
         <Dropdown
           options={installmentOptions}
           dataAttribute="installments"
@@ -162,7 +164,7 @@ export const CreditCardForm = memo(function CreditCardForm({
               <p className="text-base text-gray-11 font-family-dm-sans">
                 {installmentOptions.find(
                   (opt: DropdownOption) => opt.id === selectedInstallments
-                )?.label || "Quanto deseja parcelar?"}
+                )?.label || t("installmentsPlaceholder")}
               </p>
               <span className="text-gray-12">›</span>
             </div>
@@ -196,6 +198,7 @@ export const DebitCardForm = memo(function DebitCardForm({
   isMobile?: boolean;
   errors?: CardErrors;
 }) {
+  const t = useT("checkout");
   const isAmex = cvvMaxLengthForCard(cardNumber) === 4;
   const cvvMaxLength = cvvMaxLengthForCard(cardNumber);
 
@@ -203,14 +206,14 @@ export const DebitCardForm = memo(function DebitCardForm({
     <div className={`${isMobile ? "flex flex-col gap-4" : "space-y-4"}`}>
       <div className="flex flex-col gap-2 w-full">
         <label className="text-base text-gray-12 font-family-dm-sans">
-          Nome impresso no cartão
+          {t("cardNameLabel")}
         </label>
         <Input
           type="text"
           value={cardName || ""}
           onChange={(e) => setCardName && setCardName(e.target.value)}
           className="bg-gray-2"
-          placeholder="Ex: João Ribeiro"
+          placeholder={t("cardNamePlaceholder")}
           aria-invalid={!!errors?.cardName}
         />
         {errors?.cardName && <p className="text-sm text-red-11">{errors.cardName}</p>}
@@ -218,7 +221,7 @@ export const DebitCardForm = memo(function DebitCardForm({
 
       <div className="flex flex-col gap-2 w-full">
         <label className="text-base text-gray-12 font-family-dm-sans">
-          Número do cartão
+          {t("cardNumberLabel")}
         </label>
         <Input
           type="text"
@@ -226,7 +229,7 @@ export const DebitCardForm = memo(function DebitCardForm({
           onChange={(e) => setCardNumber && setCardNumber(formatCardNumber(e.target.value))}
           className="bg-gray-2"
           maxLength={19}
-          placeholder="Ex: 5400 7975 6026 4737"
+          placeholder={t("cardNumberPlaceholder")}
           aria-invalid={!!errors?.cardNumber}
         />
         {errors?.cardNumber && <p className="text-sm text-red-11">{errors.cardNumber}</p>}
@@ -235,7 +238,7 @@ export const DebitCardForm = memo(function DebitCardForm({
       <div className={`flex ${isMobile ? "flex-col gap-4" : "justify-between gap-4"} w-full`}>
         <div className={`${isMobile ? "w-full" : "flex-1"} flex flex-col gap-2`}>
           <label className="text-base text-gray-12 font-family-dm-sans">
-            Data de validade
+            {t("cardExpiryLabel")}
           </label>
           <Input
             type="text"
@@ -243,7 +246,7 @@ export const DebitCardForm = memo(function DebitCardForm({
             onChange={(e) => setCardExpiry && setCardExpiry(maskCardExpiry(e.target.value, cardExpiry || ""))}
             className="bg-gray-2"
             maxLength={5}
-            placeholder="MM/AA"
+            placeholder={t("cardExpiryPlaceholder")}
             aria-invalid={!!errors?.cardExpiry}
           />
           {errors?.cardExpiry && <p className="text-sm text-red-11">{errors.cardExpiry}</p>}
@@ -268,7 +271,7 @@ export const DebitCardForm = memo(function DebitCardForm({
             onChange={(e) => setCardCVV && setCardCVV(e.target.value.replace(/\D/g, "").substring(0, cvvMaxLength))}
             maxLength={cvvMaxLength}
             className="bg-gray-2"
-            placeholder={isAmex ? "4 dígitos" : "3 dígitos"}
+            placeholder={isAmex ? t("cardCvv4Digits") : t("cardCvv3Digits")}
             aria-invalid={!!errors?.cardCVV}
           />
           {errors?.cardCVV && <p className="text-sm text-red-11">{errors.cardCVV}</p>}

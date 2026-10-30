@@ -6,6 +6,7 @@ import { MapPin } from "lucide-react";
 import { CalendarIcon } from "@/components/Icons/CalendarIcon";
 import { Tooltip } from "@/components/Tooltip";
 import { cn } from "@/utils/cn";
+import { useT } from "@/i18n/client";
 
 interface EventInfoCardEvent {
   name?: string;
@@ -53,6 +54,7 @@ export function EventInfoCard({
   hideViewLink = false,
   className,
 }: EventInfoCardProps) {
+  const t = useT("event");
   const cityState = [event.city, event.state].filter(Boolean).join(", ");
   const formattedDate = formatDate(event.eventDate);
   const showLink = !hideViewLink && !!event.slug;
@@ -72,7 +74,7 @@ export function EventInfoCard({
           {event.bannerUrl ? (
             <Image
               src={event.bannerUrl}
-              alt={event.name || "Evento"}
+              alt={event.name || t("eventImageAlt")}
               fill
               sizes="150px"
               className="object-cover rounded-lg"
@@ -106,7 +108,7 @@ export function EventInfoCard({
           href={`/events/${event.slug}`}
           className="hidden md:inline-block font-family-dm-sans font-normal text-sm leading-[1.3] text-primary-10 underline whitespace-nowrap shrink-0"
         >
-          Ver evento
+          {t("viewEvent")}
         </Link>
       )}
     </div>

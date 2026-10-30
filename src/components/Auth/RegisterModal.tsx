@@ -15,8 +15,19 @@ import { Turnstile } from "@marsidev/react-turnstile";
 import { Checkbox } from "@/components/CheckBox";
 import { TermsOfServiceModal } from "./TermsOfServiceModal";
 import { useRegisterFlow } from "./useRegisterFlow";
+import { useT, useTurnstileLanguage, useLocale } from "@/i18n/client";
+import { countryDisplayName } from "@/i18n/countryName";
 
 const TURNSTILE_SITE_KEY = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY ?? "";
+
+/* Sexo: o form guarda o rótulo pt-BR (é o valor mapeado pro enum do backend no
+ * `useRegisterFlow`); a tradução acontece só na exibição. */
+const GENDER_KEYS = {
+  masculino: "genderMale",
+  feminino: "genderFemale",
+  outro: "genderOther",
+  "prefiro não informar": "genderPreferNotToSay",
+} as const;
 
 export function RegisterModal() {
   const {
@@ -64,6 +75,17 @@ export function RegisterModal() {
     mobileTurnstileRef,
     desktopTurnstileRef,
   } = useRegisterFlow();
+  const t = useT("auth");
+  const { intl } = useLocale();
+  const turnstileLanguage = useTurnstileLanguage();
+
+  const genderLabel = (value: string) => {
+    const key = GENDER_KEYS[value.toLowerCase().trim() as keyof typeof GENDER_KEYS];
+    return key ? t(key) : value;
+  };
+  const sexoDropdownOptions = sexoOptions.map((o) => ({ ...o, label: genderLabel(o.label) }));
+  const handleSexoSelect = (option: { id?: string; label: string }) =>
+    handleInputChange("sexo", sexoOptions.find((o) => o.id === option.id)?.label ?? option.label);
 
   /* Checkbox de aceite — única fonte de verdade compartilhada entre mobile e
    * desktop. Renderizada antes do Turnstile + botão de submit no Step 3 (UX).
@@ -75,10 +97,10 @@ export function RegisterModal() {
         <Checkbox
           checked={acceptedTermsChecked}
           onCheckedChange={(checked) => setAcceptedTermsChecked(checked === true)}
-          aria-label="Aceitar termos de uso"
+          aria-label={t("acceptTermsAria")}
         />
         <span className="text-sm leading-[1.3] text-gray-12 font-family-dm-sans">
-          Li e aceito os{" "}
+          {t("acceptTermsPrefix")}{" "}
           <button
             type="button"
             onClick={(e) => {
@@ -87,9 +109,9 @@ export function RegisterModal() {
             }}
             className="text-primary-11 hover:text-primary-12 underline-offset-2 underline cursor-pointer"
           >
-            Termos de uso
+            {t("termsOfUse")}
           </button>{" "}
-          da PódioTicket
+          {t("acceptTermsSuffix")}
         </span>
       </label>
     );
@@ -103,13 +125,13 @@ export function RegisterModal() {
           <button
             onClick={handleBack}
             className="flex items-center justify-center shrink-0 size-8 transition-colors rotate-90 cursor-pointer hover:bg-gray-3 rounded-lg"
-            aria-label="Voltar"
+            aria-label={t("back")}
           >
             <ArrowButton isOpen={true} />
           </button>
         )}
         <p className="font-medium text-base leading-[1.3] text-gray-12 font-family-dm-sans">
-          Informações pessoais
+          {t("personalInfo")}
         </p>
       </div>
     </div>
@@ -125,13 +147,13 @@ export function RegisterModal() {
           {/* Nome */}
           <div className="flex flex-col gap-2 items-start relative shrink-0 w-full">
             <label className="font-normal text-base leading-[1.3] text-gray-12 font-family-dm-sans">
-              Nome completo
+              {t("fullName")}
             </label>
             <div className="relative w-full">
               <User className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-11" />
               <Input
                 type="text"
-                placeholder="Digite seu nome completo"
+                placeholder={t("fullNamePlaceholder")}
                 value={formData.nome}
                 onChange={(e) => handleInputChange("nome", e.target.value)}
                 className={`pl-10 h-12 ${errors.nome ? "border-red-9 focus-visible:border-red-9" : ""
@@ -147,7 +169,7 @@ export function RegisterModal() {
           {/* Nacionalidade */}
           <div className="flex flex-col gap-2 items-start relative shrink-0 w-full">
             <label className="font-normal text-base leading-[1.3] text-gray-12 font-family-dm-sans">
-              Nacionalidade
+              {t("nationality")}
             </label>
             <div className="w-full relative" ref={nationalityDropdownRef}>
               <button
@@ -166,7 +188,7 @@ export function RegisterModal() {
                       : "text-gray-11"
                       }`}
                   >
-                    {formData.nacionalidade || "Selecione"}
+                    {countryDisplayName(formData.nacionalidade, intl) || t("select")}
                   </span>
                 </div>
                 <div className="flex-none -scale-y-100 shrink-0">
@@ -180,7 +202,7 @@ export function RegisterModal() {
                       <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-11" />
                       <input
                         type="text"
-                        placeholder="Pesquisar país"
+                        placeholder={t("searchCountry")}
                         value={nationalitySearch}
                         onChange={(e) => setNationalitySearch(e.target.value)}
                         onMouseDown={(e) => e.stopPropagation()}
@@ -191,7 +213,7 @@ export function RegisterModal() {
                   <div className="max-h-[220px] overflow-y-auto [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-thumb]:bg-gray-6 [&::-webkit-scrollbar-thumb]:rounded-full">
                     {filteredNacionalidadeOptions.length === 0 ? (
                       <div className="px-3 py-4 text-sm text-gray-11 font-family-dm-sans text-center">
-                        Nenhum país encontrado
+                        {t("noCountryFound")}
                       </div>
                     ) : (
                       filteredNacionalidadeOptions.map((option) => (
@@ -204,7 +226,7 @@ export function RegisterModal() {
                           }}
                           className="w-full px-3 py-2.5 text-left text-sm font-family-dm-sans text-gray-12 hover:bg-gray-3 transition-colors"
                         >
-                          {option.label}
+                          {option.display}
                         </button>
                       ))
                     )}
@@ -227,7 +249,7 @@ export function RegisterModal() {
             disabled={isSubmitting}
             className="w-full h-12 font-bold text-base font-manrope disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            Próximo
+            {t("next")}
           </Button>
         </div>
       </div>
@@ -267,7 +289,7 @@ export function RegisterModal() {
           {/* Data de nascimento */}
           <div className="flex flex-col gap-2 items-start relative shrink-0 w-full">
             <label className="font-normal text-base leading-[1.3] text-gray-12 font-family-dm-sans">
-              Data de nascimento
+              {t("birthDate")}
             </label>
             <div className="w-full">
               <DatePickerWithConfirm
@@ -298,7 +320,7 @@ export function RegisterModal() {
           {/* Telefone */}
           <div className="flex flex-col gap-2 items-start relative shrink-0 w-full">
             <label className="font-normal text-base leading-[1.3] text-gray-12 font-family-dm-sans">
-              Telefone
+              {t("phone")}
             </label>
             <div className="relative w-full">
               <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-11" />
@@ -325,7 +347,7 @@ export function RegisterModal() {
           {/* Sexo */}
           <div className="flex flex-col gap-2 items-start relative shrink-0 w-full">
             <label className="font-normal text-base leading-[1.3] text-gray-12 font-family-dm-sans">
-              Sexo
+              {t("sex")}
             </label>
             <div className="w-full">
               <Dropdown
@@ -339,7 +361,7 @@ export function RegisterModal() {
                         className={`font-normal text-base leading-[1.3] font-family-dm-sans truncate ${formData.sexo ? "text-gray-12" : "text-gray-11"
                           }`}
                       >
-                        {formData.sexo || "Selecione"}
+                        {formData.sexo ? genderLabel(formData.sexo) : t("select")}
                       </span>
                     </div>
                     <div className="flex-none -scale-y-100 shrink-0">
@@ -347,8 +369,8 @@ export function RegisterModal() {
                     </div>
                   </div>
                 )}
-                options={sexoOptions}
-                onSelect={(option) => handleInputChange("sexo", option.label)}
+                options={sexoDropdownOptions}
+                onSelect={handleSexoSelect}
               />
             </div>
             {errors.sexo && (
@@ -373,7 +395,7 @@ export function RegisterModal() {
                   onError={() => setTurnstileToken(null)}
                   onExpire={() => setTurnstileToken(null)}
                   style={{ width: "100%", display: "block" }}
-                  options={{ theme: "light", size: "flexible", appearance: "interaction-only" }}
+                  options={{ theme: "light", size: "flexible", appearance: "interaction-only", language: turnstileLanguage }}
                 />
               </div>
             </div>
@@ -385,11 +407,11 @@ export function RegisterModal() {
           >
             {isSubmitting || authLoading
               ? isCompletingProfile
-                ? "Finalizando cadastro..."
-                : "Criando conta..."
+                ? t("finishingSignup")
+                : t("creatingAccount")
               : isCompletingProfile
-                ? "Finalizar cadastro"
-                : "Criar conta"}
+                ? t("finishSignup")
+                : t("signUp")}
           </Button>
         </div>
       </div>
@@ -403,13 +425,13 @@ export function RegisterModal() {
         <button
           onClick={handleBack}
           className="flex items-center justify-center rounded-lg shrink-0 size-8 transition-colors rotate-90 cursor-pointer hover:bg-gray-3"
-          aria-label="Voltar"
+          aria-label={t("back")}
         >
           <ArrowButton isOpen={true} />
         </button>
       )}
       <p className="font-semibold text-xl leading-[1.3] text-gray-12 font-family-dm-sans">
-        Informações pessoais
+        {t("personalInfo")}
       </p>
     </div>
   );
@@ -424,13 +446,13 @@ export function RegisterModal() {
           {/* Nome */}
           <div className="flex flex-col gap-2 items-start relative shrink-0 w-full">
             <label className="font-normal text-base leading-[1.3] text-gray-12 font-family-dm-sans">
-              Nome completo
+              {t("fullName")}
             </label>
             <div className="relative w-full">
               <User className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-11" />
               <Input
                 type="text"
-                placeholder="Digite seu nome completo"
+                placeholder={t("fullNamePlaceholder")}
                 value={formData.nome}
                 onChange={(e) => handleInputChange("nome", e.target.value)}
                 className={`pl-10 h-12 ${errors.nome ? "border-red-9 focus-visible:border-red-9" : ""
@@ -446,7 +468,7 @@ export function RegisterModal() {
           {/* Nacionalidade */}
           <div className="flex flex-col gap-2 items-start relative shrink-0 w-full">
             <label className="font-normal text-base leading-[1.3] text-gray-12 font-family-dm-sans">
-              Nacionalidade
+              {t("nationality")}
             </label>
             <div className="w-full relative" ref={nationalityDropdownRef}>
               <button
@@ -465,7 +487,7 @@ export function RegisterModal() {
                       : "text-gray-11"
                       }`}
                   >
-                    {formData.nacionalidade || "Selecione"}
+                    {countryDisplayName(formData.nacionalidade, intl) || t("select")}
                   </span>
                 </div>
                 <ArrowButton isOpen={showNationalityDropdown} />
@@ -477,7 +499,7 @@ export function RegisterModal() {
                       <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-11" />
                       <input
                         type="text"
-                        placeholder="Pesquisar país"
+                        placeholder={t("searchCountry")}
                         value={nationalitySearch}
                         onChange={(e) => setNationalitySearch(e.target.value)}
                         onMouseDown={(e) => e.stopPropagation()}
@@ -488,7 +510,7 @@ export function RegisterModal() {
                   <div className="max-h-[220px] overflow-y-auto [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-thumb]:bg-gray-6 [&::-webkit-scrollbar-thumb]:rounded-full">
                     {filteredNacionalidadeOptions.length === 0 ? (
                       <div className="px-3 py-4 text-sm text-gray-11 font-family-dm-sans text-center">
-                        Nenhum país encontrado
+                        {t("noCountryFound")}
                       </div>
                     ) : (
                       filteredNacionalidadeOptions.map((option) => (
@@ -501,7 +523,7 @@ export function RegisterModal() {
                           }}
                           className="w-full px-3 py-2.5 text-left text-sm font-family-dm-sans text-gray-12 hover:bg-gray-3 transition-colors"
                         >
-                          {option.label}
+                          {option.display}
                         </button>
                       ))
                     )}
@@ -524,7 +546,7 @@ export function RegisterModal() {
             disabled={isSubmitting}
             className="px-8 font-bold text-base disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            Próximo
+            {t("next")}
           </Button>
         </div>
       </div>
@@ -564,7 +586,7 @@ export function RegisterModal() {
           {/* Data de nascimento */}
           <div className="flex flex-col gap-2 items-start relative shrink-0 w-full">
             <label className="font-normal text-base leading-[1.3] text-gray-12 font-family-dm-sans">
-              Data de nascimento
+              {t("birthDate")}
             </label>
             <div className="w-full">
               <DatePickerWithConfirm
@@ -595,7 +617,7 @@ export function RegisterModal() {
           {/* Telefone */}
           <div className="flex flex-col gap-2 items-start relative shrink-0 w-full">
             <label className="font-normal text-base leading-[1.3] text-gray-12 font-family-dm-sans">
-              Telefone
+              {t("phone")}
             </label>
             <div className="relative w-full">
               <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-11" />
@@ -622,7 +644,7 @@ export function RegisterModal() {
           {/* Sexo */}
           <div className="flex flex-col gap-2 items-start relative shrink-0 w-full">
             <label className="font-normal text-base leading-[1.3] text-gray-12 font-family-dm-sans">
-              Sexo
+              {t("sex")}
             </label>
             <div className="w-full">
               <Dropdown
@@ -636,7 +658,7 @@ export function RegisterModal() {
                         className={`font-normal text-base leading-[1.3] font-family-dm-sans truncate ${formData.sexo ? "text-gray-12" : "text-gray-11"
                           }`}
                       >
-                        {formData.sexo || "Selecione"}
+                        {formData.sexo ? genderLabel(formData.sexo) : t("select")}
                       </span>
                     </div>
                     <div className="flex-none -scale-y-100 shrink-0">
@@ -644,8 +666,8 @@ export function RegisterModal() {
                     </div>
                   </div>
                 )}
-                options={sexoOptions}
-                onSelect={(option) => handleInputChange("sexo", option.label)}
+                options={sexoDropdownOptions}
+                onSelect={handleSexoSelect}
               />
             </div>
             {errors.sexo && (
@@ -665,7 +687,7 @@ export function RegisterModal() {
               onError={() => setTurnstileToken(null)}
               onExpire={() => setTurnstileToken(null)}
               style={{ width: "100%", display: "block" }}
-              options={{ theme: "light", size: "flexible", appearance: "interaction-only" }}
+              options={{ theme: "light", size: "flexible", appearance: "interaction-only", language: turnstileLanguage }}
               className="w-full"
             />
           )}
@@ -677,11 +699,11 @@ export function RegisterModal() {
             >
               {isSubmitting || authLoading
                 ? isCompletingProfile
-                  ? "Finalizando cadastro..."
-                  : "Criando conta..."
+                  ? t("finishingSignup")
+                  : t("creatingAccount")
                 : isCompletingProfile
-                  ? "Finalizar cadastro"
-                  : "Criar conta"}
+                  ? t("finishSignup")
+                  : t("signUp")}
             </Button>
           </div>
         </div>
@@ -698,13 +720,13 @@ export function RegisterModal() {
             <button
               onClick={handleBack}
               className="flex items-center justify-center shrink-0 size-8 transition-colors rotate-90 cursor-pointer hover:bg-gray-3 rounded-lg"
-              aria-label="Voltar"
+              aria-label={t("back")}
             >
               <ArrowButton isOpen={true} />
             </button>
           )}
           <p className="font-medium text-base leading-[1.3] text-gray-12 font-family-dm-sans">
-            Dados de acesso a conta
+            {t("accountAccess")}
           </p>
         </div>
       </div>
@@ -715,13 +737,13 @@ export function RegisterModal() {
           {/* Email input */}
           <div className="flex flex-col gap-2 items-start relative shrink-0 w-full">
             <label className="font-normal text-base leading-[1.3] text-gray-12 font-family-dm-sans">
-              Email
+              {t("email")}
             </label>
             <div className="relative w-full">
               <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-11" />
               <Input
                 type="email"
-                placeholder="Digite seu email"
+                placeholder={t("emailPlaceholder")}
                 value={formData.email}
                 onChange={(e) => handleInputChange("email", e.target.value)}
                 disabled={isCompletingProfile}
@@ -739,13 +761,13 @@ export function RegisterModal() {
           {/* Password input */}
           <div className="flex flex-col gap-2 items-start relative shrink-0 w-full">
             <label className="font-normal text-base leading-[1.3] text-gray-12 font-family-dm-sans">
-              Crie sua senha
+              {t("createPassword")}
             </label>
             <div className="relative w-full">
               <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-11" />
               <Input
                 type={showPassword ? "text" : "password"}
-                placeholder="Digite uma senha"
+                placeholder={t("createPasswordPlaceholder")}
                 value={formData.senha}
                 onChange={(e) => handleInputChange("senha", e.target.value)}
                 className={`pl-10 pr-10 h-12 ${errors.senha ? "border-red-9 focus-visible:border-red-9" : ""}`}
@@ -755,7 +777,7 @@ export function RegisterModal() {
                 type="button"
                 onClick={() => setShowPassword((v) => !v)}
                 className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-11 hover:text-gray-12 transition-colors"
-                aria-label={showPassword ? "Ocultar senha" : "Mostrar senha"}
+                aria-label={showPassword ? t("hidePassword") : t("showPassword")}
               >
                 {showPassword ? <EyeOff className="size-5" /> : <Eye className="size-5" />}
               </button>
@@ -768,13 +790,13 @@ export function RegisterModal() {
           {/* Confirm password input */}
           <div className="flex flex-col gap-2 items-start relative shrink-0 w-full">
             <label className="font-normal text-base leading-[1.3] text-gray-12 font-family-dm-sans">
-              Confirme sua senha
+              {t("confirmPassword")}
             </label>
             <div className="relative w-full">
               <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-11" />
               <Input
                 type={showConfirmPassword ? "text" : "password"}
-                placeholder="Digite novamente"
+                placeholder={t("confirmPasswordPlaceholder")}
                 value={formData.confirmarSenha}
                 onChange={(e) => handleInputChange("confirmarSenha", e.target.value)}
                 className={`pl-10 pr-10 h-12 ${errors.confirmarSenha ? "border-red-9 focus-visible:border-red-9" : ""}`}
@@ -784,7 +806,7 @@ export function RegisterModal() {
                 type="button"
                 onClick={() => setShowConfirmPassword((v) => !v)}
                 className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-11 hover:text-gray-12 transition-colors"
-                aria-label={showConfirmPassword ? "Ocultar senha" : "Mostrar senha"}
+                aria-label={showConfirmPassword ? t("hidePassword") : t("showPassword")}
               >
                 {showConfirmPassword ? <EyeOff className="size-5" /> : <Eye className="size-5" />}
               </button>
@@ -804,7 +826,7 @@ export function RegisterModal() {
             disabled={isSubmitting || authLoading}
             className="w-full h-12 font-bold text-lg disabled:opacity-50 disabled:cursor-not-allowed"
           > 
-            {isSubmitting || authLoading ? "Verificando..." : "Próximo"}
+            {isSubmitting || authLoading ? t("verifying") : t("next")}
           </Button>
         </div>
       </div>
@@ -819,13 +841,13 @@ export function RegisterModal() {
           <button
             onClick={handleBack}
             className="flex items-center justify-center rounded-lg shrink-0 size-8 transition-colors rotate-90 cursor-pointer hover:bg-gray-3"
-            aria-label="Voltar"
+            aria-label={t("back")}
           >
             <ArrowButton isOpen={true} />
           </button>
         )}
         <p className="font-semibold text-xl leading-[1.3] text-gray-12 font-family-dm-sans">
-          Dados de acesso a conta
+          {t("accountAccess")}
         </p>
       </div>
 
@@ -836,13 +858,13 @@ export function RegisterModal() {
           {/* Email input */}
           <div className="flex flex-col gap-2 items-start min-w-[230px] relative shrink-0 w-full">
             <label className="font-normal text-base leading-[1.3] text-gray-12 font-family-dm-sans">
-              Email
+              {t("email")}
             </label>
             <div className="relative w-full">
               <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-11" />
               <Input
                 type="email"
-                placeholder="Digite seu email"
+                placeholder={t("emailPlaceholder")}
                 value={formData.email}
                 onChange={(e) => handleInputChange("email", e.target.value)}
                 disabled={isCompletingProfile}
@@ -862,13 +884,13 @@ export function RegisterModal() {
             <>
               <div className="flex flex-col gap-2 items-start min-w-[230px] relative shrink-0 w-full">
                 <label className="font-normal text-base leading-[1.3] text-gray-12 font-family-dm-sans">
-                  Crie sua senha
+                  {t("createPassword")}
                 </label>
                 <div className="relative w-full">
                   <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-11" />
                   <Input
                     type={showPassword ? "text" : "password"}
-                    placeholder="Digite uma senha"
+                    placeholder={t("createPasswordPlaceholder")}
                     value={formData.senha}
                     onChange={(e) => handleInputChange("senha", e.target.value)}
                     className={`pl-10 pr-10 h-12 ${errors.senha ? "border-red-9 focus-visible:border-red-9" : ""}`}
@@ -878,7 +900,7 @@ export function RegisterModal() {
                     type="button"
                     onClick={() => setShowPassword((v) => !v)}
                     className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-11 hover:text-gray-12 transition-colors"
-                    aria-label={showPassword ? "Ocultar senha" : "Mostrar senha"}
+                    aria-label={showPassword ? t("hidePassword") : t("showPassword")}
                   >
                     {showPassword ? <EyeOff className="size-5" /> : <Eye className="size-5" />}
                   </button>
@@ -893,13 +915,13 @@ export function RegisterModal() {
               {/* Confirm password input */}
               <div className="flex flex-col gap-2 items-start min-w-[230px] relative shrink-0 w-full">
                 <label className="font-normal text-base leading-[1.3] text-gray-12 font-family-dm-sans">
-                  Confirme sua senha
+                  {t("confirmPassword")}
                 </label>
                 <div className="relative w-full">
                   <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-11" />
                   <Input
                     type={showConfirmPassword ? "text" : "password"}
-                    placeholder="Digite novamente"
+                    placeholder={t("confirmPasswordPlaceholder")}
                     value={formData.confirmarSenha}
                     onChange={(e) => handleInputChange("confirmarSenha", e.target.value)}
                     className={`pl-10 pr-10 h-12 ${errors.confirmarSenha ? "border-red-9 focus-visible:border-red-9" : ""}`}
@@ -909,7 +931,7 @@ export function RegisterModal() {
                     type="button"
                     onClick={() => setShowConfirmPassword((v) => !v)}
                     className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-11 hover:text-gray-12 transition-colors"
-                    aria-label={showConfirmPassword ? "Ocultar senha" : "Mostrar senha"}
+                    aria-label={showConfirmPassword ? t("hidePassword") : t("showPassword")}
                   >
                     {showConfirmPassword ? <EyeOff className="size-5" /> : <Eye className="size-5" />}
                   </button>
@@ -931,7 +953,7 @@ export function RegisterModal() {
             disabled={isSubmitting || authLoading}
             className="px-8 font-bold text-xl disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {isSubmitting || authLoading ? "Verificando..." : "Próximo"}
+            {isSubmitting || authLoading ? t("verifying") : t("next")}
           </Button>
         </div>
       </div>
@@ -943,14 +965,14 @@ export function RegisterModal() {
       {/* Success content */}
       <div className="flex flex-col items-center justify-center relative shrink-0 w-full">
         <div className="flex flex-col gap-4 items-center justify-center pb-[52px] pt-6 px-6 relative shrink-0 w-full max-w-[460px] mx-auto">
-          <Image src="/images/successIcon.png" alt="Success" width={100} height={100} />
+          <Image src="/images/successIcon.png" alt={t("successAlt")} width={100} height={100} />
 
           <div className="flex flex-col gap-4 items-center justify-center relative shrink-0 w-full">
             <h2 className="font-extrabold text-xl leading-[1.1] text-gray-12 font-manrope text-center">
-              Cadastro realizado!
+              {t("signupDone")}
             </h2>
             <div className="font-normal text-base leading-[1.3] text-gray-11 text-center font-family-dm-sans">
-              <p className="mb-0">Sua conta PódioTicket foi criada.</p>
+              <p className="mb-0">{t("accountCreated")}</p>
             </div>
           </div>
         </div>
@@ -958,7 +980,7 @@ export function RegisterModal() {
         {/* Continue button */}
         <div className="flex flex-col items-center justify-center pb-8 pt-4 px-6 relative shrink-0 w-full">
           <Button onClick={handleFinish} className="px-8 font-bold text-xl">
-            Continuar navegando
+            {t("keepBrowsing")}
           </Button>
         </div>
       </div>

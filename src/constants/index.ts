@@ -1,4 +1,3 @@
-export { translations } from "./translations";
 export { mockEvents, type Event } from "./events";
 export { mockKits, type Kit, type Race } from "./kits";
 export { mockRegistrations } from "./registrations";

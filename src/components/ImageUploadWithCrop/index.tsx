@@ -16,6 +16,8 @@ import { Button } from "@/components/Button";
 import type { EventImageSpec } from "@/lib/eventImageSpecs";
 import { getCroppedImageFile } from "@/utils/cropImage";
 import { cn } from "@/utils/cn";
+import { useT } from "@/i18n/client";
+import type { Translator } from "@/i18n/translate";
 
 const DEFAULT_ACCEPT = "image/jpeg,image/jpg,image/png,image/gif,image/webp";
 
@@ -52,14 +54,15 @@ export type ImageUploadWithCropProps = {
 
 function validateImageFile(
   file: File,
-  maxFileSizeMb: number
+  maxFileSizeMb: number,
+  t: Translator<"ui">,
 ): string | null {
   const validTypes = ["image/jpeg", "image/jpg", "image/png", "image/gif", "image/webp"];
   if (!validTypes.includes(file.type)) {
-    return "Formato inválido. Use JPG, PNG, GIF ou WebP.";
+    return t("cropInvalidFormat");
   }
   if (file.size > maxFileSizeMb * 1024 * 1024) {
-    return `Arquivo muito grande. Máximo de ${maxFileSizeMb}MB.`;
+    return t("cropFileTooLarge", { max: maxFileSizeMb });
   }
   return null;
 }
@@ -72,7 +75,7 @@ export const ImageUploadWithCrop = forwardRef<ImageUploadWithCropRef, ImageUploa
       outputBaseName = "imagem",
       maxFileSizeMb = 10,
       accept = DEFAULT_ACCEPT,
-      modalTitle = "Ajustar e encaixar imagem",
+      modalTitle,
       className,
       cropShape = "rect",
       onInvalidFile,
@@ -80,6 +83,7 @@ export const ImageUploadWithCrop = forwardRef<ImageUploadWithCropRef, ImageUploa
     },
     ref
   ) {
+    const t = useT("ui");
     const inputRef = useRef<HTMLInputElement>(null);
     const [open, setOpen] = useState(false);
     // O modal vai via portal pro `document.body` (escapa ancestrais com `transform`,
@@ -164,7 +168,7 @@ export const ImageUploadWithCrop = forwardRef<ImageUploadWithCropRef, ImageUploa
 
     const startWithFile = useCallback(
       (file: File): string | null => {
-        const err = validateImageFile(file, maxFileSizeMb);
+        const err = validateImageFile(file, maxFileSizeMb, t);
         if (err) {
           onInvalidFile?.(err);
           return err;
@@ -181,7 +185,7 @@ export const ImageUploadWithCrop = forwardRef<ImageUploadWithCropRef, ImageUploa
         setOpen(true);
         return null;
       },
-      [maxFileSizeMb, onInvalidFile]
+      [maxFileSizeMb, onInvalidFile, t]
     );
 
     useImperativeHandle(
@@ -222,7 +226,7 @@ export const ImageUploadWithCrop = forwardRef<ImageUploadWithCropRef, ImageUploa
         closeModal();
       } catch (e) {
         console.error(e);
-        onCropFailed?.("Não foi possível processar o recorte da imagem.");
+        onCropFailed?.(t("cropFailed"));
       } finally {
         setApplying(false);
       }
@@ -264,10 +268,10 @@ export const ImageUploadWithCrop = forwardRef<ImageUploadWithCropRef, ImageUploa
                   id="image-crop-title"
                   className="text-gray-12 text-lg font-bold font-manrope leading-tight pr-8"
                 >
-                  {modalTitle}
+                  {modalTitle ?? t("cropTitle")}
                 </h2>
                 <p className="text-gray-11 text-sm font-family-dm-sans mt-1">
-                  Arraste para posicionar e use o zoom para encaixar na área.
+                  {t("cropHint")}
                 </p>
               </div>
 
@@ -315,7 +319,7 @@ export const ImageUploadWithCrop = forwardRef<ImageUploadWithCropRef, ImageUploa
                       aria-valuemin={ZOOM_MIN}
                       aria-valuemax={ZOOM_MAX}
                       aria-valuenow={zoom}
-                      aria-label="Zoom da imagem"
+                      aria-label={t("cropZoom")}
                       className="absolute top-1/2 z-20 flex size-6 -translate-x-1/2 -translate-y-1/2 cursor-grab items-center justify-center rounded-full bg-primary-12 shadow-lg outline-none transition-transform hover:scale-110 focus-visible:ring-2 focus-visible:ring-primary-12 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-2 active:scale-95 active:cursor-grabbing"
                       style={{
                         left: `clamp(0.75rem, ${zoomToPercent(zoom)}%, calc(100% - 0.75rem))`,
@@ -369,14 +373,14 @@ export const ImageUploadWithCrop = forwardRef<ImageUploadWithCropRef, ImageUploa
                     disabled={applying}
                     className="border-gray-6 text-gray-12"
                   >
-                    Cancelar
+                    {t("cropCancel")}
                   </Button>
                   <Button
                     type="button"
                     onClick={() => void handleApply()}
                     disabled={applying || !croppedAreaPixels}
                   >
-                    {applying ? "Gerando..." : "Aplicar"}
+                    {applying ? t("cropApplying") : t("cropApply")}
                   </Button>
                 </div>
               </div>

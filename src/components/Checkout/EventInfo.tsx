@@ -31,6 +31,7 @@ import {
   normalizeCouponAppliesTo,
   stackedManualDiscount,
 } from "@/lib/orderCouponDiscount";
+import { useT } from "@/i18n/client";
 
 interface EventInfoProps {
   event: Event;
@@ -53,6 +54,7 @@ interface EventInfoProps {
 }
 
 export function EventInfo({ event, onNext, isSubmitting = false, tickets = [], categorizedTickets = [], uncategorizedTickets = [], appliedCoupon = null, appliedVoucher = null, voucherDiscountOverride = 0, disableNext = false }: EventInfoProps) {
+  const t = useT("checkout");
   const { raceQuantities } = useCheckout();
   const hidePricing = useHidePricing();
   const [isContactModalOpen, setIsContactModalOpen] = useState(false);
@@ -378,15 +380,15 @@ export function EventInfo({ event, onNext, isSubmitting = false, tickets = [], c
   const hasCouponLine = pricing.showCouponDiscount && pricing.couponDiscount > 0;
   // Label da linha de desconto: "Voucher CÓDIGO", "Cupom idade (X% OFF)" ou "Cupom CÓDIGO (...)".
   const discountLineLabel = useVoucher
-    ? formatVoucherLineLabel(voucherData?.code ?? appliedVoucher?.code)
+    ? formatVoucherLineLabel(voucherData?.code ?? appliedVoucher?.code, t)
     : stackedPreview
-      ? "Descontos"
+      ? t("discounts")
     : quantityAuto
-      ? formatAgeCouponLineLabel(quantityAuto.coupon)
+      ? formatAgeCouponLineLabel(quantityAuto.coupon, t)
     : ageCoupon
-      ? formatAgeCouponLineLabel(ageCoupon)
+      ? formatAgeCouponLineLabel(ageCoupon, t)
       : resolvedCoupon
-        ? formatCouponLineLabel(resolvedCoupon)
+        ? formatCouponLineLabel(resolvedCoupon, t)
         : "";
   // Cupom do link sem desconto ainda calculado. Voucher é client-side: quando
   // não cobre a seleção (desconto 0), a linha do voucher simplesmente não aparece.
@@ -438,7 +440,7 @@ export function EventInfo({ event, onNext, isSubmitting = false, tickets = [], c
       </div>
 
       <div className="p-4">
-        <p className="text-sm text-gray-11">Seu pedido:</p>
+        <p className="text-sm text-gray-11">{t("yourOrder")}</p>
         <h1 className="text-lg font-bold mb-2">{event.name}</h1>
         <div className="flex flex-col w-full mt-4 gap-2">
           {groupedTickets.length > 0 ? (
@@ -449,7 +451,7 @@ export function EventInfo({ event, onNext, isSubmitting = false, tickets = [], c
                   className="text-sm font-semibold text-gray-12 flex items-end justify-between w-full"
                 >
                   <div className="flex flex-col items-start w-[80%]">
-                    <span className="text-gray-11 text-xs truncate w-full line-clamp-1">{ticket.categoryName ? `${ticket.categoryName}` : "Ingresso Avulso"}</span>
+                    <span className="text-gray-11 text-xs truncate w-full line-clamp-1">{ticket.categoryName ? `${ticket.categoryName}` : t("singleTicketTitle")}</span>
                     <span className="text-gray-12 text-sm truncate">({ticket.quantity}x){" "} {ticket.ticketName}:{" "}</span>
                   </div>
                   {!hidePricing && (
@@ -462,13 +464,13 @@ export function EventInfo({ event, onNext, isSubmitting = false, tickets = [], c
             </>
           ) : (
             <p className="text-sm text-gray-11 text-center py-2">
-              Nenhum ingresso selecionado
+              {t("noTicketSelected")}
             </p>
           )}
         </div>
         {!hidePricing && (
         <div className="mt-4 flex items-center justify-between w-full text-sm text-gray-12">
-          <p className="font-semibold">Subtotal:</p>
+          <p className="font-semibold">{t("subtotalLabel")}</p>
           <p className="font-bold">{formatPrice(totalPrice)}</p>
         </div>
         )}
@@ -483,18 +485,18 @@ export function EventInfo({ event, onNext, isSubmitting = false, tickets = [], c
               </div>
             ) : couponPending ? (
               <div className="mt-2 flex items-center justify-between w-full text-sm text-gray-12">
-                <p className="font-semibold">Cupom {pendingCoupon}:</p>
+                <p className="font-semibold">{t("couponNamed", { name: pendingCoupon ?? "" })}:</p>
                 <p className="font-bold">{couponPercentSuffix}</p>
               </div>
             ) : null}
             {serviceFee > 0 && (
               <div className="mt-2 flex items-center justify-between w-full text-sm text-gray-12">
-                <p className="font-semibold">Taxa de serviço:</p>
+                <p className="font-semibold">{t("serviceFeeLabel")}</p>
                 <p className="font-bold">{formatPrice(serviceFee)}</p>
               </div>
             )}
             <h1 className="text-lg font-bold text-gray-12 flex items-center justify-between w-full mt-4 border-t border-gray-6 pt-4">
-              Total:{" "}
+              {t("totalLabel")}{" "}
               <span className="text-gray-12">
                 {formatPrice(pricing.total)}
               </span>
@@ -508,7 +510,7 @@ export function EventInfo({ event, onNext, isSubmitting = false, tickets = [], c
           disabled={totalParticipants === 0 || disableNext}
           isLoading={isSubmitting}
         >
-          Proximo
+          {t("nextUnaccented")}
         </Button>
       </div>
 

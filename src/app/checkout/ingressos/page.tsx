@@ -23,10 +23,12 @@ import { InfoIcon } from "@/components/Icons/InfoIcon";
 import { trackMetaPixel } from "@/lib/metaPixel";
 import toast from "react-hot-toast";
 import CheckoutIngressosLoading from "./loading";
+import { useT } from "@/i18n/client";
 
 function CheckoutIngressosContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
+  const t = useT("checkout");
   const eventId = searchParams.get("eventId");
   const { event, loading: isLoading } = useEvent(eventId ?? "");
   const { raceQuantities, updateRaceQuantity, bindOrder } = useCheckout();
@@ -87,7 +89,7 @@ function CheckoutIngressosContent() {
       .map(([ticketId, quantity]) => ({ ticketId, quantity }));
 
     if (tickets.length === 0) {
-      toast.error("Selecione pelo menos um ingresso para continuar.");
+      toast.error(t("selectAtLeastOneTicket"));
       // Sem o reset, o guard de reentrância fica preso em `true` e os cliques
       // seguintes viram no-op silencioso (o `finally` abaixo não roda neste retorno).
       reservingRef.current = false;
@@ -141,7 +143,7 @@ function CheckoutIngressosContent() {
           // ser audível — é 100% OFF, a pessoa vai pagar cheio sem saber.
           if (isVoucher && updated.couponRejected) {
             toast.error(
-              updated.couponRejected.reason || "Não foi possível aplicar o voucher.",
+              updated.couponRejected.reason || t("voucherApplyFailed"),
               { duration: 6000 },
             );
           }
@@ -150,7 +152,7 @@ function CheckoutIngressosContent() {
             toast.error(
               couponErr instanceof OrderApiError
                 ? couponErr.message
-                : "Não foi possível aplicar o voucher.",
+                : t("voucherApplyFailed"),
               { duration: 6000 },
             );
           }
@@ -167,22 +169,22 @@ function CheckoutIngressosContent() {
     } catch (err) {
       if (err instanceof OrderApiError) {
         if (err.code === "BATCH_SOLD_OUT") {
-          toast.error("Lote esgotado. Escolha outro ingresso.");
+          toast.error(t("batchSoldOutToast"));
         } else if (err.code === "EVENT_SOLD_OUT") {
           // Teto de vagas do evento atingido (pode acontecer por corrida mesmo com
           // o botão liberado). Mensagem do backend já é clara e específica.
-          toast.error(err.message || "Evento esgotado. Não há vagas suficientes.");
+          toast.error(err.message || t("eventSoldOutToast"));
         } else if (err.code === "TOO_MANY_PENDING_ORDERS") {
           toast.error(
-            "Você já tem reservas em andamento. Finalize uma antes de começar outra.",
+            t("tooManyPendingOrders"),
           );
         } else if (err.code === "RATE_LIMIT_EXCEEDED") {
-          toast.error("Muitas tentativas. Aguarde um minuto e tente de novo.");
+          toast.error(t("rateLimitExceeded"));
         } else {
-          toast.error(err.message || "Não foi possível reservar os ingressos.");
+          toast.error(err.message || t("reserveFailed"));
         }
       } else {
-        toast.error("Não foi possível reservar os ingressos. Tente novamente.");
+        toast.error(t("reserveFailedRetry"));
       }
     } finally {
       reservingRef.current = false;
@@ -193,15 +195,15 @@ function CheckoutIngressosContent() {
   if (!eventId) {
     return (
       <div className="w-full max-w-[1280px] mx-auto flex flex-col items-center justify-center min-h-screen gap-4">
-        <h1 className="text-2xl font-bold">Evento não especificado</h1>
+        <h1 className="text-2xl font-bold">{t("eventNotSpecifiedTitle")}</h1>
         <p className="text-gray-11 mb-6">
-          Por favor, selecione um evento para continuar com o checkout.
+          {t("eventNotSpecifiedDescription")}
         </p>
         <Link
           href="/"
           className="text-primary-10 hover:text-primary-7 transition-colors"
         >
-          Voltar para a página inicial
+          {t("backToHome")}
         </Link>
       </div>
     );
@@ -217,15 +219,15 @@ function CheckoutIngressosContent() {
   if (!event) {
     return (
       <div className="w-full max-w-[1280px] mx-auto flex flex-col items-center justify-center min-h-screen gap-4">
-        <h1 className="text-2xl font-bold">Evento não encontrado</h1>
+        <h1 className="text-2xl font-bold">{t("eventNotFoundTitle")}</h1>
         <p className="text-gray-11 mb-6">
-          O evento que você está procurando não existe ou foi removido.
+          {t("eventNotFoundDescription")}
         </p>
         <Link
           href="/"
           className="text-primary-10 hover:text-primary-7 transition-colors"
         >
-          Voltar para a página inicial
+          {t("backToHome")}
         </Link>
       </div>
     );

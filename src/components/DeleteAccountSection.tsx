@@ -7,6 +7,7 @@ import toast from "react-hot-toast";
 import { OtpCodeInput } from "@/components/OtpCodeInput";
 import { userService } from "@/services";
 import { cn } from "@/utils/cn";
+import { useT } from "@/i18n/client";
 
 interface DeleteAccountSectionProps {
   /** E-mail do usuário — exibido na instrução de código */
@@ -20,14 +21,15 @@ interface DeleteAccountSectionProps {
 
 type Step = "confirm" | "code";
 
-/** Motivos pré-definidos de exclusão. `outro` libera o campo de texto livre. */
+/** Motivos pré-definidos de exclusão. `outro` libera o campo de texto livre.
+ *  `label` (pt-BR) é o valor ENVIADO ao backend; `key` é só a exibição (i18n). */
 const DELETE_REASONS = [
-  { id: "nao-uso", label: "Não uso mais a plataforma" },
-  { id: "outra-conta", label: "Criei outra conta" },
-  { id: "privacidade", label: "Preocupações com privacidade e dados" },
-  { id: "experiencia", label: "Tive uma experiência ruim" },
-  { id: "sem-eventos", label: "Não encontro eventos do meu interesse" },
-  { id: "outro", label: "Outro motivo" },
+  { id: "nao-uso", label: "Não uso mais a plataforma", key: "reasonNoLongerUse" },
+  { id: "outra-conta", label: "Criei outra conta", key: "reasonOtherAccount" },
+  { id: "privacidade", label: "Preocupações com privacidade e dados", key: "reasonPrivacy" },
+  { id: "experiencia", label: "Tive uma experiência ruim", key: "reasonBadExperience" },
+  { id: "sem-eventos", label: "Não encontro eventos do meu interesse", key: "reasonNoEvents" },
+  { id: "outro", label: "Outro motivo", key: "reasonOther" },
 ] as const;
 
 const OTHER_REASON_MAX = 500;
@@ -48,6 +50,7 @@ export function DeleteAccountSection({
   userEmail,
   onDeleted,
 }: DeleteAccountSectionProps) {
+  const t = useT("user");
   const [open, setOpen] = useState(false);
   const [step, setStep] = useState<Step>("confirm");
   const [reasonId, setReasonId] = useState("");
@@ -63,8 +66,8 @@ export function DeleteAccountSection({
   // Countdown de reenvio
   useEffect(() => {
     if (resendCooldown <= 0) return;
-    const t = setTimeout(() => setResendCooldown((c) => c - 1), 1000);
-    return () => clearTimeout(t);
+    const timer = setTimeout(() => setResendCooldown((c) => c - 1), 1000);
+    return () => clearTimeout(timer);
   }, [resendCooldown]);
 
   // Trava o scroll do body enquanto o modal está aberto
@@ -116,7 +119,7 @@ export function DeleteAccountSection({
       setResendCooldown(60);
     } catch (err) {
       const message = err instanceof Error ? err.message : "";
-      toast.error(message || "Erro ao enviar código. Tente novamente.");
+      toast.error(message || t("sendCodeError"));
     } finally {
       setSending(false);
     }
@@ -127,12 +130,12 @@ export function DeleteAccountSection({
     setCodeError("");
     try {
       await userService.sendAccountDeletionCode();
-      toast.success("Novo código enviado para o seu e-mail.");
+      toast.success(t("newCodeSent"));
       setCode("");
       setResendCooldown(60);
     } catch (err) {
       const message = err instanceof Error ? err.message : "";
-      toast.error(message || "Erro ao reenviar código.");
+      toast.error(message || t("resendCodeError"));
     } finally {
       setSending(false);
     }
@@ -141,21 +144,21 @@ export function DeleteAccountSection({
   // Passo 2 → confirma o código e efetiva a exclusão.
   const handleConfirmDelete = async () => {
     if (code.length < 6) {
-      setCodeError("Preencha todos os 6 dígitos do código.");
+      setCodeError(t("fillAllCodeDigits"));
       return;
     }
     setDeleting(true);
     setCodeError("");
     try {
       await userService.deleteAccount(code, resolvedReason);
-      toast.success("Conta excluída. Sentiremos sua falta!");
+      toast.success(t("accountDeleted"));
       setOpen(false);
       await onDeleted();
     } catch (err) {
       const message = err instanceof Error ? err.message : "";
       setCodeError(
         message ||
-          "Código incorreto ou expirado. Tente novamente ou reenvie um novo código."
+          t("codeIncorrectOrExpired")
       );
     } finally {
       setDeleting(false);
@@ -172,15 +175,13 @@ export function DeleteAccountSection({
           className="font-manrope font-bold text-gray-12 underline text-left hover:text-red-11 transition-colors cursor-pointer"
           style={{ fontSize: 20, lineHeight: "22px" }}
         >
-          Excluir conta
+          {t("deleteAccount")}
         </button>
         <p
           className="font-family-dm-sans font-normal text-gray-11 w-full"
           style={{ fontSize: 16, lineHeight: "20.8px" }}
         >
-          Esta ação é permanente. Sua conta e seus dados serão removidos e não
-          poderão ser recuperados. Suas inscrições e o histórico de compras
-          permanecem registrados junto aos organizadores dos eventos.
+          {t("deleteAccountHint")}
         </p>
       </div>
 
@@ -215,15 +216,14 @@ export function DeleteAccountSection({
                       </div>
                       <div className="flex flex-col gap-2 items-center w-full">
                         <p className="font-family-dm-sans font-semibold text-[20px] leading-[1.3] text-gray-12 text-center">
-                          Excluir sua conta?
+                          {t("deleteConfirmTitle")}
                         </p>
                         <p className="font-family-dm-sans font-normal text-[16px] leading-[1.3] text-gray-11 text-center">
-                          Esta ação é permanente e não pode ser desfeita. Vamos
-                          enviar um código de segurança para{" "}
+                          {t("deleteConfirmPrefix")}{" "}
                           <span className="font-semibold text-gray-12">
-                            {userEmail || "seu e-mail"}
+                            {userEmail || t("yourEmail")}
                           </span>{" "}
-                          para confirmar a exclusão.
+                          {t("deleteConfirmSuffix")}
                         </p>
                       </div>
                     </div>
@@ -231,7 +231,7 @@ export function DeleteAccountSection({
                     {/* Motivo da exclusão (obrigatório) */}
                     <div className="flex flex-col gap-3 w-full">
                       <p className="font-family-dm-sans font-semibold text-[16px] leading-[1.3] text-gray-12">
-                        Por que você está excluindo sua conta?
+                        {t("deleteReasonQuestion")}
                       </p>
                       <div className="flex flex-col gap-2 w-full">
                         {DELETE_REASONS.map((r) => {
@@ -260,7 +260,7 @@ export function DeleteAccountSection({
                                 )}
                               </span>
                               <span className="font-family-dm-sans text-[14px] leading-[1.3] text-gray-12">
-                                {r.label}
+                                {t(r.key)}
                               </span>
                             </button>
                           );
@@ -275,7 +275,7 @@ export function DeleteAccountSection({
                           disabled={busy}
                           rows={3}
                           autoFocus
-                          placeholder="Conte pra gente o motivo…"
+                          placeholder={t("otherReasonPlaceholder")}
                           className="w-full resize-none rounded-[8px] border border-gray-6 bg-gray-1 px-3 py-2.5 text-[14px] text-gray-12 placeholder:text-gray-11 font-family-dm-sans outline-none focus-visible:border-gray-8"
                         />
                       )}
@@ -288,7 +288,7 @@ export function DeleteAccountSection({
                         disabled={busy}
                         className="flex-1 h-12 rounded-[8px] border border-gray-6 font-sans font-semibold text-gray-12 hover:bg-gray-3 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
                       >
-                        Cancelar
+                        {t("cancel")}
                       </button>
                       <button
                         type="button"
@@ -296,7 +296,7 @@ export function DeleteAccountSection({
                         disabled={busy || !reasonValid}
                         className="flex-1 h-12 rounded-[8px] bg-red-9 font-sans font-semibold text-white hover:bg-red-10 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
                       >
-                        {sending ? "Enviando..." : "Excluir conta"}
+                        {sending ? t("sending") : t("deleteAccount")}
                       </button>
                     </div>
                   </>
@@ -304,14 +304,14 @@ export function DeleteAccountSection({
                   <>
                     <div className="flex flex-col gap-3 items-center w-full">
                       <p className="font-family-dm-sans font-semibold text-[20px] leading-[1.3] text-gray-12 text-center">
-                        Confirme a exclusão
+                        {t("deleteCodeTitle")}
                       </p>
                       <p className="font-family-dm-sans font-normal text-[16px] leading-[1.3] text-gray-11 text-center">
-                        Enviamos um código de segurança para{" "}
+                        {t("deleteCodePrefix")}{" "}
                         <span className="font-semibold text-gray-12">
-                          {userEmail || "seu e-mail"}
+                          {userEmail || t("yourEmail")}
                         </span>
-                        . Insira-o abaixo para excluir sua conta.
+                        {t("deleteCodeSuffix")}
                       </p>
                     </div>
 
@@ -341,10 +341,10 @@ export function DeleteAccountSection({
                         className="font-family-dm-sans text-gray-11 hover:text-gray-12 underline text-[14px] disabled:opacity-60 disabled:cursor-not-allowed"
                       >
                         {sending
-                          ? "Reenviando..."
+                          ? t("resending")
                           : resendCooldown > 0
-                            ? `Reenviar código em ${resendCooldown}s`
-                            : "Reenviar código"}
+                            ? t("resendCodeIn", { seconds: resendCooldown })
+                            : t("resendCode")}
                       </button>
                     </div>
 
@@ -355,7 +355,7 @@ export function DeleteAccountSection({
                         disabled={busy}
                         className="flex-1 h-12 rounded-[8px] border border-gray-6 font-sans font-semibold text-gray-12 hover:bg-gray-3 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
                       >
-                        Cancelar
+                        {t("cancel")}
                       </button>
                       <button
                         type="button"
@@ -363,7 +363,7 @@ export function DeleteAccountSection({
                         disabled={busy || code.length < 6}
                         className="flex-1 h-12 rounded-[8px] bg-red-9 font-sans font-semibold text-white hover:bg-red-10 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
                       >
-                        {deleting ? "Excluindo..." : "Excluir conta"}
+                        {deleting ? t("deleting") : t("deleteAccount")}
                       </button>
                     </div>
                   </>

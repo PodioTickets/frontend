@@ -5,6 +5,7 @@ import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { ShieldAlert, X } from "lucide-react";
 import { Button } from "@/components/Button";
+import { useT } from "@/i18n/client";
 
 interface AdBlockNoticeModalProps {
   open: boolean;
@@ -23,6 +24,7 @@ export function AdBlockNoticeModal({
   onDismiss,
   onReload,
 }: AdBlockNoticeModalProps) {
+  const t = useT("ui");
   // Esc fecha — só assina o listener enquanto o modal está aberto.
   useEffect(() => {
     if (!open) return;
@@ -62,7 +64,7 @@ export function AdBlockNoticeModal({
             <button
               type="button"
               onClick={onDismiss}
-              aria-label="Fechar aviso"
+              aria-label={t("adBlockClose")}
               className="absolute right-4 top-4 text-gray-11 hover:text-gray-12 transition-colors cursor-pointer"
             >
               <X className="size-5" />
@@ -78,13 +80,10 @@ export function AdBlockNoticeModal({
                   id="adblock-notice-title"
                   className="text-gray-12 text-xl font-semibold font-family-dm-sans leading-[1.3] text-center"
                 >
-                  Bloqueador de anúncios detectado
+                  {t("adBlockTitle")}
                 </p>
                 <p className="text-gray-11 text-base font-normal font-family-dm-sans leading-[1.3] text-center">
-                  Extensões de bloqueio podem impedir o carregamento de imagens,
-                  mapas e do processamento de pagamento. Para uma melhor
-                  experiência, desative o bloqueador e
-                  recarregue a página.
+                  {t("adBlockText")}
                 </p>
               </div>
             </div>
@@ -95,10 +94,10 @@ export function AdBlockNoticeModal({
                 className="w-max border-gray-6 text-gray-12 font-bold font-manrope"
                 onClick={onDismiss}
               >
-                Continuar assim mesmo
+                {t("adBlockContinue")}
               </Button>
               <Button className="w-max font-bold font-manrope" onClick={onReload}>
-                Já desativei, recarregar
+                {t("adBlockReload")}
               </Button>
             </div>
           </motion.div>
