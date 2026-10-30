@@ -14,6 +14,7 @@ import { useCheckout } from "@/contexts/CheckoutContext";
 import { useIgnoreAgeLimit } from "@/contexts/IgnoreAgeLimitContext";
 import { formatDateBR } from "@/utils/datetimeBR";
 import { Minus, Plus, ChevronDown, ChevronUp } from "lucide-react";
+import { useT } from "@/i18n/client";
 
 interface KitCardProps {
   kit: Kit;
@@ -21,6 +22,7 @@ interface KitCardProps {
 }
 
 export function KitCard({ kit, index }: KitCardProps) {
+  const t = useT("checkoutInfo");
   const [isExpanded, setIsExpanded] = useState(index === 0 ? true : false);
   const [selectedKitImageIndex, setSelectedKitImageIndex] = useState(0);
   const { raceQuantities, updateRaceQuantity } = useCheckout();
@@ -39,13 +41,13 @@ export function KitCard({ kit, index }: KitCardProps) {
   const formatAgeLimit = (ageLimit?: { min?: number; max?: number }) => {
     if (!ageLimit) return null;
     if (ageLimit.min && ageLimit.max) {
-      return `de ${ageLimit.min} a ${ageLimit.max} anos`;
+      return t("ageRangeBetween", { min: ageLimit.min, max: ageLimit.max });
     }
     if (ageLimit.min) {
-      return `a partir de ${ageLimit.min} anos`;
+      return t("ageRangeFrom", { min: ageLimit.min });
     }
     if (ageLimit.max) {
-      return `até ${ageLimit.max} anos`;
+      return t("ageRangeUpTo", { max: ageLimit.max });
     }
     return null;
   };
@@ -84,7 +86,7 @@ export function KitCard({ kit, index }: KitCardProps) {
             <div className="flex flex-col gap-1">
               <h1 className="text-base font-bold text-gray-12">{kit.name}</h1>
               <div className="flex items-center gap-1">
-                <p className="text-sm text-gray-11">A partir de:</p>
+                <p className="text-sm text-gray-11">{t("fromPrice")}</p>
                 <span className="text-sm text-gray-12 font-bold">
                   {formatPrice(kit.minPrice)}
                 </span>
@@ -236,7 +238,7 @@ export function KitCard({ kit, index }: KitCardProps) {
                         {ageLimitText && (
                           <div className="bg-yellow-3 rounded-full px-4 py-3 w-fit">
                             <p className="text-xs font-medium text-yellow-12 font-family-dm-sans leading-[1.3]">
-                              Limite de idade: {ageLimitText}
+                              {t("ageLimitLabel")} {ageLimitText}
                             </p>
                           </div>
                         )}
@@ -256,7 +258,7 @@ export function KitCard({ kit, index }: KitCardProps) {
                               !race.available
                             }
                             className="size-6 cursor-pointer rounded-full flex items-center justify-center bg-gray-12 hover:bg-gray-11 text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed shrink-0 p-1"
-                            aria-label="Diminuir quantidade"
+                            aria-label={t("decreaseQuantity")}
                           >
                             <Minus className="size-4" />
                           </button>
@@ -268,7 +270,7 @@ export function KitCard({ kit, index }: KitCardProps) {
                             onClick={() => handleIncrease(race.id)}
                             disabled={!race.available}
                             className="size-6 cursor-pointer rounded-full flex items-center justify-center bg-gray-12 hover:bg-gray-11 text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed shrink-0 p-1"
-                            aria-label="Aumentar quantidade"
+                            aria-label={t("increaseQuantity")}
                           >
                             <Plus className="size-4" />
                           </button>
@@ -292,7 +294,7 @@ export function KitCard({ kit, index }: KitCardProps) {
           <div className="flex flex-col items-start justify-center gap-4">
             <h1 className="text-xl font-bold">{kit.name}</h1>
             <div className="flex items-center gap-1">
-              <p className="text-base text-gray-11">A partir de:</p>
+              <p className="text-base text-gray-11">{t("fromPrice")}</p>
               <span className="text-base text-gray-12 font-bold">
                 {formatPrice(kit.minPrice)}
               </span>
@@ -397,7 +399,7 @@ export function KitCard({ kit, index }: KitCardProps) {
                         {ageLimitText && (
                           <div className="bg-yellow-3 text-yellow-12 rounded-full px-4 py-3 w-fit">
                             <p className="text-base font-medium">
-                              Limite de idade: {ageLimitText}
+                              {t("ageLimitLabel")} {ageLimitText}
                             </p>
                           </div>
                         )}
@@ -415,7 +417,7 @@ export function KitCard({ kit, index }: KitCardProps) {
                               !race.available
                             }
                             className="size-6 cursor-pointer rounded-full flex items-center justify-center bg-gray-12 hover:bg-gray-11 text-gray-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
-                            aria-label="Diminuir quantidade"
+                            aria-label={t("decreaseQuantity")}
                           >
                             <Minus className="size-4" />
                           </button>
@@ -427,13 +429,13 @@ export function KitCard({ kit, index }: KitCardProps) {
                             onClick={() => handleIncrease(race.id)}
                             disabled={!race.available}
                             className="size-6 cursor-pointer rounded-full flex items-center justify-center bg-gray-12 hover:bg-gray-11 text-gray-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
-                            aria-label="Aumentar quantidade"
+                            aria-label={t("increaseQuantity")}
                           >
                             <Plus className="size-4" />
                           </button>
                         </div>
                         {!race.available && (
-                          <p className="text-xs text-red-10">Esgotado</p>
+                          <p className="text-xs text-red-10">{t("soldOut")}</p>
                         )}
                       </div>
                     </div>

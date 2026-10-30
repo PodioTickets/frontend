@@ -1,6 +1,7 @@
 "use client";
 
 import { Minus, Plus } from "lucide-react";
+import { useT } from "@/i18n/client";
 
 interface CounterProps {
   value: number;
@@ -19,6 +20,7 @@ export function Counter({
   max,
   disabled = false,
 }: CounterProps) {
+  const t = useT("checkout");
   const canDecrease = value > min && !disabled;
   const canIncrease = max === undefined || value < max;
 
@@ -37,7 +39,7 @@ export function Counter({
               : "bg-gray-10 text-gray-8 cursor-not-allowed"
           }
         `}
-        aria-label="Diminuir quantidade"
+        aria-label={t("counterDecrease")}
       >
         <Minus className="size-4 text-gray-2" />
       </button>
@@ -57,7 +59,7 @@ export function Counter({
               : "bg-gray-12 text-gray-8 cursor-not-allowed"
           }
         `}
-        aria-label="Aumentar quantidade"
+        aria-label={t("counterIncrease")}
       >
         <Plus className="size-4 text-gray-2" />
       </button>

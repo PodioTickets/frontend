@@ -1,4 +1,9 @@
 import type { OrderCoupon } from "@/interfaces/order";
+import { ptBR } from "@/i18n/messages/pt-BR";
+import { createTranslator, type Translator } from "@/i18n/translate";
+
+/** Rótulos em pt-BR por padrão; o componente passa `useT("checkout")` do idioma ativo. */
+const ptT = createTranslator(ptBR, "checkout");
 
 /**
  * Resultado normalizado do preview de `/coupons/.../preview`. O endpoint
@@ -40,8 +45,11 @@ export type CouponPreviewResult =
     };
 
 /** Label inline do voucher pra linhas de resumo (paralelo a `formatCouponLineLabel`). */
-export function formatVoucherLineLabel(code: string | null | undefined): string {
-  return code ? `Voucher ${code}` : "Voucher aplicado";
+export function formatVoucherLineLabel(
+  code: string | null | undefined,
+  t: Translator<"checkout"> = ptT,
+): string {
+  return code ? t("voucherNamed", { code }) : t("voucherApplied");
 }
 
 /**
@@ -74,14 +82,17 @@ export function computeVoucherTicketsDiscount(
  * - `Cupom automático (10% OFF)`
  * - `Cupom PODIO500`
  */
-export function formatCouponLineLabel(coupon: OrderCoupon): string {
+export function formatCouponLineLabel(
+  coupon: OrderCoupon,
+  t: Translator<"checkout"> = ptT,
+): string {
   const isAutomatic =
     coupon.couponType === "QUANTITY" || coupon.couponType === "AGE";
   const base = isAutomatic
-    ? "Cupom automático"
+    ? t("couponAutomatic")
     : coupon.code
-      ? `Cupom ${coupon.code}`
-      : "Cupom aplicado";
+      ? t("couponNamed", { name: coupon.code })
+      : t("couponApplied");
   if (coupon.type === "PERCENTAGE" && coupon.value > 0) {
     return `${base} (${coupon.value}% OFF)`;
   }

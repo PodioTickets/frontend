@@ -1,5 +1,6 @@
 "use client";
 import { useState, useCallback, useRef, useEffect, useMemo } from "react";
+import { useT } from "@/i18n/client";
 
 interface PriceRangeSliderProps {
   min?: number;
@@ -14,6 +15,7 @@ export function PriceRangeSlider({
   defaultValue = [min, max],
   onChange,
 }: PriceRangeSliderProps) {
+  const t = useT("home");
   const formatNumberToCurrency = (value: number): string => {
     return new Intl.NumberFormat("pt-BR", {
       minimumFractionDigits: 2,
@@ -388,7 +390,7 @@ export function PriceRangeSlider({
 
   return (
     <div className="px-6 py-5 w-full max-w-[570px]">
-      <h1>Preços sem incluir impostos</h1>
+      <h1>{t("priceExcludesTaxes")}</h1>
       <div
         ref={sliderRef}
         className="relative h-10 cursor-pointer w-full py-2"
@@ -427,7 +429,7 @@ export function PriceRangeSlider({
 
       <div className="flex items-center justify-between gap-4 mb-6 w-full">
         <div className="flex-1">
-          <label className="text-xs text-gray-11 mb-2 block">Mínimo</label>
+          <label className="text-xs text-gray-11 mb-2 block">{t("priceMin")}</label>
           <div className="relative">
             <span className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-11 pointer-events-none">
               R$
@@ -444,7 +446,7 @@ export function PriceRangeSlider({
           </div>
         </div>
         <div className="flex-1">
-          <label className="text-xs text-gray-11 mb-2 block">Máximo</label>
+          <label className="text-xs text-gray-11 mb-2 block">{t("priceMax")}</label>
           <div className="relative">
             <span className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-11 pointer-events-none">
               R$

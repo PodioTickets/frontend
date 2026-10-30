@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { userService } from "@/services";
 import { queryKeys } from "@/services/cache/QueryClient";
 import type { Ticket } from "@/components/Ticket/Card";
+import { useLocale, useT } from "@/i18n/client";
 
 const DEFAULT_MODALITY_ICON = "/icons-3d/Icon3D-corrida-de-rua.webp";
 
@@ -128,6 +129,8 @@ export function useMyTickets(
   enabled: boolean = true
 ): UseMyTicketsReturn {
   const { page = 1, limit = 20, status } = params;
+  const t = useT("user");
+  const { locale } = useLocale();
 
   const {
     data,
@@ -135,7 +138,8 @@ export function useMyTickets(
     error,
     refetch,
   } = useQuery({
-    queryKey: queryKeys.user.tickets(params),
+    // `locale` na chave: os textos de fallback abaixo são montados aqui (trocar idioma refaz).
+    queryKey: [...queryKeys.user.tickets(params), locale],
     queryFn: async () => {
       const response = await userService.getMyTickets({ page, limit, status });
       const orders: any[] = response.orders || [];
@@ -153,13 +157,13 @@ export function useMyTickets(
           id: order.id,
           event: {
             id: order.event?.id || "",
-            name: order.event?.name || "Evento sem nome",
+            name: order.event?.name || t("unnamedEvent"),
             imageUrl: order.event?.bannerUrl || order.event?.imageUrl || "",
             eventDate: order.event?.startDate || order.event?.eventDate || "",
             locationName: order.event?.locationName ?? null,
             location: {
-              city: order.event?.city || order.event?.location?.city || "Cidade não informada",
-              state: order.event?.state || order.event?.location?.state || "Estado não informado",
+              city: order.event?.city || order.event?.location?.city || t("cityNotInformed"),
+              state: order.event?.state || order.event?.location?.state || t("stateNotInformed"),
             },
           },
           modalities,

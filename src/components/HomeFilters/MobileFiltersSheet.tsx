@@ -16,6 +16,16 @@ import { Button } from "@/components/Button";
 import { modalitiesColumns } from "@/constants";
 import type { DateRange } from "react-day-picker";
 import type { LocationFacetState } from "@/hooks/useEventLocationFacets";
+import { useT } from "@/i18n/client";
+
+/** id da modalidade (`modalitiesColumns`) → chave do dicionário `home`. Sem chave = rótulo original. */
+export const MODALITY_LABEL_KEYS: Record<string, "modalityRunning" | "modalitySwimming" | "modalityTriathlon" | "modalityCycling" | "modalityOther"> = {
+  "corrida-de-rua": "modalityRunning",
+  natacao: "modalitySwimming",
+  triathlon: "modalityTriathlon",
+  ciclismo: "modalityCycling",
+  outros: "modalityOther",
+};
 
 /**
  * Bottom-sheet de filtros (MOBILE) — compartilhado pela home e pelo /search via
@@ -83,6 +93,7 @@ export function MobileFiltersSheet({
   const [mounted, setMounted] = useState(false);
   const [expanded, setExpanded] = useState<SectionKey | null>(null);
   const dragControls = useDragControls();
+  const t = useT("home");
   const startDrag = useCallback(
     (event: React.PointerEvent) => dragControls.start(event),
     [dragControls],
@@ -110,7 +121,9 @@ export function MobileFiltersSheet({
     onClose();
   }, [onSearch, onClose]);
 
-  const allModalities = modalitiesColumns.flat();
+  const allModalities = modalitiesColumns.flat().map((m) =>
+    MODALITY_LABEL_KEYS[m.id] ? { ...m, label: t(MODALITY_LABEL_KEYS[m.id]) } : m,
+  );
 
   if (!mounted) return null;
 
@@ -146,7 +159,7 @@ export function MobileFiltersSheet({
           className="md:hidden fixed bottom-0 left-0 right-0 z-[61] bg-gray-1 rounded-t-2xl max-h-[90dvh] flex flex-col overflow-hidden shadow-2xl"
           role="dialog"
           aria-modal="true"
-          aria-label="Filtros de busca"
+          aria-label={t("searchFiltersLabel")}
         >
           {/* Grabber + header (área de arrasto pra fechar) */}
           <div
@@ -156,14 +169,14 @@ export function MobileFiltersSheet({
             <div className="mx-auto mb-3 h-1 w-10 rounded-full bg-gray-6" />
             <div className="flex items-center justify-between gap-3">
               <h2 className="font-manrope font-bold text-lg leading-[1.1] text-gray-12">
-                Filtros
+                {t("filters")}
               </h2>
               <button
                 type="button"
                 onClick={onClose}
                 className="shrink-0 text-sm font-semibold text-gray-11 font-family-dm-sans hover:text-gray-12 active:scale-95 transition"
               >
-                Fechar
+                {t("close")}
               </button>
             </div>
           </div>
@@ -173,8 +186,8 @@ export function MobileFiltersSheet({
             {/* Local */}
             <FilterCard
               icon={<LocationIcon className="size-6 shrink-0" />}
-              title="Local"
-              summary={locationSummary ?? "Selecione um local"}
+              title={t("filterLocation")}
+              summary={locationSummary ?? t("selectLocation")}
               open={expanded === "local"}
               onToggle={() => toggleSection("local")}
               borderBelowHeader
@@ -192,7 +205,7 @@ export function MobileFiltersSheet({
             {/* Datas */}
             <FilterCard
               icon={<CalendarIcon className="size-6 shrink-0" />}
-              title="Datas"
+              title={t("filterDates")}
               summary={dateSummary}
               open={expanded === "datas"}
               onToggle={() => toggleSection("datas")}
@@ -210,11 +223,11 @@ export function MobileFiltersSheet({
             {/* Modalidade */}
             <FilterCard
               icon={<SneakersIcon className="size-6 shrink-0" />}
-              title="Modalidade"
+              title={t("filterModality")}
               summary={
                 selectedModalities.length > 0
-                  ? `${selectedModalities.length} selecionada${selectedModalities.length > 1 ? "s" : ""}`
-                  : "Qual modalidade?"
+                  ? t(selectedModalities.length > 1 ? "modalitiesSelectedOther" : "modalitiesSelectedOne", { count: selectedModalities.length })
+                  : t("whichModality")
               }
               open={expanded === "modalidade"}
               onToggle={() => toggleSection("modalidade")}
@@ -256,7 +269,7 @@ export function MobileFiltersSheet({
             {/* Preço */}
             <FilterCard
               icon={<MoneyIcon className="size-6 shrink-0" />}
-              title="Preço"
+              title={t("filterPrice")}
               summary={priceSummary}
               open={expanded === "preco"}
               onToggle={() => toggleSection("preco")}
@@ -279,10 +292,10 @@ export function MobileFiltersSheet({
               onClick={onClearAll}
               className="font-semibold text-base text-gray-12 font-family-dm-sans active:scale-95 transition"
             >
-              Limpar tudo
+              {t("clearAll")}
             </button>
             <Button onClick={handleSearch} className="w-[140px] h-11">
-              Buscar
+              {t("search")}
             </Button>
           </div>
         </motion.div>

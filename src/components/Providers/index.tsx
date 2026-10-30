@@ -1,15 +1,25 @@
 "use client";
-import type { PropsWithChildren } from "react";
+import type { ReactNode } from "react";
 import { QueryProvider } from "./QueryProvider";
 import { AuthProvider } from "@/hooks/useAuth";
 import { ModalsProvider } from "./ModalsProvider";
-import { LanguageProvider } from "@/contexts/LanguageContext";
+import { I18nProvider } from "@/i18n/client";
+import type { Locale } from "@/i18n/config";
+import type { Messages } from "@/i18n/messages/pt-BR";
 import { ProfileCompleteChecker } from "./ProfileCompleteChecker";
 import { CouponLinkCapture } from "./CouponLinkCapture";
 
-const Providers = ({ children }: PropsWithChildren) => {
+const Providers = ({
+  children,
+  locale,
+  messages,
+}: {
+  children: ReactNode;
+  locale: Locale;
+  messages?: Messages;
+}) => {
   return (
-    <LanguageProvider>
+    <I18nProvider locale={locale} messages={messages}>
       <QueryProvider>
         <AuthProvider>
           <ModalsProvider />
@@ -18,7 +28,7 @@ const Providers = ({ children }: PropsWithChildren) => {
           {children}
         </AuthProvider>
       </QueryProvider>
-    </LanguageProvider>
+    </I18nProvider>
   );
 };
 

@@ -7,6 +7,7 @@ import {
   isShortGoogleMapsLink,
   safeGoogleMapsExternalLink,
 } from "@/utils/googleMapsEmbed";
+import { useLocale, useT } from "@/i18n/client";
 
 interface EventMapProps {
   city: string;
@@ -21,6 +22,7 @@ interface EventMapProps {
 }
 
 export function EventMap({ city, state, title, googleMapsLink }: EventMapProps) {
+  const t = useT("event");
   const address = useMemo(() => {
     return `${city}, ${state}, Brasil`;
   }, [city, state]);
@@ -50,12 +52,16 @@ export function EventMap({ city, state, title, googleMapsLink }: EventMapProps) 
 
   // Embed: link do organizador (local exato; resolvido se for curto) >
   // busca cidade/estado.
+  // `hl`: idioma dos controles do Google ("Abrir no Maps") acompanha o do site.
+  const { locale } = useLocale();
   const mapUrl = useMemo(() => {
-    return (
+    const url = new URL(
       googleMapsLinkToEmbedUrl(resolvedLink ?? googleMapsLink) ??
-      `https://www.google.com/maps?q=${encodeURIComponent(address)}&output=embed`
+        `https://www.google.com/maps?q=${encodeURIComponent(address)}&output=embed`,
     );
-  }, [resolvedLink, googleMapsLink, address]);
+    url.searchParams.set("hl", locale);
+    return url.toString();
+  }, [resolvedLink, googleMapsLink, address, locale]);
 
   // Link externo: link do organizador validado (só hosts Google — abre em
   // _blank, nunca URL arbitrária) > busca cidade/estado.
@@ -77,7 +83,7 @@ export function EventMap({ city, state, title, googleMapsLink }: EventMapProps) 
         allowFullScreen
         referrerPolicy="no-referrer-when-downgrade"
         src={mapUrl}
-        title={title || `Mapa de ${city}, ${state}`}
+        title={title || t("mapTitle", { city, state })}
       />
       <div className="absolute bottom-4 right-4">
         <Link
@@ -101,7 +107,7 @@ export function EventMap({ city, state, title, googleMapsLink }: EventMapProps) 
             <polyline points="15 3 21 3 21 9" />
             <line x1="10" y1="14" x2="21" y2="3" />
           </svg>
-          Abrir no Google Maps
+          {t("openInGoogleMaps")}
         </Link>
       </div>
     </div>

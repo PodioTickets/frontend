@@ -43,6 +43,7 @@ import {
   quantityCouponCandidates,
   quantityCouponCardPreview,
 } from "@/lib/quantityCoupon";
+import { useT } from "@/i18n/client";
 
 interface ModalitiesStepProps {
   event: Event;
@@ -55,6 +56,7 @@ interface ModalitiesStepProps {
 }
 
 export function ModalitiesStep({ event, onNext, onBack, isSubmitting = false, disableNext = false }: ModalitiesStepProps) {
+  const t = useT("checkout");
   const { raceQuantities } = useCheckout();
   const { isAuthenticated } = useAuth();
   const { openLoginModal } = useLoginModal();
@@ -478,15 +480,15 @@ export function ModalitiesStep({ event, onNext, onBack, isSubmitting = false, di
   // Label da linha de desconto: "Voucher CÓDIGO", "Cupom idade (X% OFF)" ou
   // "Cupom CÓDIGO (...)".
   const discountLineLabel = useVoucher
-    ? formatVoucherLineLabel(voucherData?.code ?? orderVoucher?.code)
+    ? formatVoucherLineLabel(voucherData?.code ?? orderVoucher?.code, t)
     : stackedPreview
-      ? "Descontos"
+      ? t("discounts")
     : quantityAuto
-      ? formatAgeCouponLineLabel(quantityAuto.coupon)
+      ? formatAgeCouponLineLabel(quantityAuto.coupon, t)
     : ageCoupon
-      ? formatAgeCouponLineLabel(ageCoupon)
+      ? formatAgeCouponLineLabel(ageCoupon, t)
       : appliedCoupon
-        ? formatCouponLineLabel(appliedCoupon)
+        ? formatCouponLineLabel(appliedCoupon, t)
         : "";
   // Cupom do link ainda sem desconto calculado ("ao continuar"). Voucher e cupom
   // de idade são calculados client-side, então não usam esse fallback.
@@ -557,7 +559,7 @@ export function ModalitiesStep({ event, onNext, onBack, isSubmitting = false, di
         {/* Instruction Card */}
         <div className=" rounded-lg mb-4">
           <p className="text-sm text-gray-11">
-            Escolha seus ingressos e defina a quantidade. Você pode ajustar depois em Informações.
+            {t("selectTicketsHint")}
           </p>
         </div>
 
@@ -602,7 +604,7 @@ export function ModalitiesStep({ event, onNext, onBack, isSubmitting = false, di
           ) : (
             <div className="w-full rounded-lg border border-gray-5 px-4 py-8 text-center ">
               <p className="text-gray-11">
-                Nenhum ingresso disponível para este evento.
+                {t("noTicketsAvailable")}
               </p>
             </div>
           )}
@@ -627,12 +629,12 @@ export function ModalitiesStep({ event, onNext, onBack, isSubmitting = false, di
                 : null
             }
             pendingDiscountLabel={
-              couponPending ? `Cupom ${pendingCoupon}${couponPercentSuffix}` : null
+              couponPending ? `${t("couponNamed", { name: pendingCoupon ?? "" })}${couponPercentSuffix}` : null
             }
             serviceFee={serviceFee}
             total={totalWithFee}
             cta={{
-              label: "Selecionar",
+              label: t("select"),
               onClick: handleNext,
               disabled: totalParticipants === 0 || disableNext,
               loading: isSubmitting,
@@ -649,15 +651,15 @@ export function ModalitiesStep({ event, onNext, onBack, isSubmitting = false, di
               <button
                 className="cursor-pointer rotate-180 size-8 flex items-center justify-center rounded-full border border-gray-6"
                 onClick={onBack}
-                aria-label="Voltar para a página do evento"
+                aria-label={t("backToEventPage")}
               >
                 <ArrowButton isOpen={false} />
               </button>
             )}
-            <h1 className="text-2xl font-bold">Selecione seus ingressos</h1>
+            <h1 className="text-2xl font-bold">{t("selectTicketsTitle")}</h1>
           </div>
           <p className="text-sm text-gray-11 mt-4">
-            Escolha seus ingressos e defina a quantidade. Você pode ajustar depois em Informações.
+            {t("selectTicketsHint")}
           </p>
         </div>
 
@@ -715,7 +717,7 @@ export function ModalitiesStep({ event, onNext, onBack, isSubmitting = false, di
             ) : (
               <div className="w-full rounded-lg border border-gray-5 px-4 py-8 text-center">
                 <p className="text-gray-11">
-                  Nenhum ingresso disponível para este evento.
+                  {t("noTicketsAvailable")}
                 </p>
               </div>
             )}

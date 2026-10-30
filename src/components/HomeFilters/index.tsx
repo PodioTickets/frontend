@@ -15,9 +15,10 @@ import { useRouter, useSearchParams } from "next/navigation";
 import type { DateRange } from "react-day-picker";
 import { useEventLocationFacets } from "@/hooks/useEventLocationFacets";
 import { LocationCascadePicker } from "@/components/LocationCascadePicker";
-import { MobileFiltersSheet } from "./MobileFiltersSheet";
+import { MobileFiltersSheet, MODALITY_LABEL_KEYS } from "./MobileFiltersSheet";
 import { useQueryClient } from "@tanstack/react-query";
 import { cn } from "@/utils/cn";
+import { useLocale, useT } from "@/i18n/client";
 
 interface HomeFiltersProps {
   initialState?: string | null;
@@ -80,6 +81,15 @@ export function HomeFilters({
   const searchParams = useSearchParams();
   const queryClient = useQueryClient();
   const { facets, isLoading: facetsLoading } = useEventLocationFacets();
+  const t = useT("home");
+  const { intl } = useLocale();
+  const modalityOptions = useMemo(
+    () =>
+      modalitiesColumns.flat().map((m) =>
+        MODALITY_LABEL_KEYS[m.id] ? { ...m, label: t(MODALITY_LABEL_KEYS[m.id]) } : m,
+      ),
+    [t],
+  );
 
   const [selectedModalities, setSelectedModalities] =
     useState<string[]>(initialModalities);
@@ -187,7 +197,7 @@ export function HomeFilters({
 
   const formatPriceRange = useCallback(() => {
     if (isAllPrices) {
-      return "Todos os preços";
+      return t("allPrices");
     }
     const formatCurrency = (value: number) => {
       return new Intl.NumberFormat("pt-BR", {
@@ -199,15 +209,15 @@ export function HomeFilters({
     return `${formatCurrency(priceRange[0])} - ${formatCurrency(
       priceRange[1]
     )}`;
-  }, [priceRange]);
+  }, [priceRange, isAllPrices, t]);
 
   const formatDateRange = useCallback(() => {
     if (!selectedDateRange?.from) {
-      return "Dia do evento";
+      return t("eventDay");
     }
 
     const formatDate = (date: Date) => {
-      return new Intl.DateTimeFormat("pt-BR", {
+      return new Intl.DateTimeFormat(intl, {
         day: "2-digit",
         month: "short",
       }).format(date);
@@ -220,17 +230,17 @@ export function HomeFilters({
     }
 
     return formatDate(selectedDateRange.from);
-  }, [selectedDateRange]);
+  }, [selectedDateRange, intl, t]);
 
   const locationSummary = useMemo(() => {
     if (!selectedStateApi) return null;
     const facet = facets.find((f) => f.apiValue === selectedStateApi);
     const stateName = facet?.displayLabel ?? selectedStateApi;
     if (!selectedCityApi) {
-      return `${stateName} — todas as cidades`;
+      return t("stateAllCities", { state: stateName });
     }
     return `${selectedCityApi}, ${stateName}`;
-  }, [facets, selectedStateApi, selectedCityApi]);
+  }, [facets, selectedStateApi, selectedCityApi, t]);
 
   // Resumo dos filtros ativos no card mobile (senão, o placeholder padrão).
   const mobileSummary = useMemo(() => {
@@ -239,12 +249,13 @@ export function HomeFilters({
     if (selectedDateRange?.from) parts.push(formatDateRange());
     if (selectedModalities.length > 0) {
       parts.push(
-        `${selectedModalities.length} modalidade${selectedModalities.length > 1 ? "s" : ""}`,
+        t(selectedModalities.length > 1 ? "modalitiesCountOther" : "modalitiesCountOne", { count: selectedModalities.length }),
       );
     }
     if (!isAllPrices) parts.push(formatPriceRange());
-    return parts.length ? parts.join(" · ") : "Local - Data - Modalidade";
+    return parts.length ? parts.join(" · ") : t("mobileSummaryPlaceholder");
   }, [
+    t,
     locationSummary,
     selectedDateRange,
     selectedModalities,
@@ -307,10 +318,10 @@ export function HomeFilters({
         type="button"
         onClick={() => setMobileFiltersOpen(true)}
         className="w-full flex md:hidden items-center gap-3 overflow-hidden rounded-2xl border border-gray-5 bg-gray-1 px-3 py-2 text-left active:scale-[0.99] transition"
-        aria-label="Abrir filtros de busca"
+        aria-label={t("openSearchFilters")}
       >
         <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-          <p className="font-family-manrope text-[15px] font-semibold text-gray-12">Procure seu evento</p>
+          <p className="font-family-manrope text-[15px] font-semibold text-gray-12">{t("searchYourEvent")}</p>
           <div className="flex min-w-0 items-center gap-1">
             <Image src="/images/search-summary-location.svg" alt="" width={16} height={16} unoptimized className="shrink-0" />
             <p className="font-family-dm-sans text-xs leading-[1.3] text-gray-11 truncate">{mobileSummary}</p>
@@ -360,9 +371,9 @@ export function HomeFilters({
             <div className="flex items-center w-[280px] gap-2 px-4 h-full bg-transparent hover:bg-gray-6 transition-all duration-200 rounded-2xl cursor-pointer">
               <LocationIcon />
               <div className="flex flex-col min-w-0">
-                <h1 className="font-family-manrope font-bold">Local</h1>
+                <h1 className="font-family-manrope font-bold">{t("filterLocation")}</h1>
                 <p className="font-family-dm-sans font-normal text-gray-11 truncate">
-                  {locationSummary ?? "Selecione um local"}
+                  {locationSummary ?? t("selectLocation")}
                 </p>
               </div>
             </div>
@@ -398,7 +409,7 @@ export function HomeFilters({
             <div className="flex items-center w-[280px] gap-2 px-4 h-full bg-transparent hover:bg-gray-6 transition-all duration-200 rounded-2xl cursor-pointer">
               <CalendarIcon className="size-8" />
               <div className="flex flex-col">
-                <h1 className="font-family-manrope font-bold">Datas</h1>
+                <h1 className="font-family-manrope font-bold">{t("filterDates")}</h1>
                 <p
                   className={`font-family-dm-sans font-normal text-gray-11 ${selectedDateRange?.from ? "text-base" : "text-base"
                     }`}
@@ -423,7 +434,7 @@ export function HomeFilters({
           maxHeight="max-h-[430px]"
           className="top-20 left-1/2 -translate-x-1/2"
           align="center"
-          columns={[modalitiesColumns.flat()]}
+          columns={[modalityOptions]}
           multiSelect={true}
           selectedIds={memoizedSelectedModalities}
           onMultiSelectChange={handleModalitiesChange}
@@ -431,12 +442,11 @@ export function HomeFilters({
             <div className="flex items-center w-[280px] gap-2 px-4 h-full bg-transparent hover:bg-gray-6 transition-all duration-200 rounded-2xl cursor-pointer">
               <SneakersIcon />
               <div className="flex flex-col">
-                <h1 className="font-family-manrope font-bold">Modalidade</h1>
+                <h1 className="font-family-manrope font-bold">{t("filterModality")}</h1>
                 <p className="font-family-dm-sans font-normal text-gray-11">
                   {selectedModalities.length > 0
-                    ? `${selectedModalities.length} selecionada${selectedModalities.length > 1 ? "s" : ""
-                    }`
-                    : "Qual modalidade?"}
+                    ? t(selectedModalities.length > 1 ? "modalitiesSelectedOther" : "modalitiesSelectedOne", { count: selectedModalities.length })
+                    : t("whichModality")}
                 </p>
               </div>
             </div>
@@ -455,7 +465,7 @@ export function HomeFilters({
             <div className="flex items-center w-[280px] gap-2 px-4 pr-20 h-full bg-transparent hover:bg-gray-6 transition-all duration-200 rounded-2xl cursor-pointer">
               <MoneyIcon />
               <div className="flex flex-col">
-                <h1 className="font-family-manrope font-bold">Preço</h1>
+                <h1 className="font-family-manrope font-bold">{t("filterPrice")}</h1>
                 <p
                   className={`font-family-dm-sans font-normal text-gray-11 ${isAllPrices ? "text-base" : "text-xs"
                     }`}
@@ -477,7 +487,7 @@ export function HomeFilters({
         <button
           onClick={handleSearch}
           className={cn("absolute right-0 flex items-center justify-center gap-2 bg-[#5CC870] hover:bg-[#4db860] transition-colors p-2 rounded-full w-10 h-10 ml-4 mr-4 cursor-pointer", hero && "size-14 mr-2.5")}
-          aria-label="Pesquisar eventos"
+          aria-label={t("searchEvents")}
         >
           <SearchIcon />
         </button>

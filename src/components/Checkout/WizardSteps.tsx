@@ -6,6 +6,7 @@ import { ArrowLeft } from "lucide-react";
 import { cn } from "@/utils/cn";
 import { Button } from "@/components/Button";
 import { ArrowButton } from "@/components/ArrowButton";
+import { useT } from "@/i18n/client";
 
 /**
  * Peças compartilhadas dos wizards de página inteira fora do checkout público
@@ -41,12 +42,13 @@ export function WizardStepper({
   /** Classes do contêiner desktop (largura/padding variam por layout). */
   className?: string;
 }) {
+  const t = useT("checkout");
   return (
     <>
       <div className="md:hidden w-full bg-gray-1 border-b border-gray-6">
         <div className="flex items-center justify-center px-4 py-4 relative">
           {showBack && (
-            <button onClick={onBack} aria-label="Voltar" className="absolute left-4 flex items-center justify-center">
+            <button onClick={onBack} aria-label={t("back")} className="absolute left-4 flex items-center justify-center">
               <ArrowLeft className="size-5 text-gray-12" />
             </button>
           )}

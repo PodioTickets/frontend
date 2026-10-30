@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { ArrowLeft, ChevronRight, Search } from "lucide-react";
 import { LocationIcon } from "@/components/Icons/LocationIcon";
 import type { LocationFacetState } from "@/hooks/useEventLocationFacets";
+import { useT } from "@/i18n/client";
 
 type Step = "states" | "cities";
 
@@ -27,6 +28,7 @@ export function LocationCascadePicker({
   const [step, setStep] = useState<Step>("states");
   const [browsingStateApi, setBrowsingStateApi] = useState<string | null>(null);
   const [query, setQuery] = useState("");
+  const t = useT("home");
 
   const browsingFacet = useMemo(
     () => facets.find((f) => f.apiValue === browsingStateApi) ?? null,
@@ -66,7 +68,7 @@ export function LocationCascadePicker({
   if (isLoading) {
     return (
       <div className="p-4 text-sm text-gray-11 font-family-dm-sans">
-        Carregando locais com eventos…
+        {t("locationLoading")}
       </div>
     );
   }
@@ -74,7 +76,7 @@ export function LocationCascadePicker({
   if (!facets.length) {
     return (
       <div className="p-4 text-sm text-gray-11 font-family-dm-sans">
-        Nenhum local disponível no momento.
+        {t("locationEmpty")}
       </div>
     );
   }
@@ -87,7 +89,7 @@ export function LocationCascadePicker({
             type="button"
             onClick={goStates}
             className="p-1 rounded-lg hover:bg-gray-3 text-gray-12"
-            aria-label="Voltar para estados"
+            aria-label={t("locationBackToStates")}
           >
             <ArrowLeft className="size-5" />
           </button>
@@ -100,7 +102,7 @@ export function LocationCascadePicker({
             <Search className="size-4 text-gray-11 shrink-0" />
             <input
               type="text"
-              placeholder="Buscar cidade…"
+              placeholder={t("locationSearchCity")}
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               className="flex-1 bg-transparent text-sm text-gray-12 placeholder:text-gray-11 outline-none font-family-dm-sans"
@@ -140,7 +142,7 @@ export function LocationCascadePicker({
           >
             <LocationIcon className="size-5 shrink-0" />
             <span className="font-medium text-sm text-gray-12 font-family-dm-sans">
-              Todas as cidades
+              {t("locationAllCities")}
             </span>
           </button>
         </div>
@@ -155,7 +157,7 @@ export function LocationCascadePicker({
           <Search className="size-4 text-gray-11 shrink-0" />
           <input
             type="text"
-            placeholder="Buscar estado ou cidade…"
+            placeholder={t("locationSearchStateOrCity")}
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             className="flex-1 bg-transparent text-sm text-gray-12 placeholder:text-gray-11 outline-none font-family-dm-sans"
@@ -172,7 +174,7 @@ export function LocationCascadePicker({
             }}
             className="w-full text-center text-sm font-medium text-primary-9 hover:underline font-family-dm-sans py-1"
           >
-            Limpar local
+            {t("locationClear")}
           </button>
         </div>
       )}

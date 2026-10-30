@@ -75,31 +75,35 @@ const DEFAULT_TIME_OPTS: Intl.DateTimeFormatOptions = {
 /**
  * Formata data/hora em pt-BR no fuso UTC (sem shift). Passe as mesmas `options`
  * que usaria no `Intl.DateTimeFormat`. Default: `dd/mm/aaaa`.
+ * `locale` (tag Intl, ex.: `useLocale().intl`) só no site público traduzido; o resto fica pt-BR.
  * Retorna "" para valores ausentes/ inválidos.
  */
 export function formatDateTimeBR(
   value: DateInput,
   options: Intl.DateTimeFormatOptions = DEFAULT_DATE_OPTS,
+  locale = "pt-BR",
 ): string {
   const d = toUtcDate(value);
   if (!d) return "";
-  return new Intl.DateTimeFormat("pt-BR", { ...options, timeZone: "UTC" }).format(d);
+  return new Intl.DateTimeFormat(locale, { ...options, timeZone: "UTC" }).format(d);
 }
 
 /** Atalho: só a DATA (default `dd/mm/aaaa`), UTC. */
 export function formatDateBR(
   value: DateInput,
   options: Intl.DateTimeFormatOptions = DEFAULT_DATE_OPTS,
+  locale = "pt-BR",
 ): string {
-  return formatDateTimeBR(value, options);
+  return formatDateTimeBR(value, options, locale);
 }
 
 /** Atalho: só a HORA (default `HH:mm`, 24h), UTC. */
 export function formatTimeBR(
   value: DateInput,
   options: Intl.DateTimeFormatOptions = DEFAULT_TIME_OPTS,
+  locale = "pt-BR",
 ): string {
-  return formatDateTimeBR(value, options);
+  return formatDateTimeBR(value, options, locale);
 }
 
 /**
@@ -121,26 +125,29 @@ const TZ_BR = "America/Sao_Paulo";
 export function formatInstantBRT(
   value: DateInput,
   options: Intl.DateTimeFormatOptions = { ...DEFAULT_DATE_OPTS, ...DEFAULT_TIME_OPTS },
+  locale = "pt-BR",
 ): string {
   const d = toUtcDate(value);
   if (!d) return "";
-  return new Intl.DateTimeFormat("pt-BR", { ...options, timeZone: TZ_BR }).format(d);
+  return new Intl.DateTimeFormat(locale, { ...options, timeZone: TZ_BR }).format(d);
 }
 
 /** Atalho: só a DATA do instante (default `dd/mm/aaaa`), fuso de Brasília. */
 export function formatDateBRT(
   value: DateInput,
   options: Intl.DateTimeFormatOptions = DEFAULT_DATE_OPTS,
+  locale = "pt-BR",
 ): string {
-  return formatInstantBRT(value, options);
+  return formatInstantBRT(value, options, locale);
 }
 
 /** Atalho: só a HORA do instante (default `HH:mm`, 24h), fuso de Brasília. */
 export function formatTimeBRT(
   value: DateInput,
   options: Intl.DateTimeFormatOptions = DEFAULT_TIME_OPTS,
+  locale = "pt-BR",
 ): string {
-  return formatInstantBRT(value, options);
+  return formatInstantBRT(value, options, locale);
 }
 
 /**
@@ -217,10 +224,10 @@ const EVENT_HAPPENS_LABEL_OPTS: Intl.DateTimeFormatOptions = {
  * Compartilhado pelos cards de evento (home/busca) e de ingresso (meus ingressos).
  * Retorna "" para valor ausente/ inválido.
  */
-export function formatEventHappensLabel(value: DateInput): string {
+export function formatEventHappensLabel(value: DateInput, locale = "pt-BR"): string {
   const d = toUtcDate(value);
   if (!d) return "";
-  const label = formatDateTimeBR(value, EVENT_HAPPENS_LABEL_OPTS);
+  const label = formatDateTimeBR(value, EVENT_HAPPENS_LABEL_OPTS, locale);
   if (!label) return "";
   // A preposição sai do `getUTCDay` do MESMO Date que o Intl formata (0 = domingo,
   // 6 = sábado, os dois masculinos → "no"; de segunda a sexta o nome é "…-feira",
@@ -239,6 +246,9 @@ export function formatEventHappensLabel(value: DateInput): string {
     d.getUTCDate(),
   );
   const isPast = eventCivilStart.getTime() < brasiliaTodayCivilStart().getTime();
+  // en/es (site público traduzido): preposição fixa — "on Saturday, July 25" / "el sábado, 25 de julio".
+  if (locale.startsWith("en")) return `${isPast ? "Happened" : "Happens"} on ${label}`;
+  if (locale.startsWith("es")) return `${isPast ? "Fue" : "Es"} el ${label}`;
   const verb = isPast ? "Aconteceu" : "Acontece";
   // O dia da semana fica em minúsculo de propósito: agora ele vem no meio da frase
   // ("Acontece na quarta-feira, …"), não mais no começo — por isso some o
@@ -251,8 +261,8 @@ export function formatEventHappensLabel(value: DateInput): string {
  * sem o prefixo "Acontece". Para linhas com rótulo próprio ("Inscrições até …")
  * que devem usar o MESMO formato longo dos cards. Retorna "" p/ valor inválido.
  */
-export function formatWeekdayDayMonthBR(value: DateInput): string {
-  return formatDateTimeBR(value, EVENT_HAPPENS_LABEL_OPTS);
+export function formatWeekdayDayMonthBR(value: DateInput, locale = "pt-BR"): string {
+  return formatDateTimeBR(value, EVENT_HAPPENS_LABEL_OPTS, locale);
 }
 
 /**
@@ -262,14 +272,15 @@ export function formatWeekdayDayMonthBR(value: DateInput): string {
  * em UTC, sem shift. A 1ª letra vai maiúscula porque aqui o dia da semana abre a
  * linha. Retorna "" para valor ausente/ inválido.
  */
-export function formatEventDateWithTimeBR(value: DateInput): string {
-  const date = formatWeekdayDayMonthBR(value);
+export function formatEventDateWithTimeBR(value: DateInput, locale = "pt-BR"): string {
+  const date = formatWeekdayDayMonthBR(value, locale);
   if (!date) return "";
   const time = formatTimeBR(value);
   // Sem horário escolhido o evento é gravado às 00:00 (ver `composeRegistrationDateTime`)
   // — não há flag separada, então 00:00 é tratado como "sem horário" e some da tela.
   // Espaço inseparável ( ) entre "às" e a hora: se quebrar linha, o "às" desce junto.
-  const label = time && time !== "00:00" ? `${date} às ${time}` : date;
+  const at = locale.startsWith("en") ? "at" : locale.startsWith("es") ? "a las" : "às";
+  const label = time && time !== "00:00" ? `${date} ${at} ${time}` : date;
   return label.charAt(0).toUpperCase() + label.slice(1);
 }
 

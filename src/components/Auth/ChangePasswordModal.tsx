@@ -10,10 +10,12 @@ import { userService } from "@/services";
 import { useAuth } from "@/hooks/useAuth";
 import { useModalSubmitState } from "@/hooks/useModalSubmitState";
 import { ModalFooterActions } from "@/components/ui/ModalFooterActions";
+import { useT } from "@/i18n/client";
 
 export function ChangePasswordModal() {
   const { isOpen, closeChangePasswordModal } = useChangePasswordModal();
   const { refetchUser, user } = useAuth();
+  const t = useT("auth");
 
   const hasPassword = user?.hasPassword !== false;
 
@@ -34,21 +36,21 @@ export function ChangePasswordModal() {
     const newErrors: typeof errors = {};
 
     if (hasPassword && !currentPassword) {
-      newErrors.currentPassword = "Senha atual é obrigatória";
+      newErrors.currentPassword = t("currentPasswordRequired");
     }
 
     if (!newPassword) {
-      newErrors.newPassword = "Nova senha é obrigatória";
+      newErrors.newPassword = t("newPasswordRequired");
     } else if (newPassword.length < 8) {
-      newErrors.newPassword = "A senha deve ter no mínimo 8 caracteres";
+      newErrors.newPassword = t("newPasswordMin8");
     } else if (!/[A-Z]/.test(newPassword) || !/[a-z]/.test(newPassword) || !/[0-9]/.test(newPassword)) {
-      newErrors.newPassword = "A senha deve conter letra maiúscula, minúscula e número";
+      newErrors.newPassword = t("newPasswordStrength");
     }
 
     if (!confirmPassword) {
-      newErrors.confirmPassword = "Confirmação de senha é obrigatória";
+      newErrors.confirmPassword = t("vConfirmPasswordRequired");
     } else if (newPassword !== confirmPassword) {
-      newErrors.confirmPassword = "As senhas não coincidem";
+      newErrors.confirmPassword = t("vPasswordsMismatch");
     }
 
     setErrors(newErrors);
@@ -67,13 +69,13 @@ export function ChangePasswordModal() {
           newPassword,
         });
 
-        toast.success("Senha alterada com sucesso!");
+        toast.success(t("passwordChanged"));
         closeChangePasswordModal();
         resetForm();
         await refetchUser();
       } catch (error: any) {
         console.error("Error changing password:", error);
-        const message: string = error?.message || "Erro ao alterar senha. Verifique os dados e tente novamente.";
+        const message: string = error?.message || t("changePasswordError");
 
         if (message.toLowerCase().includes("igual")) {
           setErrors((prev) => ({ ...prev, newPassword: message }));
@@ -135,12 +137,12 @@ export function ChangePasswordModal() {
               {/* Header */}
               <div className="border-b border-gray-6 flex items-center justify-between p-4">
                 <h2 className="font-semibold text-[20px] leading-[1.3] text-gray-12 font-family-dm-sans">
-                  Alterar senha
+                  {t("changePasswordTitle")}
                 </h2>
                 <button
                   onClick={handleClose}
                   className="flex items-center justify-center rounded-lg w-8 h-8 hover:bg-gray-3 transition-colors cursor-pointer"
-                  aria-label="Fechar"
+                  aria-label={t("close")}
                 >
                   <X className="w-5 h-5 text-gray-11" />
                 </button>
@@ -154,7 +156,7 @@ export function ChangePasswordModal() {
                   {hasPassword && (
                     <div className="flex flex-col gap-2 items-start w-full">
                       <label className="font-normal text-base leading-[1.3] text-gray-12 font-family-dm-sans">
-                        Senha atual
+                        {t("currentPassword")}
                       </label>
                       <div className="border border-gray-6 flex gap-2.5 h-12 items-center px-3 rounded-lg w-full">
                         <Lock className="w-6 h-6 text-gray-11 shrink-0" />
@@ -167,7 +169,7 @@ export function ChangePasswordModal() {
                               setErrors((prev) => ({ ...prev, currentPassword: undefined }));
                             }
                           }}
-                          placeholder="Digite sua senha atual"
+                          placeholder={t("currentPasswordPlaceholder")}
                           className="flex-1 border-0 p-0 h-auto bg-transparent text-base font-normal text-gray-11 placeholder:text-gray-11 outline-none focus-visible:ring-0 shadow-none"
                         />
                         <button
@@ -190,7 +192,7 @@ export function ChangePasswordModal() {
                   {/* New Password */}
                   <div className="flex flex-col gap-2 items-start w-full">
                     <label className="font-normal text-base leading-[1.3] text-gray-12 font-family-dm-sans">
-                      Nova senha
+                      {t("newPassword")}
                     </label>
                     <div className="border border-gray-6 flex gap-2.5 h-12 items-center px-3 rounded-lg w-full">
                       <Lock className="w-6 h-6 text-gray-11 shrink-0" />
@@ -207,7 +209,7 @@ export function ChangePasswordModal() {
                             setErrors((prev) => ({ ...prev, confirmPassword: undefined }));
                           }
                         }}
-                        placeholder="Digite uma nova senha"
+                        placeholder={t("newPasswordPlaceholder")}
                         className="flex-1 border-0 p-0 h-auto bg-transparent text-base font-normal text-gray-11 placeholder:text-gray-11 outline-none focus-visible:ring-0 shadow-none"
                       />
                       <button
@@ -229,7 +231,7 @@ export function ChangePasswordModal() {
                   {/* Confirm Password */}
                   <div className="flex flex-col gap-2 items-start w-full">
                     <label className="font-normal text-base leading-[1.3] text-gray-12 font-family-dm-sans">
-                    Confirme sua senha
+                    {t("confirmPassword")}
                     </label>
                     <div className="border border-gray-6 flex gap-2.5 h-12 items-center px-3 rounded-lg w-full">
                       <Lock className="w-6 h-6 text-gray-11 shrink-0" />
@@ -242,7 +244,7 @@ export function ChangePasswordModal() {
                             setErrors((prev) => ({ ...prev, confirmPassword: undefined }));
                           }
                         }}
-                        placeholder="Digite sua senha novamente"
+                        placeholder={t("repeatPasswordPlaceholder")}
                         className="flex-1 border-0 p-0 h-auto bg-transparent text-base font-normal text-gray-11 placeholder:text-gray-11 outline-none focus-visible:ring-0 shadow-none"
                       />
                       <button
@@ -264,7 +266,7 @@ export function ChangePasswordModal() {
 
                 {/* Buttons */}
                 <ModalFooterActions
-                  submitLabel="Salvar"
+                  submitLabel={t("save")}
                   onCancel={handleClose}
                   onSubmit={handleSubmit}
                   isSubmitting={isSubmitting}

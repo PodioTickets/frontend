@@ -8,9 +8,11 @@ import { Pagination } from "@/components/Pagination";
 import Image from "next/image";
 import { SlidersHorizontal } from "lucide-react";
 import UserTicketsLoading from "./loading";
+import { useT } from "@/i18n/client";
 
 export default function UserTicketsPage() {
   const { isAuthenticated } = useAuth();
+  const t = useT("user");
   const [page, setPage] = useState(1);
 
   const { tickets, pagination, loading, refetch } = useMyTickets(
@@ -45,14 +47,14 @@ export default function UserTicketsPage() {
           <div className="flex items-center gap-2 md:gap-3">
             <Image
               src="/images/ticket-huge.png"
-              alt="Ingressos"
+              alt={t("ticketsAlt")}
               width={32}
               height={32}
               className="size-6 md:size-8"
               draggable={false}
             />
             <span className="font-manrope font-extrabold text-[#202020] text-xl leading-[22px] md:text-[28px] md:leading-[30.8px]">
-              Meus ingressos
+              {t("myTickets")}
             </span>
           </div>
 
@@ -63,7 +65,7 @@ export default function UserTicketsPage() {
                 className="font-dm-sans text-[#B4B4B4]"
                 style={{ fontSize: 16 }}
               >
-                Carregando ingressos...
+                {t("loadingTickets")}
               </p>
             </div>
           ) : tickets.length === 0 ? (
@@ -80,7 +82,7 @@ export default function UserTicketsPage() {
                 className="font-dm-sans text-[#B4B4B4]"
                 style={{ fontSize: 16 }}
               >
-                Você ainda não possui ingressos
+                {t("noTickets")}
               </p>
             </div>
           ) : (
@@ -100,7 +102,7 @@ export default function UserTicketsPage() {
                 className="w-full h-12 rounded-lg border border-[#D9D9D9] flex items-center justify-center font-manrope font-bold text-[#202020] disabled:opacity-50"
                 style={{ fontSize: 16, lineHeight: "17.6px" }}
               >
-                {loading ? "Carregando..." : "Carregar mais"}
+                {loading ? t("loading") : t("loadMore")}
               </button>
             </div>
           )}

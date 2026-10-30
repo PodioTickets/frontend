@@ -1,21 +1,27 @@
 import type { Metadata } from "next";
 import { LegalDocument } from "@/components/LegalDocument";
 import { privacyPolicy } from "@/data/privacyPolicy";
+import { getT } from "@/i18n/server";
 
-export const metadata: Metadata = {
-  title: "Política de Privacidade | PódioTicket",
-  description:
-    "Política de Privacidade e Política de Cookies da PódioTicket — como coletamos, usamos, compartilhamos e protegemos seus dados pessoais (LGPD).",
-  // `robots` é decidido em runtime no RootLayout (homologação → noindex).
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getT("user");
+  return {
+    title: t("privacyMetaTitle"),
+    description: t("privacyMetaDescription"),
+    // `robots` é decidido em runtime no RootLayout (homologação → noindex).
+  };
+}
 
-export default function PrivacyPage() {
+// O texto legal (`privacyPolicy`) fica em pt-BR em todos os idiomas — só o chrome é traduzido.
+export default async function PrivacyPage() {
+  const t = await getT("user");
   const body = privacyPolicy.filter((b) => b.type !== "h1");
   return (
     <LegalDocument
-      title="Política de privacidade"
+      title={t("privacyTitle")}
       blocks={body}
       updatedAt="01/01/2026"
+      updatedAtLabel={t("lastUpdated")}
     />
   );
 }

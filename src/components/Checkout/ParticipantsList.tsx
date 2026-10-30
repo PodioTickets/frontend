@@ -7,6 +7,7 @@ import { useCheckout } from "@/contexts/CheckoutContext";
 import { cn } from "@/utils/cn";
 import { formatDateBR } from "@/utils/datetimeBR";
 import { formatBRL as formatCurrency } from "@/lib/money";
+import { useT } from "@/i18n/client";
 
 interface ParticipantCardProps {
   participantIndex: number;
@@ -34,6 +35,7 @@ function ParticipantCard({
   ticketPrice,
   additionalProducts = [],
 }: ParticipantCardProps) {
+  const t = useT("checkoutInfo");
   const formatDate = (date: string) => {
     if (!date) return "";
     return formatDateBR(date, {
@@ -53,9 +55,9 @@ function ParticipantCard({
 
   const getGenderLabel = (gender: string) => {
     const labels: Record<string, string> = {
-      male: "Masculino",
-      female: "Feminino",
-      other: "Outro",
+      male: t("genderMale"),
+      female: t("genderFemale"),
+      other: t("genderOther"),
     };
     return labels[gender] || gender;
   };
@@ -71,14 +73,14 @@ function ParticipantCard({
       <div className="flex flex-col gap-5 px-4 py-6">
         <div className="flex flex-col gap-5 grow items-start">
           <p className="font-family-dm-sans font-normal text-base leading-[1.3] text-gray-12">
-            Participante {participantIndex + 1}
+            {t("participantN", { n: participantIndex + 1 })}
           </p>
           <p className="font-manrope font-bold text-xl leading-[1.1] text-gray-12">
             {ticketName}
           </p>
           <div className="flex items-end justify-between w-full text-gray-12">
             <p className="font-family-dm-sans font-normal text-base leading-[1.3]">
-              Valor do ingresso:
+              {t("ticketValue")}
             </p>
             <p className="font-manrope font-bold text-lg leading-[1.1]">
               {formatCurrency(ticketPrice)}
@@ -87,7 +89,7 @@ function ParticipantCard({
           {additionalProducts.length > 0 && (
             <div className="flex items-end justify-between w-full text-gray-12">
               <p className="font-family-dm-sans font-normal text-base leading-[1.3]">
-                {additionalProducts.length > 1 ? "Produtos adicionais" : "Produto adicional"} ({additionalProducts.length}):
+                {additionalProducts.length > 1 ? t("additionalProductsOther") : t("additionalProductsOne")} ({additionalProducts.length}):
               </p>
               <p className="font-manrope font-bold text-lg leading-[1.1]">
                 {formatCurrency(totalAdditionalProducts)}
@@ -119,7 +121,7 @@ function ParticipantCard({
             </div>
             <div className="flex flex-col gap-3 items-start justify-center">
               <p className="font-family-dm-sans font-semibold text-sm leading-[1.3] text-gray-12">
-                {participant.name || "Sem nome"}
+                {participant.name || t("noName")}
               </p>
               <div className="flex gap-2 items-center justify-center">
                 {participant.birthDate && (

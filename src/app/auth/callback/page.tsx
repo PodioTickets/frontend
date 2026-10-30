@@ -12,6 +12,7 @@ import {
   clearReturnPath,
   saveReturnPath,
 } from "@/utils/authRedirect";
+import { useT } from "@/i18n/client";
 
 function CallbackContent() {
   const router = useRouter();
@@ -19,6 +20,7 @@ function CallbackContent() {
   const { refetchUser, user } = useAuth();
   const { openRegisterModal } = useRegisterModal();
   const { openLoginModal } = useLoginModal();
+  const t = useT("auth");
   const [isProcessing, setIsProcessing] = useState(true);
   const hasProcessedRef = useRef(false);
 
@@ -47,7 +49,7 @@ function CallbackContent() {
         // Se houver erro na URL, exibe mensagem e redireciona
         if (error) {
           hasProcessedRef.current = true;
-          toast.error("Erro ao fazer login com Google. Tente novamente.");
+          toast.error(t("googleLoginError"));
           setTimeout(() => {
             router.push(fallbackPath);
           }, 1000);
@@ -100,7 +102,7 @@ function CallbackContent() {
             if (!response.success || !response.data) {
               const errorMessage =
                 response.error ||
-                "Erro ao fazer login com Google. Tente novamente.";
+                t("googleLoginError");
               toast.error(errorMessage);
               setTimeout(() => {
                 router.push(fallbackPath);
@@ -129,16 +131,14 @@ function CallbackContent() {
 
             const updatedUser = await refetchUser();
             if (!isProfileComplete(updatedUser)) {
-              toast.success(
-                "Login realizado com sucesso! Complete seu cadastro para continuar."
-              );
+              toast.success(t("loginSuccessCompleteProfile"));
               openRegisterModal({ completeProfile: true });
               clearReturnPath();
               router.replace(savedReturnTo || "/");
               return;
             }
 
-            toast.success("Login realizado com sucesso!");
+            toast.success(t("loginSuccess"));
 
             // Volta para o destino salvo antes do login (resiliente ao OAuth)
             // ou para a home.
@@ -152,7 +152,7 @@ function CallbackContent() {
           } catch (validateError) {
             console.error("Erro ao validar código do Google:", validateError);
             hasProcessedRef.current = true;
-            toast.error("Erro ao processar autenticação. Tente novamente.");
+            toast.error(t("authProcessingError"));
             setTimeout(() => {
               router.push(fallbackPath);
             }, 1000);
@@ -180,16 +180,14 @@ function CallbackContent() {
 
             // Verifica se o perfil está completo
             if (!isProfileComplete(updatedUser)) {
-              toast.success(
-                "Login realizado com sucesso! Complete seu cadastro para continuar."
-              );
+              toast.success(t("loginSuccessCompleteProfile"));
               openRegisterModal({ completeProfile: true });
               clearReturnPath();
               router.replace(savedReturnTo || "/");
               return;
             }
 
-            toast.success("Login realizado com sucesso!");
+            toast.success(t("loginSuccess"));
 
             // Volta para o destino salvo antes do login (resiliente ao OAuth)
             // ou para a home.
@@ -201,7 +199,7 @@ function CallbackContent() {
             }, 500);
           } catch (profileError) {
             console.error("Erro ao buscar perfil:", profileError);
-            toast.error("Erro ao carregar perfil do usuário.");
+            toast.error(t("profileLoadError"));
             setTimeout(() => {
               router.push(fallbackPath);
             }, 1000);
@@ -212,7 +210,7 @@ function CallbackContent() {
         // Se não recebeu nem código nem tokens, só mostra erro se ainda não processou
         if (!hasProcessedRef.current) {
           hasProcessedRef.current = true;
-          toast.error("Tokens não recebidos. Tente novamente.");
+          toast.error(t("tokensMissing"));
           setTimeout(() => {
             router.push(fallbackPath);
           }, 1000);
@@ -221,7 +219,7 @@ function CallbackContent() {
         console.error("Erro ao processar callback:", error);
         if (!hasProcessedRef.current) {
           hasProcessedRef.current = true;
-          toast.error("Erro ao processar autenticação. Tente novamente.");
+          toast.error(t("authProcessingError"));
           // `fallbackPath` está fora de escopo aqui (declarado no try) — relê o
           // destino salvo para também não cair na home neste erro inesperado.
           const safeReturn =
@@ -243,7 +241,7 @@ function CallbackContent() {
       <div className="flex flex-col items-center gap-4">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-11"></div>
         <p className="text-gray-11 font-family-dm-sans">
-          {isProcessing ? "Processando autenticação..." : "Redirecionando..."}
+          {isProcessing ? t("processingAuth") : t("redirecting")}
         </p>
       </div>
     </div>
@@ -251,13 +249,14 @@ function CallbackContent() {
 }
 
 export default function AuthCallbackPage() {
+  const t = useT("auth");
   return (
     <Suspense
       fallback={
         <div className="flex items-center justify-center min-h-screen bg-gray-2">
           <div className="flex flex-col items-center gap-4">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-11"></div>
-            <p className="text-gray-11 font-family-dm-sans">Carregando...</p>
+            <p className="text-gray-11 font-family-dm-sans">{t("loading")}</p>
           </div>
         </div>
       }

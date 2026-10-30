@@ -12,6 +12,7 @@ import { CalendarIcon } from "@/components/Icons/CalendarIcon";
 import { ArrowButton } from "@/components/ArrowButton";
 import { brasiliaTodayCivilStart } from "@/utils/datetimeBR";
 import { Button } from "../Button";
+import { useT } from "@/i18n/client";
 
 /**
  * Placeholder padrao dos campos de data: dia/mes zerados + ano ATUAL de Brasilia
@@ -106,6 +107,7 @@ export function DatePicker({
   openAtCurrentMonth = false,
 }: DatePickerProps) {
   const [isOpen, setIsOpen] = React.useState(false);
+  const t = useT("ui");
 
   // Helper function to parse value to Date
   const parseValueToDate = (
@@ -313,7 +315,7 @@ export function DatePicker({
               disabled={confirmDisabled}
               className="w-1/2 h-8 text-xs"
             >
-              Confirmar
+              {t("confirm")}
             </Button>
           </div>
         </div>

@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import { useCountdown } from "@/hooks/useCountdown";
+import { useT } from "@/i18n/client";
 
 interface RegistrationCountdownProps {
   /** Alvo da contagem (abertura ou encerramento das inscrições). */
@@ -28,6 +29,7 @@ export function RegistrationCountdown({
   onExpire,
   className,
 }: RegistrationCountdownProps) {
+  const t = useT("event");
   const { days, hours, minutes, isReady, isExpired } =
     useCountdown(targetDate);
 
@@ -42,13 +44,13 @@ export function RegistrationCountdown({
   }
 
   if (isExpired) {
-    return <span className={className}>agora</span>;
+    return <span className={className}>{t("countdownNow")}</span>;
   }
 
   const formatted =
     days > 0
-      ? `${days} dias : ${pad(hours)} horas : ${pad(minutes)} minutos`
-      : `${pad(hours)} horas : ${pad(minutes)} minutos`;
+      ? t("countdownWithDays", { days, hours: pad(hours), minutes: pad(minutes) })
+      : t("countdownNoDays", { hours: pad(hours), minutes: pad(minutes) });
 
   return (
     <span

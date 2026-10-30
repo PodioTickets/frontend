@@ -9,6 +9,7 @@ import { SeeDetailsIcon } from "../Icons/SeeDetailsIcon";
 import { usePathname } from "next/navigation";
 import { formatBRL as formatPrice } from "@/lib/money";
 import { useHidePricing } from "@/contexts/HidePricingContext";
+import { useT } from "@/i18n/client";
 
 /**
  * Barra de resumo fixa (mobile) unificada do checkout.
@@ -121,6 +122,7 @@ export function MobileSummaryBar({
   open: controlledOpen,
   onOpenChange,
 }: MobileSummaryBarProps) {
+  const t = useT("checkout");
   const [internalOpen, setInternalOpen] = useState(false);
   // Controlado se `open` foi passado; senão usa o estado interno.
   const open = controlledOpen ?? internalOpen;
@@ -172,13 +174,13 @@ export function MobileSummaryBar({
   ) : pendingDiscountLabel ? (
     <SummaryRow
       label={pendingDiscountLabel}
-      value={<span className="text-xs font-medium">ao continuar</span>}
+      value={<span className="text-xs font-medium">{t("onContinue")}</span>}
     />
   ) : null;
 
   const feeRow =
     serviceFee > 0 ? (
-      <SummaryRow label="Taxa de serviço" value={formatPrice(serviceFee)} />
+      <SummaryRow label={t("serviceFee")} value={formatPrice(serviceFee)} />
     ) : null;
 
   // Cortesia (hidePricing): NÃO troca as barras por versões mínimas — renderiza as
@@ -200,7 +202,7 @@ export function MobileSummaryBar({
             aria-expanded={open}
             className="self-end w-1/3 bg-gray-2 border-t border-l border-r border-gray-6 rounded-tl-xl py-2 text-xs font-medium text-gray-11 text-center font-family-dm-sans hover:text-gray-12 active:scale-95 transition-transform"
           >
-            {open ? "Ocultar detalhes" : "Ver detalhes"}
+            {open ? t("hideDetails") : t("seeDetails")}
           </button>
 
           <div className="bg-gray-2 border-t border-gray-6 shadow-lg px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
@@ -211,11 +213,11 @@ export function MobileSummaryBar({
                   {eventName}
                 </h3>
               </div>
-              <SummaryRow label="Participantes" value={totalParticipants} />
+              <SummaryRow label={t("participants")} value={totalParticipants} />
               {!hidePricing && discountRow}
               {!hidePricing && feeRow}
               <div className="flex items-center justify-between gap-3">
-                {!hidePricing && <SummaryRow label="Total" value={formatPrice(total)} emphasize />}
+                {!hidePricing && <SummaryRow label={t("total")} value={formatPrice(total)} emphasize />}
                 {cta && (
                   <Button
                     onClick={cta.onClick}
@@ -234,9 +236,9 @@ export function MobileSummaryBar({
         /* Barra minimizada COMPACTA — demais etapas: "(N participantes) · Ver detalhes". */
         <div data-mobile-summary-bar="true" className="fixed bottom-0 left-0 right-0 z-50 md:hidden flex flex-col">
           <div className="bg-gray-2 border-t border-gray-6 shadow-lg px-4 py-3 flex items-center justify-between pb-[max(1.25rem,env(safe-area-inset-bottom))] w-full">
-            <h1 className="text-sm text-gray-11">({totalParticipants} {totalParticipants > 1 ? "Participantes" : "Participante"})</h1>
+            <h1 className="text-sm text-gray-11">({totalParticipants} {totalParticipants > 1 ? t("participants") : t("participant")})</h1>
             <h1 onClick={toggleSheet}
-              aria-expanded={open} className="flex items-center gap-2 text-primary-11 font-medium text-sm underline cursor-pointer">Ver detalhes <SeeDetailsIcon /></h1>
+              aria-expanded={open} className="flex items-center gap-2 text-primary-11 font-medium text-sm underline cursor-pointer">{t("seeDetails")} <SeeDetailsIcon /></h1>
           </div>
         </div>
       ) : null}
@@ -280,7 +282,7 @@ export function MobileSummaryBar({
                 className="md:hidden fixed bottom-0 left-0 right-0 z-[61] bg-gray-1 rounded-t-2xl max-h-[85dvh] flex flex-col overflow-hidden shadow-2xl"
                 role="dialog"
                 aria-modal="true"
-                aria-label="Detalhes do pedido"
+                aria-label={t("orderDetails")}
               >
                 {/* Grabber + header — área de arrasto pra fechar (touch-none
                     impede o navegador de tratar o gesto como scroll). */}
@@ -295,7 +297,7 @@ export function MobileSummaryBar({
                         {eventName}
                       </h2>
                       <p className="text-sm text-gray-11 font-family-dm-sans mt-1">
-                        Participantes:{" "}
+                        {t("participantsLabel")}{" "}
                         <span className="font-semibold text-gray-12">{totalParticipants}</span>
                       </p>
                     </div>
@@ -304,7 +306,7 @@ export function MobileSummaryBar({
                       onClick={closeSheet}
                       className="shrink-0 text-sm font-semibold text-gray-11 font-family-dm-sans hover:text-gray-12 active:scale-95 transition"
                     >
-                      Fechar
+                      {t("close")}
                     </button>
                   </div>
                 </div>
@@ -320,12 +322,12 @@ export function MobileSummaryBar({
                     tickets.length > 0 && (
                       <div className="flex flex-col gap-3">
                         <p className="font-manrope font-bold text-base text-gray-12">
-                          Ingressos no pedido
+                          {t("ticketsInOrder")}
                         </p>
                         {tickets.map((ticket, index) => (
                           <div key={index} className="flex flex-col gap-0.5 min-w-0">
                             <p className="text-xs text-gray-11 leading-[1.3] truncate font-family-dm-sans">
-                              {ticket.categoryName || "Ingresso Avulso"}
+                              {ticket.categoryName || t("singleTicketTitle")}
                             </p>
                             <div className="flex items-baseline gap-2 min-w-0">
                               {/* Tooltip click-to-reveal: nome completo quando truncado (mobile sem hover). */}
@@ -357,10 +359,10 @@ export function MobileSummaryBar({
                   {/* Breakdown completo — oculto na cortesia (pedido R$0). */}
                   {!hidePricing && (
                     <div className="flex flex-col gap-2 border-t border-gray-6 pt-4">
-                      <SummaryRow label="Subtotal" value={formatPrice(subtotal)} />
+                      <SummaryRow label={t("subtotal")} value={formatPrice(subtotal)} />
                       {discountRow}
                       {feeRow}
-                      <SummaryRow label="Total" value={formatPrice(total)} emphasize />
+                      <SummaryRow label={t("total")} value={formatPrice(total)} emphasize />
                     </div>
                   )}
                 </div>

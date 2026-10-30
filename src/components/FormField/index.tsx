@@ -5,6 +5,7 @@ import { Eye, EyeOff } from "lucide-react";
 import { cn } from "@/utils/cn";
 import { Input } from "@/components/Input";
 import { FieldHelpTooltip } from "@/components/Organizer/FieldHelpTooltip";
+import { useT } from "@/i18n/client";
 
 export interface FormFieldProps {
   label: string;
@@ -76,6 +77,7 @@ export function FormField({
 
   // Campos de senha ganham o botão "olho" (mostrar/ocultar), igual aos logins.
   const [showPassword, setShowPassword] = React.useState(false);
+  const t = useT("ui");
   const isPassword = type === "password";
   const effectiveType = isPassword && showPassword ? "text" : type;
 
@@ -133,7 +135,7 @@ export function FormField({
             type="button"
             onClick={() => setShowPassword((p) => !p)}
             className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-11 hover:text-gray-12 transition-colors"
-            aria-label={showPassword ? "Ocultar senha" : "Mostrar senha"}
+            aria-label={showPassword ? t("hidePassword") : t("showPassword")}
             tabIndex={-1}
           >
             {showPassword ? (

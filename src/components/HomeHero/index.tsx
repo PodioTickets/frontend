@@ -6,6 +6,7 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 import { ImageWithInitialFallback } from "@/components/ImageWithInitialFallback";
 import { useHomeFeaturedEvents } from "@/hooks/useFeaturedEvents";
 import { cn } from "@/utils/cn";
+import { useT } from "@/i18n/client";
 
 /** Nº de banners na hero (Figma: 5 páginas). */
 const SLIDES = 5;
@@ -45,6 +46,7 @@ export function HomeHero() {
   const n = slides.length;
   const [active, setActive] = useState(0);
   const touchX = useRef<number | null>(null);
+  const t = useT("home");
 
   if (isLoading) {
     // Mesma caixa da hero pronta (área + espaço das bolinhas) → sem salto de layout.
@@ -127,10 +129,10 @@ export function HomeHero() {
 
         {n > 1 && (
           <>
-            <button type="button" onClick={() => go(-1)} className={cn(arrowClass, "left-[20.9%]")} aria-label="Banner anterior">
+            <button type="button" onClick={() => go(-1)} className={cn(arrowClass, "left-[20.9%]")} aria-label={t("heroPrevBanner")}>
               <ChevronLeft className="size-6 text-gray-12" />
             </button>
-            <button type="button" onClick={() => go(1)} className={cn(arrowClass, "right-[20.9%]")} aria-label="Próximo banner">
+            <button type="button" onClick={() => go(1)} className={cn(arrowClass, "right-[20.9%]")} aria-label={t("heroNextBanner")}>
               <ChevronRight className="size-6 text-gray-12" />
             </button>
           </>
@@ -144,7 +146,7 @@ export function HomeHero() {
               key={event.id}
               type="button"
               onClick={() => setActive(i)}
-              aria-label={`Ir para o banner ${i + 1}`}
+              aria-label={t("heroGoToBanner", { n: i + 1 })}
               className={cn(
                 "h-2 rounded-full transition-all duration-200",
                 i === active ? "w-12 bg-primary-10" : "w-2 bg-gray-8 hover:bg-gray-9",

@@ -28,6 +28,8 @@ import { TicketPickControl, useTicketPick } from "@/contexts/TicketPickContext";
 import { ticketAutoCouponBadges, type AgeDisplayCoupon } from "@/lib/autoCouponBadges";
 import type { QuantityAutoCoupon } from "@/lib/quantityCoupon";
 import { AutoCouponBadges } from "./AutoCouponBadges";
+import { useT } from "@/i18n/client";
+import type { Translator } from "@/i18n/translate";
 
 /** Cupons automáticos do evento para os selos dos cards (null/ausente = sem selos). */
 export type AutoCouponsForBadges = { quantity: QuantityAutoCoupon[]; age: AgeDisplayCoupon[] } | null;
@@ -136,11 +138,11 @@ const formatDisplayPrice = (breakdown: {
     ? formatPriceCurrency(breakdown.discounted)
     : formatPrice(breakdown.discounted);
 
-const formatAgeLimit = (ageLimit?: { min?: number; max?: number }) => {
+const formatAgeLimit = (ageLimit: { min?: number; max?: number } | undefined, t: Translator<"checkout">) => {
   if (!ageLimit) return null;
-  if (ageLimit.min && ageLimit.max) return `de ${ageLimit.min} a ${ageLimit.max} anos`;
-  if (ageLimit.min) return `a partir de ${ageLimit.min} anos`;
-  if (ageLimit.max) return `até ${ageLimit.max} anos`;
+  if (ageLimit.min && ageLimit.max) return t("ageRangeBetween", { min: ageLimit.min, max: ageLimit.max });
+  if (ageLimit.min) return t("ageRangeFrom", { min: ageLimit.min });
+  if (ageLimit.max) return t("ageRangeUpTo", { max: ageLimit.max });
   return null;
 };
 
@@ -186,6 +188,7 @@ const TicketItemMobile = memo(({
   couponConditionsMet?: boolean;
   autoCoupons?: AutoCouponsForBadges;
 }) => {
+  const t = useT("checkout");
   const [isImageModalOpen, setIsImageModalOpen] = useState(false);
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
   const hidePricing = useHidePricing();
@@ -195,7 +198,7 @@ const TicketItemMobile = memo(({
   const distanceKm = getDistanceKm(ticket);
   const distanceUnit = ticket?.distanceUnit === "KM" || ticket?.distanceUnit === "Km" ? "km" : "m"
   const ignoreAgeLimit = useIgnoreAgeLimit();
-  const ageLimitText = formatAgeLimit(ticket.ageLimit);
+  const ageLimitText = formatAgeLimit(ticket.ageLimit, t);
   // Badge de limite de idade: `userAge` undefined (prop ausente, ex.: preview do
   // organizador) → comportamento antigo (sempre mostra); null (anônimo / sem
   // nascimento) → esconde; número → mostra só se a idade estiver FORA do limite.
@@ -262,8 +265,8 @@ const TicketItemMobile = memo(({
   const hasDescription = !!ticket.description?.trim();
 
   const couponBadges = useMemo(
-    () => (autoCoupons ? ticketAutoCouponBadges(ticket, autoCoupons.quantity, autoCoupons.age) : []),
-    [ticket, autoCoupons],
+    () => (autoCoupons ? ticketAutoCouponBadges(ticket, autoCoupons.quantity, autoCoupons.age, t) : []),
+    [ticket, autoCoupons, t],
   );
   const showCouponBadges = !pick && !hidePricing && !isBatchSoldOut;
 
@@ -282,7 +285,7 @@ const TicketItemMobile = memo(({
               type="button"
               onClick={() => handleImageClick(0)}
               className="size-[136px] relative shrink-0 rounded-lg border border-gray-6 overflow-hidden cursor-pointer hover:opacity-90 transition-opacity"
-              aria-label="Ver imagem em destaque"
+              aria-label={t("viewFeaturedImage")}
             >
               {mainImage ? (
                 <ImageWithInitialFallback
@@ -340,7 +343,7 @@ const TicketItemMobile = memo(({
                   type="button"
                   onClick={() => handleImageClick(0)}
                   className="size-[136px] relative shrink-0 rounded-lg border border-gray-6 overflow-hidden cursor-pointer hover:opacity-90 transition-opacity"
-                  aria-label="Ver imagem em destaque"
+                  aria-label={t("viewFeaturedImage")}
                 >
                   {mainImage ? (
                     <ImageWithInitialFallback
@@ -380,8 +383,8 @@ const TicketItemMobile = memo(({
                                 className="size-[64px] relative shrink-0 rounded-lg border border-gray-6 overflow-hidden cursor-pointer hover:opacity-90 transition-opacity"
                                 aria-label={
                                   showOverlay
-                                    ? `Ver mais ${remainingCount} imagens`
-                                    : "Ver imagem"
+                                    ? t("viewMoreImages", { n: remainingCount })
+                                    : t("viewImage")
                                 }
                               >
                                 <ImageWithInitialFallback
@@ -453,7 +456,7 @@ const TicketItemMobile = memo(({
               {showAgeLimit ? (
                 <div className="bg-yellow-3 rounded-full px-2.5 py-0.5 self-start max-w-full max-md:mb-6">
                   <p className="text-[11px] font-medium text-yellow-12 font-family-dm-sans">
-                    Limite de idade: {ageLimitText}
+                    {t("ageLimitLabel", { range: ageLimitText ?? "" })}
                   </p>
                 </div>
               ) : null}
@@ -465,7 +468,7 @@ const TicketItemMobile = memo(({
         {isSingleImageLayout && showAgeLimit ? (
           <div className="bg-yellow-3 rounded-full px-2.5 py-0.5 self-start max-w-full">
             <p className="text-[11px] font-medium text-yellow-12 font-family-dm-sans leading-[1.3]">
-              Limite de idade: {ageLimitText}
+              {t("ageLimitLabel", { range: ageLimitText ?? "" })}
             </p>
           </div>
         ) : null}
@@ -497,15 +500,14 @@ const TicketItemMobile = memo(({
             // Lote esgotado: badge cinza no lugar do stepper (não dá pra adicionar).
             // `h-11` = mesma altura do stepper (mobile) pra o card não encolher.
             <span className="shrink-0 inline-flex items-center h-11 rounded-full bg-gray-4 px-4 text-sm font-semibold text-gray-11 font-manrope leading-[1.1] whitespace-nowrap">
-              Lote esgotado
+              {t("batchSoldOut")}
             </span>
           ) : (
             <div className="relative">
               <div className="absolute bottom-full right-0 pb-1 pointer-events-none">
                 {showLowStock ? (
                   <p className="text-xs font-medium text-red-11 whitespace-nowrap">
-                    Restam apenas {ticket.availableQuantity}{" "}
-                    {ticket.availableQuantity === 1 ? "vaga" : "vagas"}!
+                    {t(ticket.availableQuantity === 1 ? "spotsLeftOne" : "spotsLeftOther", { n: ticket.availableQuantity ?? 0 })}
                   </p>
                 ) : null}
               </div>
@@ -515,7 +517,7 @@ const TicketItemMobile = memo(({
                   onClick={() => onDecrease(ticket.id)}
                   disabled={quantity === 0}
                   className="size-6 cursor-pointer rounded-full flex items-center justify-center bg-gray-12 hover:bg-gray-11 text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed shrink-0 p-1"
-                  aria-label="Diminuir quantidade"
+                  aria-label={t("counterDecrease")}
                 >
                   <Minus className="size-4" />
                 </button>
@@ -527,7 +529,7 @@ const TicketItemMobile = memo(({
                   onClick={() => onIncrease(ticket.id)}
                   disabled={isAtMax}
                   className="size-6 cursor-pointer rounded-full flex items-center justify-center bg-gray-12 hover:bg-gray-11 text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed shrink-0 p-1"
-                  aria-label="Aumentar quantidade"
+                  aria-label={t("counterIncrease")}
                 >
                   <Plus className="size-4" />
                 </button>
@@ -589,6 +591,7 @@ const TicketItemDesktop = memo(({
   couponConditionsMet?: boolean;
   autoCoupons?: AutoCouponsForBadges;
 }) => {
+  const t = useT("checkout");
   const hidePricing = useHidePricing();
   const pick = useTicketPick();
   const [isImageModalOpen, setIsImageModalOpen] = useState(false);
@@ -599,7 +602,7 @@ const TicketItemDesktop = memo(({
   const distanceKm = getDistanceKm(ticket);
   const distanceUnit = ticket?.distanceUnit === "KM" || ticket?.distanceUnit === "Km" ? "km" : "m"
   const ignoreAgeLimit = useIgnoreAgeLimit();
-  const ageLimitText = formatAgeLimit(ticket.ageLimit);
+  const ageLimitText = formatAgeLimit(ticket.ageLimit, t);
   // Badge de limite de idade: `userAge` undefined (prop ausente, ex.: preview do
   // organizador) → comportamento antigo (sempre mostra); null (anônimo / sem
   // nascimento) → esconde; número → mostra só se a idade estiver FORA do limite.
@@ -692,8 +695,8 @@ const TicketItemDesktop = memo(({
   const hasDescription = !!ticket.description?.trim();
 
   const couponBadges = useMemo(
-    () => (autoCoupons ? ticketAutoCouponBadges(ticket, autoCoupons.quantity, autoCoupons.age) : []),
-    [ticket, autoCoupons],
+    () => (autoCoupons ? ticketAutoCouponBadges(ticket, autoCoupons.quantity, autoCoupons.age, t) : []),
+    [ticket, autoCoupons, t],
   );
   const showCouponBadges = !pick && !hidePricing && !isBatchSoldOut;
 
@@ -710,15 +713,14 @@ const TicketItemDesktop = memo(({
         // Lote esgotado: badge cinza no lugar do stepper (não dá pra adicionar).
         // `h-10` = mesma altura do stepper (size-6 + py-2) pra o card não encolher.
         <span className="shrink-0 inline-flex items-center h-10 rounded-full bg-gray-4 px-4 text-sm font-semibold text-gray-11 font-manrope leading-[1.1] whitespace-nowrap">
-          Lote esgotado
+          {t("batchSoldOut")}
         </span>
       ) : (
         // Aviso de estoque baixo IN-FLOW (não `absolute`), logo acima do stepper.
         <>
           {withWarning && showLowStock ? (
             <p className="text-xs font-medium text-red-11 whitespace-nowrap">
-              Restam apenas {ticket.availableQuantity}{" "}
-              {ticket.availableQuantity === 1 ? "vaga" : "vagas"}!
+              {t(ticket.availableQuantity === 1 ? "spotsLeftOne" : "spotsLeftOther", { n: ticket.availableQuantity ?? 0 })}
             </p>
           ) : null}
           <div className="flex items-center justify-center w-max gap-2 bg-primary-4 rounded-full px-2 py-2">
@@ -727,7 +729,7 @@ const TicketItemDesktop = memo(({
               onClick={() => onDecrease(ticket.id)}
               disabled={quantity === 0}
               className="size-6 cursor-pointer rounded-full flex items-center justify-center bg-gray-12 hover:bg-gray-11 text-gray-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
-              aria-label="Diminuir quantidade"
+              aria-label={t("counterDecrease")}
             >
               <Minus className="size-4" />
             </button>
@@ -739,7 +741,7 @@ const TicketItemDesktop = memo(({
               onClick={() => onIncrease(ticket.id)}
               disabled={isAtMax}
               className="size-6 cursor-pointer rounded-full flex items-center justify-center bg-gray-12 hover:bg-gray-11 text-gray-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
-              aria-label="Aumentar quantidade"
+              aria-label={t("counterIncrease")}
             >
               <Plus className="size-4" />
             </button>
@@ -783,7 +785,7 @@ const TicketItemDesktop = memo(({
                   <button
                     onClick={handlePreviousImage}
                     className="w-[18px] h-4 flex items-center justify-center shrink-0 cursor-pointer hover:opacity-70 transition-opacity"
-                    aria-label="Imagem anterior"
+                    aria-label={t("previousImage")}
                   >
                     <ArrowButton isOpen={false} className="-rotate-90" />
                   </button>
@@ -810,7 +812,7 @@ const TicketItemDesktop = memo(({
                   <button
                     onClick={handleNextImage}
                     className="w-[18px] h-4 flex items-center justify-center shrink-0 cursor-pointer hover:opacity-70 transition-opacity"
-                    aria-label="Próxima imagem"
+                    aria-label={t("nextImage")}
                   >
                     <ArrowButton isOpen={true} />
                   </button>
@@ -859,15 +861,14 @@ const TicketItemDesktop = memo(({
                 {showAgeLimit ? (
                   <div className="shrink-0 bg-yellow-3 text-yellow-12 rounded-full px-3 py-1 max-w-full">
                     <p className="text-xs font-medium font-family-dm-sans whitespace-nowrap">
-                      Limite de idade: {ageLimitText}
+                      {t("ageLimitLabel", { range: ageLimitText ?? "" })}
                     </p>
                   </div>
                 ) : null}
                 {/* "Restam apenas N vagas" na MESMA linha, empurrado pra DIREITA. */}
                 {showLowStock ? (
                   <p className="ml-auto shrink-0 text-xs font-medium text-red-11 whitespace-nowrap">
-                    Restam apenas {ticket.availableQuantity}{" "}
-                    {ticket.availableQuantity === 1 ? "vaga" : "vagas"}!
+                    {t(ticket.availableQuantity === 1 ? "spotsLeftOne" : "spotsLeftOther", { n: ticket.availableQuantity ?? 0 })}
                   </p>
                 ) : null}
               </div>
@@ -952,6 +953,7 @@ export function TicketCategoryCard({
   autoCoupons,
 }: TicketCategoryCardProps) {
   const kitSelectionDisplay = kitSelectionDisplayProp ?? defaultEventKitSelectionDisplay();
+  const t = useT("checkout");
   const [isExpanded, setIsExpanded] = useState(expandedByDefault ?? index === 0);
   const { raceQuantities, updateRaceQuantity } = useCheckout();
   const hidePricing = useHidePricing();
@@ -1133,7 +1135,7 @@ export function TicketCategoryCard({
                 </h1>
                 {!expanded && !hidePricing ? (
                   <div className="flex flex-wrap items-center gap-1 text-base">
-                    <p className="text-gray-11 font-family-dm-sans leading-[1.3]">A partir de:</p>
+                    <p className="text-gray-11 font-family-dm-sans leading-[1.3]">{t("startingFrom")}</p>
                     <span className="text-gray-12 font-bold font-manrope">
                       {formatDisplayPrice(minPriceBreakdown)}
                     </span>
@@ -1220,7 +1222,7 @@ export function TicketCategoryCard({
                 </h1>
                 {!expanded && !hidePricing ? (
                   <div className="flex items-center gap-1 text-base">
-                    <p className="text-gray-11 font-family-dm-sans leading-[1.3]">A partir de:</p>
+                    <p className="text-gray-11 font-family-dm-sans leading-[1.3]">{t("startingFrom")}</p>
                     <span className="text-gray-12 font-bold font-manrope leading-[1.1]">
                       {formatDisplayPrice(minPriceBreakdown)}
                     </span>

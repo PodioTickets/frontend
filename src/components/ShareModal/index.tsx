@@ -10,6 +10,7 @@ import { CopyIcon } from "../Icons/CopyIcon";
 import { TelegramIcon } from "../Icons/TelegramIcon";
 import { InstagramIcon } from "../Icons/InstagramIcon";
 import { WhatsappIcon } from "../Icons/WhatsappIcon";
+import { useT } from "@/i18n/client";
 
 interface ShareModalProps {
   isOpen: boolean;
@@ -24,6 +25,7 @@ export function ShareModal({
   eventName,
   eventUrl,
 }: ShareModalProps) {
+  const t = useT("event");
   const [fullUrl, setFullUrl] = useState('');
 
   useEffect(() => {
@@ -37,9 +39,9 @@ export function ShareModal({
   const handleCopyLink = async () => {
     try {
       await navigator.clipboard.writeText(fullUrl);
-      toast.success("Link copiado para a área de transferência!");
+      toast.success(t("linkCopied"));
     } catch (error) {
-      toast.error("Erro ao copiar link");
+      toast.error(t("copyLinkError"));
     }
   };
 
@@ -106,7 +108,7 @@ export function ShareModal({
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between mb-6 border-b border-gray-6 pb-4 px-4">
-          <h2 className="text-xl font-bold text-gray-12">Compartilhar</h2>
+          <h2 className="text-xl font-bold text-gray-12">{t("share")}</h2>
           <button
             onClick={onClose}
             className="text-gray-12 hover:text-gray-11 transition-colors cursor-pointer"
