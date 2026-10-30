@@ -5,7 +5,7 @@ import { MoreVertical, Plus } from "lucide-react";
 import { cn } from "@/utils/cn";
 import { Input } from "@/components/Input";
 import { Tooltip } from "@/components/Tooltip";
-import { BookIcon } from "../Icons/BookIcon";
+import { InfoIcon } from "../Icons/InfoIcon";
 import { TrashIcon } from "../Icons/TrashIcon";
 import { sanitizeVariationTypeLabelInput } from "@/lib/productValidation";
 import type { ProductVariation } from "@/components/Product/CreateProductModal.types";
@@ -129,7 +129,7 @@ export function ProductVariations({
                     className="inline-flex cursor-help rounded text-gray-12 hover:text-gray-11 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-8"
                     aria-label="Informação: preço específico da variação"
                   >
-                    <BookIcon className="size-5 shrink-0" />
+                    <InfoIcon className="size-5 shrink-0" />
                   </button>
                 </Tooltip>
               </span>

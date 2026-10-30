@@ -26,7 +26,7 @@ import {
   type ImageUploadWithCropRef,
 } from "@/components/ImageUploadWithCrop";
 import { EVENT_IMAGE_SPECS } from "@/lib/eventImageSpecs";
-import { BookIcon } from "../Icons/BookIcon";
+import { InfoIcon } from "../Icons/InfoIcon";
 import { CalendarIcon } from "../Icons/CalendarIcon";
 import { LoadingAnimation } from "@/components/Loading";
 import { cn } from "@/utils/cn";
@@ -950,7 +950,7 @@ export function CreateProductModal() {
                             className="inline-flex cursor-help text-gray-11 hover:text-gray-12 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-8 rounded"
                             aria-label="Informação: produto incluso no ingresso"
                           >
-                            <BookIcon className="size-5 shrink-0" />
+                            <InfoIcon className="size-5 shrink-0" />
                           </button>
                         </Tooltip>
                       </div>
@@ -1046,7 +1046,7 @@ export function CreateProductModal() {
                               className="inline-flex cursor-help text-gray-11 hover:text-gray-12 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-8 rounded"
                               aria-label="Informação: produto obrigatório ou opcional"
                             >
-                              <BookIcon className="size-5 shrink-0" />
+                              <InfoIcon className="size-5 shrink-0" />
                             </button>
                           </Tooltip>
                         </div>

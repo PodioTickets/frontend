@@ -4,7 +4,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { X, Pencil } from "lucide-react";
 import { Button } from "@/components/Button";
 import { Tooltip } from "@/components/Tooltip";
-import { BookIcon } from "../Icons/BookIcon";
+import { InfoIcon } from "../Icons/InfoIcon";
 import type { MobileVariationDraft } from "@/components/Product/CreateProductModal.types";
 
 /**
@@ -165,7 +165,7 @@ export function ProductVariationMobileSheets({
                         Preço específico
                       </label>
                       <Tooltip content="Sobrescreve o preço base do produto pra essa variação.">
-                        <BookIcon className="size-5 text-gray-11" />
+                        <InfoIcon className="size-5 text-gray-11" />
                       </Tooltip>
                     </div>
                     <div className="flex h-12 items-center gap-2 rounded-lg border border-gray-6 px-3 py-4">
