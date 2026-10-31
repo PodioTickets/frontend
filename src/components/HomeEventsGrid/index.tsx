@@ -13,7 +13,7 @@ const MOBILE_MAX = 6;
 const hideOnMobile = (i: number) => (i >= MOBILE_MAX ? "hidden lg:block" : undefined);
 
 /**
- * "Todos os eventos" da home = os 10 PRIMEIROS do calendário (/search sem filtros):
+ * "Explore os eventos" da home = os 10 PRIMEIROS do calendário (/search sem filtros):
  * mesma busca, e o backend já pagina na ordem do calendário (destaques, próximos por
  * data, concluídos no fim). "Ver mais eventos" leva ao calendário.
  */
@@ -25,11 +25,11 @@ export function HomeEventsGrid() {
 
   return (
     <section className="flex w-full flex-col items-center gap-8">
-      <h2 className="font-manrope text-2xl font-extrabold leading-[1.1] text-gray-12 md:text-[28px]">
-        {t("allEvents")}
+      <h2 className="[text-box-trim:trim-both] [text-box-edge:cap_alphabetic] self-start font-family-dm-sans text-2xl font-semibold leading-[1.3] text-gray-12 md:text-[28px]">
+        {t("exploreEvents")}
       </h2>
 
-      <div className="grid w-full grid-cols-2 gap-x-4 gap-y-5 lg:grid-cols-5">
+      <div className="grid w-full grid-cols-2 gap-x-4 gap-y-6 lg:grid-cols-5">
         {isLoading
           ? Array.from({ length: HOME_EVENTS }).map((_, i) => (
               <div key={i} className={cn("aspect-1660/930 w-full animate-pulse rounded-[8px] bg-gray-5", hideOnMobile(i))} />

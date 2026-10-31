@@ -66,10 +66,11 @@ export interface ModalityOption {
   icon?: string;
 }
 
+// `id` = código do back (`MODALITY_CODE_TO_LABEL` / ModalityTemplate.code); código desconhecido não filtra nada.
 export const modalitiesColumns: ModalityOption[][] = [
   [
     {
-      id: "corrida-de-rua",
+      id: "corrida",
       label: "Corrida",
       icon: "/icons-3d/Icon3D-corrida-de-rua.webp",
     },

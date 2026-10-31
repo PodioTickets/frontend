@@ -10,6 +10,9 @@ export default {
   notFoundTitle: "Not Found",
   notFoundText: "Could not find requested resource: {path}",
   notFoundBack: "Return Home",
+  featuredEvents: "Eventos em destaque",
+  modalities: "Modalidades",
+  exploreEvents: "Explore os eventos",
   // Hero
   heroPrevBanner: "Banner anterior",
   heroNextBanner: "Próximo banner",

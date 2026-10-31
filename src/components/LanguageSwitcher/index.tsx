@@ -1,15 +1,14 @@
 "use client";
 import { Check, Globe } from "lucide-react";
 import { Dropdown } from "../Dropdown";
-import { ArrowButton } from "../ArrowButton";
-import { LOCALES, LOCALE_LABELS } from "@/i18n/config";
+import { LOCALES, LOCALE_LABELS, type Locale } from "@/i18n/config";
 import { useLocale, useSetLocale, useT } from "@/i18n/client";
 import { cn } from "@/utils/cn";
 
 /** Ocupa o lugar do ✓ nos idiomas não selecionados — mantém os nomes alinhados. */
 const NoIcon = ({ className }: { className?: string }) => <span className={className} />;
 
-/** Desktop: botão "🌐 PT" no header (mesma moldura do "Criar conta") com a lista de idiomas. */
+/** Desktop: botão só com o globo no header, com a lista de idiomas. */
 export function LanguageSwitcher() {
   const { locale } = useLocale();
   const setLocale = useSetLocale();
@@ -17,24 +16,28 @@ export function LanguageSwitcher() {
 
   return (
     <Dropdown
-      trigger={(isOpen) => (
-        <button
-          type="button"
-          aria-label={t("language")}
-          className="flex items-center gap-1.5 h-[44px] px-3 rounded-md border border-[#3A3A3A] text-[#EEEEEE] text-sm font-bold font-manrope hover:bg-[#3A3A3A]/10 transition-colors"
-        >
-          <Globe className="size-4" />
-          {LOCALE_LABELS[locale].short}
-          <ArrowButton isOpen={isOpen} className="ml-0.5" />
-        </button>
+      trigger={() => (
+        <div className="flex items-center h-full">
+          <button
+            type="button"
+            aria-label={t("language")}
+            className="flex items-center justify-center size-10 rounded-full text-[#EEEEEE] hover:bg-[#3A3A3A]/30 transition-colors"
+          >
+            <Globe className="size-5" />
+          </button>
+        </div>
       )}
       options={LOCALES.map((l) => ({
         id: l,
         label: LOCALE_LABELS[l].name,
         icon: l === locale ? Check : NoIcon,
-        onClick: () => l !== locale && setLocale(l),
       }))}
-      onSelect={(option) => option.onClick?.()}
+      // onSelect e não onClick na opção: o Dropdown chama o onClick 2x (item + handleSelect),
+      // e cada chamada é um router.refresh().
+      onSelect={(o) => o.id !== locale && setLocale(o.id as Locale)}
+      // Atributo próprio: com o padrão "dropdown" (o mesmo do perfil), o clicar-fora de um
+      // tratava o botão do outro como seu e os dois menus ficavam abertos, um sobre o outro.
+      dataAttribute="language"
       position="bottom"
       align="end"
       width="w-[180px]"

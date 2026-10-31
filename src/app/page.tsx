@@ -3,6 +3,7 @@ import { Suspense } from "react";
 import { HomeFilters } from "@/components/HomeFilters";
 import { HomeEventsGrid } from "@/components/HomeEventsGrid";
 import { HomeHero } from "@/components/HomeHero";
+import { HomeModalities } from "@/components/HomeModalities";
 import { Button } from "@/components/Button";
 import Link from "next/link";
 import { getT } from "@/i18n/server";
@@ -49,8 +50,8 @@ export async function generateMetadata(): Promise<Metadata> {
 export default async function Home() {
   const t = await getT("home");
   return (
-    <section className="flex flex-col min-h-screen w-full px-4 md:px-0 max-w-[1280px] mx-auto mb-12">
-      {/* Hero (Figma 6731:58998): faixa gray-3 full-bleed com a busca + banners em destaque. */}
+    <section className="flex flex-col min-h-screen w-full px-4 md:px-0 max-w-[1280px] mx-auto mb-12 md:mb-19">
+      {/* Hero (Figma 7498:67390): faixa gray-3 full-bleed com a busca + "Eventos em destaque". */}
       <div className="relative left-1/2 right-1/2 -mx-[50vw] w-screen bg-gray-3 border-b border-gray-6">
         <div className="mx-auto flex w-full max-w-[1280px] flex-col items-center gap-7 pb-6 pt-6 md:gap-[52px] md:pb-11 md:pt-9">
           {/* Mobile: card "Procure seu evento" (Figma 7397:65774) acima do carrossel; desktop: barra de filtros. */}
@@ -63,12 +64,15 @@ export default async function Home() {
         </div>
       </div>
 
-      {/* Todos os eventos (Figma 6731:59738): 2 linhas de 5 + "Ver mais eventos". */}
-      <div className="mt-8 md:mt-9">
+      {/* Modalidades (Figma 7498:67779) e Explore os eventos (7498:67420): 2 linhas de 5 + "Ver mais eventos". */}
+      <div className="mt-8 md:mt-12">
+        <HomeModalities />
+      </div>
+      <div className="mt-10 md:mt-11">
         <HomeEventsGrid />
       </div>
 
-      <div className="w-full mt-6 md:mt-14">
+      <div className="w-full mt-6 md:mt-17">
         <div className="md:bg-[url('/banners/banner_2.png')] bg-[url('/banners/banner_2_mobile.png')] md:bg-cover bg-cover md:bg-center bg-no-repeat w-full h-auto lg:h-[256px] rounded-lg p-5 md:p-10 flex flex-col justify-between">
           <div className="flex flex-col gap-2 md:gap-1">
             <h1 className="font-manrope text-base md:text-[28px] font-extrabold text-gray-1">

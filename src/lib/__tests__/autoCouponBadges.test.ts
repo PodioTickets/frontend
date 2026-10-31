@@ -45,6 +45,29 @@ describe("ticketAutoCouponBadges", () => {
     expect(b[1].shortText).toBe("Cupom por idade 20%");
   });
 
+  it("agrupa cupons do mesmo tipo num selo só, com todas as condições", () => {
+    const b = ticketAutoCouponBadges(
+      t,
+      [qc({ id: "q1", minQuantity: 2, maxQuantity: 3, value: 10 }), qc({ id: "q2", minQuantity: 4, value: 20 })],
+      [ac({ id: "a1", maxAge: 10 }), ac({ id: "a2", minAge: 60, maxAge: null })],
+    );
+    expect(b.map((x) => x.kind)).toEqual(["QUANTITY", "AGE"]);
+    expect(b[0].shortText).toBe("Cupom por quantidade");
+    expect(b[0].tinyText).toBe("Quantidade");
+    expect(b[0].fullTexts).toEqual([
+      "Compre de 2 a 3 ingressos e ganhe 10% de desconto!",
+      "Compre 4 ou mais ingressos e ganhe 20% de desconto!",
+    ]);
+    // Mesmo desconto (20% e 20%) → o selo mantém o valor.
+    expect(b[1].shortText).toBe("Cupom por idade 20%");
+    expect(b[1].fullTexts).toHaveLength(2);
+  });
+
+  it("um cupom por tipo não ganha fullTexts", () => {
+    const b = ticketAutoCouponBadges(t, [qc()], [ac()]);
+    expect(b.every((x) => x.fullTexts === undefined)).toBe(true);
+  });
+
   it("respeita appliesTo e o limite de idade do ingresso", () => {
     expect(full([qc({ appliesTo: JSON.stringify(["outro"]) })], [])).toEqual([]);
     expect(full([], [ac({ maxAge: 10 })], { id: "t1", ageLimit: { min: 16 } })).toEqual([]);

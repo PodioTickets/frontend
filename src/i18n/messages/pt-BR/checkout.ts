@@ -34,6 +34,10 @@ export default {
   couponQtyTiny: "Quantidade {d}",
   couponAgeShort: "Cupom por idade {d}",
   couponAgeTiny: "Idade {d}",
+  couponQtyGroupShort: "Cupom por quantidade",
+  couponQtyGroupTiny: "Quantidade",
+  couponAgeGroupShort: "Cupom por idade",
+  couponAgeGroupTiny: "Idade",
 
   // Navegação / etapas
   back: "Voltar",
