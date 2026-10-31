@@ -15,6 +15,8 @@ interface EventCardProps {
   preview?: boolean;
   /** Banner ORIGINAL, sem redimensionar/recomprimir no next/image (grid da home). */
   originalImage?: boolean;
+  /** Textos em 12px no mobile (grade da home). */
+  smallTextOnMobile?: boolean;
 }
 
 /**
@@ -22,7 +24,7 @@ interface EventCardProps {
  * evento (aspect 312/142, cantos arredondados). Card SEM borda/fundo/sombra:
  * banner arredondado → título → endereço (local, cidade, estado) → data por extenso.
  */
-export function EventCard({ event, preview = false, originalImage = false }: EventCardProps) {
+export function EventCard({ event, preview = false, originalImage = false, smallTextOnMobile = false }: EventCardProps) {
   const { intl } = useLocale();
   // Endereço completo: "Local, Cidade, Estado". `locationName` (escolhido no mapa)
   // pode faltar em eventos legados → cai pra "Cidade, Estado".
@@ -50,6 +52,7 @@ export function EventCard({ event, preview = false, originalImage = false }: Eve
         addressLabel={addressLabel}
         dateLabel={dateLabel}
         nativeImg={preview || originalImage}
+        smallTextOnMobile={smallTextOnMobile}
       />
     </div>
   );

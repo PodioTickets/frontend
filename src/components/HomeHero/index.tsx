@@ -50,7 +50,7 @@ export function HomeHero() {
 
   const withTitle = (content: ReactNode) => (
     <div className="flex w-full flex-col items-center gap-4 md:gap-6">
-      <h2 className="[text-box-trim:trim-both] [text-box-edge:cap_alphabetic] font-family-dm-sans text-2xl font-semibold leading-[1.3] text-gray-12 md:text-[28px]">
+      <h2 className="[text-box-trim:trim-both] [text-box-edge:cap_alphabetic] font-family-dm-sans text-base font-semibold leading-[1.3] text-gray-12 md:text-[28px]">
         {t("featuredEvents")}
       </h2>
       {content}
