@@ -20,7 +20,7 @@ import { useT } from "@/i18n/client";
 
 /** id da modalidade (`modalitiesColumns`) → chave do dicionário `home`. Sem chave = rótulo original. */
 export const MODALITY_LABEL_KEYS: Record<string, "modalityRunning" | "modalitySwimming" | "modalityTriathlon" | "modalityCycling" | "modalityOther"> = {
-  "corrida-de-rua": "modalityRunning",
+  corrida: "modalityRunning",
   natacao: "modalitySwimming",
   triathlon: "modalityTriathlon",
   ciclismo: "modalityCycling",

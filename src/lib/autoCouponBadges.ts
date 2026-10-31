@@ -33,6 +33,8 @@ export interface AutoCouponBadge {
   tinyText: string;
   /** Ex.: "Compre 3 ou mais ingressos e ganhe 20% de desconto!". */
   fullText: string;
+  /** Quando 2+ cupons do mesmo tipo são agrupados, cada condição individual. */
+  fullTexts?: string[];
 }
 
 function discountLabel(c: { type: "PERCENTAGE" | "FIXED"; value: number }): string {
@@ -95,5 +97,28 @@ export function ticketAutoCouponBadges(
     const fullText = ageFullText(c, d, t);
     if (fullText) out.push({ id: c.id, kind: "AGE", shortText: t("couponAgeShort", { d }), tinyText: t("couponAgeTiny", { d }), fullText });
   }
-  return out;
+
+  // Agrupa badges do mesmo tipo: 1 selo por kind, com todas as condições no tooltip.
+  const grouped = new Map<"QUANTITY" | "AGE", AutoCouponBadge[]>();
+  for (const b of out) {
+    let list = grouped.get(b.kind);
+    if (!list) { list = []; grouped.set(b.kind, list); }
+    list.push(b);
+  }
+  const merged: AutoCouponBadge[] = [];
+  for (const [kind, badges] of grouped) {
+    if (badges.length === 1) { merged.push(badges[0]); continue; }
+    const isQty = kind === "QUANTITY";
+    // Mesmo desconto em todos → o selo mantém o valor; senão, rótulo sem valor.
+    const sameDiscount = badges.every((b) => b.shortText === badges[0].shortText);
+    merged.push({
+      id: badges.map((b) => b.id).join("+"),
+      kind,
+      shortText: sameDiscount ? badges[0].shortText : isQty ? t("couponQtyGroupShort") : t("couponAgeGroupShort"),
+      tinyText: sameDiscount ? badges[0].tinyText : isQty ? t("couponQtyGroupTiny") : t("couponAgeGroupTiny"),
+      fullText: badges[0].fullText,
+      fullTexts: badges.map((b) => b.fullText),
+    });
+  }
+  return merged;
 }

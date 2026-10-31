@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { ImageWithInitialFallback } from "@/components/ImageWithInitialFallback";
@@ -48,9 +48,18 @@ export function HomeHero() {
   const touchX = useRef<number | null>(null);
   const t = useT("home");
 
+  const withTitle = (content: ReactNode) => (
+    <div className="flex w-full flex-col items-center gap-4 md:gap-6">
+      <h2 className="[text-box-trim:trim-both] [text-box-edge:cap_alphabetic] font-family-dm-sans text-2xl font-semibold leading-[1.3] text-gray-12 md:text-[28px]">
+        {t("featuredEvents")}
+      </h2>
+      {content}
+    </div>
+  );
+
   if (isLoading) {
     // Mesma caixa da hero pronta (área + espaço das bolinhas) → sem salto de layout.
-    return (
+    return withTitle(
       <div className="flex w-full flex-col items-center gap-5 md:gap-9">
         <div className="relative w-full aspect-[375/177] md:aspect-[1280/344]">
           <div className="absolute left-1/2 top-1/2 aspect-1660/930 w-[83.2%] -translate-x-1/2 -translate-y-1/2 animate-pulse rounded-[8px] bg-gray-5 md:w-[47.4%] md:rounded-xl" />
@@ -65,7 +74,7 @@ export function HomeHero() {
   const arrowClass =
     "hidden md:flex absolute top-1/2 -translate-y-1/2 z-40 size-12 items-center justify-center rounded-full bg-gray-2 border-[1.5px] border-gray-6 hover:bg-gray-3 transition-colors";
 
-  return (
+  return withTitle(
     // `overflow-x-clip`: no mobile os banners das pontas passam da borda da tela (Figma)
     // — corta sem gerar scroll horizontal (e sem virar contexto de rolagem, como `hidden`).
     <div className="flex w-full flex-col items-center gap-5 overflow-x-clip md:gap-9">

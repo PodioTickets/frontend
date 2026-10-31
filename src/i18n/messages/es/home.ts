@@ -11,6 +11,9 @@ export default {
   notFoundTitle: "Página no encontrada",
   notFoundText: "No encontramos la página que buscas: {path}",
   notFoundBack: "Volver al inicio",
+  featuredEvents: "Eventos destacados",
+  modalities: "Modalidades",
+  exploreEvents: "Explora los eventos",
   // Hero
   heroPrevBanner: "Banner anterior",
   heroNextBanner: "Siguiente banner",

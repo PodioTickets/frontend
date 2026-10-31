@@ -38,7 +38,8 @@ export function AutoCouponBadges({
   alwaysCompact?: boolean;
 }) {
   if (badges.length === 0) return null;
-  const compact = alwaysCompact || badges.length > 1;
+  // Selo agrupado (2+ cupons do mesmo tipo) precisa do tooltip mesmo sozinho.
+  const compact = alwaysCompact || badges.length > 1 || badges.some((b) => b.fullTexts);
 
   return (
     // Sem gap + `-mr-2` em todos menos o último: como no Figma, o selo seguinte cobre os 8px
@@ -75,7 +76,11 @@ export function AutoCouponBadges({
             className={cn("min-w-0 flex", overlapNext)}
             contentClassName="w-max max-w-[min(100vw-2rem,280px)] items-stretch gap-0"
             content={
-              <p className="text-sm font-normal font-family-dm-sans text-gray-12 text-left">{b.fullText}</p>
+              <div className="flex flex-col gap-1">
+                {(b.fullTexts ?? [b.fullText]).map((txt, j) => (
+                  <p key={j} className="text-sm font-normal font-family-dm-sans text-gray-12 text-left">{txt}</p>
+                ))}
+              </div>
             }
           >
             {pill}
