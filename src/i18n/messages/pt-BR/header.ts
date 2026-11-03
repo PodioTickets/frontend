@@ -3,7 +3,7 @@ export default {
   defaultUserName: "Usuário",
   profile: "Perfil e configurações",
   myTickets: "Meus ingressos",
-  logout: "Logout",
+  logout: "Sair",
   logoutMobile: "Sair",
   signUp: "Criar conta",
   signIn: "Entrar",

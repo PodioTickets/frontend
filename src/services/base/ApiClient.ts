@@ -6,6 +6,7 @@ import {
   SURFACE_HEADER,
   sessionHintCookieName,
 } from "@/lib/authSurface";
+import { currentLocale } from "@/i18n/serviceMessages";
 
 // Tipos base para respostas de API
 export interface ApiResponse<T = any> {
@@ -87,6 +88,9 @@ export class ApiClient {
         // Declara a SUPERFÍCIE (admin/organizer/client) → o backend escolhe o
         // cookie de sessão certo. Sessões isoladas: as 3 convivem no navegador.
         config.headers[SURFACE_HEADER] = getCurrentSurface();
+        // Idioma da página (painel = pt-BR) → o back devolve os erros traduzidos
+        // (AllExceptionsFilter). Header CORS-safelisted: sem preflight novo.
+        config.headers["Accept-Language"] = currentLocale();
 
         // Identidade de telemetria: o backend usa este header pra costurar a
         // jornada (page view anônimo ↔ checkout autenticado) nos registros de

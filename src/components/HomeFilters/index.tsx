@@ -14,6 +14,7 @@ import { useState, useCallback, useMemo, useEffect, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import type { DateRange } from "react-day-picker";
 import { useEventLocationFacets } from "@/hooks/useEventLocationFacets";
+import { useIpLocation } from "@/hooks/useIpLocation";
 import { LocationCascadePicker } from "@/components/LocationCascadePicker";
 import { MobileFiltersSheet, MODALITY_LABEL_KEYS } from "./MobileFiltersSheet";
 import { useQueryClient } from "@tanstack/react-query";
@@ -242,7 +243,20 @@ export function HomeFilters({
     return `${selectedCityApi}, ${stateName}`;
   }, [facets, selectedStateApi, selectedCityApi, t]);
 
-  // Resumo dos filtros ativos no card mobile (senão, o placeholder padrão).
+  // Card mobile sem filtro: "Perto de Curitiba, PR" pela cidade do IP (Figma 7549:73523).
+  // Só TEXTO — não vira filtro (escolha do usuário em 03/11). A request só sai no
+  // mobile (o desktop não mostra o card); cache de 30 min no hook.
+  const [isMobile] = useState(
+    () => typeof window !== "undefined" && window.matchMedia("(max-width: 767px)").matches,
+  );
+  const { data: ipLocation } = useIpLocation(isMobile);
+  const ipPlace = ipLocation?.city
+    ? ipLocation.country === "BR" && ipLocation.region
+      ? `${ipLocation.city}, ${ipLocation.region}`
+      : ipLocation.city
+    : null;
+
+  // Resumo dos filtros ativos no card mobile (senão, o local do IP ou o placeholder).
   const mobileSummary = useMemo(() => {
     const parts: string[] = [];
     if (locationSummary) parts.push(locationSummary);
@@ -253,9 +267,11 @@ export function HomeFilters({
       );
     }
     if (!isAllPrices) parts.push(formatPriceRange());
-    return parts.length ? parts.join(" · ") : t("mobileSummaryPlaceholder");
+    if (parts.length) return parts.join(" · ");
+    return ipPlace ? t("nearPlace", { place: ipPlace }) : t("mobileSummaryPlaceholder");
   }, [
     t,
+    ipPlace,
     locationSummary,
     selectedDateRange,
     selectedModalities,

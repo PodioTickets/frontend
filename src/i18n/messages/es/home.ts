@@ -46,6 +46,7 @@ export default {
   searchYourEvent: "Busca tu evento",
   openSearchFilters: "Abrir filtros de búsqueda",
   mobileSummaryPlaceholder: "Lugar - Fecha - Deporte",
+  nearPlace: "Cerca de {place}",
   searchFiltersLabel: "Filtros de búsqueda",
   filters: "Filtros",
   close: "Cerrar",

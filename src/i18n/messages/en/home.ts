@@ -46,6 +46,7 @@ export default {
   searchYourEvent: "Search for your event",
   openSearchFilters: "Open search filters",
   mobileSummaryPlaceholder: "Location - Date - Sport",
+  nearPlace: "Near {place}",
   searchFiltersLabel: "Search filters",
   filters: "Filters",
   close: "Close",

@@ -43,8 +43,10 @@ export function Header() {
     organizerPath.startsWith("/organizer") || isOrganizerShortSurfacePath(pathname);
   const isAdmin = adminPath.includes("/admin");
   // Home e /search já têm o card "Procure seu evento" no mobile — a barra do header
-  // sairia duplicada ali. Desktop mantém (é a única busca por texto).
-  const hideSearchOnMobile = pathname === "/" || pathname === "/search";
+  // sairia duplicada ali. Página de evento: sem busca no mobile (pedido do usuário).
+  // Desktop mantém (é a única busca por texto).
+  const hideSearchOnMobile =
+    pathname === "/" || pathname === "/search" || pathname.startsWith("/events/");
   const { push } = useRouter();
   const { isAuthenticated, user, logout } = useAuth();
   const { openModal } = useModalStore();
@@ -345,7 +347,7 @@ export function Header() {
               {/* Scrollable Content */}
               <div className="overflow-y-auto h-[calc(100vh-64px)] overscroll-contain [-webkit-overflow-scrolling:touch] [touch-action:pan-y]">
                 {/* Menu Items */}
-                <div className="bg-[#222] border-b border-[#3a3a3a] space-y-2 font-family-dm-sans">
+                <div className="bg-[#222] border-b border-[#3a3a3a] font-family-dm-sans">
                   {isAuthenticated && user ? (
                     <>
                       <button

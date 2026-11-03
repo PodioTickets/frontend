@@ -1,12 +1,18 @@
-import { cookies } from "next/headers";
-import { DEFAULT_LOCALE, isLocale, LOCALE_COOKIE, type Locale } from "./config";
+import { cookies, headers } from "next/headers";
+import { isLocale, LOCALE_COOKIE, type Locale } from "./config";
+import { localeFromRequest } from "./detectLocale";
 import { ptBR, type Messages, type Namespace } from "./messages/pt-BR";
 import { createTranslator, type Translator } from "./translate";
 
-/** Idioma do request (cookie do seletor); sem cookie/valor inválido → pt-BR. */
+/**
+ * Idioma do request: cookie do seletor (escolha explícita) → país do IP (`CF-IPCountry`,
+ * do Cloudflare) → `Accept-Language` → pt-BR. Ver `localeFromRequest`.
+ */
 export async function getLocale(): Promise<Locale> {
   const value = (await cookies()).get(LOCALE_COOKIE)?.value;
-  return isLocale(value) ? value : DEFAULT_LOCALE;
+  if (isLocale(value)) return value;
+  const h = await headers();
+  return localeFromRequest(h.get("cf-ipcountry"), h.get("accept-language"), h.get("user-agent"));
 }
 
 /** Import dinâmico: en/es só carregam no server quando alguém escolheu o idioma. */
