@@ -1,5 +1,4 @@
-import Cookies from "js-cookie";
-import { DEFAULT_LOCALE, isLocale, LOCALE_COOKIE, type Locale } from "./config";
+import { DEFAULT_LOCALE, isLocale, type Locale } from "./config";
 
 /**
  * Textos montados FORA do React (services de auth/usuário), onde não há `useT`.
@@ -33,8 +32,8 @@ const MESSAGES = {
   },
 } satisfies Record<string, Record<Locale, string>>;
 
-/** Idioma do cookie; no painel (organizer/admin) e no server → pt-BR, igual ao `I18nProvider`. */
-function currentLocale(): Locale {
+/** Idioma da página; no painel (organizer/admin) e no server → pt-BR, igual ao `I18nProvider`. */
+export function currentLocale(): Locale {
   if (typeof window === "undefined") return DEFAULT_LOCALE;
   const path = window.location.pathname;
   const isPanel =
@@ -42,7 +41,8 @@ function currentLocale(): Locale {
     path.startsWith("/admin") ||
     !!document.querySelector('meta[name="pt-app-surface"]');
   if (isPanel) return DEFAULT_LOCALE;
-  const value = Cookies.get(LOCALE_COOKIE);
+  // `<html lang>` = idioma resolvido no server (cookie OU IP/navegador — `getLocale`).
+  const value = document.documentElement.lang;
   return isLocale(value) ? value : DEFAULT_LOCALE;
 }
 

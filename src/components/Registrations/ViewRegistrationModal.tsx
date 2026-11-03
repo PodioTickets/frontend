@@ -517,11 +517,15 @@ export function ViewRegistrationModal() {
    * VERDADE é o backend: os endpoints de edição rejeitam não-admin (403). */
   const isAdmin = getCurrentSurface() === "admin";
 
-  /* Troca de ingresso (só admin): inscrição confirmada e ainda não trocada. O backend
-   * revalida (pedido pago, elegibilidade). Página inteira → fecha o modal antes. */
+  /* Troca de ingresso (só admin): inscrição confirmada, ainda não trocada e evento cuja
+   * data não passou (`eventDatePast` vem do servidor). O backend revalida (pedido pago,
+   * data, elegibilidade). Página inteira → fecha o modal antes. */
   const router = useRouter();
   const canSwapTicket =
-    isAdmin && currentRegistration?.status === "CONFIRMED" && !currentRegistration?.voidedAt;
+    isAdmin &&
+    currentRegistration?.status === "CONFIRMED" &&
+    !currentRegistration?.voidedAt &&
+    !currentRegistration?.eventDatePast;
   const openSwapTicket = () => {
     const id = currentRegistration?.id;
     if (!id) return;

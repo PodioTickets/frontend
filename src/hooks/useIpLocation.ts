@@ -3,8 +3,9 @@ import { geoService, type IpLocation } from "@/services";
 
 /**
  * Localização aproximada (cidade) do usuário pelo IP, resolvida no servidor
- * (`geoip-lite`, base local — sem terceiros). Usada só para CENTRALIZAR o mapa
- * de seleção de local ao CRIAR um evento; nunca fixa o pino.
+ * (`geoip-lite`, base local — sem terceiros). Usada para CENTRALIZAR o mapa
+ * de seleção de local ao CRIAR um evento (nunca fixa o pino) e no texto "Perto de
+ * <cidade>" do card de busca mobile (`HomeFilters`, só exibição).
  *
  * `enabled` liga a busca só quando faz sentido (fluxo de criação, sem local já
  * escolhido, mapa habilitado). Cache longo: o IP não muda dentro da sessão.

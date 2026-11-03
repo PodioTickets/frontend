@@ -950,7 +950,7 @@ export function CreateProductModal() {
                             className="inline-flex cursor-help text-gray-11 hover:text-gray-12 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-8 rounded"
                             aria-label="Informação: produto incluso no ingresso"
                           >
-                            <InfoIcon className="size-5 shrink-0" />
+                            <InfoIcon className="size-5 shrink-0 md:size-4" />
                           </button>
                         </Tooltip>
                       </div>
@@ -1046,7 +1046,7 @@ export function CreateProductModal() {
                               className="inline-flex cursor-help text-gray-11 hover:text-gray-12 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-8 rounded"
                               aria-label="Informação: produto obrigatório ou opcional"
                             >
-                              <InfoIcon className="size-5 shrink-0" />
+                              <InfoIcon className="size-5 shrink-0 md:size-4" />
                             </button>
                           </Tooltip>
                         </div>

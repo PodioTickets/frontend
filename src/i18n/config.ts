@@ -4,6 +4,7 @@
  *
  * A escolha vive num COOKIE (não na URL): as rotas e o proxy de hosts (organizer/admin)
  * ficam intactos, e o server lê o idioma no mesmo request (sem flash de PT → EN).
+ * Sem cookie, o idioma sai do país do IP / navegador (`detectLocale.ts`) — sem gravar cookie.
  * Contrapartida: o Google indexa só a versão pt-BR.
  */
 export const LOCALES = ["pt-BR", "en", "es"] as const;

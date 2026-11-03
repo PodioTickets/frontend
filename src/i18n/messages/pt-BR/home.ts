@@ -46,6 +46,7 @@ export default {
   searchYourEvent: "Procure seu evento",
   openSearchFilters: "Abrir filtros de busca",
   mobileSummaryPlaceholder: "Local - Data - Modalidade",
+  nearPlace: "Perto de {place}",
   searchFiltersLabel: "Filtros de busca",
   filters: "Filtros",
   close: "Fechar",

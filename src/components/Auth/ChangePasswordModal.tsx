@@ -77,9 +77,11 @@ export function ChangePasswordModal() {
         console.error("Error changing password:", error);
         const message: string = error?.message || t("changePasswordError");
 
-        if (message.toLowerCase().includes("igual")) {
+        // O back devolve a mensagem no idioma da página (pt/es "igual", en "same").
+        const lower = message.toLowerCase();
+        if (lower.includes("igual") || lower.includes("same")) {
           setErrors((prev) => ({ ...prev, newPassword: message }));
-        } else if (message.toLowerCase().includes("senha atual")) {
+        } else if (/senha atual|current password|contraseña actual/.test(lower)) {
           setErrors((prev) => ({ ...prev, currentPassword: message }));
         } else {
           toast.error(message);
