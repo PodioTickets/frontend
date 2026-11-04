@@ -31,7 +31,7 @@ export interface AutoCouponBadge {
   shortText: string;
   /** Ex.: "Quantidade 20%" — mobile com 2+ selos (os resumidos não cabem lado a lado). */
   tinyText: string;
-  /** Ex.: "Compre 3 ou mais ingressos e ganhe 20% de desconto!". */
+  /** Ex.: "Ganhe 20% de desconto por ingresso ao comprar 3 ou mais!". */
   fullText: string;
   /** Quando 2+ cupons do mesmo tipo são agrupados, cada condição individual. */
   fullTexts?: string[];

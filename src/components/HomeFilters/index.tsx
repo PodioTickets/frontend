@@ -245,10 +245,16 @@ export function HomeFilters({
 
   // Card mobile sem filtro: "Perto de Curitiba, PR" pela cidade do IP (Figma 7549:73523).
   // Só TEXTO — não vira filtro (escolha do usuário em 03/11). A request só sai no
-  // mobile (o desktop não mostra o card); cache de 30 min no hook.
-  const [isMobile] = useState(
-    () => typeof window !== "undefined" && window.matchMedia("(max-width: 767px)").matches,
-  );
+  // mobile (o desktop não mostra o card); cache de 30 min no hook. Acompanha a mudança
+  // de largura (girar o aparelho / modo celular do DevTools depois de carregar).
+  const [isMobile, setIsMobile] = useState(false);
+  useEffect(() => {
+    const mq = window.matchMedia("(max-width: 767px)");
+    const sync = () => setIsMobile(mq.matches);
+    sync();
+    mq.addEventListener("change", sync);
+    return () => mq.removeEventListener("change", sync);
+  }, []);
   const { data: ipLocation } = useIpLocation(isMobile);
   const ipPlace = ipLocation?.city
     ? ipLocation.country === "BR" && ipLocation.region

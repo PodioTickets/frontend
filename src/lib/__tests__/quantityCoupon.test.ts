@@ -1,6 +1,9 @@
 import { describe, it, expect } from "vitest";
 import {
+  combineQuantityCoupons,
   pickBestAutoCoupon,
+  quantityCouponForTicket,
+  selectQuantityCoupons,
   quantityCouponCandidates,
   quantityCouponCardPreview,
   type QuantityAutoCoupon,
@@ -23,7 +26,7 @@ const first = (coupons: QuantityAutoCoupon[], s: ReturnType<typeof sel>, subtota
 
 describe("quantityCouponCandidates", () => {
   it("dentro da faixa (bordas inclusivas) → aplica sobre o subtotal coberto", () => {
-    expect(first([qc()], sel(3), 300)).toEqual({ coupon: qc(), discount: 30 });
+    expect(first([qc()], sel(3), 300)).toMatchObject({ coupon: qc(), discount: 30, coveredTicketIds: [expect.any(String)] });
     expect(first([qc()], sel(5), 500)?.discount).toBe(50);
   });
 
@@ -64,6 +67,39 @@ describe("quantityCouponCandidates", () => {
   it("sem cupons / sem seleção → vazio", () => {
     expect(quantityCouponCandidates(undefined, sel(3), 300)).toEqual([]);
     expect(quantityCouponCandidates([qc()], [], 0)).toEqual([]);
+  });
+});
+
+describe("selectQuantityCoupons (só competem cupons do mesmo ingresso)", () => {
+  const cand = (id: string, discount: number, coveredTicketIds: string[], appliesTo: string | null = null) => ({
+    coupon: { id, type: "PERCENTAGE" as const, value: 10, appliesTo, minCartValue: null, minQuantity: null, maxQuantity: null, createdAt: "2026-01-01" },
+    discount,
+    coveredTicketIds,
+  });
+  const ids = (list: Array<{ coupon: { id: string } }>) => list.map((c) => c.coupon.id);
+
+  it("ingressos diferentes: valem juntos, maior desconto primeiro", () => {
+    expect(ids(selectQuantityCoupons([cand("a", 20, ["t1"]), cand("b", 60, ["t2"])]))).toEqual(["b", "a"]);
+  });
+
+  it("mesmo ingresso: vale só o que mais desconta", () => {
+    expect(ids(selectQuantityCoupons([cand("a", 20, ["t1"]), cand("b", 60, ["t1"])]))).toEqual(["b"]);
+  });
+
+  it("cobertura parcial: o maior tira os concorrentes dos ingressos dele", () => {
+    const list = [cand("x", 100, ["a", "b"]), cand("y", 60, ["a"]), cand("z", 60, ["b"])];
+    expect(ids(selectQuantityCoupons(list))).toEqual(["x"]);
+  });
+
+  it("combineQuantityCoupons soma os descontos; sem cupom é null", () => {
+    expect(combineQuantityCoupons(selectQuantityCoupons([cand("a", 20, ["t1"]), cand("b", 60, ["t2"])]))?.discount).toBe(80);
+    expect(combineQuantityCoupons([])).toBeNull();
+  });
+
+  it("quantityCouponForTicket: cada card usa o cupom do próprio ingresso", () => {
+    const list = [cand("a", 20, ["t1"], '["t1"]'), cand("b", 60, ["t2"], '["t2"]')];
+    expect(quantityCouponForTicket(list, "t2")?.id).toBe("b");
+    expect(quantityCouponForTicket(list, "t3")).toBeNull();
   });
 });
 

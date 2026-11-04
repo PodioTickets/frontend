@@ -26,9 +26,9 @@ export default {
   expiredBackToEvent: "Back to event",
 
   // autoCouponBadges
-  couponQtyFullMin: "Buy {min} or more tickets and get {d} off!",
-  couponQtyFullExact: "Buy {min} tickets and get {d} off!",
-  couponQtyFullRange: "Buy {min} to {max} tickets and get {d} off!",
+  couponQtyFullMin: "Get {d} off per ticket when you buy {min} or more!",
+  couponQtyFullExact: "Get {d} off per ticket when you buy {min}!",
+  couponQtyFullRange: "Get {d} off per ticket when you buy {min} to {max}!",
   couponAgeFullRange: "{d} off for ages {min} to {max}.",
   couponAgeFullMax: "{d} off for ages up to {max}.",
   couponAgeFullMin: "{d} off for ages {min} and up.",

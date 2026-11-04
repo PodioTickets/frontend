@@ -21,6 +21,13 @@ export interface QuantityAutoCoupon {
   createdAt: string | null;
 }
 
+/** Cupom que casou com a seleção. `coveredTicketIds` = ingressos selecionados que ele cobre. */
+export interface QuantityCouponCandidate {
+  coupon: QuantityAutoCoupon;
+  discount: number;
+  coveredTicketIds: string[];
+}
+
 export function parseAppliesToIds(appliesTo: string | null | undefined): string[] | null {
   if (!appliesTo || appliesTo === "all") return null;
   try {
@@ -43,8 +50,8 @@ export function quantityCouponCandidates(
   coupons: QuantityAutoCoupon[] | null | undefined,
   selected: Array<{ id: string; price: number; quantity: number }>,
   cartSubtotal: number,
-): Array<{ coupon: QuantityAutoCoupon; discount: number }> {
-  const out: Array<{ coupon: QuantityAutoCoupon; discount: number }> = [];
+): QuantityCouponCandidate[] {
+  const out: QuantityCouponCandidate[] = [];
   for (const coupon of coupons ?? []) {
     if (coupon.value <= 0) continue;
     const allowed = parseAppliesToIds(coupon.appliesTo);
@@ -64,7 +71,11 @@ export function quantityCouponCandidates(
       coupon.type === "PERCENTAGE"
         ? Math.floor(subtotalCents * (coupon.value / 100))
         : qty * coupon.value;
-    out.push({ coupon, discount: Math.min(discountCents, subtotalCents) / 100 });
+    out.push({
+      coupon,
+      discount: Math.min(discountCents, subtotalCents) / 100,
+      coveredTicketIds: covered.filter((t) => t.quantity > 0).map((t) => t.id),
+    });
   }
   return out;
 }
@@ -95,6 +106,51 @@ export function pickBestAutoCoupon<T extends { id: string; discount: number; cre
     if ((c.createdAt ?? "") < (best.createdAt ?? "")) best = c;
   }
   return best;
+}
+
+/**
+ * Cupons que valem JUNTOS — mesma regra do backend (`selectAutoCoupons`): só competem os que
+ * cobrem o mesmo ingresso. O melhor fica com os ingressos dele e o resto segue disputando
+ * os demais.
+ */
+export function selectQuantityCoupons(
+  candidates: QuantityCouponCandidate[],
+  currentCouponId?: string | null,
+): QuantityCouponCandidate[] {
+  const selected: QuantityCouponCandidate[] = [];
+  let rest = candidates;
+  for (;;) {
+    const best = pickBestAutoCoupon(
+      rest.map((c) => ({ id: c.coupon.id, discount: c.discount, createdAt: c.coupon.createdAt, candidate: c })),
+      currentCouponId,
+    );
+    if (!best) return selected;
+    selected.push(best.candidate);
+    const taken = new Set(best.candidate.coveredTicketIds);
+    rest = rest.filter((c) => !c.coveredTicketIds.some((id) => taken.has(id)));
+  }
+}
+
+/** Total e cupons da prévia; `coupon` = o principal (rótulo quando há um só). */
+export function combineQuantityCoupons(selected: QuantityCouponCandidate[]) {
+  if (selected.length === 0) return null;
+  return {
+    coupon: selected[0].coupon,
+    discount: selected.reduce((s, c) => s + c.discount, 0),
+    coupons: selected,
+  };
+}
+
+/** Cupom que risca o preço do card: o que cobre aquele ingresso. */
+export function quantityCouponForTicket(
+  selected: QuantityCouponCandidate[],
+  ticketId: string,
+): QuantityAutoCoupon | null {
+  const match = selected.find(({ coupon }) => {
+    const allowed = parseAppliesToIds(coupon.appliesTo);
+    return !allowed || allowed.includes(ticketId);
+  });
+  return match?.coupon ?? null;
 }
 
 /**

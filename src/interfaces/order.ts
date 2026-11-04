@@ -35,6 +35,11 @@ export interface OrderTicket {
   couponApplied?: boolean;
 }
 
+/** Cupom automático do pedido com a parte dele no desconto (centavos). */
+export interface OrderAutoCoupon extends OrderCoupon {
+  discount: number;
+}
+
 export interface OrderCoupon {
   id: string;
   code: string | null;
@@ -115,6 +120,8 @@ export interface OrderResponse {
   coupon?: OrderCoupon | null;
   /** Cupom automático (AGE/QUANTITY) acumulado com o cupom manual em `coupon`. */
   autoCoupon?: OrderCoupon | null;
+  /** Automáticos além do que está em `coupon`: uma linha por cupom no resumo. */
+  autoCoupons?: OrderAutoCoupon[] | null;
   voucher?: OrderVoucher | null;
   payment?: OrderPaymentInfo;
   registrations?: OrderRegistration[];

@@ -39,9 +39,12 @@ import { useCouponPreview } from "@/hooks/useCouponPreview";
 import { useAgeCouponEligibility } from "@/hooks/useAgeCouponEligibility";
 import { computeAgeCouponTicketDiscount, formatAgeCouponLineLabel } from "@/lib/ageCoupon";
 import {
+  combineQuantityCoupons,
   pickBestAutoCoupon,
   quantityCouponCandidates,
   quantityCouponCardPreview,
+  quantityCouponForTicket,
+  selectQuantityCoupons,
 } from "@/lib/quantityCoupon";
 import { useT } from "@/i18n/client";
 
@@ -368,6 +371,7 @@ export function ModalitiesStep({ event, onNext, onBack, isSubmitting = false, di
   // aplicado no pedido, senão o 1º criado — mesma regra do backend. O de quantidade
   // aparece assim que a seleção cai na faixa min/max. Voucher e cupom manual/link vêm
   // antes (escolha do usuário).
+  const quantityCandidates = quantityCouponCandidates(ageEligibility?.quantityCoupons, selectedTickets, totalPrice);
   const autoChoice =
     !useVoucher
       ? pickBestAutoCoupon(
@@ -375,14 +379,17 @@ export function ModalitiesStep({ event, onNext, onBack, isSubmitting = false, di
           ...(ageCoupon
             ? [{ id: ageCoupon.id, discount: ageDiscount, createdAt: ageCoupon.createdAt, quantity: null }]
             : []),
-          ...quantityCouponCandidates(ageEligibility?.quantityCoupons, selectedTickets, totalPrice).map(
+          ...quantityCandidates.map(
             (c) => ({ id: c.coupon.id, discount: c.discount, createdAt: c.coupon.createdAt, quantity: c }),
           ),
         ],
         orderCoupon?.id,
       )
       : null;
-  const quantityAuto = autoChoice?.quantity ?? null;
+  // Cupons de ingressos diferentes não competem: valem juntos, cada um no próprio ingresso.
+  const quantityAuto = autoChoice?.quantity
+    ? combineQuantityCoupons(selectQuantityCoupons(quantityCandidates, orderCoupon?.id))
+    : null;
 
   // Preview pros cards: desconta o preço de cada ingresso (strike-through) igual
   // ao cupom de link. Só quando `appliesTo: "all"` — pra um subconjunto de
@@ -400,9 +407,11 @@ export function ModalitiesStep({ event, onNext, onBack, isSubmitting = false, di
       : null;
   // Strike-through dos cards = o cupom automático ESCOLHIDO. O de quantidade risca assim
   // que "aplica" (seleção na faixa), só nos ingressos do `appliesTo`.
-  const autoCouponCardPreview: CouponPreviewResult | null = quantityAuto
-    ? quantityCouponCardPreview(quantityAuto.coupon)
-    : ageCouponPreview;
+  const autoCouponCardPreview = (ticketId: string): CouponPreviewResult | null => {
+    if (!quantityAuto) return ageCouponPreview;
+    const coupon = quantityCouponForTicket(quantityAuto.coupons, ticketId);
+    return coupon ? quantityCouponCardPreview(coupon) : null;
+  };
   // Selos dos cards: cupons automáticos do evento (voucher é exclusivo → sem selos).
   const autoCouponsForBadges: AutoCouponsForBadges =
     !useVoucher && ageEligibility
@@ -481,7 +490,7 @@ export function ModalitiesStep({ event, onNext, onBack, isSubmitting = false, di
   // "Cupom CÓDIGO (...)".
   const discountLineLabel = useVoucher
     ? formatVoucherLineLabel(voucherData?.code ?? orderVoucher?.code, t)
-    : stackedPreview
+    : stackedPreview || (quantityAuto && quantityAuto.coupons.length > 1)
       ? t("discounts")
     : quantityAuto
       ? formatAgeCouponLineLabel(quantityAuto.coupon, t)

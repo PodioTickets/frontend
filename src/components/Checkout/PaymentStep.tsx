@@ -51,6 +51,7 @@ import {
 } from "@/interfaces/order";
 
 import { useT } from "@/i18n/client";
+import { orderAutoCouponLines } from "@/lib/orderCouponDiscount";
 import type { Translator } from "@/i18n/translate";
 
 /** Código de erro do backend → chave do dicionário `checkout` (texto resolvido no render). */
@@ -819,8 +820,7 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
     : 0;
   // Cupom automático acumulado com o manual (linha própria; 0 sem acúmulo).
   const autoCouponDiscount = (currentOrder?.pricing.autoCouponDiscount ?? 0) / 100;
-  const autoCouponPercent =
-    currentOrder?.autoCoupon?.type === "PERCENTAGE" ? currentOrder.autoCoupon.value : undefined;
+  const autoCouponLines = orderAutoCouponLines(currentOrder?.autoCoupons, t);
 
   const voucherDiscount = currentOrder?.pricing.voucherDiscount
     ? currentOrder.pricing.voucherDiscount / 100
@@ -1774,8 +1774,7 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
               coupon={{
                 code: couponCode,
                 discount: couponDiscount,
-                autoDiscount: autoCouponDiscount,
-                autoPercent: autoCouponPercent,
+                autoLines: autoCouponLines,
                 name: appliedCouponName,
                 percent: couponPercent,
                 type: currentOrder?.coupon?.type ?? undefined,
@@ -2186,8 +2185,7 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
             coupon={{
               code: couponCode,
               discount: couponDiscount,
-              autoDiscount: autoCouponDiscount,
-              autoPercent: autoCouponPercent,
+              autoLines: autoCouponLines,
               name: appliedCouponName,
               percent: couponPercent,
               type: currentOrder?.coupon?.type ?? undefined,

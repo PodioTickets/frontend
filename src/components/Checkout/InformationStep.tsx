@@ -54,7 +54,7 @@ import {
 } from "@/utils/phone";
 import { motion, AnimatePresence } from "framer-motion";
 import { X } from "lucide-react";
-import { formatCouponLineLabel, formatVoucherLineLabel } from "@/lib/orderCouponDiscount";
+import { formatCouponLineLabel, formatVoucherLineLabel, orderAutoCouponLines } from "@/lib/orderCouponDiscount";
 import { useAuth } from "@/hooks/useAuth";
 import { useAgeCouponEligibility } from "@/hooks/useAgeCouponEligibility";
 import { isAgeWithinTicketLimit } from "@/lib/ageCoupon";
@@ -680,11 +680,11 @@ export function InformationStep({
       0;
     return cents / 100;
   }, [orderData, timerCurrentOrder, showCouponDiscount]);
-  // Cupom automático ACUMULADO com o manual (linha própria, acima do manual).
-  const autoCoupon = timerCurrentOrder?.autoCoupon ?? orderData?.autoCoupon ?? null;
+  // Cupons automáticos além do principal/manual (uma linha cada, acima do cupom).
+  const autoCouponLines = orderAutoCouponLines(timerCurrentOrder?.autoCoupons ?? orderData?.autoCoupons, tCheckout);
   const autoCouponDiscountAmount =
     ((orderData?.pricing?.autoCouponDiscount ?? timerCurrentOrder?.pricing?.autoCouponDiscount ?? 0) / 100);
-  const hasAutoCouponLine = !!autoCoupon && autoCouponDiscountAmount > 0;
+  const hasAutoCouponLine = autoCouponLines.length > 0;
 
   // Voucher aplicado na order (via `?voucher=` no /ingressos). Valor autoritativo
   // do `pricing.voucherDiscount` (centavos). Cupom e voucher são mutuamente
@@ -1991,12 +1991,12 @@ export function InformationStep({
                       <p className="font-semibold font-family-dm-sans">{formatPrice(totalPrice)}</p>
                     </div>
                   )}
-                  {!hidePricing && hasAutoCouponLine && (
-                    <div className="flex items-center justify-between w-full text-sm text-gray-12">
-                      <p className="font-semibold">{formatCouponLineLabel(autoCoupon!, tCheckout)}:</p>
-                      <p className="font-semibold font-family-dm-sans">- {formatPrice(autoCouponDiscountAmount)}</p>
+                  {!hidePricing && autoCouponLines.map((line) => (
+                    <div key={line.id} className="flex items-center justify-between w-full text-sm text-gray-12">
+                      <p className="font-semibold">{line.label}:</p>
+                      <p className="font-semibold font-family-dm-sans">- {formatPrice(line.amount)}</p>
                     </div>
-                  )}
+                  ))}
                   {!hidePricing && appliedCoupon && showCouponDiscount && couponDiscountAmount > 0 && (
                     <div className="flex items-center justify-between w-full text-sm text-gray-12">
                       <p className="font-semibold">{formatCouponLineLabel(appliedCoupon, tCheckout)}:</p>
@@ -2949,16 +2949,12 @@ export function InformationStep({
                       <p className="font-semibold">{t("subtotal")}</p>
                       <p className="font-bold">{formatPrice(totalPrice)}</p>
                     </div>
-                    {hasAutoCouponLine && (
-                      <div className="flex items-center justify-between text-base text-gray-12">
-                        <p className="font-semibold">
-                          {formatCouponLineLabel(autoCoupon!, tCheckout)}:
-                        </p>
-                        <p className="font-bold">
-                          -{formatPrice(autoCouponDiscountAmount)}
-                        </p>
+                    {autoCouponLines.map((line) => (
+                      <div key={line.id} className="flex items-center justify-between text-base text-gray-12">
+                        <p className="font-semibold">{line.label}:</p>
+                        <p className="font-bold">-{formatPrice(line.amount)}</p>
                       </div>
-                    )}
+                    ))}
                     {appliedCoupon && showCouponDiscount && couponDiscountAmount > 0 && (
                       <div className="flex items-center justify-between text-base text-gray-12">
                         <p className="font-semibold">
