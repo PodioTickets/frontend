@@ -24,9 +24,9 @@ export default {
   expiredBackToEvent: "Voltar para o evento",
 
   // autoCouponBadges ({d} = desconto já formatado: "20%" / "R$ 10,00")
-  couponQtyFullMin: "Compre {min} ou mais ingressos e ganhe {d} de desconto!",
-  couponQtyFullExact: "Compre {min} ingressos e ganhe {d} de desconto!",
-  couponQtyFullRange: "Compre de {min} a {max} ingressos e ganhe {d} de desconto!",
+  couponQtyFullMin: "Ganhe {d} de desconto por ingresso ao comprar {min} ou mais!",
+  couponQtyFullExact: "Ganhe {d} de desconto por ingresso ao comprar {min}!",
+  couponQtyFullRange: "Ganhe {d} de desconto por ingresso ao comprar de {min} a {max}!",
   couponAgeFullRange: "{d} de desconto para idades de {min} a {max} anos.",
   couponAgeFullMax: "{d} de desconto até {max} anos de idade.",
   couponAgeFullMin: "{d} de desconto a partir dos {min} anos de idade.",

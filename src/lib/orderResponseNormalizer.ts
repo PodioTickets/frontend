@@ -67,6 +67,7 @@ export function toOrderResponse(data: any): OrderResponse {
     },
     coupon: data.coupon ?? null,
     autoCoupon: data.autoCoupon ?? null,
+    autoCoupons: data.autoCoupons ?? null,
     voucher: data.voucher ?? null,
     payment: data.payment,
     registrations: data.registrations,

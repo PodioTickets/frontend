@@ -109,7 +109,8 @@ interface TicketCategoryCardProps {
   userAge?: number | null;
   /** Preview de cupom injetado (ex.: cupom automático de idade) quando não há
    *  cupom de link na URL — desconta os preços dos cards igual ao cupom de link. */
-  couponPreviewOverride?: CouponPreviewResult | null;
+  /** Por ingresso: cupons automáticos diferentes podem cobrir ingressos do mesmo card. */
+  couponPreviewOverride?: (ticketId: string) => CouponPreviewResult | null;
   /** Id do ingresso "vencedor" do voucher (maior valor entre os elegíveis) —
    *  o único card que o voucher zera. Calculado no step (lista global). */
   voucherFreeTicketId?: string | null;
@@ -962,7 +963,7 @@ export function TicketCategoryCard({
   const pendingCoupon = usePendingCouponSnapshot();
   const { data: couponPreview } = useCouponPreview(event?.id, pendingCoupon);
   // Cupom de link (URL) tem prioridade; senão usa o override injetado (idade).
-  const effectivePreview = couponPreview ?? couponPreviewOverride ?? null;
+  const previewFor = (ticketId: string) => couponPreview ?? couponPreviewOverride?.(ticketId) ?? null;
 
   const totalQuantity = useMemo(
     () => Object.values(raceQuantities).reduce((s, q) => s + q, 0),
@@ -990,12 +991,12 @@ export function TicketCategoryCard({
     for (const t of validTickets) {
       dMin = Math.min(
         dMin,
-        resolvePreviewPrice(getTicketPrice(t), t.id, effectivePreview, raceQuantities[t.id] || 0, voucherFreeTicketId, couponConditionsMet).discounted,
+        resolvePreviewPrice(getTicketPrice(t), t.id, previewFor(t.id), raceQuantities[t.id] || 0, voucherFreeTicketId, couponConditionsMet).discounted,
       );
     }
     const discounted = dMin === Infinity ? minPrice : dMin;
     return { discounted, original: minPrice, hasDiscount: discounted < minPrice };
-  }, [validTickets, minPrice, effectivePreview, raceQuantities, voucherFreeTicketId, couponConditionsMet]);
+  }, [validTickets, minPrice, couponPreview, couponPreviewOverride, raceQuantities, voucherFreeTicketId, couponConditionsMet]);
 
   const showCategoryLevelKit =
     !!categoryId &&
@@ -1073,7 +1074,7 @@ export function TicketCategoryCard({
               onIncrease={handleIncrease}
               kitSelectionDisplay={kitSelectionDisplay}
               showProductImages={showTicketLevelImages}
-              couponPreview={effectivePreview}
+              couponPreview={previewFor(ticket.id)}
               userAge={userAge}
               voucherFreeTicketId={voucherFreeTicketId}
               couponConditionsMet={couponConditionsMet}
@@ -1093,7 +1094,7 @@ export function TicketCategoryCard({
               onIncrease={handleIncrease}
               kitSelectionDisplay={kitSelectionDisplay}
               showProductImages={showTicketLevelImages}
-              couponPreview={effectivePreview}
+              couponPreview={previewFor(ticket.id)}
               userAge={userAge}
               voucherFreeTicketId={voucherFreeTicketId}
               couponConditionsMet={couponConditionsMet}
@@ -1181,7 +1182,7 @@ export function TicketCategoryCard({
                     onIncrease={handleIncrease}
                     kitSelectionDisplay={kitSelectionDisplay}
                     showProductImages={showTicketLevelImages}
-                    couponPreview={effectivePreview}
+                    couponPreview={previewFor(ticket.id)}
                     userAge={userAge}
                     voucherFreeTicketId={voucherFreeTicketId}
                     couponConditionsMet={couponConditionsMet}
@@ -1268,7 +1269,7 @@ export function TicketCategoryCard({
                     onIncrease={handleIncrease}
                     kitSelectionDisplay={kitSelectionDisplay}
                     showProductImages={showTicketLevelImages}
-                    couponPreview={effectivePreview}
+                    couponPreview={previewFor(ticket.id)}
                     userAge={userAge}
                     voucherFreeTicketId={voucherFreeTicketId}
                     couponConditionsMet={couponConditionsMet}

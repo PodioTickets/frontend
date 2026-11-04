@@ -1,4 +1,4 @@
-import type { OrderCoupon } from "@/interfaces/order";
+import type { OrderAutoCoupon, OrderCoupon } from "@/interfaces/order";
 import { ptBR } from "@/i18n/messages/pt-BR";
 import { createTranslator, type Translator } from "@/i18n/translate";
 
@@ -97,6 +97,16 @@ export function formatCouponLineLabel(
     return `${base} (${coupon.value}% OFF)`;
   }
   return base;
+}
+
+/** Uma linha por cupom automático do pedido, em REAIS. */
+export function orderAutoCouponLines(
+  coupons: OrderAutoCoupon[] | null | undefined,
+  t: Translator<"checkout"> = ptT,
+): Array<{ id: string; label: string; amount: number }> {
+  return (coupons ?? [])
+    .filter((c) => c.discount > 0)
+    .map((c) => ({ id: c.id, label: formatCouponLineLabel(c, t), amount: c.discount / 100 }));
 }
 
 /**

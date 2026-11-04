@@ -24,7 +24,6 @@ import { ImageWithInitialFallback } from "@/components/ImageWithInitialFallback"
 import { withAdminPathPrefix } from "@/lib/adminPathPresentation";
 import { useAdminAppSurface } from "@/contexts/AdminAppSurfaceContext";
 import { YoutubeIcon } from "../Icons/YoutubeIcon";
-import { cn } from "@/utils/cn";
 import { useLocale, useT } from "@/i18n/client";
 import { LanguageSegmented, LanguageSwitcher } from "../LanguageSwitcher";
 
@@ -42,11 +41,6 @@ export function Header() {
   const isOrganizer =
     organizerPath.startsWith("/organizer") || isOrganizerShortSurfacePath(pathname);
   const isAdmin = adminPath.includes("/admin");
-  // Home e /search já têm o card "Procure seu evento" no mobile — a barra do header
-  // sairia duplicada ali. Página de evento: sem busca no mobile (pedido do usuário).
-  // Desktop mantém (é a única busca por texto).
-  const hideSearchOnMobile =
-    pathname === "/" || pathname === "/search" || pathname.startsWith("/events/");
   const { push } = useRouter();
   const { isAuthenticated, user, logout } = useAuth();
   const { openModal } = useModalStore();
@@ -162,7 +156,8 @@ export function Header() {
               </div>
             </Link>
           </div>
-          <div className={cn("flex w-full max-w-[560px] px-4 md:px-0", hideSearchOnMobile && "hidden md:flex")}>
+          {/* Busca só no desktop: no mobile fica o card "Procure seu evento" (home e /search). */}
+          <div className="hidden md:flex w-full max-w-[560px]">
             <SearchBar
               search={search}
               setSearch={setSearch}

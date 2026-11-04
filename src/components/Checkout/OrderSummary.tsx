@@ -61,9 +61,8 @@ export interface OrderSummaryCoupon {
   type?: "PERCENTAGE" | "FIXED";
   couponType?: "DISCOUNT" | "QUANTITY" | "AGE";
   fixedValue?: number;
-  /** Cupom automático ACUMULADO com o manual (linha própria acima do manual). */
-  autoDiscount?: number;
-  autoPercent?: number;
+  /** Cupons automáticos além do principal/manual (uma linha cada, acima do cupom). */
+  autoLines?: Array<{ id: string; label: string; amount: number }>;
   error?: string | null;
   isApplied?: boolean;
   isLoading?: boolean;
@@ -117,8 +116,7 @@ export function OrderSummary({
     type: couponValueType,
     couponType,
     fixedValue: couponFixedValue,
-    autoDiscount: autoCouponDiscount = 0,
-    autoPercent: autoCouponPercent,
+    autoLines: autoCouponLines = [],
     error: couponError = null,
     isApplied: isCouponApplied = false,
     isLoading: isCouponLoading = false,
@@ -236,19 +234,13 @@ export function OrderSummary({
             <p className="font-manrope font-semibold md:font-bold">{formatPrice(subtotal)}</p>
           </div>
 
-          {/* Cupom automático acumulado com o manual */}
-          {autoCouponDiscount > 0 && (
-            <div className="flex items-center justify-between text-sm text-gray-12">
-              <p className="font-manrope font-medium md:font-semibold">
-                {t("couponAutomatic")}
-                {autoCouponPercent != null && autoCouponPercent > 0 ? ` (${autoCouponPercent}% OFF)` : ""}
-                :
-              </p>
-              <p className="font-manrope font-semibold md:font-bold">
-                -{formatPrice(autoCouponDiscount)}
-              </p>
+          {/* Cupons automáticos além do principal/manual */}
+          {autoCouponLines.map((line) => (
+            <div key={line.id} className="flex items-center justify-between text-sm text-gray-12">
+              <p className="font-manrope font-medium md:font-semibold">{line.label}:</p>
+              <p className="font-manrope font-semibold md:font-bold">-{formatPrice(line.amount)}</p>
             </div>
-          )}
+          ))}
 
           {/* Cupom aplicado */}
           {isCouponApplied && couponDiscount > 0 && (

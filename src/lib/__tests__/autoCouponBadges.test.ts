@@ -28,8 +28,12 @@ const full = (q: QuantityAutoCoupon[], a: AgeDisplayCoupon[], ticket = t) =>
 
 describe("ticketAutoCouponBadges", () => {
   it("textos de quantidade (com e sem máximo)", () => {
-    expect(full([qc()], [])).toEqual(["Compre 3 ou mais ingressos e ganhe 20% de desconto!"]);
-    expect(full([qc({ maxQuantity: 5 })], [])).toEqual(["Compre de 3 a 5 ingressos e ganhe 20% de desconto!"]);
+    expect(full([qc()], [])).toEqual(["Ganhe 20% de desconto por ingresso ao comprar 3 ou mais!"]);
+    expect(full([qc({ maxQuantity: 5 })], [])).toEqual(["Ganhe 20% de desconto por ingresso ao comprar de 3 a 5!"]);
+    expect(full([qc({ maxQuantity: 3 })], [])).toEqual(["Ganhe 20% de desconto por ingresso ao comprar 3!"]);
+    expect(full([qc({ type: "FIXED", value: 2000, minQuantity: 2 })], [])[0]).toMatch(
+      /^Ganhe R\$\s20,00 de desconto por ingresso ao comprar 2 ou mais!$/,
+    );
   });
 
   it("textos de idade (até, faixa, a partir de)", () => {
@@ -55,8 +59,8 @@ describe("ticketAutoCouponBadges", () => {
     expect(b[0].shortText).toBe("Cupom por quantidade");
     expect(b[0].tinyText).toBe("Quantidade");
     expect(b[0].fullTexts).toEqual([
-      "Compre de 2 a 3 ingressos e ganhe 10% de desconto!",
-      "Compre 4 ou mais ingressos e ganhe 20% de desconto!",
+      "Ganhe 10% de desconto por ingresso ao comprar de 2 a 3!",
+      "Ganhe 20% de desconto por ingresso ao comprar 4 ou mais!",
     ]);
     // Mesmo desconto (20% e 20%) → o selo mantém o valor.
     expect(b[1].shortText).toBe("Cupom por idade 20%");

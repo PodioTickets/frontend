@@ -15,6 +15,7 @@ import {
   computeCouponDiscount,
   formatCouponLineLabel,
   formatVoucherLineLabel,
+  orderAutoCouponLines,
 } from "@/lib/orderCouponDiscount";
 import type { Ticket } from "@/hooks/useTickets";
 import { isSemInteresseVariation } from "@/utils/semInteresseVariation";
@@ -909,6 +910,9 @@ export function SubscriptionStep({
       ? (serverPricing!.couponDiscount ?? 0) / 100
       : couponBreakdown.totalDiscount;
   const hasCouponLine = !!appliedCoupon && showCouponDiscount && couponDiscountAmount > 0;
+  // Cupons automáticos além do principal/manual (uma linha cada, acima do cupom).
+  const autoCouponLines = orderAutoCouponLines(timerCurrentOrder?.autoCoupons ?? orderData?.autoCoupons, tCheckout);
+  const autoCouponDiscountAmount = autoCouponLines.reduce((s, line) => s + line.amount, 0);
 
   const voucherDiscountAmount = useServerPricing
     ? (serverPricing!.voucherDiscount ?? 0) / 100
@@ -921,9 +925,9 @@ export function SubscriptionStep({
     () =>
       Math.max(
         0,
-        totalPrice + totalProductsPrice - couponDiscountAmount - voucherDiscountAmount,
+        totalPrice + totalProductsPrice - couponDiscountAmount - autoCouponDiscountAmount - voucherDiscountAmount,
       ),
-    [totalPrice, totalProductsPrice, couponDiscountAmount, voucherDiscountAmount],
+    [totalPrice, totalProductsPrice, couponDiscountAmount, autoCouponDiscountAmount, voucherDiscountAmount],
   );
 
   // Taxa e total: no caminho SERVER vêm direto da order; no FALLBACK, recomputa.
@@ -1381,7 +1385,9 @@ export function SubscriptionStep({
         subtotal={totalPrice + totalProductsPrice}
         discount={
           hasCouponLine
-            ? { label: formatCouponLineLabel(appliedCoupon!, tCheckout), amount: couponDiscountAmount }
+            ? autoCouponLines.length > 0
+              ? { label: t("discounts"), amount: couponDiscountAmount + autoCouponDiscountAmount }
+              : { label: formatCouponLineLabel(appliedCoupon!, tCheckout), amount: couponDiscountAmount }
             : hasVoucherLine
               ? { label: formatVoucherLineLabel(appliedVoucher!.code, tCheckout), amount: voucherDiscountAmount }
               : null
@@ -1614,6 +1620,14 @@ export function SubscriptionStep({
                 </p>
               </div>
               )}
+              {!hidePricing && autoCouponLines.map((line) => (
+                <div key={line.id} className="flex flex-col gap-2 mt-2">
+                  <p className="text-sm font-medium text-gray-12 flex items-center justify-between">
+                    {line.label}:
+                    <span className="text-gray-12">-{formatPrice(line.amount)}</span>
+                  </p>
+                </div>
+              ))}
               {!hidePricing && hasCouponLine && (
                 <div className="flex flex-col gap-2 mt-2">
                   <p className="text-sm font-medium text-gray-12 flex items-center justify-between">

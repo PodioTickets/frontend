@@ -17,7 +17,12 @@ import { useCouponPreview } from "@/hooks/useCouponPreview";
 import { useAgeCouponEligibility } from "@/hooks/useAgeCouponEligibility";
 import { useAuth } from "@/hooks/useAuth";
 import { computeAgeCouponTicketDiscount, formatAgeCouponLineLabel } from "@/lib/ageCoupon";
-import { pickBestAutoCoupon, quantityCouponCandidates } from "@/lib/quantityCoupon";
+import {
+  combineQuantityCoupons,
+  pickBestAutoCoupon,
+  quantityCouponCandidates,
+  selectQuantityCoupons,
+} from "@/lib/quantityCoupon";
 import type { OrderCoupon, OrderVoucher } from "@/interfaces/order";
 import {
   computeLinkCouponTicketDiscount,
@@ -301,18 +306,21 @@ export function EventInfo({ event, onNext, isSubmitting = false, tickets = [], c
       const quantity = raceQuantities[ticket.id] || 0;
       if (quantity > 0) selected.push({ id: ticket.id, price: getTicketPrice(ticket), quantity });
     });
+    const candidates = quantityCouponCandidates(ageEligibility?.quantityCoupons, selected, totalPrice);
+    const currentCouponId = hasRealOrderCoupon ? appliedCoupon?.id : null;
     const choice = pickBestAutoCoupon(
       [
         ...(ageCoupon
           ? [{ id: ageCoupon.id, discount: ageDiscount, createdAt: ageCoupon.createdAt, quantity: null }]
           : []),
-        ...quantityCouponCandidates(ageEligibility?.quantityCoupons, selected, totalPrice).map(
+        ...candidates.map(
           (c) => ({ id: c.coupon.id, discount: c.discount, createdAt: c.coupon.createdAt, quantity: c }),
         ),
       ],
-      hasRealOrderCoupon ? appliedCoupon?.id : null,
+      currentCouponId,
     );
-    return choice?.quantity ?? null;
+    // Cupons de ingressos diferentes não competem: valem juntos, cada um no próprio ingresso.
+    return choice?.quantity ? combineQuantityCoupons(selectQuantityCoupons(candidates, currentCouponId)) : null;
   }, [useVoucher, ageCoupon, ageDiscount, ageEligibility, hasRealOrderCoupon, appliedCoupon, categorizedTickets, uncategorizedTickets, raceQuantities, totalPrice]);
 
   // Acúmulo automático + manual: o manual incide sobre o valor já descontado pelo
@@ -378,6 +386,11 @@ export function EventInfo({ event, onNext, isSubmitting = false, tickets = [], c
   );
   const serviceFee = pricing.serviceFee;
   const hasCouponLine = pricing.showCouponDiscount && pricing.couponDiscount > 0;
+  // Uma linha por cupom quando mais de um automático vale junto.
+  const quantityCouponLines =
+    hasCouponLine && !useVoucher && !stackedPreview && (quantityAuto?.coupons.length ?? 0) > 1
+      ? quantityAuto!.coupons
+      : [];
   // Label da linha de desconto: "Voucher CÓDIGO", "Cupom idade (X% OFF)" ou "Cupom CÓDIGO (...)".
   const discountLineLabel = useVoucher
     ? formatVoucherLineLabel(voucherData?.code ?? appliedVoucher?.code, t)
@@ -478,7 +491,14 @@ export function EventInfo({ event, onNext, isSubmitting = false, tickets = [], c
         {!hidePricing && groupedTickets.length > 0 && (
           <>
 
-            {hasCouponLine ? (
+            {quantityCouponLines.length > 0 ? (
+              quantityCouponLines.map(({ coupon, discount }) => (
+                <div key={coupon.id} className="mt-2 flex items-center justify-between w-full text-sm text-gray-12">
+                  <p className="font-semibold">{formatAgeCouponLineLabel(coupon, t)}:</p>
+                  <p className="font-bold">-{formatPrice(discount)}</p>
+                </div>
+              ))
+            ) : hasCouponLine ? (
               <div className="mt-2 flex items-center justify-between w-full text-sm text-gray-12">
                 <p className="font-semibold">{discountLineLabel}:</p>
                 <p className="font-bold">-{formatPrice(pricing.couponDiscount)}</p>
