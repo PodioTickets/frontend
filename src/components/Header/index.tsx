@@ -144,7 +144,16 @@ export function Header() {
         <div className="max-w-[1280px] h-full w-full flex items-center justify-between gap-2 md:gap-4 md:px-0">
           <div className="flex items-center gap-2 md:gap-8 h-full shrink-0">
             <Link href="/" className="flex items-center">
-              <div className="size-8 md:w-8 md:h-8 overflow-hidden relative shrink-0">
+              {/* Mobile: logo completa (sem busca no header, sobra espaço). Desktop: só o ícone. */}
+              <Image
+                src="/images/logo_horizontal.png"
+                alt="PódioTicket"
+                width={141}
+                height={24}
+                priority
+                className="md:hidden h-6 w-auto shrink-0"
+              />
+              <div className="hidden md:block size-8 overflow-hidden relative shrink-0">
                 <Image
                   src="/images/logo.png"
                   alt="PódioTicket"
