@@ -110,6 +110,25 @@ export function orderAutoCouponLines(
 }
 
 /**
+ * Cupons de 1 unidade do pedido, com a parte de cada um em CENTAVOS. O pedido pode ter vários
+ * cupons, cada um num ingresso: o selo do participante precisa do cupom daquela unidade.
+ */
+export function orderUnitCoupons(
+  unit: { unitDiscount?: number; productsDiscount?: number; autoCouponId?: string; autoCouponDiscount?: number } | undefined,
+  orderCoupon: OrderCoupon | null | undefined,
+  autoCoupons: OrderAutoCoupon[] | null | undefined,
+): Array<{ coupon: OrderCoupon; amount: number }> {
+  const total = (unit?.unitDiscount ?? 0) + (unit?.productsDiscount ?? 0);
+  const auto = autoCoupons?.find((c) => c.id === unit?.autoCouponId);
+  const autoAmount = auto ? Math.min(total, unit?.autoCouponDiscount ?? total) : 0;
+  const rest = total - autoAmount;
+  return [
+    ...(auto && autoAmount > 0 ? [{ coupon: auto, amount: autoAmount }] : []),
+    ...(orderCoupon && rest > 0 ? [{ coupon: orderCoupon, amount: rest }] : []),
+  ];
+}
+
+/**
  * Cálculo client-side do desconto efetivo de um cupom sobre tickets e produtos.
  *
  * O backend é a fonte da verdade do desconto final no `pricing.couponDiscount` —

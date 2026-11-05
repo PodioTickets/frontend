@@ -47,10 +47,19 @@ interface ParticipantData {
     /** Nacionalidade (PT-BR) — decide formatação do documento (CPF vs cru). */
     nationality?: string;
   };
-  couponCode?: string;
-  couponDiscount?: number;
+  /** Cupons que caíram neste ingresso (o pedido pode ter vários, um em cada ingresso). */
+  coupons?: ParticipantCoupon[];
   voucherCode?: string;
   voucherDiscount?: number;
+}
+
+export interface ParticipantCoupon {
+  id: string;
+  code: string | null;
+  couponType: "DISCOUNT" | "QUANTITY" | "AGE";
+  percent?: number;
+  /** Em reais. */
+  amount: number;
 }
 
 export interface OrderSummaryCoupon {
@@ -113,7 +122,6 @@ export function OrderSummary({
     discount: couponDiscount = 0,
     name: couponName,
     percent: couponPercent,
-    type: couponValueType,
     couponType,
     fixedValue: couponFixedValue,
     autoLines: autoCouponLines = [],
@@ -402,8 +410,7 @@ export function OrderSummary({
 
                   {/* Perfil + Badges */}
                   {(participantData.participant ||
-                    participantData.couponCode ||
-                    (isCouponApplied && participantData.couponDiscount) ||
+                    participantData.coupons ||
                     participantData.voucherCode) && (
                       <div className="border-b border-gray-6 flex flex-col gap-3 items-start pb-5 px-4 w-full">
                         {participantData.participant && (
@@ -474,28 +481,26 @@ export function OrderSummary({
                         )}
 
                         {/* Badge de Cupom */}
-                        {(participantData.couponCode || isCouponApplied) &&
-                          participantData.couponDiscount && (
-                            <div className="bg-yellow-4 flex items-center justify-between p-3 rounded-lg w-full">
-                              <div className="flex gap-1 items-center">
-                                <TicketIcon className="size-4 text-yellow-12" />
-                                <p className="font-family-dm-sans font-semibold text-sm leading-[1.3] text-yellow-12">
-                                  {couponType === "QUANTITY" ||
-                                    couponType === "AGE" ||
-                                    !participantData.couponCode
-                                    ? t("couponAutomatic")
-                                    : t("couponCodeBadge", { code: participantData.couponCode })}
-                                </p>
-                                <p className="font-family-dm-sans font-semibold text-sm leading-[1.3] text-yellow-12">
-                                  {couponValueType === "PERCENTAGE" &&
-                                    `(-${couponPercent}%)`}
-                                </p>
-                              </div>
-                              <p className="font-family-dm-sans font-semibold text-sm leading-[1.3] text-yellow-12 whitespace-nowrap">
-                                -{formatPrice(participantData.couponDiscount!)}
+                        {participantData.coupons?.map((c) => (
+                          <div key={c.id} className="bg-yellow-4 flex items-center justify-between p-3 rounded-lg w-full">
+                            <div className="flex gap-1 items-center">
+                              <TicketIcon className="size-4 text-yellow-12" />
+                              <p className="font-family-dm-sans font-semibold text-sm leading-[1.3] text-yellow-12">
+                                {c.couponType === "QUANTITY" || c.couponType === "AGE" || !c.code
+                                  ? t("couponAutomatic")
+                                  : t("couponCodeBadge", { code: c.code })}
                               </p>
+                              {c.percent != null && (
+                                <p className="font-family-dm-sans font-semibold text-sm leading-[1.3] text-yellow-12">
+                                  {`(-${c.percent}%)`}
+                                </p>
+                              )}
                             </div>
-                          )}
+                            <p className="font-family-dm-sans font-semibold text-sm leading-[1.3] text-yellow-12 whitespace-nowrap">
+                              -{formatPrice(c.amount)}
+                            </p>
+                          </div>
+                        ))}
 
                         {/* Badge de Voucher */}
                         {participantData.voucherCode &&

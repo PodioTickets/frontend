@@ -1,3 +1,4 @@
+import { orderUnitCoupons } from "../orderCouponDiscount";
 import { describe, it, expect } from "vitest";
 import type { OrderCoupon } from "@/interfaces/order";
 import {
@@ -448,5 +449,33 @@ describe("stackedManualDiscount (acúmulo sequencial)", () => {
     expect(stackedManualDiscount(55.6, 8.9, { type: "PERCENTAGE", value: 20 })).toBe(53.82);
     expect(stackedManualDiscount(30, 8.9, { type: "FIXED", value: 30 })).toBe(30);
     expect(stackedManualDiscount(55.6, 0, { type: "PERCENTAGE", value: 20 })).toBe(55.6);
+  });
+});
+
+describe("orderUnitCoupons", () => {
+  const main = { id: "main", code: null, couponType: "QUANTITY", type: "PERCENTAGE", value: 20 } as const;
+  const extra = { ...main, id: "extra", value: 30, discount: 3000 };
+
+  it("unidade do cupom extra mostra o extra, não o principal", () => {
+    const unit = { unitDiscount: 3000, autoCouponId: "extra", autoCouponDiscount: 3000 };
+    expect(orderUnitCoupons(unit, main, [extra])).toEqual([{ coupon: extra, amount: 3000 }]);
+  });
+
+  it("unidade sem automático marcado fica com o cupom do pedido", () => {
+    expect(orderUnitCoupons({ unitDiscount: 2000 }, main, [extra])).toEqual([{ coupon: main, amount: 2000 }]);
+  });
+
+  it("acúmulo: separa o automático do manual na mesma unidade", () => {
+    const manual = { ...main, id: "manual", couponType: "DISCOUNT", code: "PODIO10", value: 10 } as const;
+    const unit = { unitDiscount: 3700, autoCouponId: "extra", autoCouponDiscount: 3000 };
+    expect(orderUnitCoupons(unit, manual, [extra])).toEqual([
+      { coupon: extra, amount: 3000 },
+      { coupon: manual, amount: 700 },
+    ]);
+  });
+
+  it("sem desconto na unidade, nenhum cupom", () => {
+    expect(orderUnitCoupons({ unitDiscount: 0 }, main, [extra])).toEqual([]);
+    expect(orderUnitCoupons(undefined, main, null)).toEqual([]);
   });
 });

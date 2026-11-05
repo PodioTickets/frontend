@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { useThreeDS, ThreeDSError } from "@/hooks/useThreeDS";
-import { OrderSummary } from "./OrderSummary";
+import { OrderSummary, type ParticipantCoupon } from "./OrderSummary";
 import { ParticipantSummaryModal } from "./ParticipantSummaryModal";
 import {
   CheckoutAddressSection,
@@ -51,7 +51,7 @@ import {
 } from "@/interfaces/order";
 
 import { useT } from "@/i18n/client";
-import { orderAutoCouponLines } from "@/lib/orderCouponDiscount";
+import { orderAutoCouponLines, orderUnitCoupons } from "@/lib/orderCouponDiscount";
 import type { Translator } from "@/i18n/translate";
 
 /** Código de erro do backend → chave do dicionário `checkout` (texto resolvido no render). */
@@ -641,8 +641,7 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
         gender?: string;
         nationality?: string;
       };
-      couponCode?: string;
-      couponDiscount?: number;
+      coupons?: ParticipantCoupon[];
       voucherCode?: string;
       voucherDiscount?: number;
     }> = [];
@@ -667,7 +666,15 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
         // couponApplied vem do servidor por reserva; fallback para presença do cupom + desconto.
         const couponApplied = reservedTicket?.couponApplied ?? (!!orderCoupon && unitDiscount > 0);
 
-        const hasCoupon = !!orderCoupon && couponApplied && unitDiscount > 0;
+        const coupons = couponApplied
+          ? orderUnitCoupons(reservedTicket, orderCoupon, currentOrder?.autoCoupons).map(({ coupon, amount }) => ({
+            id: coupon.id,
+            code: coupon.code,
+            couponType: coupon.couponType,
+            percent: coupon.type === "PERCENTAGE" ? coupon.value : undefined,
+            amount: amount / 100,
+          }))
+          : [];
         const hasVoucher = !!orderVoucher && !orderCoupon && unitDiscount > 0;
 
         data.push({
@@ -685,8 +692,7 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
             nationality: participant.nationality,
           },
           additionalProducts: products.length > 0 ? products : undefined,
-          couponCode: hasCoupon ? (orderCoupon!.code ?? t("autoDiscount")) : undefined,
-          couponDiscount: hasCoupon ? unitDiscount / 100 : undefined,
+          coupons: coupons.length > 0 ? coupons : undefined,
           voucherCode: hasVoucher ? orderVoucher!.code : undefined,
           voucherDiscount: hasVoucher ? unitDiscount / 100 : undefined,
         });

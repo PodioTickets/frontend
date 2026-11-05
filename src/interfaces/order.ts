@@ -30,6 +30,10 @@ export interface OrderTicket {
   productsDiscount?: number;
   /** Parte do cupom automático em `unitDiscount` (acúmulo). */
   autoUnitDiscount?: number;
+  /** Cupom de `order.autoCoupons` que caiu nesta unidade; o resto do desconto é do `order.coupon`. */
+  autoCouponId?: string;
+  /** Parte desse cupom na unidade (ingresso + produtos). */
+  autoCouponDiscount?: number;
   finalUnitPrice?: number;
   finalTotalPrice?: number;
   couponApplied?: boolean;

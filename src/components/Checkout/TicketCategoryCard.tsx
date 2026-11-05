@@ -25,14 +25,13 @@ import type { CouponPreviewResult } from "@/lib/orderCouponDiscount";
 import { isAgeWithinTicketLimit } from "@/lib/ageCoupon";
 import { stepTicketQuantity, ticketQuantityCap } from "@/lib/ticketMinQuantity";
 import { TicketPickControl, useTicketPick } from "@/contexts/TicketPickContext";
-import { ticketAutoCouponBadges, type AgeDisplayCoupon } from "@/lib/autoCouponBadges";
-import type { QuantityAutoCoupon } from "@/lib/quantityCoupon";
-import { AutoCouponBadges } from "./AutoCouponBadges";
+import type { AutoCouponOffer } from "@/lib/autoCouponBadges";
+import { AutoCouponSeal } from "./AutoCouponBadges";
 import { useT } from "@/i18n/client";
 import type { Translator } from "@/i18n/translate";
 
-/** Cupons automáticos do evento para os selos dos cards (null/ausente = sem selos). */
-export type AutoCouponsForBadges = { quantity: QuantityAutoCoupon[]; age: AgeDisplayCoupon[] } | null;
+/** Selos de cupom automático por ingresso (null/ausente = sem selos). */
+export type AutoCouponsForBadges = Record<string, AutoCouponOffer> | null;
 
 /* Aplica preview de cupom (`?coupon=` na URL) ao preço base do ticket pra
  * exibir "R$ X (com desconto)  R$ Y (riscado)" nos cards. Backend é fonte
@@ -265,20 +264,17 @@ const TicketItemMobile = memo(({
 
   const hasDescription = !!ticket.description?.trim();
 
-  const couponBadges = useMemo(
-    () => (autoCoupons ? ticketAutoCouponBadges(ticket, autoCoupons.quantity, autoCoupons.age, t) : []),
-    [ticket, autoCoupons, t],
-  );
-  const showCouponBadges = !pick && !hidePricing && !isBatchSoldOut;
+  const couponOffer = !pick && !hidePricing && !isBatchSoldOut ? autoCoupons?.[ticket.id] : undefined;
 
   return (
     // Wrapper: card + descrição empilhados. A descrição fica FORA do card,
     // logo abaixo dele (respiro do `gap-2`), em vez de dentro junto ao título.
     // Com descrição, um respiro extra embaixo (`mb-2`) separa melhor do próximo
     // ticket — sem ele, a descrição encostaria no card seguinte (lista `gap-3`).
-    <div className={cn("flex flex-col gap-2", hasDescription && "mb-2")}>
+    // Selo fica 13px acima do card: respiro de 24px até o item de cima (Figma 7589:71877).
+    <div className={cn("flex flex-col gap-2", hasDescription && "mb-2", couponOffer && "mt-2 not-first:mt-3")}>
       <div className="relative bg-gray-2 border border-gray-6 rounded-xl p-4 flex flex-col gap-2 md:gap-6">
-        {showCouponBadges && <AutoCouponBadges badges={couponBadges} tooltipTrigger="click" alwaysCompact />}
+        {couponOffer && <AutoCouponSeal offer={couponOffer} tooltipTrigger="click" />}
         {isSingleImageLayout ? (
           <div className="flex gap-3 items-start w-full">
             {/* Imagem principal */}
@@ -695,11 +691,7 @@ const TicketItemDesktop = memo(({
 
   const hasDescription = !!ticket.description?.trim();
 
-  const couponBadges = useMemo(
-    () => (autoCoupons ? ticketAutoCouponBadges(ticket, autoCoupons.quantity, autoCoupons.age, t) : []),
-    [ticket, autoCoupons, t],
-  );
-  const showCouponBadges = !pick && !hidePricing && !isBatchSoldOut;
+  const couponOffer = !pick && !hidePricing && !isBatchSoldOut ? autoCoupons?.[ticket.id] : undefined;
 
   // Controle de quantidade (esgotado OU aviso de estoque + stepper). Função pra
   // ser reusada em DOIS lugares: na linha de preço (checkout normal) ou, no modo
@@ -759,7 +751,7 @@ const TicketItemDesktop = memo(({
     // fotos sem o antigo espaçador invisível, que abria vão grande entre os cards.
     // Com descrição, um respiro extra embaixo (`mb-2`) separa melhor do próximo
     // ticket — sem ele, a descrição encostaria no card seguinte (lista `gap-3`).
-    <div className={cn("w-full flex flex-col", hasDescription && "mb-2")}>
+    <div className={cn("w-full flex flex-col", hasDescription && "mb-2", couponOffer && "not-first:mt-3")}>
       <div className={cn(productItems.length > 0 ? "flex gap-4 items-center" : "flex flex-col")}>
         {productItems.length > 0 && (
           <div className="shrink-0">
@@ -826,7 +818,7 @@ const TicketItemDesktop = memo(({
           imagens, `w-full`. */}
         <div className={cn("min-w-0 flex flex-col", productItems.length > 0 ? "flex-1" : "w-full")}>
           <div className="relative bg-gray-2 border border-gray-6 rounded-xl p-5 flex flex-col gap-2 w-full">
-            {showCouponBadges && <AutoCouponBadges badges={couponBadges} tooltipTrigger="hover" />}
+            {couponOffer && <AutoCouponSeal offer={couponOffer} tooltipTrigger="hover" />}
             <div className="flex flex-col justify-center gap-1">
               <h2 className="text-xl font-bold font-manrope leading-[1.1] text-gray-12">
                 {ticket.name}

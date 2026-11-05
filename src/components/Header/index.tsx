@@ -165,16 +165,18 @@ export function Header() {
               </div>
             </Link>
           </div>
-          {/* Busca só no desktop: no mobile fica o card "Procure seu evento" (home e /search). */}
-          <div className="hidden md:flex w-full max-w-[560px]">
-            <SearchBar
-              search={search}
-              setSearch={setSearch}
-              results={searchResults}
-              onSearch={handleSearch}
-              placeholder={t("searchPlaceholder")}
-            />
-          </div>
+          {/* Busca só na home e só no desktop: no mobile fica o card "Procure seu evento". */}
+          {pathname === "/" && (
+            <div className="hidden md:flex w-full max-w-[560px]">
+              <SearchBar
+                search={search}
+                setSearch={setSearch}
+                results={searchResults}
+                onSearch={handleSearch}
+                placeholder={t("searchPlaceholder")}
+              />
+            </div>
+          )}
           <div className="hidden md:flex items-center h-[50px] gap-2">
             <LanguageSwitcher />
 
