@@ -148,10 +148,10 @@ export function Header() {
               <Image
                 src="/images/logo_horizontal.png"
                 alt="PódioTicket"
-                width={141}
-                height={24}
+                width={118}
+                height={20}
                 priority
-                className="md:hidden h-6 w-auto shrink-0"
+                className="md:hidden h-5 w-auto shrink-0"
               />
               <div className="hidden md:block size-8 overflow-hidden relative shrink-0">
                 <Image
