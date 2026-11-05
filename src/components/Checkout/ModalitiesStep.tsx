@@ -1,6 +1,8 @@
 "use client";
 
-import { TicketCategoryCard, type AutoCouponsForBadges } from "./TicketCategoryCard";
+import { TicketCategoryCard } from "./TicketCategoryCard";
+import { AutoCouponBanner } from "./AutoCouponBadges";
+import { autoCouponDisplay } from "@/lib/autoCouponBadges";
 import { hasDisplayableDistance } from "@/utils/checkoutModalityDisplay";
 import { EventInfo } from "./EventInfo";
 import type { Event } from "@/interfaces/event";
@@ -412,11 +414,20 @@ export function ModalitiesStep({ event, onNext, onBack, isSubmitting = false, di
     const coupon = quantityCouponForTicket(quantityAuto.coupons, ticketId);
     return coupon ? quantityCouponCardPreview(coupon) : null;
   };
-  // Selos dos cards: cupons automáticos do evento (voucher é exclusivo → sem selos).
-  const autoCouponsForBadges: AutoCouponsForBadges =
+  // Anúncios de cupom automático (voucher é exclusivo → sem anúncios). Ingresso esgotado não
+  // conta: não dá para comprar, então um cupom pode ser "geral" sem cobri-lo.
+  const autoCouponOffers =
     !useVoucher && ageEligibility
-      ? { quantity: ageEligibility.quantityCoupons, age: ageEligibility.ageCoupons }
+      ? autoCouponDisplay(
+        [...categorizedTickets.flatMap((c) => c.tickets), ...uncategorizedTickets]
+          .filter((ticket) => ticket.activeBatch?.status !== "SOLD_OUT" && ticket.activeBatchStatus !== "SOLD_OUT")
+          .map((ticket) => ({ id: ticket.id, price: getTicketPrice(ticket), ageLimit: ticket.ageLimit })),
+        ageEligibility.quantityCoupons,
+        ageEligibility.ageCoupons,
+        t,
+      )
       : null;
+  const autoCouponsForBadges = autoCouponOffers?.byTicket ?? null;
 
   // Acúmulo automático + manual (link ou da order): o manual incide sobre o valor já
   // descontado pelo automático, capado no subtotal — espelha o backend (autoritativo).
@@ -617,6 +628,7 @@ export function ModalitiesStep({ event, onNext, onBack, isSubmitting = false, di
               </p>
             </div>
           )}
+          {autoCouponOffers?.general && <AutoCouponBanner offer={autoCouponOffers.general} tooltipTrigger="click" />}
         </div>
 
         {/* Barra de resumo fixa (mobile) — unificada entre os steps do checkout. */}
@@ -730,6 +742,7 @@ export function ModalitiesStep({ event, onNext, onBack, isSubmitting = false, di
                 </p>
               </div>
             )}
+            {autoCouponOffers?.general && <AutoCouponBanner offer={autoCouponOffers.general} tooltipTrigger="hover" desktop />}
           </div>
           <div className="w-[400px] shrink-0">
             <EventInfo

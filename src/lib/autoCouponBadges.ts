@@ -1,16 +1,18 @@
 /**
- * Selos dos cupons AUTOMÁTICOS (quantidade / idade) nos cards de `/checkout/ingressos`
- * (Figma 617:35395, "selos no canto"). Só EXIBIÇÃO: qual cupom aplica continua sendo
- * decidido pelo backend (o mais vantajoso), igual ao resto do checkout.
+ * Cupons AUTOMÁTICOS (quantidade / idade) anunciados em `/checkout/ingressos`
+ * (Figma 7589:71877 e 7589:72061). Só EXIBIÇÃO: qual cupom aplica no pedido continua
+ * sendo decidido pelo backend.
  *
- * 1 cupom no ingresso → texto completo; 2+ → texto resumido, com o completo no tooltip.
+ * Cupom automático não soma com outro automático, então cada ingresso anuncia 1 só:
+ * entre os gerais, o mais vantajoso vira o anúncio embaixo da lista; o específico só
+ * vira selo no card se descontar MAIS que o geral naquele ingresso.
  */
 import { formatBRLFromCents } from "./money";
 import { parseAppliesToIds, type QuantityAutoCoupon } from "./quantityCoupon";
 import { ptBR } from "@/i18n/messages/pt-BR";
 import { createTranslator, type Translator } from "@/i18n/translate";
 
-/** Default pt-BR (testes / chamadas sem idioma); o card passa o `t` do idioma ativo. */
+/** Default pt-BR (testes / chamadas sem idioma); o step passa o `t` do idioma ativo. */
 const ptT = createTranslator(ptBR, "checkout");
 
 /** Regras públicas de um cupom AGE (`ageCoupons` do age-eligibility). */
@@ -24,18 +26,33 @@ export interface AgeDisplayCoupon {
   maxAge: number | null;
 }
 
-export interface AutoCouponBadge {
+/** Ingresso à venda, com o preço em REAIS (base da comparação entre cupons). */
+export interface AutoCouponTicket {
   id: string;
-  kind: "QUANTITY" | "AGE";
-  /** Ex.: "Cupom por quantidade 20%". */
-  shortText: string;
-  /** Ex.: "Quantidade 20%" — mobile com 2+ selos (os resumidos não cabem lado a lado). */
-  tinyText: string;
-  /** Ex.: "Ganhe 20% de desconto por ingresso ao comprar 3 ou mais!". */
-  fullText: string;
-  /** Quando 2+ cupons do mesmo tipo são agrupados, cada condição individual. */
-  fullTexts?: string[];
+  price: number;
+  ageLimit?: { min?: number; max?: number };
 }
+
+export interface AutoCouponOffer {
+  id: string;
+  /** Desconto já formatado: "20%" / "R$ 20,00". */
+  discount: string;
+  /** Como ativar (tooltip do "Saiba mais"). Ex.: "Ganhe 20% de desconto por ingresso ao comprar 3 ou mais!". */
+  howTo: string;
+}
+
+export interface AutoCouponDisplay {
+  /** Anúncio embaixo da lista: cupom que cobre todos os ingressos à venda. */
+  general: AutoCouponOffer | null;
+  /** Selo do card, por ingresso. */
+  byTicket: Record<string, AutoCouponOffer>;
+}
+
+type Candidate = AutoCouponOffer & {
+  type: "PERCENTAGE" | "FIXED";
+  value: number;
+  covers: (ticket: AutoCouponTicket) => boolean;
+};
 
 function discountLabel(c: { type: "PERCENTAGE" | "FIXED"; value: number }): string {
   return c.type === "PERCENTAGE" ? `${c.value}%` : formatBRLFromCents(c.value);
@@ -72,53 +89,74 @@ function ageRangeFitsTicket(c: AgeDisplayCoupon, ageLimit?: { min?: number; max?
   return cMin <= tMax && tMin <= cMax;
 }
 
-/** Selos do ingresso: quantidade primeiro, depois idade (ordem do Figma). */
-export function ticketAutoCouponBadges(
-  ticket: { id: string; ageLimit?: { min?: number; max?: number } },
+/** Quanto o cupom desconta de 1 ingresso, em reais (nunca mais que o preço). */
+function savings(c: Candidate, price: number): number {
+  return c.type === "PERCENTAGE" ? (price * c.value) / 100 : Math.min(price, c.value / 100);
+}
+
+/** Maior pontuação positiva; no empate fica o 1º (a API manda do mais antigo, regra do backend). */
+function pickBest(candidates: Candidate[], score: (c: Candidate) => number): Candidate | null {
+  let best: Candidate | null = null;
+  let bestScore = 0;
+  for (const c of candidates) {
+    const s = score(c);
+    if (s > bestScore) {
+      best = c;
+      bestScore = s;
+    }
+  }
+  return best;
+}
+
+function toOffer({ id, discount, howTo }: Candidate): AutoCouponOffer {
+  return { id, discount, howTo };
+}
+
+export function autoCouponDisplay(
+  tickets: AutoCouponTicket[],
   quantityCoupons: QuantityAutoCoupon[] | null | undefined,
   ageCoupons: AgeDisplayCoupon[] | null | undefined,
   t: Translator<"checkout"> = ptT,
-): AutoCouponBadge[] {
-  const out: AutoCouponBadge[] = [];
+): AutoCouponDisplay {
+  const candidates: Candidate[] = [];
   for (const c of quantityCoupons ?? []) {
-    if (c.value <= 0 || !coversTicket(c.appliesTo, ticket.id)) continue;
-    const d = discountLabel(c);
-    out.push({
+    if (c.value <= 0) continue;
+    const discount = discountLabel(c);
+    candidates.push({
       id: c.id,
-      kind: "QUANTITY",
-      shortText: t("couponQtyShort", { d }),
-      tinyText: t("couponQtyTiny", { d }),
-      fullText: quantityFullText(c, d, t),
+      type: c.type,
+      value: c.value,
+      discount,
+      howTo: quantityFullText(c, discount, t),
+      covers: (ticket) => coversTicket(c.appliesTo, ticket.id),
     });
   }
   for (const c of ageCoupons ?? []) {
-    if (c.value <= 0 || !coversTicket(c.appliesTo, ticket.id) || !ageRangeFitsTicket(c, ticket.ageLimit)) continue;
-    const d = discountLabel(c);
-    const fullText = ageFullText(c, d, t);
-    if (fullText) out.push({ id: c.id, kind: "AGE", shortText: t("couponAgeShort", { d }), tinyText: t("couponAgeTiny", { d }), fullText });
-  }
-
-  // Agrupa badges do mesmo tipo: 1 selo por kind, com todas as condições no tooltip.
-  const grouped = new Map<"QUANTITY" | "AGE", AutoCouponBadge[]>();
-  for (const b of out) {
-    let list = grouped.get(b.kind);
-    if (!list) { list = []; grouped.set(b.kind, list); }
-    list.push(b);
-  }
-  const merged: AutoCouponBadge[] = [];
-  for (const [kind, badges] of grouped) {
-    if (badges.length === 1) { merged.push(badges[0]); continue; }
-    const isQty = kind === "QUANTITY";
-    // Mesmo desconto em todos → o selo mantém o valor; senão, rótulo sem valor.
-    const sameDiscount = badges.every((b) => b.shortText === badges[0].shortText);
-    merged.push({
-      id: badges.map((b) => b.id).join("+"),
-      kind,
-      shortText: sameDiscount ? badges[0].shortText : isQty ? t("couponQtyGroupShort") : t("couponAgeGroupShort"),
-      tinyText: sameDiscount ? badges[0].tinyText : isQty ? t("couponQtyGroupTiny") : t("couponAgeGroupTiny"),
-      fullText: badges[0].fullText,
-      fullTexts: badges.map((b) => b.fullText),
+    const discount = discountLabel(c);
+    const howTo = ageFullText(c, discount, t);
+    if (c.value <= 0 || !howTo) continue;
+    candidates.push({
+      id: c.id,
+      type: c.type,
+      value: c.value,
+      discount,
+      howTo,
+      covers: (ticket) => coversTicket(c.appliesTo, ticket.id) && ageRangeFitsTicket(c, ticket.ageLimit),
     });
   }
-  return merged;
+
+  const isGeneral = (c: Candidate) => tickets.length > 0 && tickets.every(c.covers);
+  const general = pickBest(candidates.filter(isGeneral), (c) =>
+    tickets.reduce((sum, ticket) => sum + savings(c, ticket.price), 0),
+  );
+
+  const specific = candidates.filter((c) => !isGeneral(c));
+  const byTicket: Record<string, AutoCouponOffer> = {};
+  for (const ticket of tickets) {
+    const best = pickBest(specific.filter((c) => c.covers(ticket)), (c) => savings(c, ticket.price));
+    if (best && (!general || savings(best, ticket.price) > savings(general, ticket.price))) {
+      byTicket[ticket.id] = toOffer(best);
+    }
+  }
+  return { general: general && toOffer(general), byTicket };
 }

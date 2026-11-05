@@ -35,6 +35,8 @@ export function toOrderResponse(data: any): OrderResponse {
       totalDiscount: t.totalDiscount ?? 0,
       productsDiscount: t.productsDiscount ?? 0,
       autoUnitDiscount: t.autoUnitDiscount ?? 0,
+      autoCouponId: t.autoCouponId,
+      autoCouponDiscount: t.autoCouponDiscount,
       finalUnitPrice: t.finalUnitPrice ?? t.unitPrice ?? 0,
       finalTotalPrice: t.finalTotalPrice ?? 0,
       couponApplied: t.couponApplied ?? false,

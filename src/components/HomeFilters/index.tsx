@@ -255,7 +255,7 @@ export function HomeFilters({
     mq.addEventListener("change", sync);
     return () => mq.removeEventListener("change", sync);
   }, []);
-  const { data: ipLocation } = useIpLocation(isMobile);
+  const { data: ipLocation, isPending: ipPending } = useIpLocation(isMobile);
   const ipPlace = ipLocation?.city
     ? ipLocation.country === "BR" && ipLocation.region
       ? `${ipLocation.city}, ${ipLocation.region}`
@@ -274,9 +274,12 @@ export function HomeFilters({
     }
     if (!isAllPrices) parts.push(formatPriceRange());
     if (parts.length) return parts.join(" · ");
+    // Pendente (null): o card mostra skeleton, sem piscar o texto padrão antes do IP.
+    if (ipPending) return null;
     return ipPlace ? t("nearPlace", { place: ipPlace }) : t("mobileSummaryPlaceholder");
   }, [
     t,
+    ipPending,
     ipPlace,
     locationSummary,
     selectedDateRange,
@@ -346,7 +349,11 @@ export function HomeFilters({
           <p className="font-family-manrope text-[15px] font-semibold text-gray-12">{t("searchYourEvent")}</p>
           <div className="flex min-w-0 items-center gap-1">
             <Image src="/images/search-summary-location.svg" alt="" width={16} height={16} unoptimized className="shrink-0" />
-            <p className="font-family-dm-sans text-xs leading-[1.3] text-gray-11 truncate">{mobileSummary}</p>
+            {mobileSummary === null ? (
+              <div className="h-[15.6px] w-40 max-w-full animate-pulse rounded bg-gray-5" />
+            ) : (
+              <p className="font-family-dm-sans text-xs leading-[1.3] text-gray-11 truncate">{mobileSummary}</p>
+            )}
           </div>
         </div>
         <Image src="/images/search-summary-search.svg" alt="" width={24} height={24} unoptimized className="shrink-0" />

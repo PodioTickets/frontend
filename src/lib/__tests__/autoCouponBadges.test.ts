@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { ticketAutoCouponBadges, type AgeDisplayCoupon } from "../autoCouponBadges";
+import { autoCouponDisplay, type AgeDisplayCoupon, type AutoCouponTicket } from "../autoCouponBadges";
 import type { QuantityAutoCoupon } from "../quantityCoupon";
 
 const qc = (over: Partial<QuantityAutoCoupon> = {}): QuantityAutoCoupon => ({
@@ -22,59 +22,97 @@ const ac = (over: Partial<AgeDisplayCoupon> = {}): AgeDisplayCoupon => ({
   maxAge: 10,
   ...over,
 });
-const t: { id: string; ageLimit?: { min?: number; max?: number } } = { id: "t1" };
-const full = (q: QuantityAutoCoupon[], a: AgeDisplayCoupon[], ticket = t) =>
-  ticketAutoCouponBadges(ticket, q, a).map((b) => b.fullText);
+const t1: AutoCouponTicket = { id: "t1", price: 100 };
+const t2: AutoCouponTicket = { id: "t2", price: 50 };
+const tickets = [t1, t2];
+const only = (id: string) => JSON.stringify([id]);
 
-describe("ticketAutoCouponBadges", () => {
-  it("textos de quantidade (com e sem máximo)", () => {
-    expect(full([qc()], [])).toEqual(["Ganhe 20% de desconto por ingresso ao comprar 3 ou mais!"]);
-    expect(full([qc({ maxQuantity: 5 })], [])).toEqual(["Ganhe 20% de desconto por ingresso ao comprar de 3 a 5!"]);
-    expect(full([qc({ maxQuantity: 3 })], [])).toEqual(["Ganhe 20% de desconto por ingresso ao comprar 3!"]);
-    expect(full([qc({ type: "FIXED", value: 2000, minQuantity: 2 })], [])[0]).toMatch(
-      /^Ganhe R\$\s20,00 de desconto por ingresso ao comprar 2 ou mais!$/,
+describe("autoCouponDisplay", () => {
+  it("texto de como ativar: quantidade", () => {
+    const howTo = (c: QuantityAutoCoupon) => autoCouponDisplay(tickets, [c], []).general?.howTo;
+    expect(howTo(qc())).toBe("Ganhe 20% de desconto por ingresso ao comprar 3 ou mais!");
+    expect(howTo(qc({ minQuantity: 2, maxQuantity: 4 }))).toBe("Ganhe 20% de desconto por ingresso ao comprar de 2 a 4!");
+    expect(howTo(qc({ minQuantity: 3, maxQuantity: 3 }))).toBe("Ganhe 20% de desconto por ingresso ao comprar 3!");
+  });
+
+  it("texto de como ativar: idade", () => {
+    const howTo = (c: AgeDisplayCoupon) => autoCouponDisplay(tickets, [], [c]).general?.howTo;
+    expect(howTo(ac())).toBe("20% de desconto até 10 anos de idade.");
+    expect(howTo(ac({ minAge: 5, maxAge: 10 }))).toBe("20% de desconto para idades de 5 a 10 anos.");
+    expect(howTo(ac({ minAge: 60, maxAge: null }))).toBe("20% de desconto a partir dos 60 anos de idade.");
+  });
+
+  it("vários gerais: anuncia só o mais vantajoso, quantidade ou idade", () => {
+    const d = autoCouponDisplay(tickets, [qc({ id: "q10", value: 10 })], [ac({ id: "a30", value: 30 })]);
+    expect(d.general?.id).toBe("a30");
+    expect(d.byTicket).toEqual({});
+  });
+
+  it("gerais de tipos diferentes comparam em reais sobre os ingressos", () => {
+    // 10% de (100 + 50) = R$ 15; R$ 10 fixo por ingresso = R$ 20.
+    const d = autoCouponDisplay(tickets, [qc({ id: "pct", value: 10 }), qc({ id: "fix", type: "FIXED", value: 1000 })], []);
+    expect(d.general?.id).toBe("fix");
+    expect(d.general?.discount).toMatch(/R\$\s10,00/);
+  });
+
+  it("empate entre gerais: fica o 1º recebido", () => {
+    expect(autoCouponDisplay(tickets, [qc({ id: "antigo" }), qc({ id: "novo" })], []).general?.id).toBe("antigo");
+  });
+
+  it("específico melhor que o geral vira selo no ingresso", () => {
+    const d = autoCouponDisplay(tickets, [qc(), qc({ id: "esp", value: 30, appliesTo: only("t1") })], []);
+    expect(d.general?.id).toBe("q1");
+    expect(Object.keys(d.byTicket)).toEqual(["t1"]);
+    expect(d.byTicket.t1.id).toBe("esp");
+  });
+
+  it("específico igual ou pior que o geral é ignorado", () => {
+    const pior = autoCouponDisplay(tickets, [qc(), qc({ id: "esp", value: 10, appliesTo: only("t1") })], []);
+    const igual = autoCouponDisplay(tickets, [qc(), qc({ id: "esp", value: 20, appliesTo: only("t1") })], []);
+    expect(pior.byTicket).toEqual({});
+    expect(igual.byTicket).toEqual({});
+  });
+
+  it("específico compara em reais no preço daquele ingresso", () => {
+    // Geral 20%: R$ 20 em t1 e R$ 10 em t2. Fixo de R$ 15 só ganha em t2.
+    const fixo = qc({ id: "fix", type: "FIXED", value: 1500, appliesTo: only("t2") });
+    expect(autoCouponDisplay(tickets, [qc(), fixo], []).byTicket.t2.id).toBe("fix");
+    const emT1 = qc({ id: "fix", type: "FIXED", value: 1500, appliesTo: only("t1") });
+    expect(autoCouponDisplay(tickets, [qc(), emT1], []).byTicket).toEqual({});
+  });
+
+  it("sem geral: cada ingresso mostra o seu melhor específico, sem somar", () => {
+    const d = autoCouponDisplay(
+      tickets,
+      [
+        qc({ id: "a", value: 10, appliesTo: only("t1") }),
+        qc({ id: "b", value: 30, appliesTo: only("t1") }),
+        qc({ id: "c", type: "FIXED", value: 2000, appliesTo: only("t2") }),
+      ],
+      [],
     );
+    expect(d.general).toBeNull();
+    expect(d.byTicket.t1.id).toBe("b");
+    expect(d.byTicket.t1.discount).toBe("30%");
+    expect(d.byTicket.t2.discount).toMatch(/R\$\s20,00/);
   });
 
-  it("textos de idade (até, faixa, a partir de)", () => {
-    expect(full([], [ac()])).toEqual(["20% de desconto até 10 anos de idade."]);
-    expect(full([], [ac({ minAge: 10, maxAge: 15 })])).toEqual(["20% de desconto para idades de 10 a 15 anos."]);
-    expect(full([], [ac({ minAge: 10, maxAge: null })])).toEqual(["20% de desconto a partir dos 10 anos de idade."]);
+  it("appliesTo com todos os ingressos conta como geral", () => {
+    const d = autoCouponDisplay(tickets, [qc({ appliesTo: JSON.stringify(["t1", "t2"]) })], []);
+    expect(d.general?.id).toBe("q1");
   });
 
-  it("resumido: quantidade antes de idade; FIXED em reais", () => {
-    const b = ticketAutoCouponBadges(t, [qc({ type: "FIXED", value: 1000 })], [ac()]);
-    expect(b.map((x) => x.kind)).toEqual(["QUANTITY", "AGE"]);
-    expect(b[0].shortText).toMatch(/^Cupom por quantidade R\$\s10,00$/);
-    expect(b[1].shortText).toBe("Cupom por idade 20%");
+  it("idade fora do limite do ingresso não cobre esse ingresso", () => {
+    const adulto = { ...t2, ageLimit: { min: 18 } };
+    const d = autoCouponDisplay([t1, adulto], [], [ac({ maxAge: 10 })]);
+    expect(d.general).toBeNull();
+    expect(Object.keys(d.byTicket)).toEqual(["t1"]);
   });
 
-  it("agrupa cupons do mesmo tipo num selo só, com todas as condições", () => {
-    const b = ticketAutoCouponBadges(
-      t,
-      [qc({ id: "q1", minQuantity: 2, maxQuantity: 3, value: 10 }), qc({ id: "q2", minQuantity: 4, value: 20 })],
-      [ac({ id: "a1", maxAge: 10 }), ac({ id: "a2", minAge: 60, maxAge: null })],
-    );
-    expect(b.map((x) => x.kind)).toEqual(["QUANTITY", "AGE"]);
-    expect(b[0].shortText).toBe("Cupom por quantidade");
-    expect(b[0].tinyText).toBe("Quantidade");
-    expect(b[0].fullTexts).toEqual([
-      "Ganhe 10% de desconto por ingresso ao comprar de 2 a 3!",
-      "Ganhe 20% de desconto por ingresso ao comprar 4 ou mais!",
-    ]);
-    // Mesmo desconto (20% e 20%) → o selo mantém o valor.
-    expect(b[1].shortText).toBe("Cupom por idade 20%");
-    expect(b[1].fullTexts).toHaveLength(2);
-  });
-
-  it("um cupom por tipo não ganha fullTexts", () => {
-    const b = ticketAutoCouponBadges(t, [qc()], [ac()]);
-    expect(b.every((x) => x.fullTexts === undefined)).toBe(true);
-  });
-
-  it("respeita appliesTo e o limite de idade do ingresso", () => {
-    expect(full([qc({ appliesTo: JSON.stringify(["outro"]) })], [])).toEqual([]);
-    expect(full([], [ac({ maxAge: 10 })], { id: "t1", ageLimit: { min: 16 } })).toEqual([]);
-    expect(full([], [ac({ minAge: 30, maxAge: 38 })], { id: "t1", ageLimit: { min: 16 } })).toHaveLength(1);
+  it("ingresso gratuito, valor zero e lista vazia não anunciam nada", () => {
+    expect(autoCouponDisplay([{ id: "t1", price: 0 }], [qc()], []).general).toBeNull();
+    expect(autoCouponDisplay(tickets, [qc({ value: 0 })], []).general).toBeNull();
+    expect(autoCouponDisplay([], [qc()], []).general).toBeNull();
+    expect(autoCouponDisplay(tickets, null, undefined)).toEqual({ general: null, byTicket: {} });
   });
 });
