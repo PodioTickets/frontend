@@ -932,6 +932,8 @@ export interface FinancialTicketBatch {
   price: number;
   /** Unidades vendidas do lote (agregado pelo backend). */
   quantitySold?: number;
+  /** Centavos vendidos a preço de compra (preço do lote pode mudar depois). Só no dashboard. */
+  soldValue?: number;
   createdAt?: string;
 }
 

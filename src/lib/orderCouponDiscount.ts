@@ -18,6 +18,8 @@ export type CouponPreviewResult =
       type: "PERCENTAGE" | "FIXED";
       couponType?: string;
       applyToProducts?: boolean;
+      /** Cupom automático que acumula com este manual: o manual incide sobre o valor já descontado. */
+      stackedOn?: CouponPreviewResult | null;
       /**
        * Ingressos cobertos pelo cupom (espelha o ramo do voucher). Já
        * normalizado no boundary do `UserService`: `null` = todos ("all"/ausente);

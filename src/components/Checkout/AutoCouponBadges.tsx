@@ -57,7 +57,7 @@ export function AutoCouponSeal({ offer, tooltipTrigger }: { offer: AutoCouponOff
   );
 }
 
-/** Anúncio do cupom geral embaixo da lista (Figma `desconto/molécula/anúncio-geral`). */
+/** Anúncio do cupom geral acima do primeiro ingresso (Figma `desconto/molécula/anúncio-geral`). */
 export function AutoCouponBanner({
   offer,
   tooltipTrigger,
@@ -74,8 +74,7 @@ export function AutoCouponBanner({
 
   const howTo = (
     <HowToActivate howTo={offer.howTo} tooltipTrigger={tooltipTrigger}>
-      {desktop ? t("couponSeeMore") : t("couponLearnMore")}
-      {desktop && <Image src="/images/coupon-info.svg" alt="" width={12} height={12} unoptimized className="shrink-0" />}
+      {t("couponLearnMore")}
     </HowToActivate>
   );
   const tag = <Image src={`/images/coupon-banner-tag${desktop ? "-desktop" : ""}.svg`} alt="" width={20} height={20} unoptimized className="shrink-0" />;
@@ -95,7 +94,7 @@ export function AutoCouponBanner({
   }
   return (
     // py 8.4px: o Figma (h 50) apara a entrelinha do texto; com leading 1.3 + p-3 dava 57.
-    <div className="mt-2 flex items-center gap-3 px-3 py-[8.4px] rounded-xl border border-blue-6 bg-blue-3">
+    <div className="flex items-center gap-3 px-3 py-[8.4px] rounded-xl border border-blue-6 bg-blue-3">
       <div className="flex-1 min-w-0 flex items-center gap-2">
         {tag}
         <p className="flex-1 min-w-0 text-xs font-bold font-family-dm-sans leading-[1.3] text-blue-12">

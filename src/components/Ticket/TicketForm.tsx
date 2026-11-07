@@ -885,9 +885,6 @@ export function TicketForm({
   };
 
   const handleBatchChange = (batchId: string, field: keyof Batch, value: string) => {
-    const batch = batches.find((b) => b.id === batchId);
-    if (!batch) return;
-    if (field === "price" && (batch.quantitySold ?? 0) > 0) return;
     setBatches(batches.map((b) => (b.id === batchId ? { ...b, [field]: value } : b)));
   };
 

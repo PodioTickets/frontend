@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { autoCouponDisplay, type AgeDisplayCoupon, type AutoCouponTicket } from "../autoCouponBadges";
+import { autoCouponDisplay, type AgeDisplayCoupon, type AutoCouponTicket, type ManualDisplayCoupon } from "../autoCouponBadges";
 import type { QuantityAutoCoupon } from "../quantityCoupon";
 
 const qc = (over: Partial<QuantityAutoCoupon> = {}): QuantityAutoCoupon => ({
@@ -109,10 +109,86 @@ describe("autoCouponDisplay", () => {
     expect(Object.keys(d.byTicket)).toEqual(["t1"]);
   });
 
+  describe("selo no card da categoria", () => {
+    const a1: AutoCouponTicket = { id: "a1", price: 100, categoryId: "catA" };
+    const a2: AutoCouponTicket = { id: "a2", price: 50, categoryId: "catA" };
+    const b1: AutoCouponTicket = { id: "b1", price: 80, categoryId: "catB" };
+    const solo: AutoCouponTicket = { id: "solo", price: 80 };
+    const list = [a1, a2, b1, solo];
+    const ids = (...t: string[]) => JSON.stringify(t);
+
+    it("cobre a categoria inteira: 1 selo na categoria e nenhum nos ingressos dela", () => {
+      const d = autoCouponDisplay(list, [qc({ appliesTo: ids("a1", "a2") })], []);
+      expect(d.byCategory.catA?.id).toBe("q1");
+      expect(d.byTicket).toEqual({});
+    });
+
+    it("cobre só parte da categoria: selo fica no ingresso", () => {
+      const d = autoCouponDisplay(list, [qc({ appliesTo: only("a1") })], []);
+      expect(d.byCategory).toEqual({});
+      expect(d.byTicket.a1?.id).toBe("q1");
+    });
+
+    it("cupons diferentes na mesma categoria: cada ingresso mantém o seu", () => {
+      const d = autoCouponDisplay(list, [qc({ id: "q1", appliesTo: only("a1") }), qc({ id: "q2", appliesTo: only("a2") })], []);
+      expect(d.byCategory).toEqual({});
+      expect(Object.keys(d.byTicket).sort()).toEqual(["a1", "a2"]);
+    });
+
+    it("ingresso sem categoria segue com selo próprio", () => {
+      const d = autoCouponDisplay(list, [qc({ appliesTo: only("solo") })], []);
+      expect(d.byCategory).toEqual({});
+      expect(d.byTicket.solo?.id).toBe("q1");
+    });
+
+    it("cupom que cobre todos os ingressos segue no anúncio, não na categoria", () => {
+      const d = autoCouponDisplay(list, [qc()], []);
+      expect(d.general?.id).toBe("q1");
+      expect(d.byCategory).toEqual({});
+    });
+  });
+
+  describe("cupom manual aplicado", () => {
+    const manual = (over: Partial<ManualDisplayCoupon> = {}): ManualDisplayCoupon => ({
+      id: "m1", code: "PODIO15", type: "PERCENTAGE", value: 15, appliesTo: null, ...over,
+    });
+    const display = (m: ManualDisplayCoupon, q: QuantityAutoCoupon[] = []) =>
+      autoCouponDisplay(tickets, q, [], undefined, m);
+
+    it("geral: anúncio próprio, sem tirar o do automático (eles somam)", () => {
+      const d = display(manual(), [qc()]);
+      expect(d.manualGeneral?.discount).toBe("15%");
+      expect(d.manualGeneral?.howTo).toBe("Cupom PODIO15 aplicado ao seu pedido.");
+      expect(d.general?.id).toBe("q1");
+      expect(d.byTicket).toEqual({});
+    });
+
+    it("específico: vira selo só nos ingressos dele", () => {
+      const d = display(manual({ appliesTo: ["t1"] }));
+      expect(d.manualGeneral).toBeNull();
+      expect(Object.keys(d.byTicket)).toEqual(["t1"]);
+    });
+
+    it("específico divide o selo com o automático: fica o maior", () => {
+      const auto = qc({ id: "esp", value: 30, appliesTo: only("t1") });
+      expect(display(manual({ appliesTo: ["t1"] }), [auto]).byTicket.t1.id).toBe("esp");
+      expect(display(manual({ appliesTo: ["t1"], value: 40 }), [auto]).byTicket.t1.id).toBe("m1");
+    });
+
+    it("específico aparece mesmo menor que o automático geral (eles somam)", () => {
+      expect(display(manual({ appliesTo: ["t1"], value: 5 }), [qc()]).byTicket.t1.id).toBe("m1");
+    });
+
+    it("condição do cupom no texto de como ativar", () => {
+      expect(display(manual({ minQuantity: 2 })).manualGeneral?.howTo).toBe("Cupom PODIO15: vale ao comprar 2 ou mais ingressos.");
+      expect(display(manual({ minCartValue: 10000 })).manualGeneral?.howTo).toMatch(/^Cupom PODIO15: vale em compras a partir de R\$\s100,00\.$/);
+    });
+  });
+
   it("ingresso gratuito, valor zero e lista vazia não anunciam nada", () => {
     expect(autoCouponDisplay([{ id: "t1", price: 0 }], [qc()], []).general).toBeNull();
     expect(autoCouponDisplay(tickets, [qc({ value: 0 })], []).general).toBeNull();
     expect(autoCouponDisplay([], [qc()], []).general).toBeNull();
-    expect(autoCouponDisplay(tickets, null, undefined)).toEqual({ general: null, byTicket: {} });
+    expect(autoCouponDisplay(tickets, null, undefined)).toEqual({ general: null, manualGeneral: null, byTicket: {}, byCategory: {} });
   });
 });

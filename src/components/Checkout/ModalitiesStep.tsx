@@ -416,15 +416,29 @@ export function ModalitiesStep({ event, onNext, onBack, isSubmitting = false, di
   };
   // Anúncios de cupom automático (voucher é exclusivo → sem anúncios). Ingresso esgotado não
   // conta: não dá para comprar, então um cupom pode ser "geral" sem cobri-lo.
+  // Cupom manual: anunciado só depois de aplicado (link ou pedido), pois depende de código.
+  const manualCoupon = appliedCoupon?.couponType === "DISCOUNT"
+    ? {
+      ...appliedCoupon,
+      // Preview do link traz o escopo e as condições; o cupom do pedido, só o escopo.
+      appliesTo: orderCoupon ? normalizeCouponAppliesTo(orderCoupon.appliesTo) : couponData?.appliesTo ?? null,
+      minQuantity: orderCoupon ? null : couponData?.minQuantity,
+      minCartValue: orderCoupon ? null : couponData?.minCartValue,
+    }
+    : null;
   const autoCouponOffers =
-    !useVoucher && ageEligibility
+    !useVoucher
       ? autoCouponDisplay(
-        [...categorizedTickets.flatMap((c) => c.tickets), ...uncategorizedTickets]
-          .filter((ticket) => ticket.activeBatch?.status !== "SOLD_OUT" && ticket.activeBatchStatus !== "SOLD_OUT")
-          .map((ticket) => ({ id: ticket.id, price: getTicketPrice(ticket), ageLimit: ticket.ageLimit })),
-        ageEligibility.quantityCoupons,
-        ageEligibility.ageCoupons,
+        [
+          ...categorizedTickets.flatMap((c) => c.tickets.map((ticket) => ({ ticket, categoryId: c.id }))),
+          ...uncategorizedTickets.map((ticket) => ({ ticket, categoryId: undefined })),
+        ]
+          .filter(({ ticket }) => ticket.activeBatch?.status !== "SOLD_OUT" && ticket.activeBatchStatus !== "SOLD_OUT")
+          .map(({ ticket, categoryId }) => ({ id: ticket.id, price: getTicketPrice(ticket), ageLimit: ticket.ageLimit, categoryId })),
+        ageEligibility?.quantityCoupons,
+        ageEligibility?.ageCoupons,
         t,
+        manualCoupon,
       )
       : null;
   const autoCouponsForBadges = autoCouponOffers?.byTicket ?? null;
@@ -585,6 +599,8 @@ export function ModalitiesStep({ event, onNext, onBack, isSubmitting = false, di
 
         {/* Categories List */}
         <div className="flex flex-col gap-4">
+          {autoCouponOffers?.manualGeneral && <AutoCouponBanner offer={autoCouponOffers.manualGeneral} tooltipTrigger="click" />}
+          {autoCouponOffers?.general && <AutoCouponBanner offer={autoCouponOffers.general} tooltipTrigger="click" />}
           {categorizedTickets.length > 0 || uncategorizedTickets.length > 0 ? (
             <>
               {uncategorizedTickets.map((ticket) => (
@@ -607,6 +623,7 @@ export function ModalitiesStep({ event, onNext, onBack, isSubmitting = false, di
                   categoryId={category.id}
                   categoryName={category.name}
                   categoryDescription={category.description}
+                  categoryCoupon={autoCouponOffers?.byCategory[category.id]}
                   tickets={category.tickets}
                   index={index}
                   expandedByDefault={index === 0}
@@ -628,7 +645,6 @@ export function ModalitiesStep({ event, onNext, onBack, isSubmitting = false, di
               </p>
             </div>
           )}
-          {autoCouponOffers?.general && <AutoCouponBanner offer={autoCouponOffers.general} tooltipTrigger="click" />}
         </div>
 
         {/* Barra de resumo fixa (mobile) — unificada entre os steps do checkout. */}
@@ -686,6 +702,8 @@ export function ModalitiesStep({ event, onNext, onBack, isSubmitting = false, di
 
         <div className="w-full flex items-start gap-11 mt-6">
           <div className="flex-1 flex flex-col gap-6">
+            {autoCouponOffers?.manualGeneral && <AutoCouponBanner offer={autoCouponOffers.manualGeneral} tooltipTrigger="hover" desktop />}
+            {autoCouponOffers?.general && <AutoCouponBanner offer={autoCouponOffers.general} tooltipTrigger="hover" desktop />}
             {categorizedTickets.length > 0 || uncategorizedTickets.length > 0 ? (
               <>
                 {uncategorizedTickets.map((ticket, index) => {
@@ -716,6 +734,7 @@ export function ModalitiesStep({ event, onNext, onBack, isSubmitting = false, di
                         categoryId={category.id}
                         categoryName={category.name}
                         categoryDescription={category.description}
+                        categoryCoupon={autoCouponOffers?.byCategory[category.id]}
                         tickets={category.tickets}
                         index={index}
                         expandedByDefault={index === 0}
@@ -742,7 +761,6 @@ export function ModalitiesStep({ event, onNext, onBack, isSubmitting = false, di
                 </p>
               </div>
             )}
-            {autoCouponOffers?.general && <AutoCouponBanner offer={autoCouponOffers.general} tooltipTrigger="hover" desktop />}
           </div>
           <div className="w-[400px] shrink-0">
             <EventInfo

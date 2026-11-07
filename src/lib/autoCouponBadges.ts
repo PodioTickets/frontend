@@ -4,8 +4,13 @@
  * sendo decidido pelo backend.
  *
  * Cupom automático não soma com outro automático, então cada ingresso anuncia 1 só:
- * entre os gerais, o mais vantajoso vira o anúncio embaixo da lista; o específico só
- * vira selo no card se descontar MAIS que o geral naquele ingresso.
+ * entre os gerais, o mais vantajoso vira o anúncio acima da lista; o específico só
+ * vira selo no card se descontar MAIS que o geral naquele ingresso. Selo igual em todos
+ * os ingressos à venda de uma categoria sobe para o card da categoria, 1 vez só.
+ *
+ * Cupom MANUAL só é anunciado depois de aplicado (link ou pedido): ele depende de código,
+ * então anunciar para todos revelaria o desconto. Como soma com o automático, o geral tem
+ * anúncio próprio; o de ingresso específico divide o selo do card (fica o maior).
  */
 import { formatBRLFromCents } from "./money";
 import { parseAppliesToIds, type QuantityAutoCoupon } from "./quantityCoupon";
@@ -26,11 +31,24 @@ export interface AgeDisplayCoupon {
   maxAge: number | null;
 }
 
+/** Cupom manual já aplicado nesta etapa. `appliesTo` normalizado: null = todos os ingressos. */
+export interface ManualDisplayCoupon {
+  id: string;
+  code: string | null;
+  type: "PERCENTAGE" | "FIXED";
+  value: number;
+  appliesTo: string[] | null;
+  minQuantity?: number | null;
+  /** Em CENTAVOS. */
+  minCartValue?: number | null;
+}
+
 /** Ingresso à venda, com o preço em REAIS (base da comparação entre cupons). */
 export interface AutoCouponTicket {
   id: string;
   price: number;
   ageLimit?: { min?: number; max?: number };
+  categoryId?: string;
 }
 
 export interface AutoCouponOffer {
@@ -42,10 +60,14 @@ export interface AutoCouponOffer {
 }
 
 export interface AutoCouponDisplay {
-  /** Anúncio embaixo da lista: cupom que cobre todos os ingressos à venda. */
+  /** Anúncio acima do primeiro ingresso: cupom que cobre todos os ingressos à venda. */
   general: AutoCouponOffer | null;
+  /** Anúncio do cupom manual aplicado, quando ele cobre todos os ingressos à venda. */
+  manualGeneral: AutoCouponOffer | null;
   /** Selo do card, por ingresso. */
   byTicket: Record<string, AutoCouponOffer>;
+  /** Selo no card da categoria: cupom que cobre todos os ingressos à venda dela. */
+  byCategory: Record<string, AutoCouponOffer>;
 }
 
 type Candidate = AutoCouponOffer & {
@@ -89,6 +111,15 @@ function ageRangeFitsTicket(c: AgeDisplayCoupon, ageLimit?: { min?: number; max?
   return cMin <= tMax && tMin <= cMax;
 }
 
+function manualHowTo(c: ManualDisplayCoupon, t: Translator<"checkout">): string {
+  const code = c.code ?? "";
+  if (c.minQuantity && c.minQuantity > 1) return t("couponManualMinQuantity", { code, min: c.minQuantity });
+  if (c.minCartValue && c.minCartValue > 0) {
+    return t("couponManualMinValue", { code, value: formatBRLFromCents(c.minCartValue) });
+  }
+  return t("couponManualApplied", { code });
+}
+
 /** Quanto o cupom desconta de 1 ingresso, em reais (nunca mais que o preço). */
 function savings(c: Candidate, price: number): number {
   return c.type === "PERCENTAGE" ? (price * c.value) / 100 : Math.min(price, c.value / 100);
@@ -117,6 +148,7 @@ export function autoCouponDisplay(
   quantityCoupons: QuantityAutoCoupon[] | null | undefined,
   ageCoupons: AgeDisplayCoupon[] | null | undefined,
   t: Translator<"checkout"> = ptT,
+  manualCoupon?: ManualDisplayCoupon | null,
 ): AutoCouponDisplay {
   const candidates: Candidate[] = [];
   for (const c of quantityCoupons ?? []) {
@@ -151,12 +183,39 @@ export function autoCouponDisplay(
   );
 
   const specific = candidates.filter((c) => !isGeneral(c));
+  const manual: Candidate | null = manualCoupon && manualCoupon.value > 0
+    ? {
+      id: manualCoupon.id,
+      type: manualCoupon.type,
+      value: manualCoupon.value,
+      discount: discountLabel(manualCoupon),
+      howTo: manualHowTo(manualCoupon, t),
+      covers: (ticket) => !manualCoupon.appliesTo || manualCoupon.appliesTo.includes(ticket.id),
+    }
+    : null;
+  const manualIsGeneral = !!manual && isGeneral(manual);
+  const manualGeneral = manualIsGeneral
+    ? pickBest([manual], (c) => tickets.reduce((sum, ticket) => sum + savings(c, ticket.price), 0))
+    : null;
+
   const byTicket: Record<string, AutoCouponOffer> = {};
   for (const ticket of tickets) {
     const best = pickBest(specific.filter((c) => c.covers(ticket)), (c) => savings(c, ticket.price));
-    if (best && (!general || savings(best, ticket.price) > savings(general, ticket.price))) {
-      byTicket[ticket.id] = toOffer(best);
-    }
+    const auto = best && (!general || savings(best, ticket.price) > savings(general, ticket.price)) ? best : null;
+    const seal = pickBest(
+      [auto, !manualIsGeneral && manual?.covers(ticket) ? manual : null].filter((c): c is Candidate => !!c),
+      (c) => savings(c, ticket.price),
+    );
+    if (seal) byTicket[ticket.id] = toOffer(seal);
   }
-  return { general: general && toOffer(general), byTicket };
+
+  const byCategory: Record<string, AutoCouponOffer> = {};
+  for (const categoryId of new Set(tickets.flatMap((ticket) => ticket.categoryId ?? []))) {
+    const group = tickets.filter((ticket) => ticket.categoryId === categoryId);
+    const offer = byTicket[group[0].id];
+    if (!offer || !group.every((ticket) => byTicket[ticket.id]?.id === offer.id)) continue;
+    byCategory[categoryId] = offer;
+    for (const ticket of group) delete byTicket[ticket.id];
+  }
+  return { general: general && toOffer(general), manualGeneral: manualGeneral && toOffer(manualGeneral), byTicket, byCategory };
 }
