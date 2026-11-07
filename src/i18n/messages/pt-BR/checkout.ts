@@ -34,7 +34,9 @@ export default {
   couponBannerLine1: "Ganhe {d} de desconto",
   couponBannerLine2: "em todos os ingressos",
   couponLearnMore: "Saiba mais",
-  couponSeeMore: "ver mais",
+  couponManualApplied: "Cupom {code} aplicado ao seu pedido.",
+  couponManualMinQuantity: "Cupom {code}: vale ao comprar {min} ou mais ingressos.",
+  couponManualMinValue: "Cupom {code}: vale em compras a partir de {value}.",
 
   // Navegação / etapas
   back: "Voltar",

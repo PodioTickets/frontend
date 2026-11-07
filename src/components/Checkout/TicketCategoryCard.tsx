@@ -75,6 +75,14 @@ function resolvePreviewPrice(
 ): { discounted: number; original: number; hasDiscount: boolean } {
   const full = { discounted: price, original: price, hasDiscount: false };
   if (!preview) return full;
+  if (preview.kind === "coupon" && preview.stackedOn) {
+    // Acúmulo: automático primeiro, manual sobre o resultado (mesma ordem do backend).
+    const auto = resolvePreviewPrice(price, ticketId, preview.stackedOn, ticketQuantity);
+    const { discounted } = resolvePreviewPrice(
+      auto.discounted, ticketId, { ...preview, stackedOn: null }, ticketQuantity, voucherFreeTicketId, couponConditionsMet,
+    );
+    return { discounted, original: price, hasDiscount: discounted < price };
+  }
   if (preview.kind === "voucher") {
     const isFree =
       !!voucherFreeTicketId &&
@@ -118,6 +126,8 @@ interface TicketCategoryCardProps {
    *  já vem no próprio preview. Default `true` (sem cupom de link gated). */
   couponConditionsMet?: boolean;
   autoCoupons?: AutoCouponsForBadges;
+  /** Selo do cupom que cobre todos os ingressos à venda da categoria. */
+  categoryCoupon?: AutoCouponOffer;
 }
 
 const formatPrice = (price: number) => {
@@ -944,18 +954,28 @@ export function TicketCategoryCard({
   voucherFreeTicketId,
   couponConditionsMet = true,
   autoCoupons,
+  categoryCoupon,
 }: TicketCategoryCardProps) {
   const kitSelectionDisplay = kitSelectionDisplayProp ?? defaultEventKitSelectionDisplay();
   const t = useT("checkout");
   const [isExpanded, setIsExpanded] = useState(expandedByDefault ?? index === 0);
   const { raceQuantities, updateRaceQuantity } = useCheckout();
   const hidePricing = useHidePricing();
+  const pick = useTicketPick();
+  const categorySeal = !pick && !hidePricing ? categoryCoupon : undefined;
   // Preview do cupom da URL pra renderizar preço descontado com strike-through.
   // Backend reconcilia no PaymentStep; aqui é só feedback visual no /ingressos.
   const pendingCoupon = usePendingCouponSnapshot();
   const { data: couponPreview } = useCouponPreview(event?.id, pendingCoupon);
   // Cupom de link (URL) tem prioridade; senão usa o override injetado (idade).
-  const previewFor = (ticketId: string) => couponPreview ?? couponPreviewOverride?.(ticketId) ?? null;
+  const previewFor = (ticketId: string): CouponPreviewResult | null => {
+    const auto = couponPreviewOverride?.(ticketId) ?? null;
+    if (!couponPreview) return auto;
+    // Só cupom manual acumula; link de cupom automático é o próprio automático.
+    return couponPreview.kind === "coupon" && couponPreview.couponType === "DISCOUNT"
+      ? { ...couponPreview, stackedOn: auto }
+      : couponPreview;
+  };
 
   const totalQuantity = useMemo(
     () => Object.values(raceQuantities).reduce((s, q) => s + q, 0),
@@ -1100,8 +1120,9 @@ export function TicketCategoryCard({
 
   return (
     <>
-      {/* Mobile Layout */}
-      <div className="w-full md:hidden">
+      {/* Mobile Layout. Selo fora do `overflow-hidden` do card, que o cortaria. */}
+      <div className={cn("relative w-full md:hidden", categorySeal && "mt-2")}>
+        {categorySeal && <AutoCouponSeal offer={categorySeal} tooltipTrigger="click" />}
         <div className="border border-gray-6 rounded-xl overflow-hidden bg-gray-1">
           <div
             className={`flex items-center justify-between gap-3 px-3 py-4 ${hasSelectedTicket ? "cursor-default" : "cursor-pointer"}`}
@@ -1188,7 +1209,8 @@ export function TicketCategoryCard({
       </div>
 
       {/* Desktop Layout */}
-      <div className="hidden md:block w-full">
+      <div className="relative hidden md:block w-full">
+        {categorySeal && <AutoCouponSeal offer={categorySeal} tooltipTrigger="hover" />}
         <div className="rounded-xl border border-gray-6 overflow-hidden bg-gray-1">
           <div
             className={`flex items-center w-full justify-between gap-3 border-b border-gray-6 px-4 py-4 transition-colors ${hasSelectedTicket ? "cursor-default" : "cursor-pointer hover:bg-gray-2/80"}`}

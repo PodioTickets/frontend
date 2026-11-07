@@ -36,7 +36,9 @@ export default {
   couponBannerLine1: "Obtén {d} de descuento",
   couponBannerLine2: "en todas las entradas",
   couponLearnMore: "Más información",
-  couponSeeMore: "ver más",
+  couponManualApplied: "Cupón {code} aplicado a tu pedido.",
+  couponManualMinQuantity: "Cupón {code}: válido al comprar {min} o más entradas.",
+  couponManualMinValue: "Cupón {code}: válido en compras desde {value}.",
 
   // Navegación / pasos
   back: "Volver",

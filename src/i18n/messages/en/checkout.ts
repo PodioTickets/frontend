@@ -36,7 +36,9 @@ export default {
   couponBannerLine1: "Get {d} off",
   couponBannerLine2: "on all tickets",
   couponLearnMore: "Learn more",
-  couponSeeMore: "see more",
+  couponManualApplied: "Coupon {code} applied to your order.",
+  couponManualMinQuantity: "Coupon {code}: valid when you buy {min} or more tickets.",
+  couponManualMinValue: "Coupon {code}: valid on purchases of {value} or more.",
 
   // Navigation / steps
   back: "Back",

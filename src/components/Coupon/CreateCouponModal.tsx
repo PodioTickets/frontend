@@ -43,6 +43,7 @@ export function CreateCouponModal() {
   const [codeError, setCodeError] = useState("");
   const [valueError, setValueError] = useState("");
   const [apiError, setApiError] = useState("");
+  const [appliesToError, setAppliesToError] = useState("");
   const [applyToProducts, setApplyToProducts] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isMdUp, setIsMdUp] = useState(true);
@@ -60,6 +61,7 @@ export function CreateCouponModal() {
 
   const modalBodyScrollRef = useRef<HTMLDivElement>(null);
   const advancedPanelRef = useRef<HTMLDivElement>(null);
+  const appliesToErrorRef = useRef<HTMLParagraphElement>(null);
   // Guarda se o toggle do painel avançado partiu de clique do usuário.
   // Sem isso, a abertura automática em modo de edição (data sync) dispararia
   // o scroll-into-view e o modal abriria já rolado pra baixo.
@@ -146,6 +148,7 @@ export function CreateCouponModal() {
       // Reseta o intent — qualquer scroll precisa vir de clique explícito do usuário
       // após esta abertura do modal.
       userToggledAdvancedRef.current = false;
+      setAppliesToError("");
       if (isEditing && data?.coupon) {
         // Editing mode - load coupon data
         const c = data.coupon;
@@ -235,6 +238,10 @@ export function CreateCouponModal() {
     }
   }, [isOpen, isEditing, data]);
 
+  // O painel avançado aberto empurra o erro para fora da área visível do modal.
+  useEffect(() => {
+    if (appliesToError) appliesToErrorRef.current?.scrollIntoView({ block: "nearest" });
+  }, [appliesToError]);
 
   useEffect(() => {
     if (!showAdvanced) return;
@@ -484,6 +491,10 @@ export function CreateCouponModal() {
       const raw = error.response?.data?.message ?? error?.message ?? "";
       const message = Array.isArray(raw) ? raw[0] : String(raw);
       const code = error.response?.data?.code ?? error.response?.data?.error ?? "";
+      if (code === "AUTO_COUPON_TICKET_CONFLICT") {
+        setAppliesToError(message);
+        return;
+      }
       // Detecta colisão de código tanto pelo error code do backend quanto por
       // pattern matching nas mensagens (PT-BR e EN), pra não depender de um
       // único idioma/formato.
@@ -760,8 +771,7 @@ export function CreateCouponModal() {
                             {(
                               [
                                 { key: "DISCOUNT" as CouponType, label: "Cupom de desconto", onSelect: () => { setCouponType("DISCOUNT"); setMinQuantity(""); setMaxQuantity(""); setMinAge(""); setMaxAge(""); } },
-                                { key: "QUANTITY" as CouponType, label: "Cupom por quantidade", onSelect: () => { setCouponType("QUANTITY"); setMinAge(""); setMaxAge(""); } },
-                                { key: "AGE" as CouponType, label: "Cupom por idade", onSelect: () => { setCouponType("AGE"); setMinQuantity(""); setMaxQuantity(""); } },
+                                { key: "QUANTITY" as CouponType, label: "Cupom por quantidade", onSelect: () => { setCouponType("QUANTITY"); setMinAge(""); setMaxAge(""); setUsageLimitEnabled(false); setUsageLimit(""); setUsageLimitError(""); } },
                               ] as const
                             ).map(({ key, label, onSelect }) => (
                               <button
@@ -985,6 +995,7 @@ export function CreateCouponModal() {
                                   onChange={() => {
                                     setAppliesTo("all");
                                     setSelectedTicketIds([]);
+                                    setAppliesToError("");
                                   }}
                                   name="apply-coupon-tickets"
                                   className="size-6"
@@ -996,7 +1007,7 @@ export function CreateCouponModal() {
                               <label className="flex cursor-pointer items-center gap-2">
                                 <Radio
                                   checked={appliesTo === "specific"}
-                                  onChange={() => setAppliesTo("specific")}
+                                  onChange={() => { setAppliesTo("specific"); setAppliesToError(""); }}
                                   name="apply-coupon-tickets"
                                   className="size-6"
                                 />
@@ -1023,6 +1034,9 @@ export function CreateCouponModal() {
                                   <ArrowButton isOpen={false} />
                                 </button>
                               </div>
+                            )}
+                            {appliesToError && (
+                              <p ref={appliesToErrorRef} className="text-sm text-red-11 font-family-dm-sans leading-[1.3]">{appliesToError}</p>
                             )}
                           </div>
 
@@ -1311,60 +1325,62 @@ export function CreateCouponModal() {
                                   </div>
 
                                   {/* Limite por cupom */}
-                                  <div className="flex flex-col gap-5">
-                                    <div className="flex flex-col gap-2">
-                                      <h3 className="text-gray-12 text-lg font-medium font-family-dm-sans leading-[1.3]">
-                                        Limite por cupom
-                                      </h3>
-                                      <p className="text-gray-11 text-base font-family-dm-sans leading-[1.3]">
-                                        Número máximo de vezes que esse cupom pode ser utilizado {couponType !== "QUANTITY" ? "por ingresso" : "por pedido"}
-                                      </p>
-                                    </div>
-                                    <div className="flex gap-6">
-                                      <label className="flex items-center gap-2 cursor-pointer">
-                                        <Checkbox
-                                          checked={!usageLimitEnabled}
-                                          onCheckedChange={(checked) => {
-                                            if (checked) { setUsageLimitEnabled(false); setUsageLimit(""); setUsageLimitError(""); }
-                                          }}
-                                        />
-                                        <span className="text-sm font-family-dm-sans leading-[1.3] text-gray-12">Desabilitar</span>
-                                      </label>
-                                      <label className="flex items-center gap-2 cursor-pointer">
-                                        <Checkbox
-                                          checked={usageLimitEnabled}
-                                          onCheckedChange={(checked) => { if (checked) setUsageLimitEnabled(true); }}
-                                        />
-                                        <span className="text-sm font-family-dm-sans leading-[1.3] text-gray-12">Habilitar</span>
-                                      </label>
-                                    </div>
-                                    {usageLimitEnabled && (
-                                      <div className="flex flex-col gap-2 w-full md:w-[259px]">
-                                        <label className="text-gray-12 text-base font-family-dm-sans leading-[1.3]">
-                                          Limite
-                                        </label>
-                                        <Input
-                                          type="text"
-                                          placeholder="Ex: 45"
-                                          value={usageLimit}
-                                          onChange={(e) => {
-                                            const num = e.target.value.replace(/[^0-9]/g, "");
-                                            setUsageLimit(num);
-                                            const currentUsageCount = data?.coupon?.usageCount ?? 0;
-                                            if (num && parseInt(num) < currentUsageCount) {
-                                              setUsageLimitError(`O limite não pode ser menor que o uso atual (${currentUsageCount})`);
-                                            } else {
-                                              setUsageLimitError("");
-                                            }
-                                          }}
-                                          className={`h-12 ${usageLimitError ? "border-red-6 focus:border-red-10" : ""}`}
-                                        />
-                                        {usageLimitError && (
-                                          <p className="text-sm text-red-11">{usageLimitError}</p>
-                                        )}
+                                  {couponType !== "QUANTITY" && (
+                                    <div className="flex flex-col gap-5">
+                                      <div className="flex flex-col gap-2">
+                                        <h3 className="text-gray-12 text-lg font-medium font-family-dm-sans leading-[1.3]">
+                                          Limite por cupom
+                                        </h3>
+                                        <p className="text-gray-11 text-base font-family-dm-sans leading-[1.3]">
+                                          Quantidade máxima de ingressos que podem utilizar este cupom.
+                                        </p>
                                       </div>
-                                    )}
-                                  </div>
+                                      <div className="flex gap-6">
+                                        <label className="flex items-center gap-2 cursor-pointer">
+                                          <Checkbox
+                                            checked={!usageLimitEnabled}
+                                            onCheckedChange={(checked) => {
+                                              if (checked) { setUsageLimitEnabled(false); setUsageLimit(""); setUsageLimitError(""); }
+                                            }}
+                                          />
+                                          <span className="text-sm font-family-dm-sans leading-[1.3] text-gray-12">Desabilitar</span>
+                                        </label>
+                                        <label className="flex items-center gap-2 cursor-pointer">
+                                          <Checkbox
+                                            checked={usageLimitEnabled}
+                                            onCheckedChange={(checked) => { if (checked) setUsageLimitEnabled(true); }}
+                                          />
+                                          <span className="text-sm font-family-dm-sans leading-[1.3] text-gray-12">Habilitar</span>
+                                        </label>
+                                      </div>
+                                      {usageLimitEnabled && (
+                                        <div className="flex flex-col gap-2 w-full md:w-[259px]">
+                                          <label className="text-gray-12 text-base font-family-dm-sans leading-[1.3]">
+                                            Limite
+                                          </label>
+                                          <Input
+                                            type="text"
+                                            placeholder="Ex: 45"
+                                            value={usageLimit}
+                                            onChange={(e) => {
+                                              const num = e.target.value.replace(/[^0-9]/g, "");
+                                              setUsageLimit(num);
+                                              const currentUsageCount = data?.coupon?.usageCount ?? 0;
+                                              if (num && parseInt(num) < currentUsageCount) {
+                                                setUsageLimitError(`O limite não pode ser menor que o uso atual (${currentUsageCount})`);
+                                              } else {
+                                                setUsageLimitError("");
+                                              }
+                                            }}
+                                            className={`h-12 ${usageLimitError ? "border-red-6 focus:border-red-10" : ""}`}
+                                          />
+                                          {usageLimitError && (
+                                            <p className="text-sm text-red-11">{usageLimitError}</p>
+                                          )}
+                                        </div>
+                                      )}
+                                    </div>
+                                  )}
 
                                   {/* Lista exclusiva por CPF */}
 
@@ -1431,6 +1447,7 @@ export function CreateCouponModal() {
         onConfirm={(ticketIds) => {
           setSelectedTicketIds(ticketIds);
           setAppliesTo(ticketIds.length > 0 ? "specific" : "all");
+          setAppliesToError("");
         }}
         eventId={eventId}
         selectedTicketIds={selectedTicketIds}
