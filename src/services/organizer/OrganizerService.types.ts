@@ -743,12 +743,15 @@ export interface LotNearDepletionBatch {
 export interface LotNearDepletion {
   ticketId: string;
   ticketName: string;
+  /** Categoria do ingresso (null = sem categoria). Ausente em resposta antiga. */
+  categoryName?: string | null;
   status: "Normal" | "Atenção" | "Crítico";
   sold: number;
   total: number;
   remaining: number;
   percentageSold: number;
-  activeBatch?: { id: string; number: number; label: string } | null;
+  /** `count` = total de lotes do ingresso ("Lote 3 de 3"). */
+  activeBatch?: { id: string; number: number; count?: number; label: string } | null;
   /** Shape detalhado a partir da rota `/dashboard/rankings`. */
   batches?: LotNearDepletionBatch[];
 }

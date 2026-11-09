@@ -239,6 +239,7 @@ export function useEventDashboard(
       })),
       lotsNearDepletion: (rankings?.lotsNearDepletion ?? []).map((l) => ({
         name: l.ticketName,
+        categoryName: l.categoryName ?? null,
         status: l.status,
         sold: l.sold,
         total: l.total,

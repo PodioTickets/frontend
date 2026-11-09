@@ -22,6 +22,7 @@ import {
   pickBestAutoCoupon,
   quantityCouponCandidates,
   selectQuantityCoupons,
+  stackableQuantityCoupons,
 } from "@/lib/quantityCoupon";
 import type { OrderCoupon, OrderVoucher } from "@/interfaces/order";
 import {
@@ -306,7 +307,10 @@ export function EventInfo({ event, onNext, isSubmitting = false, tickets = [], c
       const quantity = raceQuantities[ticket.id] || 0;
       if (quantity > 0) selected.push({ id: ticket.id, price: getTicketPrice(ticket), quantity });
     });
-    const candidates = quantityCouponCandidates(ageEligibility?.quantityCoupons, selected, totalPrice);
+    // Cupom de código tira os de quantidade sem "Acumular descontos" — igual ao ModalitiesStep.
+    const candidates = quantityCouponCandidates(
+      stackableQuantityCoupons(ageEligibility?.quantityCoupons, hasManualCoupon), selected, totalPrice,
+    );
     const currentCouponId = hasRealOrderCoupon ? appliedCoupon?.id : null;
     const choice = pickBestAutoCoupon(
       [
@@ -321,7 +325,7 @@ export function EventInfo({ event, onNext, isSubmitting = false, tickets = [], c
     );
     // Cupons de ingressos diferentes não competem: valem juntos, cada um no próprio ingresso.
     return choice?.quantity ? combineQuantityCoupons(selectQuantityCoupons(candidates, currentCouponId)) : null;
-  }, [useVoucher, ageCoupon, ageDiscount, ageEligibility, hasRealOrderCoupon, appliedCoupon, categorizedTickets, uncategorizedTickets, raceQuantities, totalPrice]);
+  }, [useVoucher, ageCoupon, ageDiscount, ageEligibility, hasManualCoupon, hasRealOrderCoupon, appliedCoupon, categorizedTickets, uncategorizedTickets, raceQuantities, totalPrice]);
 
   // Acúmulo automático + manual: o manual incide sobre o valor já descontado pelo
   // automático, capado no subtotal — espelha o ModalitiesStep e o backend.

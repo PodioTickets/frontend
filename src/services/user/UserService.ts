@@ -201,6 +201,7 @@ export class UserService extends AuthService {
             // O ResponseCompressionInterceptor remove chaves null → ausência = sem condição.
             minCartValue: typeof q.minCartValue === "number" ? q.minCartValue : null,
             minQuantity: typeof q.minQuantity === "number" ? q.minQuantity : null,
+            allowStacking: q.allowStacking === true,
             maxQuantity: typeof q.maxQuantity === "number" ? q.maxQuantity : null,
             createdAt: typeof q.createdAt === "string" ? q.createdAt : null,
           }))

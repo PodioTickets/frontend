@@ -6,6 +6,7 @@ import {
   selectQuantityCoupons,
   quantityCouponCandidates,
   quantityCouponCardPreview,
+  stackableQuantityCoupons,
   type QuantityAutoCoupon,
 } from "../quantityCoupon";
 
@@ -18,6 +19,7 @@ const qc = (over: Partial<QuantityAutoCoupon> = {}): QuantityAutoCoupon => ({
   minQuantity: 3,
   maxQuantity: 5,
   createdAt: "2026-01-01T00:00:00.000Z",
+  allowStacking: false,
   ...over,
 });
 const sel = (qty: number, id = "tk-A", price = 100) => [{ id, price, quantity: qty }];
@@ -72,7 +74,7 @@ describe("quantityCouponCandidates", () => {
 
 describe("selectQuantityCoupons (só competem cupons do mesmo ingresso)", () => {
   const cand = (id: string, discount: number, coveredTicketIds: string[], appliesTo: string | null = null) => ({
-    coupon: { id, type: "PERCENTAGE" as const, value: 10, appliesTo, minCartValue: null, minQuantity: null, maxQuantity: null, createdAt: "2026-01-01" },
+    coupon: { id, type: "PERCENTAGE" as const, value: 10, appliesTo, minCartValue: null, minQuantity: null, maxQuantity: null, createdAt: "2026-01-01", allowStacking: false },
     discount,
     coveredTicketIds,
   });
@@ -128,5 +130,17 @@ describe("quantityCouponCardPreview", () => {
   it("risca só os ingressos do appliesTo; 'all' = todos", () => {
     expect(quantityCouponCardPreview(qc({ appliesTo: '["tk-A"]' })).appliesTo).toEqual(["tk-A"]);
     expect(quantityCouponCardPreview(qc()).appliesTo).toBeNull();
+  });
+});
+
+describe("stackableQuantityCoupons", () => {
+  const list = [qc({ id: "solo" }), qc({ id: "acumula", allowStacking: true })];
+
+  it("sem cupom de código: todos valem", () => {
+    expect(stackableQuantityCoupons(list, false)?.map((c) => c.id)).toEqual(["solo", "acumula"]);
+  });
+
+  it("com cupom de código: só os que acumulam", () => {
+    expect(stackableQuantityCoupons(list, true)?.map((c) => c.id)).toEqual(["acumula"]);
   });
 });

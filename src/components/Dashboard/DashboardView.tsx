@@ -17,6 +17,7 @@ import { ProductDetailsDrawer } from "@/components/Organizer/ProductDetailsDrawe
 import { TicketsWithLotsList } from "@/components/Financial/TicketsWithLotsList";
 import { PurchaseHeatmap } from "./PurchaseHeatmap";
 import { DashboardWeekTrend } from "./DashboardWeekTrend";
+import { LotsNearDepletionCard } from "./LotsNearDepletionCard";
 import { Pagination } from "@/components/Pagination";
 import {
   DashboardRankingCategoryLabel,
@@ -415,53 +416,14 @@ export function DashboardView({
 
         {/* Bottom Section */}
         <div className="grid grid-cols-[392px_1fr] gap-3 w-full">
-          {/* Ingressos Próximos de Esgotamento */}
-          <div className="bg-gray-1 border border-gray-6 rounded-xl">
-            <div className="px-4 py-5 border-b border-gray-6 flex items-center justify-between">
-              <p className="font-family-dm-sans font-normal text-[16px] leading-[1.3] text-gray-11">Ingressos próximos de esgotamento</p>
-            </div>
-            <div>
-              {paginatedLotsNearDepletion.map((lot, index) => {
-                const globalIndex = lotsNearDepletionSliceStart + index;
-                const percentage = lot.percentageSold;
-                const getStatusColor = (status: string) => {
-                  if (status === "Crítico") return "bg-red-11";
-                  if (status === "Atenção") return "bg-yellow-11";
-                  return "bg-gray-11";
-                };
-                return (
-                  <div key={`${globalIndex}-${lot.name}`} className="px-4 py-2 border-b border-gray-6 last:border-b-0">
-                    <div className="flex-1 min-w-0 mb-3">
-                      <DashboardRankingTicketNameLabel name={`${lot.name}`} />
-                    </div>
-                    <div className="mb-3">
-                      <div className="relative h-3 bg-gray-6 rounded-full overflow-hidden">
-                        <div
-                          className={`absolute left-0 top-0 h-full rounded-full ${getStatusColor(lot.status)}`}
-                          style={{ width: `${percentage}%` }}
-                        />
-                      </div>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <div className={`px-2 py-1 rounded ${getStatusColor(lot.status)} text-sm font-family-dm-sans font-normal text-gray-1 shrink-0`}>
-                        {lot.status}
-                      </div>
-                      <div>
-                        <span className="font-family-dm-sans font-normal text-sm leading-[1.3] text-gray-11">Lote atual: </span>
-                        <span className="font-family-dm-sans font-semibold text-sm leading-[1.3] text-gray-12">{lot.activeBatch?.label ?? "—"}</span>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-            <Pagination
-              currentPage={lotsNearDepletionPage}
-              totalPages={lotsNearDepletionTotalPages}
-              onPageChange={setLotsNearDepletionPage}
-              variant="compact"
-            />
-          </div>
+          {/* Lotes próximos de esgotamento (Figma 7688:162632) */}
+          <LotsNearDepletionCard
+            lots={paginatedLotsNearDepletion}
+            sliceStart={lotsNearDepletionSliceStart}
+            page={lotsNearDepletionPage}
+            totalPages={lotsNearDepletionTotalPages}
+            onPageChange={setLotsNearDepletionPage}
+          />
 
           {/* Heatmap de Dias e Horários */}
           <div className="bg-gray-1 border border-gray-6 rounded-xl">
@@ -683,47 +645,16 @@ export function DashboardView({
           />
         </div>
 
-        {/* Ingressos próximos de esgotamento - mobile */}
-        <div className="bg-gray-1 border border-gray-6 rounded-xl mb-6">
-          <div className="px-4 py-3 border-b border-gray-6">
-            <p className="font-family-dm-sans font-normal text-base text-gray-11">Ingressos próximos de esgotamento</p>
-          </div>
-          <div className="divide-y divide-gray-6">
-            {paginatedLotsNearDepletion.map((lot, index) => {
-              const globalIndex = lotsNearDepletionSliceStart + index;
-              const percentage = (lot.sold / lot.total) * 100;
-              const getStatusColor = (status: string) => {
-                if (status === "Crítico") return "bg-red-11";
-                if (status === "Atenção") return "bg-yellow-11";
-                return "bg-gray-11";
-              };
-              return (
-                <div key={`${globalIndex}-${lot.name}`} className="px-4 py-3">
-                  <div className="flex items-center justify-between mb-2 gap-2 min-w-0">
-                    <div className="flex-1 min-w-0">
-                      <DashboardRankingTicketNameLabel name={lot.name} size="sm" />
-                    </div>
-                    <span className={`px-2 py-0.5 rounded text-xs font-family-dm-sans text-gray-1 shrink-0 ${getStatusColor(lot.status)}`}>{lot.status}</span>
-                  </div>
-                  <div className="h-2 bg-gray-6 rounded-full overflow-hidden mb-2">
-                    <div className={`h-full rounded-full ${getStatusColor(lot.status)}`} style={{ width: `${percentage}%` }} />
-                  </div>
-                  <div className="flex justify-between text-sm text-gray-11">
-                    <span>Status: <span className="font-semibold text-gray-12">{lot.status}</span></span>
-                    <span>Lote atual: <span className="font-semibold text-gray-12">{lot.activeBatch?.label ?? "—"}</span></span>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-          <Pagination
-            currentPage={lotsNearDepletionPage}
-            totalPages={lotsNearDepletionTotalPages}
-            onPageChange={setLotsNearDepletionPage}
-            variant="compact"
-            className="text-xs"
-          />
-        </div>
+        {/* Lotes próximos de esgotamento - mobile (mesmo card do desktop) */}
+        <LotsNearDepletionCard
+          className="mb-6"
+          paginationClassName="text-xs"
+          lots={paginatedLotsNearDepletion}
+          sliceStart={lotsNearDepletionSliceStart}
+          page={lotsNearDepletionPage}
+          totalPages={lotsNearDepletionTotalPages}
+          onPageChange={setLotsNearDepletionPage}
+        />
 
         {/* Heatmap - mobile */}
         <div className="bg-gray-1 border border-gray-6 rounded-xl mb-6 overflow-hidden">
