@@ -19,6 +19,16 @@ export interface QuantityAutoCoupon {
   maxQuantity: number | null;
   /** ISO — desempate "1º criado" com o cupom de idade. */
   createdAt: string | null;
+  /** "Acumular descontos": vale junto de cupom de código. Sem ela o manual tira este cupom. */
+  allowStacking: boolean;
+}
+
+/** Com cupom de código (link ou pedido), só os automáticos que acumulam — espelha o back. */
+export function stackableQuantityCoupons(
+  coupons: QuantityAutoCoupon[] | null | undefined,
+  hasManualCoupon: boolean,
+): QuantityAutoCoupon[] | undefined {
+  return hasManualCoupon ? coupons?.filter((c) => c.allowStacking) : coupons ?? undefined;
 }
 
 /** Cupom que casou com a seleção. `coveredTicketIds` = ingressos selecionados que ele cobre. */

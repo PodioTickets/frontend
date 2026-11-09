@@ -47,6 +47,7 @@ import {
   quantityCouponCardPreview,
   quantityCouponForTicket,
   selectQuantityCoupons,
+  stackableQuantityCoupons,
 } from "@/lib/quantityCoupon";
 import { useT } from "@/i18n/client";
 
@@ -373,7 +374,9 @@ export function ModalitiesStep({ event, onNext, onBack, isSubmitting = false, di
   // aplicado no pedido, senão o 1º criado — mesma regra do backend. O de quantidade
   // aparece assim que a seleção cai na faixa min/max. Voucher e cupom manual/link vêm
   // antes (escolha do usuário).
-  const quantityCandidates = quantityCouponCandidates(ageEligibility?.quantityCoupons, selectedTickets, totalPrice);
+  // Cupom de código (link ou pedido) tira os de quantidade sem "Acumular descontos": somem da prévia e dos anúncios.
+  const quantityCoupons = stackableQuantityCoupons(ageEligibility?.quantityCoupons, hasManualCoupon);
+  const quantityCandidates = quantityCouponCandidates(quantityCoupons, selectedTickets, totalPrice);
   const autoChoice =
     !useVoucher
       ? pickBestAutoCoupon(
@@ -435,7 +438,7 @@ export function ModalitiesStep({ event, onNext, onBack, isSubmitting = false, di
         ]
           .filter(({ ticket }) => ticket.activeBatch?.status !== "SOLD_OUT" && ticket.activeBatchStatus !== "SOLD_OUT")
           .map(({ ticket, categoryId }) => ({ id: ticket.id, price: getTicketPrice(ticket), ageLimit: ticket.ageLimit, categoryId })),
-        ageEligibility?.quantityCoupons,
+        quantityCoupons,
         ageEligibility?.ageCoupons,
         t,
         manualCoupon,

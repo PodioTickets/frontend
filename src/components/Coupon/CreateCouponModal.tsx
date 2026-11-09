@@ -45,6 +45,7 @@ export function CreateCouponModal() {
   const [apiError, setApiError] = useState("");
   const [appliesToError, setAppliesToError] = useState("");
   const [applyToProducts, setApplyToProducts] = useState(false);
+  const [allowStacking, setAllowStacking] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isMdUp, setIsMdUp] = useState(true);
 
@@ -133,13 +134,14 @@ export function CreateCouponModal() {
       maxQuantity !== (c.maxQuantity?.toString() || "") ||
       minAge !== (c.minAge?.toString() || "") ||
       maxAge !== (c.maxAge?.toString() || "") ||
-      applyToProducts !== !!c.applyToProducts
+      applyToProducts !== !!c.applyToProducts ||
+      allowStacking !== !!c.allowStacking
     );
   }, [
     isEditing, data, couponType, code, note, discountType, value,
     appliesTo, selectedTicketIds, expiryDate, expiryEnabled,
     usageLimit, usageLimitEnabled, cpfListStatus, cpfList,
-    minQuantity, maxQuantity, minAge, maxAge, applyToProducts,
+    minQuantity, maxQuantity, minAge, maxAge, applyToProducts, allowStacking,
   ]);
 
   // Initialize form when modal opens
@@ -192,6 +194,7 @@ export function CreateCouponModal() {
         setCpfListStatus(c.cpfListStatus || "DISABLED");
         setCpfList(c.cpfList || []);
         setApplyToProducts(!!c.applyToProducts);
+        setAllowStacking(!!c.allowStacking);
         // Abre painel avançado automaticamente se houver configurações ativas.
         // IMPORTANTE: minQuantity/minAge/maxAge NÃO entram aqui — esses campos
         // ficam no formulário principal (obrigatórios pros tipos QUANTITY/AGE),
@@ -202,7 +205,8 @@ export function CreateCouponModal() {
             c.expiryDate ||
             c.maxUsage ||
             c.cpfListStatus === "ENABLED" ||
-            c.applyToProducts
+            c.applyToProducts ||
+            c.allowStacking
           )
         );
         setMinQuantity(c.minQuantity?.toString() || "");
@@ -230,6 +234,7 @@ export function CreateCouponModal() {
         setCpfListStatus("DISABLED");
         setCpfList([]);
         setApplyToProducts(false);
+        setAllowStacking(false);
         setMinQuantity("");
         setMaxQuantity("");
         setMinAge("");
@@ -450,6 +455,8 @@ export function CreateCouponModal() {
         cpfList:
           couponType !== "QUANTITY" && cpfListStatus === "ENABLED" ? cpfList : null,
         applyToProducts,
+        // Só cupom por quantidade acumula com cupom de código (os outros tipos gravam false).
+        allowStacking: couponType === "QUANTITY" && allowStacking,
         // Campos específicos por tipo — quando o tipo do cupom muda, os campos
         // dos outros tipos precisam ser limpos no backend.
         minQuantity: couponType === "QUANTITY" && minQuantity ? parseInt(minQuantity) : null,
@@ -809,7 +816,7 @@ export function CreateCouponModal() {
                             {couponType === "DISCOUNT" && (
                               <div className="flex flex-col gap-2">
                                 <p className="text-gray-11 text-base font-family-dm-sans leading-[1.3]">
-                                  Crie um código para o participante digitar no pagamento e receber o desconto
+                                  Quantidade máxima de ingressos que podem utilizar este cupom.
                                 </p>
                                 <div className="relative">
                                   <Input
@@ -1281,6 +1288,36 @@ export function CreateCouponModal() {
                                         </label>
                                       </div>
                                     </div>
+
+                                    {/* Acumular descontos — só cupom por quantidade. Desabilitado: cupom de código tira este. */}
+                                    {couponType === "QUANTITY" && (
+                                      <div className="flex flex-col gap-5">
+                                        <div className="flex flex-col gap-2">
+                                          <h3 className="text-gray-12 text-lg font-medium font-family-dm-sans leading-[1.3]">
+                                            Acumular descontos
+                                          </h3>
+                                          <p className="text-gray-11 text-base font-family-dm-sans leading-[1.3]">
+                                            Permitir que o desconto automático por quantidade seja combinado com cupons de código no mesmo pedido.
+                                          </p>
+                                        </div>
+                                        <div className="flex gap-6">
+                                          <label className="flex items-center gap-2 cursor-pointer">
+                                            <Checkbox
+                                              checked={!allowStacking}
+                                              onCheckedChange={(checked) => { if (checked) setAllowStacking(false); }}
+                                            />
+                                            <span className="text-sm font-family-dm-sans leading-[1.3] text-gray-12">Desabilitar</span>
+                                          </label>
+                                          <label className="flex items-center gap-2 cursor-pointer">
+                                            <Checkbox
+                                              checked={allowStacking}
+                                              onCheckedChange={(checked) => { if (checked) setAllowStacking(true); }}
+                                            />
+                                            <span className="text-sm font-family-dm-sans leading-[1.3] text-gray-12">Habilitar</span>
+                                          </label>
+                                        </div>
+                                      </div>
+                                    )}
 
                                     <div className="flex flex-col gap-2">
                                       <h3 className="text-gray-12 text-lg font-medium font-family-dm-sans leading-[1.3]">
