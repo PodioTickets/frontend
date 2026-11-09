@@ -816,7 +816,7 @@ export function CreateCouponModal() {
                             {couponType === "DISCOUNT" && (
                               <div className="flex flex-col gap-2">
                                 <p className="text-gray-11 text-base font-family-dm-sans leading-[1.3]">
-                                  Quantidade máxima de ingressos que podem utilizar este cupom.
+                                  Quantidade máxima de uso do cupom.
                                 </p>
                                 <div className="relative">
                                   <Input
