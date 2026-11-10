@@ -1369,7 +1369,7 @@ export function CreateCouponModal() {
                                           Limite por cupom
                                         </h3>
                                         <p className="text-gray-11 text-base font-family-dm-sans leading-[1.3]">
-                                          Quantidade máxima de uso do cupom.
+                                          Total de vezes que o cupom pode ser utilizado.
                                         </p>
                                       </div>
                                       <div className="flex gap-6">

@@ -23,12 +23,50 @@ export interface QuantityAutoCoupon {
   allowStacking: boolean;
 }
 
-/** Com cupom de código (link ou pedido), só os automáticos que acumulam — espelha o back. */
+/**
+ * Com cupom de código (link ou pedido), só os automáticos que acumulam OU que não dividem
+ * ingresso com ele (2026-11-10) — espelha o `stacksWithManualCoupon` do back.
+ * `manual` = escopo do cupom de código (`appliesTo` normalizado: null = todos); null = sem cupom.
+ */
 export function stackableQuantityCoupons(
   coupons: QuantityAutoCoupon[] | null | undefined,
-  hasManualCoupon: boolean,
+  manual: { appliesTo: string[] | null } | null,
 ): QuantityAutoCoupon[] | undefined {
-  return hasManualCoupon ? coupons?.filter((c) => c.allowStacking) : coupons ?? undefined;
+  if (!manual) return coupons ?? undefined;
+  return coupons?.filter((c) => c.allowStacking || !sharesTicket(parseAppliesToIds(c.appliesTo), manual.appliesTo));
+}
+
+/** null = todos os ingressos. */
+function sharesTicket(a: string[] | null, b: string[] | null): boolean {
+  if (!a?.length || !b?.length) return true;
+  return a.some((id) => b.includes(id));
+}
+
+/**
+ * Parte do desconto dos automáticos que cai nos ingressos do cupom manual (`manualAppliesTo`,
+ * null = todos), em REAIS — base do rebase do manual: automático em OUTRO ingresso não reduz o manual.
+ * Mesma conta do `quantityCouponCandidates`, só sobre os ingressos em comum.
+ */
+export function autoDiscountOnTickets(
+  selectedCoupons: QuantityCouponCandidate[],
+  selected: Array<{ id: string; price: number; quantity: number }>,
+  manualAppliesTo: string[] | null,
+): number {
+  let cents = 0;
+  for (const { coupon, discount, coveredTicketIds } of selectedCoupons) {
+    const overlap = selected.filter(
+      (t) => t.quantity > 0 && coveredTicketIds.includes(t.id) && (!manualAppliesTo || manualAppliesTo.includes(t.id)),
+    );
+    if (overlap.length === coveredTicketIds.length) {
+      cents += Math.round(discount * 100);
+      continue;
+    }
+    const subtotal = overlap.reduce((s, t) => s + Math.round(Math.max(0, t.price) * 100) * t.quantity, 0);
+    const units = overlap.reduce((s, t) => s + t.quantity, 0);
+    const part = coupon.type === "PERCENTAGE" ? Math.floor(subtotal * (coupon.value / 100)) : units * coupon.value;
+    cents += Math.min(part, subtotal);
+  }
+  return cents / 100;
 }
 
 /** Cupom que casou com a seleção. `coveredTicketIds` = ingressos selecionados que ele cobre. */

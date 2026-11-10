@@ -41,6 +41,7 @@ import { useCouponPreview } from "@/hooks/useCouponPreview";
 import { useAgeCouponEligibility } from "@/hooks/useAgeCouponEligibility";
 import { computeAgeCouponTicketDiscount, formatAgeCouponLineLabel } from "@/lib/ageCoupon";
 import {
+  autoDiscountOnTickets,
   combineQuantityCoupons,
   pickBestAutoCoupon,
   quantityCouponCandidates,
@@ -374,8 +375,19 @@ export function ModalitiesStep({ event, onNext, onBack, isSubmitting = false, di
   // aplicado no pedido, senão o 1º criado — mesma regra do backend. O de quantidade
   // aparece assim que a seleção cai na faixa min/max. Voucher e cupom manual/link vêm
   // antes (escolha do usuário).
-  // Cupom de código (link ou pedido) tira os de quantidade sem "Acumular descontos": somem da prévia e dos anúncios.
-  const quantityCoupons = stackableQuantityCoupons(ageEligibility?.quantityCoupons, hasManualCoupon);
+  // Cupom manual: anunciado só depois de aplicado (link ou pedido), pois depende de código.
+  const manualCoupon = appliedCoupon?.couponType === "DISCOUNT"
+    ? {
+      ...appliedCoupon,
+      // Preview do link traz o escopo e as condições; o cupom do pedido, só o escopo.
+      appliesTo: orderCoupon ? normalizeCouponAppliesTo(orderCoupon.appliesTo) : couponData?.appliesTo ?? null,
+      minQuantity: orderCoupon ? null : couponData?.minQuantity,
+      minCartValue: orderCoupon ? null : couponData?.minCartValue,
+    }
+    : null;
+  // Cupom de código (link ou pedido) tira os de quantidade sem "Acumular descontos" que cobrem
+  // algum ingresso dele: somem da prévia e dos anúncios. Em outros ingressos valem junto.
+  const quantityCoupons = stackableQuantityCoupons(ageEligibility?.quantityCoupons, manualCoupon);
   const quantityCandidates = quantityCouponCandidates(quantityCoupons, selectedTickets, totalPrice);
   const autoChoice =
     !useVoucher
@@ -419,16 +431,6 @@ export function ModalitiesStep({ event, onNext, onBack, isSubmitting = false, di
   };
   // Anúncios de cupom automático (voucher é exclusivo → sem anúncios). Ingresso esgotado não
   // conta: não dá para comprar, então um cupom pode ser "geral" sem cobri-lo.
-  // Cupom manual: anunciado só depois de aplicado (link ou pedido), pois depende de código.
-  const manualCoupon = appliedCoupon?.couponType === "DISCOUNT"
-    ? {
-      ...appliedCoupon,
-      // Preview do link traz o escopo e as condições; o cupom do pedido, só o escopo.
-      appliesTo: orderCoupon ? normalizeCouponAppliesTo(orderCoupon.appliesTo) : couponData?.appliesTo ?? null,
-      minQuantity: orderCoupon ? null : couponData?.minQuantity,
-      minCartValue: orderCoupon ? null : couponData?.minCartValue,
-    }
-    : null;
   const autoCouponOffers =
     !useVoucher
       ? autoCouponDisplay(
@@ -449,9 +451,12 @@ export function ModalitiesStep({ event, onNext, onBack, isSubmitting = false, di
   // Acúmulo automático + manual (link ou da order): o manual incide sobre o valor já
   // descontado pelo automático, capado no subtotal — espelha o backend (autoritativo).
   const autoPreviewDiscount = quantityAuto ? quantityAuto.discount : ageCoupon ? ageDiscount : 0;
+  // O rebase usa só o automático nos ingressos do manual (automático em outro ingresso não o reduz).
   const manualPreviewDiscount = stackedManualDiscount(
     linkCouponDiscount ?? orderManualCouponDiscount ?? 0,
-    autoPreviewDiscount,
+    quantityAuto
+      ? autoDiscountOnTickets(quantityAuto.coupons, selectedTickets, manualCoupon?.appliesTo ?? null)
+      : autoPreviewDiscount,
     appliedCoupon,
   );
   const stackedPreview = hasManualCoupon || useLinkCoupon

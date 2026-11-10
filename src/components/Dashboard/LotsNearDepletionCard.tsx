@@ -46,7 +46,8 @@ export function LotsNearDepletionCard({
         {lots.map((lot, index) => {
           // Lote sem vaga = "Esgotado" (o back marca como Crítico).
           const style = STATUS_STYLE[lot.remaining === 0 ? "Esgotado" : lot.status] ?? STATUS_STYLE.Normal;
-          const batch = lot.activeBatch
+          // Ingresso com um lote só: sem o texto de lote (regra do usuário, 2026-11-10).
+          const batch = lot.activeBatch && lot.activeBatch.count !== 1
             ? `Lote ${lot.activeBatch.number}${lot.activeBatch.count ? ` de ${lot.activeBatch.count}` : ""}`
             : null;
           const caption = [lot.categoryName, batch].filter(Boolean).join("  ·  ");
