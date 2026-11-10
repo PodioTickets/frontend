@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import {
+  autoDiscountOnTickets,
   combineQuantityCoupons,
   pickBestAutoCoupon,
   quantityCouponForTicket,
@@ -137,10 +138,37 @@ describe("stackableQuantityCoupons", () => {
   const list = [qc({ id: "solo" }), qc({ id: "acumula", allowStacking: true })];
 
   it("sem cupom de código: todos valem", () => {
-    expect(stackableQuantityCoupons(list, false)?.map((c) => c.id)).toEqual(["solo", "acumula"]);
+    expect(stackableQuantityCoupons(list, null)?.map((c) => c.id)).toEqual(["solo", "acumula"]);
   });
 
-  it("com cupom de código: só os que acumulam", () => {
-    expect(stackableQuantityCoupons(list, true)?.map((c) => c.id)).toEqual(["acumula"]);
+  it("com cupom de código no mesmo ingresso: só os que acumulam", () => {
+    expect(stackableQuantityCoupons(list, { appliesTo: null })?.map((c) => c.id)).toEqual(["acumula"]);
+    expect(stackableQuantityCoupons(list, { appliesTo: ["tk-A"] })?.map((c) => c.id)).toEqual(["acumula"]);
+    const scoped = [qc({ id: "ab", appliesTo: '["tk-A","tk-B"]' })];
+    expect(stackableQuantityCoupons(scoped, { appliesTo: ["tk-B"] })).toEqual([]);
+  });
+
+  it("cupom de código em outro ingresso: o automático vale junto", () => {
+    const scoped = [qc({ id: "a", appliesTo: '["tk-A"]' })];
+    expect(stackableQuantityCoupons(scoped, { appliesTo: ["tk-B"] })?.map((c) => c.id)).toEqual(["a"]);
+  });
+});
+
+describe("autoDiscountOnTickets", () => {
+  const selected = [
+    { id: "tk-A", price: 100, quantity: 3 },
+    { id: "tk-B", price: 50, quantity: 1 },
+  ];
+
+  it("automático em outro ingresso não entra no rebase do manual", () => {
+    const auto = quantityCouponCandidates([qc({ appliesTo: '["tk-A"]' })], selected, 350);
+    expect(autoDiscountOnTickets(auto, selected, ["tk-B"])).toBe(0);
+    expect(autoDiscountOnTickets(auto, selected, ["tk-A"])).toBe(30);
+    expect(autoDiscountOnTickets(auto, selected, null)).toBe(30);
+  });
+
+  it("automático em vários ingressos: só a parte dos ingressos do manual", () => {
+    const auto = quantityCouponCandidates([qc({ maxQuantity: null })], selected, 350);
+    expect(autoDiscountOnTickets(auto, selected, ["tk-B"])).toBe(5);
   });
 });

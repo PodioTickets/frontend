@@ -18,6 +18,7 @@ import { useAgeCouponEligibility } from "@/hooks/useAgeCouponEligibility";
 import { useAuth } from "@/hooks/useAuth";
 import { computeAgeCouponTicketDiscount, formatAgeCouponLineLabel } from "@/lib/ageCoupon";
 import {
+  autoDiscountOnTickets,
   combineQuantityCoupons,
   pickBestAutoCoupon,
   quantityCouponCandidates,
@@ -292,6 +293,14 @@ export function EventInfo({ event, onNext, isSubmitting = false, tickets = [], c
     );
   }, [useLinkCoupon, resolvedCoupon, categorizedTickets, uncategorizedTickets, raceQuantities, totalPrice]);
 
+  // Escopo do cupom de código (null = todos os ingressos): o do link enquanto não há cupom real no pedido.
+  const manualScope = useMemo(
+    () => hasManualCoupon
+      ? { appliesTo: useLinkCoupon ? couponData?.appliesTo ?? null : normalizeCouponAppliesTo(resolvedCoupon?.appliesTo) }
+      : null,
+    [hasManualCoupon, useLinkCoupon, couponData, resolvedCoupon],
+  );
+
   // Cupons AUTOMÁTICOS (idade × quantidade) — espelha o ModalitiesStep: o que MAIS
   // desconta; empate → o já aplicado no pedido, senão o 1º criado.
   const quantityAuto = useMemo(() => {
@@ -307,9 +316,9 @@ export function EventInfo({ event, onNext, isSubmitting = false, tickets = [], c
       const quantity = raceQuantities[ticket.id] || 0;
       if (quantity > 0) selected.push({ id: ticket.id, price: getTicketPrice(ticket), quantity });
     });
-    // Cupom de código tira os de quantidade sem "Acumular descontos" — igual ao ModalitiesStep.
+    // Cupom de código tira os de quantidade sem "Acumular descontos" nos ingressos dele — igual ao ModalitiesStep.
     const candidates = quantityCouponCandidates(
-      stackableQuantityCoupons(ageEligibility?.quantityCoupons, hasManualCoupon), selected, totalPrice,
+      stackableQuantityCoupons(ageEligibility?.quantityCoupons, manualScope), selected, totalPrice,
     );
     const currentCouponId = hasRealOrderCoupon ? appliedCoupon?.id : null;
     const choice = pickBestAutoCoupon(
@@ -324,15 +333,17 @@ export function EventInfo({ event, onNext, isSubmitting = false, tickets = [], c
       currentCouponId,
     );
     // Cupons de ingressos diferentes não competem: valem juntos, cada um no próprio ingresso.
-    return choice?.quantity ? combineQuantityCoupons(selectQuantityCoupons(candidates, currentCouponId)) : null;
-  }, [useVoucher, ageCoupon, ageDiscount, ageEligibility, hasManualCoupon, hasRealOrderCoupon, appliedCoupon, categorizedTickets, uncategorizedTickets, raceQuantities, totalPrice]);
+    const combined = choice?.quantity ? combineQuantityCoupons(selectQuantityCoupons(candidates, currentCouponId)) : null;
+    // `onManual` = parte nos ingressos do manual (base do rebase do manual).
+    return combined && { ...combined, onManual: autoDiscountOnTickets(combined.coupons, selected, manualScope?.appliesTo ?? null) };
+  }, [useVoucher, ageCoupon, ageDiscount, ageEligibility, manualScope, hasRealOrderCoupon, appliedCoupon, categorizedTickets, uncategorizedTickets, raceQuantities, totalPrice]);
 
   // Acúmulo automático + manual: o manual incide sobre o valor já descontado pelo
   // automático, capado no subtotal — espelha o ModalitiesStep e o backend.
   const autoPreviewDiscount = quantityAuto ? quantityAuto.discount : ageCoupon ? ageDiscount : 0;
   const manualPreviewDiscount = stackedManualDiscount(
     (useLinkCoupon ? linkCouponDiscount : orderManualCouponDiscount) ?? 0,
-    autoPreviewDiscount,
+    quantityAuto ? quantityAuto.onManual : autoPreviewDiscount,
     resolvedCoupon,
   );
   const stackedPreview = (hasManualCoupon || useLinkCoupon) && !useVoucher && autoPreviewDiscount > 0 && manualPreviewDiscount > 0;
