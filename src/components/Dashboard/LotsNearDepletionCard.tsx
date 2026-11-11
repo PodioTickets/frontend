@@ -1,5 +1,6 @@
 import { Pagination } from "@/components/Pagination";
 import { cn } from "@/utils/cn";
+import { LOTS_NEAR_DEPLETION_PAGE_SIZE } from "@/lib/dashboard";
 
 export interface LotNearDepletionRow {
   name: string;
@@ -54,7 +55,10 @@ export function LotsNearDepletionCard({
           return (
             <div
               key={`${sliceStart + index}-${lot.name}`}
-              className="flex flex-1 flex-col justify-center gap-3 border-b border-gray-4 px-4 py-[18px] last:border-b-0"
+              // Altura de 1/4 da lista mesmo com menos lotes na página: não estica para preencher
+              // (regra do usuário, 2026-11-11). Sem altura definida (mobile), vale o conteúdo.
+              style={{ flexBasis: `${100 / LOTS_NEAR_DEPLETION_PAGE_SIZE}%` }}
+              className="flex shrink-0 grow-0 flex-col justify-center gap-3 border-b border-gray-4 px-4 py-[18px] last:border-b-0"
             >
               <div className="flex items-center gap-3 break-words">
                 <div className="flex min-w-0 flex-1 flex-col gap-2">
