@@ -161,6 +161,15 @@ function CheckoutIngressosContent() {
         // NÃO limpa o pendente: mantém `?coupon=`/`?voucher=` na URL (via
         // CouponLinkCapture) pra o link persistir ao voltar pro /ingressos e
         // trocar de páginas. A reaplicação é idempotente/guardada.
+      } else if (order.coupon?.couponType === "DISCOUNT" && !order.voucher) {
+        // Sem link: o pedido reaproveitado (mesmos ingressos) pode trazer o cupom manual
+        // de uma visita anterior. Sem código no PATCH o back tira o manual e devolve os
+        // automáticos. Falha silenciosa, igual ao cupom de link.
+        try {
+          syncFromOrder(await patchCoupon(order.orderId, {}));
+        } catch {
+          /* segue com o pedido como está */
+        }
       }
 
       startNavigation(() => {

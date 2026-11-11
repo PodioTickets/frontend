@@ -958,7 +958,10 @@ export function TicketCategoryCard({
 }: TicketCategoryCardProps) {
   const kitSelectionDisplay = kitSelectionDisplayProp ?? defaultEventKitSelectionDisplay();
   const t = useT("checkout");
-  const [isExpanded, setIsExpanded] = useState(expandedByDefault ?? index === 0);
+  // `null` = a pessoa ainda não clicou: segue o padrão, que pode mudar quando os cupons
+  // chegam (categoria com cupom começa fechada). Depois do 1º clique vale o clique.
+  const [userExpanded, setUserExpanded] = useState<boolean | null>(null);
+  const isExpanded = userExpanded ?? expandedByDefault ?? index === 0;
   const { raceQuantities, updateRaceQuantity } = useCheckout();
   const hidePricing = useHidePricing();
   const pick = useTicketPick();
@@ -1051,8 +1054,8 @@ export function TicketCategoryCard({
   const expanded = isExpanded || hasSelectedTicket;
   const handleToggle = useCallback(() => {
     if (hasSelectedTicket) return;
-    setIsExpanded((prev) => !prev);
-  }, [hasSelectedTicket]);
+    setUserExpanded(!isExpanded);
+  }, [hasSelectedTicket, isExpanded]);
 
   // Quantidade mínima por pedido: + pula de 0 para N e − volta de N para 0.
   const minOf = useCallback(
