@@ -239,12 +239,14 @@ export function ModalitiesStep({ event, onNext, onBack, isSubmitting = false, di
   // (`timerCurrentOrder`/`orderData`) OU em preview vindo do link `?coupon=`
   // (`couponPreview`). Cupons automáticos (QUANTITY/AGE) são ignorados aqui — o
   // desconto deles só é revelado no pagamento.
+  // Cupom REAL já aplicado na order (não o preview do link). Cupom manual (DISCOUNT) só
+  // vale com o link na URL: entrando sem `?cupom=`, o de uma visita anterior não aparece
+  // aqui e o `handleNext` de /ingressos o tira do pedido (regra do usuário, 11/11).
+  const rawOrderCoupon = timerCurrentOrder?.coupon ?? orderData?.coupon ?? null;
+  const orderCoupon = rawOrderCoupon?.couponType === "DISCOUNT" && !pendingCoupon ? null : rawOrderCoupon;
   const appliedCoupon = useMemo(
-    () =>
-      timerCurrentOrder?.coupon ??
-      orderData?.coupon ??
-      couponPreviewToOrderCoupon(couponData, pendingCoupon),
-    [timerCurrentOrder, orderData, couponData, pendingCoupon],
+    () => orderCoupon ?? couponPreviewToOrderCoupon(couponData, pendingCoupon),
+    [orderCoupon, couponData, pendingCoupon],
   );
 
   // Voucher pode vir do link (`?voucher=`, preview) OU já estar aplicado na
@@ -252,11 +254,9 @@ export function ModalitiesStep({ event, onNext, onBack, isSubmitting = false, di
   // sem o param escondia a linha do voucher e o desconto. Voucher e cupom são
   // mutuamente exclusivos; o voucher tem prioridade aqui.
   const orderVoucher = timerCurrentOrder?.voucher ?? orderData?.voucher ?? null;
-  // Cupom REAL já aplicado na order (não o preview do link). Voucher e cupom são
-  // exclusivos: voucher da ORDER sempre vale; voucher de LINK só vale se a order
-  // ainda não tem um cupom real — senão o display do voucher sobreporia o cupom
-  // autoritativo que o backend vai cobrar.
-  const orderCoupon = timerCurrentOrder?.coupon ?? orderData?.coupon ?? null;
+  // Voucher e cupom são exclusivos: voucher da ORDER sempre vale; voucher de LINK só
+  // vale se a order ainda não tem um cupom real — senão o display do voucher sobreporia
+  // o cupom autoritativo que o backend vai cobrar.
   const useVoucher = !!orderVoucher || (!!voucherData && !orderCoupon);
 
   // Ingressos selecionados (id/preço/qtd) — base do voucher e do cupom de idade.
@@ -447,6 +447,10 @@ export function ModalitiesStep({ event, onNext, onBack, isSubmitting = false, di
       )
       : null;
   const autoCouponsForBadges = autoCouponOffers?.byTicket ?? null;
+  // Categoria com cupom anunciado (selo na categoria ou em algum ingresso) começa fechada,
+  // mesmo sendo a 1ª (regra do usuário, 11/11). Com ingresso selecionado o card abre sozinho.
+  const categoryHasCouponOffer = (category: { id: string; tickets: Ticket[] }) =>
+    !!autoCouponOffers?.byCategory[category.id] || category.tickets.some((ticket) => !!autoCouponsForBadges?.[ticket.id]);
 
   // Acúmulo automático + manual (link ou da order): o manual incide sobre o valor já
   // descontado pelo automático, capado no subtotal — espelha o backend (autoritativo).
@@ -634,7 +638,7 @@ export function ModalitiesStep({ event, onNext, onBack, isSubmitting = false, di
                   categoryCoupon={autoCouponOffers?.byCategory[category.id]}
                   tickets={category.tickets}
                   index={index}
-                  expandedByDefault={index === 0}
+                  expandedByDefault={index === 0 && !categoryHasCouponOffer(category)}
                   event={event}
 
                   kitSelectionDisplay={kitSelectionDisplay}
@@ -745,7 +749,7 @@ export function ModalitiesStep({ event, onNext, onBack, isSubmitting = false, di
                         categoryCoupon={autoCouponOffers?.byCategory[category.id]}
                         tickets={category.tickets}
                         index={index}
-                        expandedByDefault={index === 0}
+                        expandedByDefault={index === 0 && !categoryHasCouponOffer(category)}
                         event={event}
 
                         kitSelectionDisplay={kitSelectionDisplay}

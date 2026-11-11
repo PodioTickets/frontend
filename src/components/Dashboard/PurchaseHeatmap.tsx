@@ -2,7 +2,7 @@
 
 import dynamic from "next/dynamic";
 import { useEffect, useRef, useState } from "react";
-import type { PurchaseLocation } from "@/services/organizer/OrganizerService.types";
+import type { PurchaseLocation, TopCity } from "@/services/organizer/OrganizerService.types";
 
 /**
  * Seção "Mapa de calor de compras" do dashboard (Leaflet + leaflet.heat sobre
@@ -26,9 +26,12 @@ function MapSkeleton() {
 
 export function PurchaseHeatmap({
   data,
+  topCities,
   pending = 0,
 }: {
   data: PurchaseLocation[];
+  /** Cidades com mais vendas — quadro no canto do mapa. */
+  topCities?: TopCity[];
   /** Bairros ainda sendo geocodificados no backend (mostra progresso; o mapa
    *  preenche em tempo real via WebSocket, sem recarregar). */
   pending?: number;
@@ -77,7 +80,7 @@ export function PurchaseHeatmap({
           Veja no mapa de onde estão vindo as compras do seu evento.
         </p>
       </div>
-      {visible ? <PurchaseHeatmapImpl data={data} /> : <MapSkeleton />}
+      {visible ? <PurchaseHeatmapImpl data={data} topCities={topCities} /> : <MapSkeleton />}
     </div>
   );
 }

@@ -4,7 +4,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
-import type { PurchaseLocation } from "@/services/organizer/OrganizerService.types";
+import type { PurchaseLocation, TopCity } from "@/services/organizer/OrganizerService.types";
 
 /**
  * Mapa de CALOR de compras — Leaflet + leaflet.heat sobre tiles do OpenStreetMap
@@ -272,7 +272,14 @@ function purchaseBadgeIcon(purchases: number): any {
   });
 }
 
-export default function PurchaseHeatmapImpl({ data }: { data: PurchaseLocation[] }) {
+export default function PurchaseHeatmapImpl({
+  data,
+  topCities = [],
+}: {
+  data: PurchaseLocation[];
+  /** Cidades com mais vendas (`topCities` do dashboard): quadro no canto superior esquerdo. */
+  topCities?: TopCity[];
+}) {
   const mapElRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<any>(null);
   const heatRef = useRef<any>(null);
@@ -670,6 +677,23 @@ export default function PurchaseHeatmapImpl({ data }: { data: PurchaseLocation[]
           ref={mapElRef}
           className="h-full w-full rounded-xl overflow-hidden bg-gray-3 z-0"
         />
+
+        {/* Cidades com mais vendas — canto superior esquerdo (zoom e tela cheia ficam embaixo à
+            direita). Acima das camadas do Leaflet (≤400) e do aviso de geocoding (500), abaixo da
+            dica de gesto (600). `pointer-events-none`: não atrapalha arrastar o mapa. */}
+        {topCities.length > 0 && (
+          <div className="pointer-events-none absolute left-3 top-3 z-550 flex max-w-[60%] flex-col gap-1.5 rounded-lg border border-gray-6 bg-gray-1/95 px-3 py-2.5 shadow-md">
+            <p className="font-family-dm-sans text-xs font-medium text-gray-11">Cidades com mais vendas</p>
+            {topCities.map((city) => (
+              <p
+                key={`${city.city}|${city.state ?? ""}`}
+                className="truncate font-family-dm-sans text-sm text-gray-11"
+              >
+                <span className="font-semibold text-gray-12">{city.city}</span>: QT {city.purchases}
+              </p>
+            ))}
+          </div>
+        )}
 
       {/* Dica de gesto cooperativo (estilo Google Maps) — aparece ao rolar/tocar
           sem o gesto correto e some sozinha. `pointer-events-none` p/ não bloquear
