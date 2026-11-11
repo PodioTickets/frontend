@@ -431,28 +431,7 @@ export function DashboardView({
           </div>
         </div>
 
-        {/* Cities Section */}
-        <div className="grid grid-cols-2 gap-3 mt-8 w-full">
-          {dashboardData.topCities.map((city, index) => {
-            const isFirst = index === 0;
-            return (
-              <div
-                key={index}
-                className={`${isFirst ? "bg-primary-2 border-primary-6" : "bg-blue-2 border-blue-6"} border rounded-lg p-3`}
-              >
-                <div className={`inline-block px-2 py-1 rounded text-[14px] font-family-dm-sans font-medium mb-2 ${isFirst ? "bg-primary-5 text-primary-12" : "bg-blue-5 text-blue-12"}`}>
-                  {isFirst ? "1º Cidade com mais vendas" : "2º Cidade com mais vendas"}
-                </div>
-                <p className="font-family-dm-sans font-semibold text-[16px] text-gray-12 mb-2">{city.city}</p>
-                <p className="font-family-dm-sans font-normal text-[14px] text-gray-11">
-                  QT de compras: <span className="font-family-dm-sans font-semibold text-[14px] leading-[1.3] text-gray-12">{city.purchases}</span>
-                </p>
-              </div>
-            )
-          })}
-        </div>
-
-        {/* Mapa de calor geográfico — logo antes do último gráfico. */}
+        {/* Mapa de calor geográfico (as cidades com mais vendas ficam no quadro dentro do mapa) — logo antes do último gráfico. */}
         <div className="mt-8 w-full">
           <PurchaseHeatmap data={dashboardData.purchaseLocations} topCities={dashboardData.topCities} pending={dashboardData.purchaseLocationsPending} />
         </div>
@@ -661,29 +640,8 @@ export function DashboardView({
           <SalesHeatmap data={dashboardData.salesHeatmap} />
         </div>
 
-        {/* Cidades - mobile */}
-        <div className="grid grid-cols-1 gap-3">
-          {dashboardData.topCities.map((city, index) => {
-            const isFirst = index === 0;
-            return (
-              <div
-                key={index}
-                className={`${isFirst ? "bg-primary-2 border-primary-6" : "bg-blue-2 border-blue-6"} border rounded-xl p-3`}
-              >
-                <div className={`inline-block px-2 py-1 rounded text-sm font-family-dm-sans font-medium mb-2 ${isFirst ? "bg-primary-5 text-primary-12" : "bg-blue-5 text-blue-12"}`}>
-                  {isFirst ? "1º Cidade com mais vendas" : "2º Cidade com mais vendas"}
-                </div>
-                <p className="font-family-dm-sans font-semibold text-base text-gray-12 mb-1">{city.city}</p>
-                <p className="font-family-dm-sans font-normal text-sm text-gray-11">
-                  QT de compras: <span className="font-semibold text-gray-12">{city.purchases}</span>
-                </p>
-              </div>
-            );
-          })}
-        </div>
-
-        {/* Mapa de calor geográfico — logo antes do último gráfico (mobile). */}
-        <div className="mt-6">
+        {/* Mapa de calor geográfico — logo antes do último gráfico (mobile). O heatmap acima já dá o mb-6. */}
+        <div>
           <PurchaseHeatmap data={dashboardData.purchaseLocations} topCities={dashboardData.topCities} pending={dashboardData.purchaseLocationsPending} />
         </div>
 
