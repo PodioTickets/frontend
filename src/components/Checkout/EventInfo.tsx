@@ -318,7 +318,13 @@ export function EventInfo({ event, onNext, isSubmitting = false, tickets = [], c
     });
     // Cupom de código tira os de quantidade sem "Acumular descontos" nos ingressos dele — igual ao ModalitiesStep.
     const candidates = quantityCouponCandidates(
-      stackableQuantityCoupons(ageEligibility?.quantityCoupons, manualScope), selected, totalPrice,
+      stackableQuantityCoupons(
+        ageEligibility?.quantityCoupons,
+        manualScope,
+        [...categorizedTickets.flatMap((c) => c.tickets), ...uncategorizedTickets].map((ticket) => ticket.id),
+      ),
+      selected,
+      totalPrice,
     );
     const currentCouponId = hasRealOrderCoupon ? appliedCoupon?.id : null;
     const choice = pickBestAutoCoupon(

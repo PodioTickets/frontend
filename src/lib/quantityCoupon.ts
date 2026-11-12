@@ -24,22 +24,28 @@ export interface QuantityAutoCoupon {
 }
 
 /**
- * Com cupom de código (link ou pedido), só os automáticos que acumulam OU que não dividem
- * ingresso com ele (2026-11-10) — espelha o `stacksWithManualCoupon` do back.
+ * Com cupom de código (link ou pedido), o automático sem "Acumular descontos" perde SÓ os ingressos
+ * do manual e segue nos outros, com a faixa de quantidade contando só esses (2026-11-11) — espelha o
+ * `autoCouponScopeWithManual` do back. Sem ingresso sobrando, sai.
  * `manual` = escopo do cupom de código (`appliesTo` normalizado: null = todos); null = sem cupom.
+ * `ticketIds` = ingressos do evento, para resolver o "all" do automático.
  */
 export function stackableQuantityCoupons(
   coupons: QuantityAutoCoupon[] | null | undefined,
   manual: { appliesTo: string[] | null } | null,
+  ticketIds: string[],
 ): QuantityAutoCoupon[] | undefined {
   if (!manual) return coupons ?? undefined;
-  return coupons?.filter((c) => c.allowStacking || !sharesTicket(parseAppliesToIds(c.appliesTo), manual.appliesTo));
-}
-
-/** null = todos os ingressos. */
-function sharesTicket(a: string[] | null, b: string[] | null): boolean {
-  if (!a?.length || !b?.length) return true;
-  return a.some((id) => b.includes(id));
+  const manualIds = manual.appliesTo;
+  return coupons?.flatMap((c) => {
+    if (c.allowStacking) return [c];
+    if (!manualIds?.length) return [];
+    const autoIds = parseAppliesToIds(c.appliesTo);
+    const remaining = (autoIds ?? ticketIds).filter((id) => !manualIds.includes(id));
+    if (remaining.length === 0) return [];
+    if (autoIds && remaining.length === autoIds.length) return [c];
+    return [{ ...c, appliesTo: JSON.stringify(remaining) }];
+  });
 }
 
 /**

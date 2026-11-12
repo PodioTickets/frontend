@@ -136,21 +136,30 @@ describe("quantityCouponCardPreview", () => {
 
 describe("stackableQuantityCoupons", () => {
   const list = [qc({ id: "solo" }), qc({ id: "acumula", allowStacking: true })];
+  const all = ["tk-A", "tk-B"];
 
   it("sem cupom de código: todos valem", () => {
-    expect(stackableQuantityCoupons(list, null)?.map((c) => c.id)).toEqual(["solo", "acumula"]);
+    expect(stackableQuantityCoupons(list, null, all)?.map((c) => c.id)).toEqual(["solo", "acumula"]);
   });
 
-  it("com cupom de código no mesmo ingresso: só os que acumulam", () => {
-    expect(stackableQuantityCoupons(list, { appliesTo: null })?.map((c) => c.id)).toEqual(["acumula"]);
-    expect(stackableQuantityCoupons(list, { appliesTo: ["tk-A"] })?.map((c) => c.id)).toEqual(["acumula"]);
+  it("cupom de código em todos os ingressos: só os que acumulam", () => {
+    expect(stackableQuantityCoupons(list, { appliesTo: null }, all)?.map((c) => c.id)).toEqual(["acumula"]);
+  });
+
+  it("automático perde só os ingressos do cupom de código (2026-11-11)", () => {
+    const r = stackableQuantityCoupons(list, { appliesTo: ["tk-A"] }, all);
+    expect(r?.map((c) => [c.id, c.appliesTo])).toEqual([["solo", '["tk-B"]'], ["acumula", "all"]]);
     const scoped = [qc({ id: "ab", appliesTo: '["tk-A","tk-B"]' })];
-    expect(stackableQuantityCoupons(scoped, { appliesTo: ["tk-B"] })).toEqual([]);
+    expect(stackableQuantityCoupons(scoped, { appliesTo: ["tk-B"] }, all)?.map((c) => c.appliesTo)).toEqual(['["tk-A"]']);
   });
 
-  it("cupom de código em outro ingresso: o automático vale junto", () => {
+  it("sem ingresso sobrando o automático sai", () => {
+    expect(stackableQuantityCoupons([qc({ id: "b", appliesTo: '["tk-B"]' })], { appliesTo: ["tk-B"] }, all)).toEqual([]);
+  });
+
+  it("cupom de código em outro ingresso: o automático vale junto, igual", () => {
     const scoped = [qc({ id: "a", appliesTo: '["tk-A"]' })];
-    expect(stackableQuantityCoupons(scoped, { appliesTo: ["tk-B"] })?.map((c) => c.id)).toEqual(["a"]);
+    expect(stackableQuantityCoupons(scoped, { appliesTo: ["tk-B"] }, all)).toEqual(scoped);
   });
 });
 
