@@ -1,6 +1,5 @@
 import { Pagination } from "@/components/Pagination";
 import { cn } from "@/utils/cn";
-import { LOTS_NEAR_DEPLETION_PAGE_SIZE } from "@/lib/dashboard";
 
 export interface LotNearDepletionRow {
   name: string;
@@ -43,23 +42,23 @@ export function LotsNearDepletionCard({
       <p className="px-4 py-5 font-family-dm-sans text-base font-normal leading-[1.3] text-gray-11 [text-box-edge:cap_alphabetic] [text-box-trim:trim-both]">
         Lotes próximos de esgotamento
       </p>
-      <div className="flex flex-1 flex-col border-y border-gray-6 bg-gray-2">
+      {/* Desktop: 4 linhas iguais (1/4 da lista, mesmo com menos lotes na página — usuário, 2026-11-11), cada
+          uma com pelo menos a altura do conteúdo: linha com "Lote N de M" não corta a de baixo (2026-11-13;
+          antes `flex-basis: 25%` estourava e o `overflow-hidden` cortava o padding da última). Mobile: conteúdo. */}
+      <div className="grid flex-1 auto-rows-auto border-y border-gray-6 bg-gray-2 md:[grid-template-rows:repeat(4,1fr)]">
         {lots.map((lot, index) => {
           // Lote sem vaga = "Esgotado" (o back marca como Crítico).
           const style = STATUS_STYLE[lot.remaining === 0 ? "Esgotado" : lot.status] ?? STATUS_STYLE.Normal;
-          // Figma 7688:162637: categoria em cima do nome; "Lote N de M" embaixo da barra, inclusive
-          // "1 de 1". Lotes acabados (sem vaga ou sem lote vigente) não mostram o lote (usuário, 2026-11-13).
-          const batch = lot.activeBatch && lot.remaining > 0
+          // Figma 7688:162637: categoria em cima do nome; "Lote N de M" embaixo da barra. Sem o texto
+          // quando o ingresso tem 1 lote só ou os lotes acabaram (sem vaga / sem lote vigente) — usuário, 2026-11-13.
+          const batch = lot.activeBatch && lot.activeBatch.count !== 1 && lot.remaining > 0
             ? `Lote ${lot.activeBatch.number}${lot.activeBatch.count ? ` de ${lot.activeBatch.count}` : ""}`
             : null;
           const caption = lot.categoryName;
           return (
             <div
               key={`${sliceStart + index}-${lot.name}`}
-              // Altura de 1/4 da lista mesmo com menos lotes na página: não estica para preencher
-              // (regra do usuário, 2026-11-11). Sem altura definida (mobile), vale o conteúdo.
-              style={{ flexBasis: `${100 / LOTS_NEAR_DEPLETION_PAGE_SIZE}%` }}
-              className="flex shrink-0 grow-0 flex-col justify-center gap-3 border-b border-gray-4 px-4 py-[18px] last:border-b-0"
+              className="flex flex-col justify-center gap-3 border-b border-gray-4 px-4 py-[18px] last:border-b-0"
             >
               <div className="flex items-center gap-3 break-words">
                 <div className="flex min-w-0 flex-1 flex-col gap-2">
