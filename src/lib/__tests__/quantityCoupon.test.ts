@@ -136,7 +136,8 @@ describe("quantityCouponCardPreview", () => {
 
 describe("stackableQuantityCoupons", () => {
   const list = [qc({ id: "solo" }), qc({ id: "acumula", allowStacking: true })];
-  const all = ["tk-A", "tk-B"];
+  // Sem categoria: cada ingresso bloqueia só ele mesmo.
+  const all = [{ id: "tk-A" }, { id: "tk-B" }];
 
   it("sem cupom de código: todos valem", () => {
     expect(stackableQuantityCoupons(list, null, all)?.map((c) => c.id)).toEqual(["solo", "acumula"]);
@@ -160,6 +161,22 @@ describe("stackableQuantityCoupons", () => {
   it("cupom de código em outro ingresso: o automático vale junto, igual", () => {
     const scoped = [qc({ id: "a", appliesTo: '["tk-A"]' })];
     expect(stackableQuantityCoupons(scoped, { appliesTo: ["tk-B"] }, all)).toEqual(scoped);
+  });
+
+  it("cupom de código tira o automático da categoria inteira (2026-11-13)", () => {
+    // 5K/10K = Corrida; KIDS = Kids; AVULSO sem categoria.
+    const tickets = [
+      { id: "5K", categoryId: "corrida" },
+      { id: "10K", categoryId: "corrida" },
+      { id: "KIDS", categoryId: "kids" },
+      { id: "AVULSO" },
+    ];
+    const scope = (appliesTo: string, manual: string[]) =>
+      stackableQuantityCoupons([qc({ appliesTo })], { appliesTo: manual }, tickets)?.map((c) => c.appliesTo);
+    expect(scope("all", ["5K"])).toEqual(['["KIDS","AVULSO"]']);
+    expect(scope('["10K"]', ["5K"])).toEqual([]);
+    expect(scope('["10K","KIDS"]', ["5K"])).toEqual(['["KIDS"]']);
+    expect(scope("all", ["AVULSO"])).toEqual(['["5K","10K","KIDS"]']);
   });
 });
 

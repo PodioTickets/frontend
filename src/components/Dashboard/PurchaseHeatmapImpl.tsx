@@ -680,18 +680,21 @@ export default function PurchaseHeatmapImpl({
 
         {/* Cidades com mais vendas — canto superior esquerdo (zoom e tela cheia ficam embaixo à
             direita). Acima das camadas do Leaflet (≤400) e do aviso de geocoding (500), abaixo da
-            dica de gesto (600). `pointer-events-none`: não atrapalha arrastar o mapa. */}
+            dica de gesto (600). Todas as cidades (2026-11-13): com muitas, a lista rola dentro do
+            quadro (só ele recebe o ponteiro; o resto do mapa segue arrastável). */}
         {topCities.length > 0 && (
-          <div className="pointer-events-none absolute left-3 top-3 z-550 flex max-w-[60%] flex-col gap-1.5 rounded-lg border border-gray-6 bg-gray-1/95 px-3 py-2.5 shadow-md">
+          <div className="absolute left-3 top-3 z-550 flex max-h-[calc(100%-24px)] max-w-[60%] flex-col gap-1.5 rounded-lg border border-gray-6 bg-gray-1/95 px-3 py-2.5 shadow-md">
             <p className="font-family-dm-sans text-xs font-medium text-gray-11">Cidades com mais vendas</p>
-            {topCities.map((city) => (
-              <p
-                key={`${city.city}|${city.state ?? ""}`}
-                className="truncate font-family-dm-sans text-sm text-gray-11"
-              >
-                <span className="font-semibold text-gray-12">{city.city}</span>: QT {city.purchases}
-              </p>
-            ))}
+            <div className="flex min-h-0 flex-col gap-1.5 overflow-y-auto overscroll-contain">
+              {topCities.map((city) => (
+                <p
+                  key={`${city.city}|${city.state ?? ""}`}
+                  className="truncate font-family-dm-sans text-sm font-semibold text-gray-12"
+                >
+                  {city.city}: {city.purchases}
+                </p>
+              ))}
+            </div>
           </div>
         )}
 

@@ -316,12 +316,15 @@ export function EventInfo({ event, onNext, isSubmitting = false, tickets = [], c
       const quantity = raceQuantities[ticket.id] || 0;
       if (quantity > 0) selected.push({ id: ticket.id, price: getTicketPrice(ticket), quantity });
     });
-    // Cupom de código tira os de quantidade sem "Acumular descontos" nos ingressos dele — igual ao ModalitiesStep.
+    // Cupom de código tira os de quantidade sem "Acumular descontos" das categorias dele — igual ao ModalitiesStep.
     const candidates = quantityCouponCandidates(
       stackableQuantityCoupons(
         ageEligibility?.quantityCoupons,
         manualScope,
-        [...categorizedTickets.flatMap((c) => c.tickets), ...uncategorizedTickets].map((ticket) => ticket.id),
+        [
+          ...categorizedTickets.flatMap((c) => c.tickets.map((ticket) => ({ id: ticket.id, categoryId: c.id }))),
+          ...uncategorizedTickets.map((ticket) => ({ id: ticket.id })),
+        ],
       ),
       selected,
       totalPrice,

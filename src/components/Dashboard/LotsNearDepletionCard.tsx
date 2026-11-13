@@ -47,11 +47,12 @@ export function LotsNearDepletionCard({
         {lots.map((lot, index) => {
           // Lote sem vaga = "Esgotado" (o back marca como Crítico).
           const style = STATUS_STYLE[lot.remaining === 0 ? "Esgotado" : lot.status] ?? STATUS_STYLE.Normal;
-          // Ingresso com um lote só: sem o texto de lote (regra do usuário, 2026-11-10).
-          const batch = lot.activeBatch && lot.activeBatch.count !== 1
+          // Figma 7688:162637: categoria em cima do nome; "Lote N de M" embaixo da barra, inclusive
+          // "1 de 1". Lotes acabados (sem vaga ou sem lote vigente) não mostram o lote (usuário, 2026-11-13).
+          const batch = lot.activeBatch && lot.remaining > 0
             ? `Lote ${lot.activeBatch.number}${lot.activeBatch.count ? ` de ${lot.activeBatch.count}` : ""}`
             : null;
-          const caption = [lot.categoryName, batch].filter(Boolean).join("  ·  ");
+          const caption = lot.categoryName;
           return (
             <div
               key={`${sliceStart + index}-${lot.name}`}
@@ -78,6 +79,11 @@ export function LotsNearDepletionCard({
               <div className="h-2.5 w-full overflow-hidden rounded-full bg-gray-4">
                 <div className={cn("h-full rounded-full", style.bar)} style={{ width: `${Math.min(100, lot.percentageSold)}%` }} />
               </div>
+              {batch && (
+                <p className="break-words font-family-dm-sans text-xs font-normal leading-[1.3] text-gray-11 [text-box-edge:cap_alphabetic] [text-box-trim:trim-both]">
+                  {batch}
+                </p>
+              )}
             </div>
           );
         })}
