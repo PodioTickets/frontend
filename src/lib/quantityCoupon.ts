@@ -28,20 +28,25 @@ export interface QuantityAutoCoupon {
  * do manual e segue nos outros, com a faixa de quantidade contando só esses (2026-11-11) — espelha o
  * `autoCouponScopeWithManual` do back. Sem ingresso sobrando, sai.
  * `manual` = escopo do cupom de código (`appliesTo` normalizado: null = todos); null = sem cupom.
- * `ticketIds` = ingressos do evento, para resolver o "all" do automático.
+ * 2026-11-13: o bloqueio vale para a CATEGORIA inteira dos ingressos do manual (regra do usuário);
+ * ingresso sem categoria bloqueia só ele mesmo.
+ * `tickets` = ingressos do evento com a categoria (resolve o "all" do automático e as categorias).
  */
 export function stackableQuantityCoupons(
   coupons: QuantityAutoCoupon[] | null | undefined,
   manual: { appliesTo: string[] | null } | null,
-  ticketIds: string[],
+  tickets: ReadonlyArray<{ id: string; categoryId?: string | null }>,
 ): QuantityAutoCoupon[] | undefined {
   if (!manual) return coupons ?? undefined;
   const manualIds = manual.appliesTo;
+  if (!manualIds?.length) return coupons?.filter((c) => c.allowStacking);
+  const blocked = new Set(manualIds);
+  const manualCategories = new Set(tickets.filter((t) => blocked.has(t.id) && t.categoryId).map((t) => t.categoryId));
+  for (const t of tickets) if (t.categoryId && manualCategories.has(t.categoryId)) blocked.add(t.id);
   return coupons?.flatMap((c) => {
     if (c.allowStacking) return [c];
-    if (!manualIds?.length) return [];
     const autoIds = parseAppliesToIds(c.appliesTo);
-    const remaining = (autoIds ?? ticketIds).filter((id) => !manualIds.includes(id));
+    const remaining = (autoIds ?? tickets.map((t) => t.id)).filter((id) => !blocked.has(id));
     if (remaining.length === 0) return [];
     if (autoIds && remaining.length === autoIds.length) return [c];
     return [{ ...c, appliesTo: JSON.stringify(remaining) }];

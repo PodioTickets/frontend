@@ -385,12 +385,15 @@ export function ModalitiesStep({ event, onNext, onBack, isSubmitting = false, di
       minCartValue: orderCoupon ? null : couponData?.minCartValue,
     }
     : null;
-  // Cupom de código (link ou pedido) tira os de quantidade sem "Acumular descontos" só dos
-  // ingressos dele (prévia e anúncios). Nos outros ingressos o automático segue valendo.
+  // Cupom de código (link ou pedido) tira os de quantidade sem "Acumular descontos" das
+  // categorias dele (prévia e anúncios). Nas outras categorias o automático segue valendo.
   const quantityCoupons = stackableQuantityCoupons(
     ageEligibility?.quantityCoupons,
     manualCoupon,
-    [...categorizedTickets.flatMap((c) => c.tickets), ...uncategorizedTickets].map((ticket) => ticket.id),
+    [
+      ...categorizedTickets.flatMap((c) => c.tickets.map((ticket) => ({ id: ticket.id, categoryId: c.id }))),
+      ...uncategorizedTickets.map((ticket) => ({ id: ticket.id })),
+    ],
   );
   const quantityCandidates = quantityCouponCandidates(quantityCoupons, selectedTickets, totalPrice);
   const autoChoice =
