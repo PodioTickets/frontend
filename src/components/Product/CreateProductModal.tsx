@@ -57,6 +57,10 @@ import { ProductPreview } from "@/components/Product/ProductPreview";
 import { ProductVariationMobileSheets } from "@/components/Product/ProductVariationMobileSheets";
 import { ProductVariations } from "@/components/Product/ProductVariations";
 
+/** Fotos do produto/kit: formatos e tamanho aceitos, e o erro que os explica. */
+const PRODUCT_IMAGE_ACCEPT = "image/jpeg,image/jpg,image/png";
+const PRODUCT_IMAGE_MAX_MB = 10;
+const PRODUCT_IMAGE_RULE_ERROR = "PNG ou JPG, máximo 10MB cada";
 
 export function CreateProductModal() {
   const {
@@ -1196,7 +1200,11 @@ export function CreateProductModal() {
             outputBaseName="produto"
             modalTitle="Ajustar imagem do produto"
             onCropped={handleProductCropped}
-            onInvalidFile={(msg) => toast.error(msg)}
+            // Produto e kit: só PNG/JPG até 10MB. A regra não fica escrita na área de fotos,
+            // só no erro (pedido do usuário, 17/11), no canto inferior esquerdo.
+            accept={PRODUCT_IMAGE_ACCEPT}
+            maxFileSizeMb={PRODUCT_IMAGE_MAX_MB}
+            onInvalidFile={() => toast.error(PRODUCT_IMAGE_RULE_ERROR, { position: "bottom-left" })}
             onCropFailed={(msg) => toast.error(msg)}
           />
 
