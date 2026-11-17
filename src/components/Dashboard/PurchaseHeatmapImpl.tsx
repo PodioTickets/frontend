@@ -5,6 +5,10 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import type { PurchaseLocation, TopCity } from "@/services/organizer/OrganizerService.types";
+import { Pagination } from "@/components/Pagination";
+
+/** Cidades por página no quadro do mapa; passou disso, paginação local (a lista já vem inteira). */
+const CITIES_PAGE_SIZE = 10;
 
 /**
  * Mapa de CALOR de compras — Leaflet + leaflet.heat sobre tiles do OpenStreetMap
@@ -280,6 +284,14 @@ export default function PurchaseHeatmapImpl({
   /** Cidades com mais vendas (`topCities` do dashboard): quadro no canto superior esquerdo. */
   topCities?: TopCity[];
 }) {
+  const [cityPage, setCityPage] = useState(1);
+  const cityTotalPages = Math.max(1, Math.ceil(topCities.length / CITIES_PAGE_SIZE));
+  // Clampa sem effect: se a lista encolher (troca de filtro), a página não fica vazia.
+  const currentCityPage = Math.min(cityPage, cityTotalPages);
+  const pagedCities = topCities.slice(
+    (currentCityPage - 1) * CITIES_PAGE_SIZE,
+    currentCityPage * CITIES_PAGE_SIZE
+  );
   const mapElRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<any>(null);
   const heatRef = useRef<any>(null);
@@ -680,13 +692,14 @@ export default function PurchaseHeatmapImpl({
 
         {/* Cidades com mais vendas — canto superior esquerdo (zoom e tela cheia ficam embaixo à
             direita). Acima das camadas do Leaflet (≤400) e do aviso de geocoding (500), abaixo da
-            dica de gesto (600). Todas as cidades (2026-11-13): com muitas, a lista rola dentro do
-            quadro (só ele recebe o ponteiro; o resto do mapa segue arrastável). */}
+            dica de gesto (600). Todas as cidades (2026-11-13), 10 por página (2026-11-17); se a
+            página não couber (mapa baixo no mobile), a lista rola dentro do quadro e a paginação
+            fica fixa embaixo (só o quadro recebe o ponteiro; o resto do mapa segue arrastável). */}
         {topCities.length > 0 && (
           <div className="absolute left-3 top-3 z-550 flex max-h-[calc(100%-24px)] max-w-[60%] flex-col gap-1.5 rounded-lg border border-gray-6 bg-gray-1/95 px-3 py-2.5 shadow-md">
             <p className="font-family-dm-sans text-xs font-medium text-gray-11">Cidades com mais vendas</p>
             <div className="flex min-h-0 flex-col gap-1.5 overflow-y-auto overscroll-contain">
-              {topCities.map((city) => (
+              {pagedCities.map((city) => (
                 <p
                   key={`${city.city}|${city.state ?? ""}`}
                   className="truncate font-family-dm-sans text-sm font-semibold text-gray-12"
@@ -695,6 +708,13 @@ export default function PurchaseHeatmapImpl({
                 </p>
               ))}
             </div>
+            <Pagination
+              currentPage={currentCityPage}
+              totalPages={cityTotalPages}
+              onPageChange={setCityPage}
+              variant="compact"
+              className="shrink-0 gap-2 p-0 pt-2 text-xs"
+            />
           </div>
         )}
 

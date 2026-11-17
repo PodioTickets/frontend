@@ -1289,36 +1289,6 @@ export function CreateCouponModal() {
                                       </div>
                                     </div>
 
-                                    {/* Acumular descontos — só cupom por quantidade. Desabilitado: cupom de código tira este. */}
-                                    {couponType === "QUANTITY" && (
-                                      <div className="flex flex-col gap-5">
-                                        <div className="flex flex-col gap-2">
-                                          <h3 className="text-gray-12 text-lg font-medium font-family-dm-sans leading-[1.3]">
-                                            Acumular descontos
-                                          </h3>
-                                          <p className="text-gray-11 text-base font-family-dm-sans leading-[1.3]">
-                                            Permitir que o desconto automático por quantidade seja combinado com cupons de código no mesmo pedido.
-                                          </p>
-                                        </div>
-                                        <div className="flex gap-6">
-                                          <label className="flex items-center gap-2 cursor-pointer">
-                                            <Checkbox
-                                              checked={!allowStacking}
-                                              onCheckedChange={(checked) => { if (checked) setAllowStacking(false); }}
-                                            />
-                                            <span className="text-sm font-family-dm-sans leading-[1.3] text-gray-12">Desabilitar</span>
-                                          </label>
-                                          <label className="flex items-center gap-2 cursor-pointer">
-                                            <Checkbox
-                                              checked={allowStacking}
-                                              onCheckedChange={(checked) => { if (checked) setAllowStacking(true); }}
-                                            />
-                                            <span className="text-sm font-family-dm-sans leading-[1.3] text-gray-12">Habilitar</span>
-                                          </label>
-                                        </div>
-                                      </div>
-                                    )}
-
                                     <div className="flex flex-col gap-2">
                                       <h3 className="text-gray-12 text-lg font-medium font-family-dm-sans leading-[1.3]">
                                         Validade do cupom
@@ -1357,6 +1327,37 @@ export function CreateCouponModal() {
                                           placeholder="00/00/2026"
                                           className="w-full md:w-auto"
                                         />
+                                      </div>
+                                    )}
+
+                                    {/* Acumular descontos — só cupom por quantidade; último item, depois da validade
+                                        (pedido do usuário, 17/11). Desabilitado: cupom de código tira este. */}
+                                    {couponType === "QUANTITY" && (
+                                      <div className="flex flex-col gap-5">
+                                        <div className="flex flex-col gap-2">
+                                          <h3 className="text-gray-12 text-lg font-medium font-family-dm-sans leading-[1.3]">
+                                            Acumular descontos
+                                          </h3>
+                                          <p className="text-gray-11 text-base font-family-dm-sans leading-[1.3]">
+                                            Permitir somar o desconto automático por quantidade ao desconto de cupons de código, quando houver.
+                                          </p>
+                                        </div>
+                                        <div className="flex gap-6">
+                                          <label className="flex items-center gap-2 cursor-pointer">
+                                            <Checkbox
+                                              checked={!allowStacking}
+                                              onCheckedChange={(checked) => { if (checked) setAllowStacking(false); }}
+                                            />
+                                            <span className="text-sm font-family-dm-sans leading-[1.3] text-gray-12">Desabilitar</span>
+                                          </label>
+                                          <label className="flex items-center gap-2 cursor-pointer">
+                                            <Checkbox
+                                              checked={allowStacking}
+                                              onCheckedChange={(checked) => { if (checked) setAllowStacking(true); }}
+                                            />
+                                            <span className="text-sm font-family-dm-sans leading-[1.3] text-gray-12">Habilitar</span>
+                                          </label>
+                                        </div>
                                       </div>
                                     )}
                                   </div>

@@ -55,9 +55,12 @@ export type ImageUploadWithCropProps = {
 function validateImageFile(
   file: File,
   maxFileSizeMb: number,
+  accept: string,
   t: Translator<"ui">,
 ): string | null {
-  const validTypes = ["image/jpeg", "image/jpg", "image/png", "image/gif", "image/webp"];
+  // Tipos válidos = os do `accept` (o mesmo filtro do seletor): arrastar e soltar não passa pelo
+  // filtro do input, então a checagem aqui é a que vale. Padrão: JPG, PNG, GIF e WebP.
+  const validTypes = accept.split(",").map((type) => type.trim());
   if (!validTypes.includes(file.type)) {
     return t("cropInvalidFormat");
   }
@@ -168,7 +171,7 @@ export const ImageUploadWithCrop = forwardRef<ImageUploadWithCropRef, ImageUploa
 
     const startWithFile = useCallback(
       (file: File): string | null => {
-        const err = validateImageFile(file, maxFileSizeMb, t);
+        const err = validateImageFile(file, maxFileSizeMb, accept, t);
         if (err) {
           onInvalidFile?.(err);
           return err;
@@ -185,7 +188,7 @@ export const ImageUploadWithCrop = forwardRef<ImageUploadWithCropRef, ImageUploa
         setOpen(true);
         return null;
       },
-      [maxFileSizeMb, onInvalidFile, t]
+      [maxFileSizeMb, accept, onInvalidFile, t]
     );
 
     useImperativeHandle(

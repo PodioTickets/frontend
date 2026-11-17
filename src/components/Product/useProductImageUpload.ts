@@ -46,7 +46,9 @@ export function useProductImageUpload() {
   const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     const file = e.dataTransfer.files[0];
-    if (file && file.type.startsWith("image/")) {
+    // Sem filtro de tipo aqui: o `ImageUploadWithCrop` valida e mostra o erro (antes, um
+    // arquivo que não era imagem era ignorado em silêncio).
+    if (file) {
       cropTargetIndexRef.current = null;
       productCropRef.current?.openWithFile(file);
     }
