@@ -11,7 +11,6 @@ const qc = (over: Partial<QuantityAutoCoupon> = {}): QuantityAutoCoupon => ({
   minQuantity: 3,
   maxQuantity: null,
   createdAt: null,
-  allowStacking: false,
   ...over,
 });
 const ac = (over: Partial<AgeDisplayCoupon> = {}): AgeDisplayCoupon => ({

@@ -385,7 +385,7 @@ export function ModalitiesStep({ event, onNext, onBack, isSubmitting = false, di
       minCartValue: orderCoupon ? null : couponData?.minCartValue,
     }
     : null;
-  // Cupom de código (link ou pedido) tira os de quantidade sem "Acumular descontos" das
+  // Cupom de código (link ou pedido) tira os de quantidade das
   // categorias dele (prévia e anúncios). Nas outras categorias o automático segue valendo.
   const quantityCoupons = stackableQuantityCoupons(
     ageEligibility?.quantityCoupons,

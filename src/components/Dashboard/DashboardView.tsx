@@ -640,11 +640,6 @@ export function DashboardView({
           <SalesHeatmap data={dashboardData.salesHeatmap} />
         </div>
 
-        {/* Mapa de calor geográfico — logo antes do último gráfico (mobile). O heatmap acima já dá o mb-6. */}
-        <div>
-          <PurchaseHeatmap data={dashboardData.purchaseLocations} topCities={dashboardData.topCities} pending={dashboardData.purchaseLocationsPending} />
-        </div>
-
         {/* Ingressos de lotes - mobile (componente compartilhado com financeiro). */}
         <div className="mt-6">
           <TicketsWithLotsList

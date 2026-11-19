@@ -19,12 +19,10 @@ export interface QuantityAutoCoupon {
   maxQuantity: number | null;
   /** ISO — desempate "1º criado" com o cupom de idade. */
   createdAt: string | null;
-  /** "Acumular descontos": vale junto de cupom de código. Sem ela o manual tira este cupom. */
-  allowStacking: boolean;
 }
 
 /**
- * Com cupom de código (link ou pedido), o automático sem "Acumular descontos" perde SÓ os ingressos
+ * Com cupom de código (link ou pedido), o automático perde SÓ os ingressos
  * do manual e segue nos outros, com a faixa de quantidade contando só esses (2026-11-11) — espelha o
  * `autoCouponScopeWithManual` do back. Sem ingresso sobrando, sai.
  * `manual` = escopo do cupom de código (`appliesTo` normalizado: null = todos); null = sem cupom.
@@ -39,12 +37,11 @@ export function stackableQuantityCoupons(
 ): QuantityAutoCoupon[] | undefined {
   if (!manual) return coupons ?? undefined;
   const manualIds = manual.appliesTo;
-  if (!manualIds?.length) return coupons?.filter((c) => c.allowStacking);
+  if (!manualIds?.length) return coupons ? [] : undefined;
   const blocked = new Set(manualIds);
   const manualCategories = new Set(tickets.filter((t) => blocked.has(t.id) && t.categoryId).map((t) => t.categoryId));
   for (const t of tickets) if (t.categoryId && manualCategories.has(t.categoryId)) blocked.add(t.id);
   return coupons?.flatMap((c) => {
-    if (c.allowStacking) return [c];
     const autoIds = parseAppliesToIds(c.appliesTo);
     const remaining = (autoIds ?? tickets.map((t) => t.id)).filter((id) => !blocked.has(id));
     if (remaining.length === 0) return [];

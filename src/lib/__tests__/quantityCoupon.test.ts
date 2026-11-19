@@ -20,7 +20,6 @@ const qc = (over: Partial<QuantityAutoCoupon> = {}): QuantityAutoCoupon => ({
   minQuantity: 3,
   maxQuantity: 5,
   createdAt: "2026-01-01T00:00:00.000Z",
-  allowStacking: false,
   ...over,
 });
 const sel = (qty: number, id = "tk-A", price = 100) => [{ id, price, quantity: qty }];
@@ -75,7 +74,7 @@ describe("quantityCouponCandidates", () => {
 
 describe("selectQuantityCoupons (só competem cupons do mesmo ingresso)", () => {
   const cand = (id: string, discount: number, coveredTicketIds: string[], appliesTo: string | null = null) => ({
-    coupon: { id, type: "PERCENTAGE" as const, value: 10, appliesTo, minCartValue: null, minQuantity: null, maxQuantity: null, createdAt: "2026-01-01", allowStacking: false },
+    coupon: { id, type: "PERCENTAGE" as const, value: 10, appliesTo, minCartValue: null, minQuantity: null, maxQuantity: null, createdAt: "2026-01-01" },
     discount,
     coveredTicketIds,
   });
@@ -135,21 +134,21 @@ describe("quantityCouponCardPreview", () => {
 });
 
 describe("stackableQuantityCoupons", () => {
-  const list = [qc({ id: "solo" }), qc({ id: "acumula", allowStacking: true })];
+  const list = [qc({ id: "solo" }), qc({ id: "outro" })];
   // Sem categoria: cada ingresso bloqueia só ele mesmo.
   const all = [{ id: "tk-A" }, { id: "tk-B" }];
 
   it("sem cupom de código: todos valem", () => {
-    expect(stackableQuantityCoupons(list, null, all)?.map((c) => c.id)).toEqual(["solo", "acumula"]);
+    expect(stackableQuantityCoupons(list, null, all)?.map((c) => c.id)).toEqual(["solo", "outro"]);
   });
 
-  it("cupom de código em todos os ingressos: só os que acumulam", () => {
-    expect(stackableQuantityCoupons(list, { appliesTo: null }, all)?.map((c) => c.id)).toEqual(["acumula"]);
+  it("cupom de código em todos os ingressos: nenhum automático", () => {
+    expect(stackableQuantityCoupons(list, { appliesTo: null }, all)).toEqual([]);
   });
 
   it("automático perde só os ingressos do cupom de código (2026-11-11)", () => {
     const r = stackableQuantityCoupons(list, { appliesTo: ["tk-A"] }, all);
-    expect(r?.map((c) => [c.id, c.appliesTo])).toEqual([["solo", '["tk-B"]'], ["acumula", "all"]]);
+    expect(r?.map((c) => [c.id, c.appliesTo])).toEqual([["solo", '["tk-B"]'], ["outro", '["tk-B"]']]);
     const scoped = [qc({ id: "ab", appliesTo: '["tk-A","tk-B"]' })];
     expect(stackableQuantityCoupons(scoped, { appliesTo: ["tk-B"] }, all)?.map((c) => c.appliesTo)).toEqual(['["tk-A"]']);
   });
