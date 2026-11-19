@@ -1201,10 +1201,10 @@ export function CreateProductModal() {
             modalTitle="Ajustar imagem do produto"
             onCropped={handleProductCropped}
             // Produto e kit: só PNG/JPG até 10MB. A regra não fica escrita na área de fotos,
-            // só no erro (pedido do usuário, 17/11), no canto inferior esquerdo.
+            // só no erro (pedido do usuário, 17/11), no canto inferior direito (18/11).
             accept={PRODUCT_IMAGE_ACCEPT}
             maxFileSizeMb={PRODUCT_IMAGE_MAX_MB}
-            onInvalidFile={() => toast.error(PRODUCT_IMAGE_RULE_ERROR, { position: "bottom-left" })}
+            onInvalidFile={() => toast.error(PRODUCT_IMAGE_RULE_ERROR)}
             onCropFailed={(msg) => toast.error(msg)}
           />
 

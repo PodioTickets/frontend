@@ -316,7 +316,7 @@ export function EventInfo({ event, onNext, isSubmitting = false, tickets = [], c
       const quantity = raceQuantities[ticket.id] || 0;
       if (quantity > 0) selected.push({ id: ticket.id, price: getTicketPrice(ticket), quantity });
     });
-    // Cupom de código tira os de quantidade sem "Acumular descontos" das categorias dele — igual ao ModalitiesStep.
+    // Cupom de código tira os de quantidade das categorias dele — igual ao ModalitiesStep.
     const candidates = quantityCouponCandidates(
       stackableQuantityCoupons(
         ageEligibility?.quantityCoupons,
