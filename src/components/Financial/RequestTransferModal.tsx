@@ -154,6 +154,8 @@ export function RequestTransferModal() {
         );
         setTransferAmount(formatCentsBRL(amountCents));
         setShowSuccess(true);
+        // A página financeira recarrega saldo/cards sem precisar de refresh.
+        data?.onSuccess?.();
       } catch (err: any) {
         toast.error(formatWithdrawalError(err));
       }
