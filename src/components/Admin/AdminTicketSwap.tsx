@@ -439,7 +439,19 @@ export function AdminTicketSwap({ registrationId }: { registrationId: string }) 
                 </div>
               )}
             </div>
-            <div className="w-full lg:w-[406px] shrink-0 lg:sticky lg:top-8">{summary}</div>
+            {/* No desktop o nome fica fora do fluxo (absolute, no respiro do mt-9) para o card
+                continuar alinhado ao topo da lista; 1 linha (truncate) para não invadir o subtítulo. */}
+            <div className="w-full lg:w-[406px] shrink-0 lg:sticky lg:top-8">
+              {step === "tickets" && event.name && (
+                <p
+                  className="mb-3 lg:absolute lg:bottom-full lg:inset-x-0 lg:truncate text-lg font-bold font-manrope text-gray-12 leading-[1.1] break-words"
+                  title={event.name}
+                >
+                  {event.name}
+                </p>
+              )}
+              {summary}
+            </div>
           </div>
         </div>
       )}

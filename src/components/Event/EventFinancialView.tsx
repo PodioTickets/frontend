@@ -98,9 +98,11 @@ export function EventFinancialView({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [authChecked, eventId, periodFilter, ticketsPage]);
 
-  const loadData = async () => {
+  // `silent`: recarga depois de uma ação (antecipação, repasse) — sem o loading de
+  // tela cheia, que desmontaria os drawers abertos; em erro mantém os dados atuais.
+  const loadData = async (silent = false) => {
     try {
-      setLoading(true);
+      if (!silent) setLoading(true);
       const [eventData, financialDataResponse] = await Promise.all([
         organizerService.getEventById(eventId),
         organizerService.getEventFinancial(eventId, {
@@ -128,11 +130,12 @@ export function EventFinancialView({
     } catch (error: any) {
       console.error("Error loading event:", error);
       toast.error("Erro ao carregar dados do evento");
-      setFinancialError(true);
+      if (!silent) setFinancialError(true);
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   };
+  const refreshFinancial = () => loadData(true);
 
   if (loading) {
     return (
@@ -183,7 +186,8 @@ export function EventFinancialView({
             <Button onClick={() => openRequestTransferModal({
               eventId,
               availableBalance: financialData.availableBalance,
-              onViewHistory: () => setIsTransferHistoryOpen(true)
+              onViewHistory: () => setIsTransferHistoryOpen(true),
+              onSuccess: refreshFinancial,
             })}>
               Solicitar repasse
             </Button>
@@ -322,7 +326,8 @@ export function EventFinancialView({
               onClick={() => openRequestTransferModal({
                 eventId,
                 availableBalance: financialData.availableBalance,
-                onViewHistory: () => setIsTransferHistoryOpen(true)
+                onViewHistory: () => setIsTransferHistoryOpen(true),
+                onSuccess: refreshFinancial,
               })}
             >
               Solicitar repasse
@@ -484,6 +489,7 @@ export function EventFinancialView({
         eventId={eventId}
         eventName={event?.name}
         categoryName="Nome da categoria"
+        onDataChanged={refreshFinancial}
         onNavigatePrev={() => {
           setIsAwaitingReleaseOpen(false);
           setIsTransferHistoryOpen(true);

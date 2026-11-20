@@ -45,6 +45,8 @@ interface AwaitingReleaseDrawerProps {
   categoryName?: string;
   onNavigatePrev?: () => void;
   onNavigateNext?: () => void;
+  /** Chamado depois de uma ação que muda os valores (antecipação) — a página recarrega os cards. */
+  onDataChanged?: () => void;
 }
 
 type FinancialTab = "avista" | "parcelados";
@@ -76,6 +78,7 @@ export function AwaitingReleaseDrawer({
   categoryName = "Nome da categoria",
   onNavigatePrev,
   onNavigateNext,
+  onDataChanged,
 }: AwaitingReleaseDrawerProps) {
   const [activeTab, setActiveTab] = useState<FinancialTab>("avista");
   const [currentPage, setCurrentPage] = useState(1);
@@ -785,7 +788,11 @@ export function AwaitingReleaseDrawer({
           eventId={eventId}
           eventName={eventName}
           onClose={() => setIsAnticipationOpen(false)}
-          onSuccess={() => loadPendingReleases(currentPage)}
+          onSuccess={() => {
+            loadPendingReleases(currentPage);
+            loadInstallments();
+            onDataChanged?.();
+          }}
         />
       )}
 
