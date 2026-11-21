@@ -8,7 +8,7 @@ import { Button } from "../Button";
 import { Loading } from "../Loading";
 import { organizerService } from "@/services";
 import {
-  computeAnticipation,
+  computeAnticipationByGross,
   unitCost,
   type AnticipationQuote,
 } from "@/utils/anticipation";
@@ -117,26 +117,26 @@ export function AnticipationModal({ eventId, onClose, eventName, onSuccess }: An
     return () => document.removeEventListener("keydown", onKey);
   }, [onClose]);
 
-  const availableTotal = quote?.availableTotal ?? 0; // bruto (Valor disponível)
-  const maxReceivable = quote?.maxReceivable ?? 0; // líquido máximo (teto do input)
+  const availableTotal = quote?.availableTotal ?? 0; // bruto (Valor disponível = teto do input)
   const monthlyRate = quote?.monthlyRate ?? 0;
   const units = useMemo(() => quote?.units ?? [], [quote]);
 
-  // `amountCents` = quanto o organizador quer RECEBER hoje (líquido), 0..maxReceivable.
-  const amountCents = Math.min(Math.max(0, rawAmount), maxReceivable);
+  // `amountCents` = quanto o organizador quer ANTECIPAR (bruto), 0..Valor disponível.
+  // Ele recebe esse valor MENOS a taxa ("Você recebe hoje") — pedido do usuário, 20/11.
+  const amountCents = Math.min(Math.max(0, rawAmount), availableTotal);
   const setAmountCents = (v: number) =>
-    setRawAmount(Math.min(Math.max(0, v), maxReceivable));
+    setRawAmount(Math.min(Math.max(0, v), availableTotal));
 
   // Prévia AO VIVO com o MESMO motor do backend (recomendado/taxa conforme digita).
   const result = useMemo(
-    () => computeAnticipation(units, amountCents, monthlyRate),
+    () => computeAnticipationByGross(units, amountCents, monthlyRate),
     [units, amountCents, monthlyRate],
   );
 
   const consumedGross = result.consumedGross; // "Valor total"
   const feeCents = result.effectiveFee; // "Taxa de antecipação"
   const receiveCents = result.receive; // "Você recebe hoje"
-  const recommendedNet = result.recommendedNet; // valor recomendado (fronteira)
+  const recommendedGross = result.recommendedGross; // valor recomendado (fronteira, bruto)
   const effectiveRatePct = result.effectiveRatePct;
 
   // Detalhamento por recebível: mostra EXATAMENTE o que o motor usou em cada
@@ -174,7 +174,7 @@ export function AnticipationModal({ eventId, onClose, eventName, onSuccess }: An
   };
 
   const handleConfirm = async () => {
-    if (amountCents <= 0 || submitting) return;
+    if (amountCents <= 0 || receiveCents <= 0 || submitting) return;
     // Sem permissão (evento ainda não passou pela análise de antecipação): abre o
     // gate em vez de chamar o endpoint (que rejeitaria). A verdade autoritativa
     // continua no backend (requestAnticipation).
@@ -184,7 +184,7 @@ export function AnticipationModal({ eventId, onClose, eventName, onSuccess }: An
     }
     setSubmitting(true);
     try {
-      // Envia o líquido desejado; o backend recalcula de forma autoritativa.
+      // Envia o BRUTO a antecipar; o backend recalcula de forma autoritativa.
       await organizerService.requestAnticipation(eventId, amountCents);
       toast.success("Antecipação solicitada com sucesso.");
       onSuccess?.();
@@ -204,10 +204,10 @@ export function AnticipationModal({ eventId, onClose, eventName, onSuccess }: An
 
   if (typeof document === "undefined") return null;
 
-  // Sem recebíveis para antecipar (teto líquido zero). O bloqueio por FALTA de
-  // permissão (`enabled === false`) NÃO some o formulário — o organizador vê os
-  // valores e o gate "Antecipe suas vendas" só aparece ao clicar em "Confirmar".
-  const noReceivables = !loading && maxReceivable <= 0;
+  // Sem recebíveis para antecipar. O bloqueio por FALTA de permissão
+  // (`enabled === false`) NÃO some o formulário — o organizador vê os valores e o
+  // gate "Antecipe suas vendas" só aparece ao clicar em "Confirmar".
+  const noReceivables = !loading && availableTotal <= 0;
 
   return (
    <>
@@ -273,7 +273,7 @@ export function AnticipationModal({ eventId, onClose, eventName, onSuccess }: An
                 </div>
                 <button
                   type="button"
-                  onClick={() => setAmountCents(maxReceivable)}
+                  onClick={() => setAmountCents(availableTotal)}
                   className="text-sm font-family-dm-sans font-semibold text-blue-11 hover:text-blue-12 transition-colors shrink-0 cursor-pointer"
                 >
                   Antecipar tudo
@@ -286,14 +286,14 @@ export function AnticipationModal({ eventId, onClose, eventName, onSuccess }: An
                 <span className="font-family-dm-sans text-sm text-gray-11">
                   Valor disponível: R$ {formatBRL(availableTotal)}
                 </span>
-                {hasAmount && recommendedNet > 0 && amountCents !== recommendedNet && (
+                {hasAmount && recommendedGross > 0 && amountCents !== recommendedGross && (
                   <button
                     type="button"
-                    onClick={() => setAmountCents(recommendedNet)}
+                    onClick={() => setAmountCents(recommendedGross)}
                     className="bg-primary-11 text-gray-1 font-family-dm-sans text-sm rounded-lg px-4 py-2 shrink-0 hover:bg-primary-10 transition-colors cursor-pointer"
                   >
                     Valor recomendado:{" "}
-                    <span className="font-bold">R$ {formatBRL(recommendedNet)}</span>
+                    <span className="font-bold">R$ {formatBRL(recommendedGross)}</span>
                   </button>
                 )}
               </div>
@@ -405,13 +405,13 @@ export function AnticipationModal({ eventId, onClose, eventName, onSuccess }: An
                           <span className="text-gray-12">− R$ {formatBRL(result.realCost)}</span>
                         </div>
                         <div className="flex items-center justify-between">
-                          <span>Valor recomendado (bruto − custo real):</span>
-                          <span className="font-semibold text-gray-12">R$ {formatBRL(recommendedNet)}</span>
+                          <span>Valor recomendado (bruto das unidades usadas):</span>
+                          <span className="font-semibold text-gray-12">R$ {formatBRL(recommendedGross)}</span>
                         </div>
-                        {receiveCents < recommendedNet && (
+                        {amountCents < recommendedGross && (
                           <div className="flex items-center justify-between">
                             <span>Sobra (recomendado − pedido) vira taxa:</span>
-                            <span className="text-gray-12">− R$ {formatBRL(recommendedNet - receiveCents)}</span>
+                            <span className="text-gray-12">− R$ {formatBRL(recommendedGross - amountCents)}</span>
                           </div>
                         )}
                       </div>
@@ -437,7 +437,7 @@ export function AnticipationModal({ eventId, onClose, eventName, onSuccess }: An
             type="button"
             variant="default"
             onClick={handleConfirm}
-            disabled={loading || noReceivables || amountCents <= 0 || submitting}
+            disabled={loading || noReceivables || amountCents <= 0 || receiveCents <= 0 || submitting}
             className="h-[44px] px-8 text-base font-bold font-manrope disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {submitting ? "Aguarde..." : "Confirmar"}
