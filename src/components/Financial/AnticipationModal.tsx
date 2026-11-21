@@ -13,6 +13,7 @@ import {
   type AnticipationQuote,
 } from "@/utils/anticipation";
 import { AnticipationLockedModal } from "./AnticipationLockedModal";
+import { getCurrentSurface } from "@/lib/authSurface";
 
 // Montar/desmontar via render condicional no pai (mount = aberto) — sem prop
 // `isOpen` nem effect de seed síncrono.
@@ -208,6 +209,9 @@ export function AnticipationModal({ eventId, onClose, eventName, onSuccess }: An
   // (`enabled === false`) NÃO some o formulário — o organizador vê os valores e o
   // gate "Antecipe suas vendas" só aparece ao clicar em "Confirmar".
   const noReceivables = !loading && availableTotal <= 0;
+  // Detalhamento por recebível: só no painel do admin (pedido do usuário, 20/11).
+  // É só exibição — as unidades continuam vindo na cotação para a prévia ao vivo.
+  const showUnitBreakdown = getCurrentSurface() === "admin";
 
   return (
    <>
@@ -339,7 +343,7 @@ export function AnticipationModal({ eventId, onClose, eventName, onSuccess }: An
               {/* Detalhamento por recebível (diagnóstico/transparência): mostra o
                   que o motor usou em CADA unidade — valor, dias até liberar, custo e
                   líquido — e marca as consumidas no valor pedido. */}
-              {unitRows.length > 0 && (
+              {showUnitBreakdown && unitRows.length > 0 && (
                 <div className="border border-gray-6 rounded-lg p-4 px-5 flex flex-col gap-3">
                   <div className="flex flex-col gap-0.5">
                     <span className="font-family-dm-sans font-semibold text-gray-12">
