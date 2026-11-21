@@ -88,3 +88,34 @@ describe("computeAnticipation (frontend mirror)", () => {
     expect(r.receive).toBe(900);
   });
 });
+
+describe("mais de 16 recebíveis (DP) — o conjunto escolhido cobre o pedido", () => {
+  // Regressão 20/11: com > 16 recebíveis a reconstrução da DP devolvia conjuntos que
+  // não cobriam o pedido (recomendado < pedido, valor total < disponível).
+  let seed = 7;
+  const rnd = () => (seed = (seed * 1103515245 + 12345) % 2147483648) / 2147483648;
+  const rates = [0.02, 0.05, 0.1];
+
+  it("Antecipar tudo consome tudo e qualquer valor é coberto", () => {
+    for (let t = 0; t < 15; t++) {
+      const rate = rates[t % 3];
+      const units: AnticipationUnit[] = Array.from({ length: 17 + Math.floor(rnd() * 40) }, (_, i) => ({
+        unitId: "u" + i,
+        orderId: "o" + i,
+        paymentId: "p" + i,
+        installmentNumber: null,
+        gross: 2000 + Math.floor(rnd() * 30000),
+        daysUntilRelease: 1 + Math.floor(rnd() * 330),
+      })).filter((u) => unitCost(u.gross, u.daysUntilRelease, rate) < u.gross);
+      const available = units.reduce((s, u) => s + u.gross, 0);
+      const max = computeAnticipation(units, available, rate).recommendedNet;
+      const all = computeAnticipation(units, max, rate);
+      expect(all.consumedGross).toBe(available);
+      expect(all.recommendedNet).toBe(max);
+      for (const req of [Math.floor(max / 3), Math.floor(max * rnd())]) {
+        if (req <= 0) continue;
+        expect(computeAnticipation(units, req, rate).recommendedNet).toBeGreaterThanOrEqual(req);
+      }
+    }
+  });
+});
