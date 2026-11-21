@@ -24,6 +24,8 @@ import { ImageWithInitialFallback } from "@/components/ImageWithInitialFallback"
 import { withAdminPathPrefix } from "@/lib/adminPathPresentation";
 import { useAdminAppSurface } from "@/contexts/AdminAppSurfaceContext";
 import { YoutubeIcon } from "../Icons/YoutubeIcon";
+import { useLocale, useT } from "@/i18n/client";
+import { LanguageSegmented, LanguageSwitcher } from "../LanguageSwitcher";
 
 export function Header() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -42,12 +44,15 @@ export function Header() {
   const { push } = useRouter();
   const { isAuthenticated, user, logout } = useAuth();
   const { openModal } = useModalStore();
+  const t = useT("header");
+  const tc = useT("common");
+  const { intl } = useLocale();
 
   const userDisplayName = useMemo(() => {
     if (!user) return "";
     const full = `${user.firstName || ""} ${user.lastName || ""}`.trim();
-    return full || user.email || "Usuário";
-  }, [user]);
+    return full || user.email || t("defaultUserName");
+  }, [user, t]);
 
   const [searchResults, setSearchResults] = useState<Array<{ id: string; title: string; href: string; imageUrl?: string; location?: string; date?: string }>>([]);
   useEffect(() => {
@@ -75,7 +80,7 @@ export function Header() {
                 day: "2-digit",
                 month: "short",
                 year: "numeric",
-              });
+              }, intl);
             }
 
             return {
@@ -96,7 +101,7 @@ export function Header() {
       cancelled = true;
       clearTimeout(timer);
     };
-  }, [search]);
+  }, [search, intl]);
 
   const handleSearch = () => {
     if (search.trim().length > 0) {
@@ -139,7 +144,16 @@ export function Header() {
         <div className="max-w-[1280px] h-full w-full flex items-center justify-between gap-2 md:gap-4 md:px-0">
           <div className="flex items-center gap-2 md:gap-8 h-full shrink-0">
             <Link href="/" className="flex items-center">
-              <div className="size-8 md:w-8 md:h-8 overflow-hidden relative shrink-0">
+              {/* Mobile: logo completa (sem busca no header, sobra espaço). Desktop: só o ícone. */}
+              <Image
+                src="/images/logo_horizontal.png"
+                alt="PódioTicket"
+                width={118}
+                height={20}
+                priority
+                className="md:hidden h-5 w-auto shrink-0"
+              />
+              <div className="hidden md:block size-8 overflow-hidden relative shrink-0">
                 <Image
                   src="/images/logo.png"
                   alt="PódioTicket"
@@ -151,15 +165,20 @@ export function Header() {
               </div>
             </Link>
           </div>
-          <div className="flex w-full max-w-[560px] px-4 md:px-0">
-            <SearchBar
-              search={search}
-              setSearch={setSearch}
-              results={searchResults}
-              onSearch={handleSearch}
-            />
-          </div>
+          {/* Busca só na home e só no desktop: no mobile fica o card "Procure seu evento". */}
+          {pathname === "/" && (
+            <div className="hidden md:flex w-full max-w-[560px]">
+              <SearchBar
+                search={search}
+                setSearch={setSearch}
+                results={searchResults}
+                onSearch={handleSearch}
+                placeholder={t("searchPlaceholder")}
+              />
+            </div>
+          )}
           <div className="hidden md:flex items-center h-[50px] gap-2">
+            <LanguageSwitcher />
 
             {isAuthenticated && user ? (
               <Dropdown
@@ -188,7 +207,7 @@ export function Header() {
                 options={[
                   {
                     id: "profile",
-                    label: "Perfil e configurações",
+                    label: t("profile"),
                     icon: User,
                     onClick: () => {
                       push("/user");
@@ -197,14 +216,14 @@ export function Header() {
                   {
                     id: "tickets",
                     icon: TicketIcon,
-                    label: "Meus ingressos",
+                    label: t("myTickets"),
                     onClick: () => {
                       push("/user/tickets");
                     },
                   },
                   {
                     id: "logout",
-                    label: "Logout",
+                    label: t("logout"),
                     icon: LogOut,
                     onClick: () => {
                       logout();
@@ -228,45 +247,63 @@ export function Header() {
                   size="default"
                   className="border-[#3A3A3A] text-[#EEEEEE] font-bold font-manrope"
                 >
-                  Criar conta
+                  {t("signUp")}
                 </Button>
                 <Button
                   onClick={() => openModal("login")}
                   variant="default"
                   size="default"
                 >
-                  Entrar
+                  {t("signIn")}
                 </Button>
               </>
             )}
           </div>
-          <div className="flex items-center z-50 shrink-0 md:hidden">
+          <div className="flex items-center gap-2 z-50 shrink-0 md:hidden">
+            {/* Um botão só: logado = foto (32px) + 3 barras; deslogado = só as barras.
+                Aberto, as barras viram o "X" (a foto fica). */}
             <button
-              className="flex items-center justify-center w-10 h-10 relative transition-all duration-300 hover:opacity-80"
+              type="button"
+              className="flex items-center gap-2 h-10 relative transition-all duration-300 hover:opacity-80"
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              aria-label="Menu"
-              role="button"
+              aria-label={t("menu")}
             >
-              <div className="w-6 h-5 flex flex-col items-center justify-center gap-1.5 relative">
-                <span
-                  className={`w-6 h-[2px] rounded-full transition-all duration-300 ease-in-out ${mobileMenuOpen
-                    ? "bg-gray-4 rotate-45 translate-y-[10px]"
-                    : "bg-gray-4"
-                    }`}
+              {isAuthenticated && user && (
+                <ImageWithInitialFallback
+                  src={user.avatarUrl?.trim() ? getAvatarUrl(user.avatarUrl) : null}
+                  alt={userDisplayName}
+                  name={userDisplayName}
+                  fallbackId={user.id}
+                  width={32}
+                  height={32}
+                  nativeImg
+                  className="size-8 rounded-full shrink-0 overflow-hidden bg-primary-10"
+                  imgClassName="object-cover rounded-full"
+                  letterClassName="text-sm font-semibold text-gray-12 uppercase"
                 />
-                <span
-                  className={`w-6 h-[2px] rounded-full transition-all duration-300 ease-in-out ${mobileMenuOpen
-                    ? "opacity-0 scale-0"
-                    : "bg-gray-4 opacity-100 scale-100"
-                    }`}
-                />
-                <span
-                  className={`w-6 h-[2px] rounded-full transition-all duration-300 ease-in-out ${mobileMenuOpen
-                    ? "bg-gray-4 -rotate-45 -translate-y-[6px]"
-                    : "bg-gray-4"
-                    }`}
-                />
-              </div>
+              )}
+              <span className="flex items-center justify-center w-10 h-10">
+                <div className="w-6 h-5 flex flex-col items-center justify-center gap-1.5 relative">
+                  <span
+                    className={`w-6 h-[2px] rounded-full transition-all duration-300 ease-in-out ${mobileMenuOpen
+                      ? "bg-gray-4 rotate-45 translate-y-[10px]"
+                      : "bg-gray-4"
+                      }`}
+                  />
+                  <span
+                    className={`w-6 h-[2px] rounded-full transition-all duration-300 ease-in-out ${mobileMenuOpen
+                      ? "opacity-0 scale-0"
+                      : "bg-gray-4 opacity-100 scale-100"
+                      }`}
+                  />
+                  <span
+                    className={`w-6 h-[2px] rounded-full transition-all duration-300 ease-in-out ${mobileMenuOpen
+                      ? "bg-gray-4 -rotate-45 -translate-y-[6px]"
+                      : "bg-gray-4"
+                      }`}
+                  />
+                </div>
+              </span>
             </button>
           </div>
         </div>
@@ -307,7 +344,7 @@ export function Header() {
                 <button
                   onClick={() => setMobileMenuOpen(false)}
                   className="flex items-center justify-center w-8 h-8 text-[#EEE] hover:opacity-80 transition-opacity"
-                  aria-label="Fechar menu"
+                  aria-label={t("closeMenu")}
                 >
                   <X className="w-5 h-5" />
                 </button>
@@ -316,7 +353,7 @@ export function Header() {
               {/* Scrollable Content */}
               <div className="overflow-y-auto h-[calc(100vh-64px)] overscroll-contain [-webkit-overflow-scrolling:touch] [touch-action:pan-y]">
                 {/* Menu Items */}
-                <div className="bg-[#222] border-b border-[#3a3a3a] space-y-2 font-family-dm-sans">
+                <div className="bg-[#222] border-b border-[#3a3a3a] font-family-dm-sans">
                   {isAuthenticated && user ? (
                     <>
                       <button
@@ -328,7 +365,7 @@ export function Header() {
                       >
                         <UserIcon className="size-5 text-[#EEE]" />
                         <span className="text-base font-medium text-[#EEE]">
-                          Perfil e configurações
+                          {t("profile")}
                         </span>
                       </button>
                       <button
@@ -340,10 +377,10 @@ export function Header() {
                       >
                         <TicketIcon className="w-5 h-5 text-[#EEE]" />
                         <span className="text-base font-medium text-[#EEE]">
-                          Meus ingressos
+                          {t("myTickets")}
                         </span>
                       </button>
-                     {/*  <button className="w-full flex gap-2 items-center h-[52px] px-4 border-b border-[#3a3a3a] text-[#EEE] hover:bg-[#2a2a2a] transition-colors">
+                      {/*  <button className="w-full flex gap-2 items-center h-[52px] px-4 border-b border-[#3a3a3a] text-[#EEE] hover:bg-[#2a2a2a] transition-colors">
                         <InfoIcon className="w-5 h-5 text-[#EEE]" />
                         <span className="text-base font-medium text-[#EEE]">
                           Central de ajuda
@@ -360,7 +397,7 @@ export function Header() {
                       >
                         <LogOut className="w-5 h-5 text-[#EEE]" />
                         <span className="text-base font-medium text-[#EEE]">
-                          Sair
+                          {t("logoutMobile")}
                         </span>
                       </button>
                     </>
@@ -375,7 +412,7 @@ export function Header() {
                         size="default"
                         className="w-full"
                       >
-                        Entrar
+                        {t("signIn")}
                       </Button>
                       <Button
                         onClick={() => {
@@ -386,11 +423,13 @@ export function Header() {
                         size="default"
                         className="w-full border-[#3A3A3A] text-[#EEEEEE] font-bold font-manrope"
                       >
-                        Criar conta
+                        {t("signUp")}
                       </Button>
                     </div>
                   )}
                 </div>
+
+                <LanguageSegmented className="bg-[#222] border-b border-[#3a3a3a]" />
 
                 {/* About Section */}
                 <div className="w-full flex flex-col md:hidden p-4">
@@ -416,14 +455,14 @@ export function Header() {
 
                   {/* Introductory Text */}
                   <p className="font-family-dm-sans text-[#B4B4B4] text-sm text-center leading-relaxed">
-                    A PódioTicket é o ponto de encontro de quem vive o esporte. Aqui você encontra seu próximo desafio, reúne os amigos, combina a largada e transforma cada chegada em uma história que merece ser lembrada.
+                    {tc("aboutText")}
                   </p>
 
                   {/* Social Media Section */}
                   <div className="text-[#EEE] flex items-center gap-10 w-full my-4 mb-6">
                     <div className="flex-1 h-px bg-[#606060] min-w-0" />
                     <p className="text-start whitespace-nowrap shrink-0">
-                      Saiba mais sobre nós
+                      {tc("learnMore")}
                     </p>
                     <div className="flex-1 h-px bg-[#606060] min-w-0" />
                   </div>

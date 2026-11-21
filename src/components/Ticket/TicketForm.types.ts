@@ -2,7 +2,7 @@ export interface Batch {
   id: string;
   quantity: string;
   price: string;
-  /** Quando > 0, o preço não pode mais ser editado (lote já teve vendas). */
+  /** Vendas do lote: a quantidade não pode ficar abaixo disso. */
   quantitySold?: number;
   startType: "date" | "previous";
   startDate?: string;
@@ -25,6 +25,9 @@ export interface TicketFormData {
   minPurchaseQuantity?: string;
   /** Quantidade máxima por pedido ("" = sem máximo). */
   maxPurchaseQuantity?: string;
+  /** Esgotamento automático: data "YYYY-MM-DD" e hora "HH:mm" ("" = sem esgotamento). */
+  autoSoldOutDate?: string;
+  autoSoldOutTime?: string;
   hasKit: boolean;
   selectedGroupId: string;
   batches: Batch[];

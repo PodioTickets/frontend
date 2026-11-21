@@ -1,6 +1,7 @@
 "use client";
 
-import { useParams, useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { Loading } from "@/components/Loading";
 import { AdminEventHeader } from "@/components/Admin/AdminEventHeader";
 import { RegistrationsView } from "@/components/Registrations/RegistrationsView";
@@ -10,6 +11,12 @@ export default function EventRegistrationsPage() {
   const router = useRouter();
   const params = useParams();
   const eventId = params.id as string;
+  // `?swapped=<id>` vem da troca de ingresso. Lido uma vez e tirado da URL: recarregar não repete o destaque.
+  const searchParams = useSearchParams();
+  const [swappedId] = useState(() => searchParams.get("swapped"));
+  useEffect(() => {
+    if (swappedId) window.history.replaceState(null, "", window.location.pathname);
+  }, [swappedId]);
 
   // Admin carrega as stats agregadas do evento (loadAggregateStats).
   const { loading, pageError, loadInitialData, registrations, viewProps } =
@@ -54,6 +61,7 @@ export default function EventRegistrationsPage() {
         />
       }
       {...viewProps}
+      highlightedRegistrationId={swappedId}
     />
   );
 }

@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/Button";
+import { useT } from "@/i18n/client";
 
 interface CheckoutCardErrorModalProps {
   open: boolean;
@@ -12,6 +13,7 @@ interface CheckoutCardErrorModalProps {
 
 export function CheckoutCardErrorModal({ open, onConfirm }: CheckoutCardErrorModalProps) {
   const [mounted, setMounted] = useState(false);
+  const t = useT("checkout");
 
   useEffect(() => {
     setMounted(true);
@@ -44,10 +46,10 @@ export function CheckoutCardErrorModal({ open, onConfirm }: CheckoutCardErrorMod
               />
               <div className="flex flex-col gap-4 items-center w-full">
                 <p className="text-gray-12 text-xl font-semibold font-family-dm-sans leading-[1.3]">
-                  Pagamento não aprovado
+                  {t("cardErrorTitle")}
                 </p>
                 <p className="text-gray-11 text-base font-normal font-family-dm-sans leading-[1.3] text-center">
-                  Sua transação não foi autorizada pela operadora do cartão. Verifique os dados informados ou tente outro método de pagamento
+                  {t("cardErrorDescription")}
                 </p>
               </div>
             </div>
@@ -57,7 +59,7 @@ export function CheckoutCardErrorModal({ open, onConfirm }: CheckoutCardErrorMod
               className="w-full border-gray-6 text-gray-12 font-bold font-manrope"
               onClick={onConfirm}
             >
-              Tentar novamente
+              {t("cardErrorRetry")}
             </Button>
           </motion.div>
         </motion.div>

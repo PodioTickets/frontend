@@ -10,6 +10,7 @@ import {
 import { ImageCarouselModal } from "./ImageCarouselModal";
 import { cn } from "@/utils/cn";
 import { ImageWithInitialFallback } from "../ImageWithInitialFallback";
+import { useT } from "@/i18n/client";
 
 type CategoryKitHorizontalCarouselProps = {
   items: ImageCarouselItem[];
@@ -27,6 +28,7 @@ export function CategoryKitHorizontalCarousel({
   items,
   primaryProductId,
 }: CategoryKitHorizontalCarouselProps) {
+  const t = useT("checkoutInfo");
   const displayItems = useMemo(
     () => items.filter(hasUsableProductImage),
     [items]
@@ -103,8 +105,8 @@ export function CategoryKitHorizontalCarousel({
       <div
         className="flex w-full flex-col gap-3 overflow-hidden"
         role="region"
-        aria-roledescription="carrossel"
-        aria-label="Imagens dos produtos do kit"
+        aria-roledescription={t("carousel")}
+        aria-label={t("kitProductImages")}
       >
         <div className="flex w-full items-center justify-center gap-2">
           <button
@@ -112,7 +114,7 @@ export function CategoryKitHorizontalCarousel({
             onClick={scrollPrev}
             disabled={single}
             className={navButtonClass}
-            aria-label="Imagem anterior"
+            aria-label={t("previousImage")}
           >
             <ChevronLeft className="size-5 shrink-0" aria-hidden />
           </button>
@@ -144,7 +146,7 @@ export function CategoryKitHorizontalCarousel({
                         ? "z-10 border-primary-8 scale-110"
                         : "border-gray-5 scale-90 hover:border-gray-7"
                     )}
-                    aria-label={`${item.name}.${isCenter ? " Selecionada. Ver em tamanho maior." : ""}`}
+                    aria-label={`${item.name}.${isCenter ? ` ${t("imageSelectedViewLarger")}` : ""}`}
                     aria-current={isCenter ? "true" : undefined}
                   >
                     <ImageWithInitialFallback
@@ -166,7 +168,7 @@ export function CategoryKitHorizontalCarousel({
             onClick={scrollNext}
             disabled={single}
             className={navButtonClass}
-            aria-label="Próxima imagem"
+            aria-label={t("nextImage")}
           >
             <ChevronRight className="size-5 shrink-0" aria-hidden />
           </button>
@@ -185,7 +187,7 @@ export function CategoryKitHorizontalCarousel({
                     ? "w-6 bg-primary-10"
                     : "w-1.5 bg-gray-6 hover:bg-gray-8"
                 )}
-                aria-label={`Ir para imagem ${i + 1}: ${item.name}`}
+                aria-label={t("goToImage", { n: i + 1, name: item.name })}
               />
             ))}
           </div>

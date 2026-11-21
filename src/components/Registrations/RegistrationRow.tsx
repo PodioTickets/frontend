@@ -25,11 +25,13 @@ export function RegistrationRow({
   onViewRegistration,
   onViewPaymentDetails,
   getStatusBadge,
+  highlighted,
 }: {
   registration: RegistrationListRow;
   onViewRegistration: () => void;
   onViewPaymentDetails: () => void;
   getStatusBadge: (status: string) => RegistrationStatusBadge;
+  highlighted?: boolean;
 }) {
   const [imageError, setImageError] = useState(false);
 
@@ -69,7 +71,7 @@ export function RegistrationRow({
 
   return (
     <div
-      className="bg-gray-1 border-b border-gray-6 flex h-[52px] items-center justify-between w-full last:border-b-0 hover:bg-gray-2 transition-colors"
+      className={`bg-gray-1 border-b border-gray-6 flex h-[52px] items-center justify-between w-full last:border-b-0 hover:bg-gray-2 transition-colors ${highlighted ? "swap-highlight" : ""}`}
     >
       {/* ID do pedido */}
       <div className="flex h-full items-center p-4 w-[136px]">

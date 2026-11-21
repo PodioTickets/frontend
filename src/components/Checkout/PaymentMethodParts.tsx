@@ -2,6 +2,7 @@ import { Button } from "../Button";
 import { PencilIcon } from "../Icons/PencilIcon";
 import { type CheckoutBillingAddress } from "./CheckoutAddressSection";
 import type { PaymentOption } from "@/interfaces/payment";
+import { useT } from "@/i18n/client";
 
 export function PaymentMethodOption({
   option,
@@ -57,6 +58,7 @@ export function BillingAddressConfirmedSummary({
   onEdit: () => void;
   className?: string;
 }) {
+  const t = useT("checkout");
   return (
     <div
       className={`border border-gray-6 rounded-lg p-4 md:p-5 flex flex-col w-full bg-gray-1 ${className}`}
@@ -64,7 +66,7 @@ export function BillingAddressConfirmedSummary({
       <div className="flex md:flex-wrap items-center md:items-center justify-between gap-3">
         <div>
           <h2 className="font-manrope font-bold text-sm md:text-xl leading-[1.1] text-gray-12 pb-1 md:pb-0">
-            Endereço
+            {t("billingAddressTitle")}
           </h2>
           <p className="md:hidden text-gray-11 text-sm">
             {[
@@ -80,7 +82,7 @@ export function BillingAddressConfirmedSummary({
           <PencilIcon className="size-4" />
         </div>
         <Button onClick={onEdit} variant="outline" className="md:flex hidden border-gray-6 text-gray-12">
-          Alterar endereço
+          {t("billingAddressEdit")}
         </Button>
       </div>
       <div className="hidden md:block text-sm text-gray-12 font-family-dm-sans leading-[1.4] space-y-1">
@@ -97,8 +99,8 @@ export function BillingAddressConfirmedSummary({
         </p>
         <p className="text-gray-12">
           {address.country?.trim() && address.country !== "Brasil"
-            ? `Código postal ${address.cep} · ${address.country}`
-            : `CEP ${address.cep}`}
+            ? t("billingPostalCode", { cep: address.cep, country: address.country })
+            : t("billingCep", { cep: address.cep })}
         </p>
       </div>
     </div>

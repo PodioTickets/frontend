@@ -13,6 +13,7 @@ import { CountrySearchSelect } from "@/components/CountrySearchSelect";
 import { SearchSelect, type SearchSelectOption } from "@/components/SearchSelect";
 import { useGeoStates, useGeoCities } from "@/hooks/useGeo";
 import { AnimatePresence, motion } from "framer-motion";
+import { useT } from "@/i18n/client";
 
 /** Comparação de nome de estado acento/caixa-insensível (recupera o `code` no prefill). */
 function sameStateName(a: string, b: string) {
@@ -100,6 +101,7 @@ export function CheckoutAddressSection({
   onChange,
   className,
 }: CheckoutAddressSectionProps) {
+  const t = useT("checkoutInfo");
   const [loadingCep, setLoadingCep] = useState(false);
   const [errors, setErrors] = useState<AddressErrors>({});
   const cepLookupSeq = useRef(0);
@@ -221,7 +223,13 @@ export function CheckoutAddressSection({
         if (seq !== cepLookupSeq.current) return;
 
         if (!result.ok) {
-          toast.error(result.message);
+          // `lookupCepDigits` (compartilhado com o painel) devolve a mensagem fixa em pt-BR.
+          const cepErrorKeys = {
+            "CEP inválido": "cepInvalidShort",
+            "CEP não encontrado": "cepNotFound",
+          } as const;
+          const key = cepErrorKeys[result.message as keyof typeof cepErrorKeys];
+          toast.error(key ? t(key) : t("cepLookupError"));
           return;
         }
 
@@ -232,10 +240,10 @@ export function CheckoutAddressSection({
           city: d.localidade || "",
           stateUf: (d.uf || "").toUpperCase(),
         });
-        toast.success("Endereço encontrado!");
+        toast.success(t("addressFound"));
       } catch {
         if (seq === cepLookupSeq.current) {
-          toast.error("Erro ao buscar CEP");
+          toast.error(t("cepLookupError"));
         }
       } finally {
         if (seq === cepLookupSeq.current) {
@@ -243,7 +251,7 @@ export function CheckoutAddressSection({
         }
       }
     },
-    [onChange, invalidateConfirm, values.country, postalConfig, clearError]
+    [onChange, invalidateConfirm, values.country, postalConfig, clearError, t]
   );
 
   const cepDigits = values.cep.replace(/\D/g, "");
@@ -253,52 +261,52 @@ export function CheckoutAddressSection({
     const newErrors: AddressErrors = {};
 
     if (!values.country?.trim()) {
-      newErrors.country = "Selecione o país.";
+      newErrors.country = t("selectCountry");
     }
     if (!postalConfig.isValid(values.cep)) {
       newErrors.cep = isForeign
-        ? "Informe um código postal válido."
-        : "Informe um CEP válido.";
+        ? t("invalidPostalCode")
+        : t("invalidCep");
     }
     if (!values.stateUf?.trim()) {
       newErrors.stateUf = isForeign
-        ? "Informe o estado ou província."
-        : "Selecione o estado.";
+        ? t("enterStateProvince")
+        : t("selectState");
     }
     if (!values.street.trim()) {
-      newErrors.street = "Informe a rua.";
+      newErrors.street = t("enterStreet");
     }
     if (!values.number.trim()) {
-      newErrors.number = "Informe o número.";
+      newErrors.number = t("enterNumber");
     }
     // Bairro só é obrigatório no Brasil — estrangeiro não tem o campo.
     if (!isForeign && !values.neighborhood.trim()) {
-      newErrors.neighborhood = "Informe o bairro.";
+      newErrors.neighborhood = t("enterNeighborhood");
     }
     if (!values.city.trim()) {
-      newErrors.city = "Informe a cidade.";
+      newErrors.city = t("enterCity");
     }
 
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
-      toast.error("Preencha todos os campos obrigatórios.");
+      toast.error(t("fillRequiredFields"));
       return;
     }
 
     setErrors({});
     onConfirmedChange(true);
-    toast.success("Endereço confirmado.");
+    toast.success(t("addressConfirmed"));
   };
 
   /* Campos pré-montados — facilita reordenar entre layouts (BR / estrangeiro)
    * mantendo as mesmas larguras (flex-1 / 136px) independente da posição. */
   const streetField = (
     <div className="flex flex-col gap-2 flex-1 min-w-[min(100%,280px)]">
-      <FieldLabel>Rua</FieldLabel>
+      <FieldLabel>{t("street")}</FieldLabel>
       <Input
         type="text"
         autoComplete="street-address"
-        placeholder="Nome da sua rua"
+        placeholder={t("streetPlaceholder")}
         value={values.street}
         onChange={(e) => {
           onChange({ street: e.target.value });
@@ -314,7 +322,7 @@ export function CheckoutAddressSection({
 
   const cityField = (
     <div className="flex flex-col gap-2 flex-1 min-w-[min(100%,200px)]">
-      <FieldLabel>Cidade</FieldLabel>
+      <FieldLabel>{t("city")}</FieldLabel>
       {citySelectMode ? (
         // Estrangeiro com cascata geo: dropdown de cidades do estado escolhido.
         // Desabilitado até escolher o estado; persiste o NOME em `city`.
@@ -324,10 +332,10 @@ export function CheckoutAddressSection({
           loading={geoCitiesLoading}
           disabled={!selectedStateCode}
           placeholder={
-            selectedStateCode ? "Selecione a cidade" : "Selecione o estado primeiro"
+            selectedStateCode ? t("selectCity") : t("selectStateFirst")
           }
-          searchPlaceholder="Pesquisar cidade"
-          emptyText="Nenhuma cidade encontrada"
+          searchPlaceholder={t("searchCity")}
+          emptyText={t("noCityFound")}
           aria-invalid={!!errors.city}
           onChange={(opt) => {
             onChange({ city: opt.value });
@@ -339,7 +347,7 @@ export function CheckoutAddressSection({
         <Input
           type="text"
           autoComplete="address-level2"
-          placeholder="Digite sua cidade"
+          placeholder={t("cityPlaceholder")}
           value={values.city}
           onChange={(e) => {
             onChange({ city: e.target.value });
@@ -356,7 +364,7 @@ export function CheckoutAddressSection({
 
   const stateField = (
     <div className="flex flex-col gap-2 flex-1 min-w-[min(100%,280px)]">
-      <FieldLabel>{isForeign ? "Estado/Província" : "Estado"}</FieldLabel>
+      <FieldLabel>{isForeign ? t("stateProvince") : t("state")}</FieldLabel>
       {isForeign ? (
         stateSelectMode ? (
           // Estrangeiro com lista geo: dropdown com busca. Guarda o `code`
@@ -365,9 +373,9 @@ export function CheckoutAddressSection({
             value={selectedStateCode}
             options={stateGeoOptions}
             loading={geoStatesLoading}
-            placeholder="Selecione o estado/província"
-            searchPlaceholder="Pesquisar estado"
-            emptyText="Nenhum estado encontrado"
+            placeholder={t("selectStateProvince")}
+            searchPlaceholder={t("searchState")}
+            emptyText={t("noStateFound")}
             aria-invalid={!!errors.stateUf}
             onChange={(opt) => {
               setSelectedStateCode(opt.value);
@@ -384,7 +392,7 @@ export function CheckoutAddressSection({
           <Input
             type="text"
             autoComplete="address-level1"
-            placeholder="Estado ou província"
+            placeholder={t("stateProvincePlaceholder")}
             value={values.stateUf}
             onChange={(e) => {
               onChange({ stateUf: e.target.value });
@@ -410,7 +418,7 @@ export function CheckoutAddressSection({
             <button
               type="button"
               className={cn(selectTriggerClass, errors.stateUf && "border-red-11")}
-              aria-label="Selecionar estado"
+              aria-label={t("selectStateAria")}
             >
               <span
                 className={cn(
@@ -419,7 +427,7 @@ export function CheckoutAddressSection({
                 )}
               >
                 {stateOptions.find((o) => o.id === values.stateUf)?.label ??
-                  "Selecione"}
+                  t("select")}
               </span>
               <ArrowButton isOpen={isOpen} className="size-3 text-gray-12 shrink-0" />
             </button>
@@ -432,11 +440,11 @@ export function CheckoutAddressSection({
 
   const numberField = (
     <div className="flex flex-col gap-2 w-full sm:w-[136px] shrink-0">
-      <FieldLabel>Número</FieldLabel>
+      <FieldLabel>{t("number")}</FieldLabel>
       <Input
         type="text"
         autoComplete="off"
-        placeholder="Nº"
+        placeholder={t("numberPlaceholder")}
         value={values.number}
         onChange={(e) => {
           onChange({ number: e.target.value });
@@ -452,11 +460,11 @@ export function CheckoutAddressSection({
 
   const complementField = (
     <div className="flex flex-col gap-2 flex-1 min-w-[min(100%,200px)]">
-      <FieldLabel>Complemento (opcional)</FieldLabel>
+      <FieldLabel>{t("complementOptional")}</FieldLabel>
       <Input
         type="text"
         autoComplete="off"
-        placeholder="Apto, bloco, etc"
+        placeholder={t("complementPlaceholder")}
         value={values.complement}
         onChange={(e) => {
           onChange({ complement: e.target.value });
@@ -469,10 +477,10 @@ export function CheckoutAddressSection({
 
   const neighborhoodField = (
     <div className="flex flex-col gap-2 flex-1 min-w-[min(100%,280px)]">
-      <FieldLabel>Bairro</FieldLabel>
+      <FieldLabel>{t("neighborhood")}</FieldLabel>
       <Input
         type="text"
-        placeholder="Digite seu bairro"
+        placeholder={t("neighborhoodPlaceholder")}
         value={values.neighborhood}
         onChange={(e) => {
           onChange({ neighborhood: e.target.value });
@@ -494,14 +502,14 @@ export function CheckoutAddressSection({
       )}
     >
       <h2 className="font-manrope font-bold text-xl leading-[1.1] text-gray-12">
-        Endereço
+        {t("address")}
       </h2>
 
       <div className="flex flex-col w-full gap-4">
         {/* País + CEP */}
         <div className="flex flex-wrap gap-x-3 gap-y-4 w-full">
           <div className="flex flex-col gap-2 flex-1 min-w-[min(100%,280px)]">
-            <FieldLabel>País</FieldLabel>
+            <FieldLabel>{t("country")}</FieldLabel>
             <CountrySearchSelect
               value={values.country}
               onChange={(country) => {
@@ -531,13 +539,13 @@ export function CheckoutAddressSection({
             />
             {loadingCep ? (
               <p className="text-sm text-gray-11 font-family-dm-sans">
-                Buscando endereço...
+                {t("searchingAddress")}
               </p>
             ) : errors.cep ? (
               <p className="text-sm text-red-11">{errors.cep}</p>
             ) : !isForeign && cepDigits.length > 0 && cepDigits.length < 8 ? (
               <p className="text-sm text-gray-11 font-family-dm-sans">
-                Preencha o CEP com 8 dígitos para liberar o restante do endereço.
+                {t("cepHint")}
               </p>
             ) : null}
           </div>
@@ -582,7 +590,7 @@ export function CheckoutAddressSection({
               className="w-full h-12 font-bold font-manrope text-base"
               onClick={handleConfirm}
             >
-              Confirmar endereço
+              {t("confirmAddress")}
             </Button>
           </motion.div>
         ) : null}

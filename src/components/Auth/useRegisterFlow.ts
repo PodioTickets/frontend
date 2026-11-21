@@ -6,13 +6,12 @@ import { userService } from "@/services";
 import type { AuthError } from "@/services/user/UserService";
 import { ZodError } from "zod";
 import toast from "react-hot-toast";
-import { COUNTRIES_PT_BR } from "@/data/countries";
 import { type TurnstileInstance } from "@marsidev/react-turnstile";
 import {
-  registerStep1aSchema,
+  buildRegisterStep1aSchema,
   buildRegisterStep1bSchema,
   isBrazilianCountry,
-  registerStep2Schema,
+  buildRegisterStep2Schema,
   type RegisterStep1aFormData,
   type RegisterStep1bFormData,
   type RegisterStep2FormData,
@@ -23,6 +22,8 @@ import {
   getPhoneMaxLengthForCountry,
   getPhoneDigitsForBackend,
 } from "@/utils/phone";
+import { useT, useLocale } from "@/i18n/client";
+import { countryMatches, countryOptions } from "@/i18n/countryName";
 
 // 1 = email/senha · 2 = nome+nacionalidade · 3 = resto dos dados pessoais · 4 = tela de sucesso (UX expõe 3 etapas; 4 é só confirmação pós-cadastro).
 export type RegisterStep = 1 | 2 | 3 | 4;
@@ -38,6 +39,8 @@ export function useRegisterFlow() {
   const { isOpen, closeRegisterModal, data: modalData } = useRegisterModal();
   const { openLoginModal } = useLoginModal();
   const { register, isLoading: authLoading, user, refetchUser, logout } = useAuth();
+  const t = useT("auth");
+  const { intl } = useLocale();
   const [currentStep, setCurrentStep] = useState<RegisterStep>(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
@@ -199,7 +202,7 @@ export function useRegisterFlow() {
         nome: formData.nome,
         nacionalidade: formData.nacionalidade,
       };
-      registerStep1aSchema.parse(data);
+      buildRegisterStep1aSchema(t).parse(data);
       setErrors({});
       return true;
     } catch (error) {
@@ -218,7 +221,7 @@ export function useRegisterFlow() {
       };
       /* Schema dinâmico: para brasileiros (formData.nacionalidade BR/Brasil/Brazil)
        * exige CPF válido; para estrangeiros aceita documento genérico. */
-      buildRegisterStep1bSchema(formData.nacionalidade).parse(data);
+      buildRegisterStep1bSchema(formData.nacionalidade, t).parse(data);
       setErrors({});
       return true;
     } catch (error) {
@@ -230,8 +233,8 @@ export function useRegisterFlow() {
     try {
       if (isCompletingProfile) {
         if (!formData.email || !formData.email.includes("@")) {
-          setErrors({ email: "Email é obrigatório" });
-          toast.error("Email é obrigatório");
+          setErrors({ email: t("vEmailRequired") });
+          toast.error(t("vEmailRequired"));
           return false;
         }
         setErrors({});
@@ -244,7 +247,7 @@ export function useRegisterFlow() {
         senha: formData.senha,
         confirmarSenha: formData.confirmarSenha,
       };
-      registerStep2Schema.parse(step2Data);
+      buildRegisterStep2Schema(t).parse(step2Data);
       setErrors({});
       return true;
     } catch (error) {
@@ -303,8 +306,8 @@ export function useRegisterFlow() {
         try {
           const result = await userService.checkEmailAvailability(formData.email);
           if (!result.available) {
-            setErrors((prev) => ({ ...prev, email: result.message || "Este e-mail já está cadastrado." }));
-            toast.error(result.message || "Este e-mail já está cadastrado.");
+            setErrors((prev) => ({ ...prev, email: result.message || t("emailTaken") }));
+            toast.error(result.message || t("emailTaken"));
             return;
           }
         } finally {
@@ -329,7 +332,7 @@ export function useRegisterFlow() {
       // Aceite de termos é obrigatório — botão já fica disabled, mas validamos
       // de novo aqui pra defender contra bypass via DevTools.
       if (!isCompletingProfile && !acceptedTermsChecked) {
-        toast.error("É preciso aceitar os Termos de uso pra criar conta.");
+        toast.error(t("mustAcceptTerms"));
         return;
       }
 
@@ -340,7 +343,7 @@ export function useRegisterFlow() {
           await userService.updateUser(user!.id, buildPersonalUpdateData(formData));
           await refetchUser();
           setCurrentStep(4);
-          toast.success("Cadastro finalizado com sucesso!");
+          toast.success(t("signupFinished"));
           setTimeout(() => {
             closeRegisterModal();
             clearReturnPath();
@@ -378,10 +381,10 @@ export function useRegisterFlow() {
         });
 
         setCurrentStep(4);
-        toast.success("Cadastro realizado com sucesso!");
+        toast.success(t("signupSuccess"));
       } catch (error: unknown) {
         const e = error as Error & Partial<Pick<AuthError, "formFieldErrors">>;
-        const msg = e?.message || "Erro ao criar conta. Tente novamente.";
+        const msg = e?.message || t("signupError");
         if (e.formFieldErrors?.email) {
           setErrors((prev) => ({ ...prev, email: e.formFieldErrors!.email! }));
         }
@@ -459,7 +462,7 @@ export function useRegisterFlow() {
   /* Aplica máscara CPF só para brasileiros. Estrangeiros podem digitar
    * passaporte/RNE livremente (letras + dígitos). */
   const isBrUser = isBrazilianCountry(formData.nacionalidade);
-  const docLabel = isBrUser ? "CPF" : "Documento";
+  const docLabel = isBrUser ? "CPF" : t("document");
   const docPlaceholder = isBrUser ? "000.000.000-00" : "12345...";
   const docMaxLength = isBrUser ? 14 : 30;
 
@@ -488,25 +491,11 @@ export function useRegisterFlow() {
   };
 
   // Nacionalidade options (todos os países; Brasil já é o padrão)
-  const nacionalidadeOptions = useMemo(
-    () =>
-      COUNTRIES_PT_BR.map((name) => ({
-        id: name.toLowerCase().normalize("NFD").replace(/\p{Diacritic}/gu, "").replace(/\s+/g, "-"),
-        label: name,
-      })),
-    []
-  );
-
-  const normalizeForSearch = (s: string) =>
-    s
-      .toLowerCase()
-      .normalize("NFD")
-      .replace(/\p{Diacritic}/gu, "");
+  const nacionalidadeOptions = useMemo(() => countryOptions(intl), [intl]);
 
   const filteredNacionalidadeOptions = useMemo(() => {
     if (!nationalitySearch.trim()) return nacionalidadeOptions;
-    const q = normalizeForSearch(nationalitySearch);
-    return nacionalidadeOptions.filter((opt) => normalizeForSearch(opt.label).includes(q));
+    return nacionalidadeOptions.filter((opt) => countryMatches(opt, nationalitySearch));
   }, [nacionalidadeOptions, nationalitySearch]);
 
   useEffect(() => {
@@ -519,7 +508,9 @@ export function useRegisterFlow() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [showNationalityDropdown]);
 
-  // Sexo options (igual à tela do usuário)
+  // Sexo options (igual à tela do usuário). O `label` pt-BR é o VALOR salvo no
+  // form (mapeado pro enum do backend via genderMap) — a tradução é só na exibição
+  // (RegisterModal).
   const sexoOptions = [
     { id: "masculino", label: "Masculino" },
     { id: "feminino", label: "Feminino" },

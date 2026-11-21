@@ -7,6 +7,7 @@ import { Button } from "@/components/Button";
 import { ArrowButton } from "@/components/ArrowButton";
 import { LegalDocumentBody } from "@/components/LegalDocument";
 import { termsOfUse } from "@/data/termsOfUse";
+import { useT } from "@/i18n/client";
 
 /* Mesmo conteúdo da página /terms; o "h1" vira o título do header do modal. */
 const termsBlocks = termsOfUse.filter((b) => b.type !== "h1");
@@ -34,6 +35,7 @@ export function TermsOfServiceModal({
   onClose,
   onAccept,
 }: TermsOfServiceModalProps) {
+  const t = useT("auth");
   // Trava scroll do body enquanto aberto — evita scroll duplo (modal + página).
   useEffect(() => {
     if (!isOpen) return;
@@ -66,18 +68,18 @@ export function TermsOfServiceModal({
                 <button
                   onClick={onClose}
                   className="flex items-center justify-center rounded-lg shrink-0 size-8 transition-colors rotate-90 cursor-pointer hover:bg-gray-3"
-                  aria-label="Voltar"
+                  aria-label={t("back")}
                 >
                   <ArrowButton isOpen={true} />
                 </button>
                 <p className="font-family-dm-sans font-semibold text-base leading-[1.3] text-gray-12 truncate">
-                  Termos de uso
+                  {t("termsOfUse")}
                 </p>
               </div>
               <button
                 onClick={onClose}
                 className="flex items-center justify-center rounded-lg size-8 transition-colors cursor-pointer hover:bg-gray-3 shrink-0"
-                aria-label="Fechar"
+                aria-label={t("close")}
               >
                 <X className="size-5 text-gray-12" />
               </button>
@@ -94,7 +96,7 @@ export function TermsOfServiceModal({
                 onClick={handleAccept}
                 className="w-full h-12"
               >
-                Aceitar termos
+                {t("acceptTerms")}
               </Button>
             </div>
           </motion.div>
@@ -121,18 +123,18 @@ export function TermsOfServiceModal({
                   <button
                     onClick={onClose}
                     className="flex items-center justify-center rounded-lg shrink-0 size-8 transition-colors rotate-90 cursor-pointer hover:bg-gray-3"
-                    aria-label="Voltar"
+                    aria-label={t("back")}
                   >
                     <ArrowButton isOpen={true} />
                   </button>
                   <p className="font-family-dm-sans font-semibold text-xl leading-[1.3] text-gray-12">
-                    Termos de uso
+                    {t("termsOfUse")}
                   </p>
                 </div>
                 <button
                   onClick={onClose}
                   className="flex items-center justify-center rounded-lg size-8 transition-colors cursor-pointer hover:bg-gray-3 shrink-0"
-                  aria-label="Fechar"
+                  aria-label={t("close")}
                 >
                   <X className="size-5 text-gray-12" />
                 </button>
@@ -149,7 +151,7 @@ export function TermsOfServiceModal({
                   onClick={handleAccept}
                   className="px-8 font-bold text-base font-manrope"
                 >
-                  Aceitar termos
+                  {t("acceptTerms")}
                 </Button>
               </div>
             </motion.div>

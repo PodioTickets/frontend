@@ -4,6 +4,7 @@ import {
   ProductVariationCard,
   type IncludedProduct,
 } from "@/components/Ticket/ProductVariationCard";
+import { useT } from "@/i18n/client";
 
 /**
  * Tab "Produtos" compartilhada entre a tela de ingresso do usuário
@@ -33,6 +34,7 @@ export function ParticipantProductsTab({
   registrationId,
   orderCreatedAt,
 }: ParticipantProductsTabProps) {
+  const t = useT("checkoutInfo");
   const hasIncluded = includedProducts.length > 0;
   const hasAdditional = additionalProducts.length > 0;
 
@@ -41,7 +43,7 @@ export function ParticipantProductsTab({
       {hasIncluded && (
         <div className="flex flex-col gap-4">
           <h3 className="text-xl font-bold text-gray-12 font-manrope leading-[1.1]">
-            Incluídos no ingresso
+            {t("includedInTicket")}
           </h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3 w-full">
             {includedProducts.map((product) => (
@@ -60,7 +62,7 @@ export function ParticipantProductsTab({
       {hasAdditional && (
         <div className="flex flex-col gap-4">
           <h3 className="text-xl font-bold text-gray-12 font-manrope leading-[1.1]">
-            Adicionais
+            {t("additionals")}
           </h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3 w-full">
             {additionalProducts.map((product) => (
@@ -77,7 +79,7 @@ export function ParticipantProductsTab({
 
       {!hasIncluded && !hasAdditional && (
         <p className="text-base text-gray-11 font-family-dm-sans">
-          Nenhum produto para este participante.
+          {t("noProductsForParticipant")}
         </p>
       )}
     </div>

@@ -10,6 +10,7 @@ import {
   brasiliaTodayCivilStart,
 } from "@/utils/datetimeBR";
 import { cn } from "@/utils/cn";
+import { useLocale, useT } from "@/i18n/client";
 
 export interface Ticket {
   id: string;
@@ -96,6 +97,8 @@ function resolveStatusTab(
  */
 export function TicketCard({ ticket, className }: TicketCardProps) {
   const router = useRouter();
+  const t = useT("user");
+  const { intl } = useLocale();
 
   const goToTicket = () => router.push(`/user/tickets/${ticket.id}`);
 
@@ -110,7 +113,7 @@ export function TicketCard({ ticket, className }: TicketCardProps) {
     .filter(Boolean)
     .join(", ");
 
-  const dateLabel = formatEventHappensLabel(ticket.event.eventDate);
+  const dateLabel = formatEventHappensLabel(ticket.event.eventDate, intl);
   const tab = resolveStatusTab(ticket.status, ticket.event.eventDate);
 
   const peopleLabel =
@@ -145,7 +148,7 @@ export function TicketCard({ ticket, className }: TicketCardProps) {
       />
       <div className="flex min-w-0 flex-col gap-0.5">
         <span className="font-family-dm-sans text-[10px] font-normal leading-[1.3] text-[#B4B4B4]">
-          Inscrição feita por
+          {t("registeredBy")}
         </span>
         <span className="font-family-dm-sans truncate text-xs font-semibold leading-[1.3] text-[#EEEEEE]">
           {ticket.invitedBy.fullName}
@@ -176,7 +179,7 @@ export function TicketCard({ ticket, className }: TicketCardProps) {
         >
           {peopleLabel ? (
             <p onClick={goToTicket} className="[text-box-trim:trim-both] font-family-dm-sans font-bold text-base text-primary-11 cursor-pointer">
-              Ver ingresso
+              {t("viewTicket")}
             </p>
           ) : null}
         </EventCardContent>

@@ -4,6 +4,7 @@ import { useMemo, useState, useEffect, useRef } from "react";
 import { Search } from "lucide-react";
 import { ArrowButton } from "@/components/ArrowButton";
 import { cn } from "@/utils/cn";
+import { useT } from "@/i18n/client";
 
 function normalizeForSearch(s: string) {
   return s
@@ -43,9 +44,9 @@ export function SearchSelect({
   value,
   onChange,
   options,
-  placeholder = "Selecione",
-  searchPlaceholder = "Pesquisar",
-  emptyText = "Nenhum resultado",
+  placeholder,
+  searchPlaceholder,
+  emptyText,
   loading = false,
   disabled = false,
   "aria-invalid": ariaInvalid,
@@ -53,6 +54,7 @@ export function SearchSelect({
   className,
 }: SearchSelectProps) {
   const [open, setOpen] = useState(false);
+  const t = useT("ui");
   const [search, setSearch] = useState("");
   const rootRef = useRef<HTMLDivElement>(null);
 
@@ -102,7 +104,7 @@ export function SearchSelect({
             selectedLabel ? "text-gray-12" : "text-gray-11",
           )}
         >
-          {selectedLabel || placeholder}
+          {selectedLabel || (placeholder ?? t("select"))}
         </span>
         <div className="flex-none shrink-0">
           <ArrowButton isOpen={open} className="size-3 text-gray-12" />
@@ -115,7 +117,7 @@ export function SearchSelect({
               <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-11" />
               <input
                 type="text"
-                placeholder={searchPlaceholder}
+                placeholder={searchPlaceholder ?? t("search")}
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 onMouseDown={(e) => e.stopPropagation()}
@@ -130,11 +132,11 @@ export function SearchSelect({
           >
             {loading ? (
               <div className="px-3 py-4 text-sm text-gray-11 font-family-dm-sans text-center">
-                Carregando...
+                {t("loading")}
               </div>
             ) : filtered.length === 0 ? (
               <div className="px-3 py-4 text-sm text-gray-11 font-family-dm-sans text-center">
-                {emptyText}
+                {emptyText ?? t("noResults")}
               </div>
             ) : (
               filtered.map((option) => (

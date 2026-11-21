@@ -5,6 +5,7 @@ import { useMemo } from "react";
 import type { Event } from "@/interfaces/event";
 import { formatWeekdayDayMonthBR } from "@/utils/datetimeBR";
 import { EventCardContent } from "./EventCardContent";
+import { useLocale } from "@/i18n/client";
 
 interface EventCardProps {
   event: Event;
@@ -14,6 +15,8 @@ interface EventCardProps {
   preview?: boolean;
   /** Banner ORIGINAL, sem redimensionar/recomprimir no next/image (grid da home). */
   originalImage?: boolean;
+  /** Textos em 12px no mobile (grade da home). */
+  smallTextOnMobile?: boolean;
 }
 
 /**
@@ -21,7 +24,8 @@ interface EventCardProps {
  * evento (aspect 312/142, cantos arredondados). Card SEM borda/fundo/sombra:
  * banner arredondado → título → endereço (local, cidade, estado) → data por extenso.
  */
-export function EventCard({ event, preview = false, originalImage = false }: EventCardProps) {
+export function EventCard({ event, preview = false, originalImage = false, smallTextOnMobile = false }: EventCardProps) {
+  const { intl } = useLocale();
   // Endereço completo: "Local, Cidade, Estado". `locationName` (escolhido no mapa)
   // pode faltar em eventos legados → cai pra "Cidade, Estado".
   const addressLabel = useMemo(() => {
@@ -34,9 +38,9 @@ export function EventCard({ event, preview = false, originalImage = false }: Eve
   // "Sábado, 25 de julho" — sem o prefixo "Acontece/Aconteceu na". A 1ª letra vai
   // maiúscula porque o dia da semana abre a linha.
   const dateLabel = useMemo(() => {
-    const label = formatWeekdayDayMonthBR(event.eventDate);
+    const label = formatWeekdayDayMonthBR(event.eventDate, intl);
     return label.charAt(0).toUpperCase() + label.slice(1);
-  }, [event.eventDate]);
+  }, [event.eventDate, intl]);
 
   const cardInner = (
     <div className="flex w-full flex-col items-start">
@@ -48,6 +52,7 @@ export function EventCard({ event, preview = false, originalImage = false }: Eve
         addressLabel={addressLabel}
         dateLabel={dateLabel}
         nativeImg={preview || originalImage}
+        smallTextOnMobile={smallTextOnMobile}
       />
     </div>
   );

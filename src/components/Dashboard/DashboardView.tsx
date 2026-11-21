@@ -17,6 +17,7 @@ import { ProductDetailsDrawer } from "@/components/Organizer/ProductDetailsDrawe
 import { TicketsWithLotsList } from "@/components/Financial/TicketsWithLotsList";
 import { PurchaseHeatmap } from "./PurchaseHeatmap";
 import { DashboardWeekTrend } from "./DashboardWeekTrend";
+import { LotsNearDepletionCard } from "./LotsNearDepletionCard";
 import { Pagination } from "@/components/Pagination";
 import {
   DashboardRankingCategoryLabel,
@@ -116,6 +117,58 @@ export function DashboardView({
     }
     return `${selectedTicketIds.length} ingressos selecionados`;
   };
+
+  const noQuestions = questionsListing.length === 0;
+  const rankingCols = "grid-cols-[1fr_81px_112px]";
+  const desktopTicketRanking = (
+    // overflow-hidden: no lugar das perguntas o card termina na última linha, cujo fundo cobria os cantos arredondados.
+    // h-full: acompanha a altura do card vizinho (ex.: "Vendas por forma de pagamento" com muitos itens); a paginação desce para o rodapé.
+    <div className="bg-gray-1 border border-gray-6 rounded-xl overflow-hidden h-full flex flex-col">
+      <div className="px-4 py-5 border-b border-gray-6 flex items-center justify-between">
+        <p className="font-family-dm-sans font-normal text-[16px] leading-[1.3] text-gray-11">Ranking de ingressos</p>
+      </div>
+      <div className="flex-1">
+        {/* Header */}
+        <div className={`grid ${rankingCols} border-b border-gray-6 bg-gray-4`}>
+          <div className="px-4 py-4">
+            <p className="font-inter font-medium text-[14px] leading-[1.3] text-gray-12">Nome</p>
+          </div>
+          <div className="px-4 py-4 flex items-center justify-center">
+            <p className="font-inter font-medium text-[14px] leading-[1.3] text-gray-12">Qt</p>
+          </div>
+          <div className="px-4 py-4 flex items-center justify-end">
+            <p className="font-inter font-medium text-[14px] leading-[1.3] text-gray-12">Total</p>
+          </div>
+        </div>
+        {/* Rows */}
+        {paginatedTicketRanking.map((ticket, index) => (
+          <div
+            key={ticketRankingSliceStart + index}
+            className={`grid ${rankingCols} border-b border-gray-6 last:border-b-0 bg-gray-1`}
+          >
+            <div className="px-4 py-3 flex flex-col gap-1 justify-center">
+              <DashboardRankingCategoryLabel category={ticket.category} />
+              <DashboardRankingTicketNameLabel name={ticket.name} />
+            </div>
+            <div className="px-4 py-3 flex items-center justify-center">
+              <p className="font-inter font-semibold text-[14px] leading-[1.3] text-gray-12">{ticket.quantity.toLocaleString("pt-BR")}</p>
+            </div>
+            <div className="px-4 py-3 flex items-center justify-end">
+              <p className="font-inter font-semibold text-[14px] leading-[1.3] text-gray-12">
+                R$ {(ticket.total / 100).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </p>
+            </div>
+          </div>
+        ))}
+      </div>
+      <Pagination
+        currentPage={ticketRankingPage}
+        totalPages={ticketRankingTotalPages}
+        onPageChange={setTicketRankingPage}
+        variant="compact"
+      />
+    </div>
+  );
 
   return (
     <div className="min-h-screen bg-gray-2">
@@ -250,8 +303,8 @@ export function DashboardView({
 
         {/* Charts Section */}
         <div className="flex gap-3 mb-8 w-full">
-          {/* Tendência de Inscrições */}
-          <div className="bg-gray-1 border border-gray-6 rounded-xl p-4 w-3/4">
+          {/* Tendência de Inscrições — largura total quando o ranking desce para o lugar das perguntas */}
+          <div className={`bg-gray-1 border border-gray-6 rounded-xl p-4 ${noQuestions ? "w-full" : "w-2/3"}`}>
             <div className="mb-4">
               <p className="font-family-dm-sans font-normal text-[16px] leading-[1.3] text-gray-11">Tendência de inscrições</p>
             </div>
@@ -273,65 +326,24 @@ export function DashboardView({
             />
           </div>
 
-          {/* Ranking de Ingressos */}
-          <div className="bg-gray-1 border border-gray-6 rounded-xl">
-            <div className="px-4 py-5 border-b border-gray-6 flex items-center justify-between">
-              <p className="font-family-dm-sans font-normal text-[16px] leading-[1.3] text-gray-11">Ranking de ingressos</p>
-            </div>
-            <div>
-              {/* Header */}
-              <div className="grid grid-cols-[199px_81px_112px] border-b border-gray-6 bg-gray-4">
-                <div className="px-4 py-4">
-                  <p className="font-inter font-medium text-[14px] leading-[1.3] text-gray-12">Nome</p>
-                </div>
-                <div className="px-4 py-4 flex items-center justify-center">
-                  <p className="font-inter font-medium text-[14px] leading-[1.3] text-gray-12">Qt</p>
-                </div>
-                <div className="px-4 py-4 flex items-center justify-end">
-                  <p className="font-inter font-medium text-[14px] leading-[1.3] text-gray-12">Total</p>
-                </div>
-              </div>
-              {/* Rows */}
-              {paginatedTicketRanking.map((ticket, index) => (
-                <div
-                  key={ticketRankingSliceStart + index}
-                  className="grid grid-cols-[199px_81px_112px] border-b border-gray-6 last:border-b-0 bg-gray-1"
-                >
-                  <div className="px-4 py-3 flex flex-col gap-2 justify-center">
-                    <DashboardRankingCategoryLabel category={ticket.category} />
-                    <DashboardRankingTicketNameLabel name={ticket.name} />
-                  </div>
-                  <div className="px-4 py-3 flex items-center justify-center">
-                    <p className="font-inter font-semibold text-[14px] leading-[1.3] text-gray-12">{ticket.quantity.toLocaleString("pt-BR")}</p>
-                  </div>
-                  <div className="px-4 py-3 flex items-center justify-end">
-                    <p className="font-inter font-semibold text-[14px] leading-[1.3] text-gray-12">
-                      R$ {(ticket.total / 100).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                    </p>
-                  </div>
-                </div>
-              ))}
-            </div>
-            <Pagination
-              currentPage={ticketRankingPage}
-              totalPages={ticketRankingTotalPages}
-              onPageChange={setTicketRankingPage}
-              variant="compact"
-            />
-          </div>
+          {!noQuestions && <div className="flex-1">{desktopTicketRanking}</div>}
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 mb-8 w-full">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 mb-8 w-full items-start">
           <div className="min-h-[311px]">
-            <SalesByPaymentMethod data={dashboardData.salesByPaymentMethod} />
+            {noQuestions ? (
+              desktopTicketRanking
+            ) : (
+              <QuestionsListing
+                items={questionsListing}
+                onItemClick={(item) => {
+                  setSelectedQuestionId(item.id);
+                }}
+              />
+            )}
           </div>
           <div className="min-h-[311px]">
-            <QuestionsListing
-              items={questionsListing}
-              onItemClick={(item) => {
-                setSelectedQuestionId(item.id);
-              }}
-            />
+            <SalesByPaymentMethod data={dashboardData.salesByPaymentMethod} />
           </div>
         </div>
 
@@ -404,53 +416,14 @@ export function DashboardView({
 
         {/* Bottom Section */}
         <div className="grid grid-cols-[392px_1fr] gap-3 w-full">
-          {/* Ingressos Próximos de Esgotamento */}
-          <div className="bg-gray-1 border border-gray-6 rounded-xl">
-            <div className="px-4 py-5 border-b border-gray-6 flex items-center justify-between">
-              <p className="font-family-dm-sans font-normal text-[16px] leading-[1.3] text-gray-11">Ingressos próximos de esgotamento</p>
-            </div>
-            <div>
-              {paginatedLotsNearDepletion.map((lot, index) => {
-                const globalIndex = lotsNearDepletionSliceStart + index;
-                const percentage = lot.percentageSold;
-                const getStatusColor = (status: string) => {
-                  if (status === "Crítico") return "bg-red-11";
-                  if (status === "Atenção") return "bg-yellow-11";
-                  return "bg-gray-11";
-                };
-                return (
-                  <div key={`${globalIndex}-${lot.name}`} className="px-4 py-2 border-b border-gray-6 last:border-b-0">
-                    <div className="flex-1 min-w-0 mb-3">
-                      <DashboardRankingTicketNameLabel name={`${lot.name}`} />
-                    </div>
-                    <div className="mb-3">
-                      <div className="relative h-3 bg-gray-6 rounded-full overflow-hidden">
-                        <div
-                          className={`absolute left-0 top-0 h-full rounded-full ${getStatusColor(lot.status)}`}
-                          style={{ width: `${percentage}%` }}
-                        />
-                      </div>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <div className={`px-2 py-1 rounded ${getStatusColor(lot.status)} text-sm font-family-dm-sans font-normal text-gray-1 shrink-0`}>
-                        {lot.status}
-                      </div>
-                      <div>
-                        <span className="font-family-dm-sans font-normal text-sm leading-[1.3] text-gray-11">Lote atual: </span>
-                        <span className="font-family-dm-sans font-semibold text-sm leading-[1.3] text-gray-12">{lot.activeBatch?.label ?? "—"}</span>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-            <Pagination
-              currentPage={lotsNearDepletionPage}
-              totalPages={lotsNearDepletionTotalPages}
-              onPageChange={setLotsNearDepletionPage}
-              variant="compact"
-            />
-          </div>
+          {/* Lotes próximos de esgotamento (Figma 7688:162632) */}
+          <LotsNearDepletionCard
+            lots={paginatedLotsNearDepletion}
+            sliceStart={lotsNearDepletionSliceStart}
+            page={lotsNearDepletionPage}
+            totalPages={lotsNearDepletionTotalPages}
+            onPageChange={setLotsNearDepletionPage}
+          />
 
           {/* Heatmap de Dias e Horários */}
           <div className="bg-gray-1 border border-gray-6 rounded-xl">
@@ -458,30 +431,9 @@ export function DashboardView({
           </div>
         </div>
 
-        {/* Cities Section */}
-        <div className="grid grid-cols-2 gap-3 mt-8 w-full">
-          {dashboardData.topCities.map((city, index) => {
-            const isFirst = index === 0;
-            return (
-              <div
-                key={index}
-                className={`${isFirst ? "bg-primary-2 border-primary-6" : "bg-blue-2 border-blue-6"} border rounded-lg p-3`}
-              >
-                <div className={`inline-block px-2 py-1 rounded text-[14px] font-family-dm-sans font-medium mb-2 ${isFirst ? "bg-primary-5 text-primary-12" : "bg-blue-5 text-blue-12"}`}>
-                  {isFirst ? "1º Cidade com mais vendas" : "2º Cidade com mais vendas"}
-                </div>
-                <p className="font-family-dm-sans font-semibold text-[16px] text-gray-12 mb-2">{city.city}</p>
-                <p className="font-family-dm-sans font-normal text-[14px] text-gray-11">
-                  QT de compras: <span className="font-family-dm-sans font-semibold text-[14px] leading-[1.3] text-gray-12">{city.purchases}</span>
-                </p>
-              </div>
-            )
-          })}
-        </div>
-
-        {/* Mapa de calor geográfico — logo antes do último gráfico. */}
+        {/* Mapa de calor geográfico (as cidades com mais vendas ficam no quadro dentro do mapa) — logo antes do último gráfico. */}
         <div className="mt-8 w-full">
-          <PurchaseHeatmap data={dashboardData.purchaseLocations} pending={dashboardData.purchaseLocationsPending} />
+          <PurchaseHeatmap data={dashboardData.purchaseLocations} topCities={dashboardData.topCities} pending={dashboardData.purchaseLocationsPending} />
         </div>
 
         {/* Ingressos de lotes — desktop (componente compartilhado com financeiro). */}
@@ -672,77 +624,20 @@ export function DashboardView({
           />
         </div>
 
-        {/* Ingressos próximos de esgotamento - mobile */}
-        <div className="bg-gray-1 border border-gray-6 rounded-xl mb-6">
-          <div className="px-4 py-3 border-b border-gray-6">
-            <p className="font-family-dm-sans font-normal text-base text-gray-11">Ingressos próximos de esgotamento</p>
-          </div>
-          <div className="divide-y divide-gray-6">
-            {paginatedLotsNearDepletion.map((lot, index) => {
-              const globalIndex = lotsNearDepletionSliceStart + index;
-              const percentage = (lot.sold / lot.total) * 100;
-              const getStatusColor = (status: string) => {
-                if (status === "Crítico") return "bg-red-11";
-                if (status === "Atenção") return "bg-yellow-11";
-                return "bg-gray-11";
-              };
-              return (
-                <div key={`${globalIndex}-${lot.name}`} className="px-4 py-3">
-                  <div className="flex items-center justify-between mb-2 gap-2 min-w-0">
-                    <div className="flex-1 min-w-0">
-                      <DashboardRankingTicketNameLabel name={lot.name} size="sm" />
-                    </div>
-                    <span className={`px-2 py-0.5 rounded text-xs font-family-dm-sans text-gray-1 shrink-0 ${getStatusColor(lot.status)}`}>{lot.status}</span>
-                  </div>
-                  <div className="h-2 bg-gray-6 rounded-full overflow-hidden mb-2">
-                    <div className={`h-full rounded-full ${getStatusColor(lot.status)}`} style={{ width: `${percentage}%` }} />
-                  </div>
-                  <div className="flex justify-between text-sm text-gray-11">
-                    <span>Status: <span className="font-semibold text-gray-12">{lot.status}</span></span>
-                    <span>Lote atual: <span className="font-semibold text-gray-12">{lot.activeBatch?.label ?? "—"}</span></span>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-          <Pagination
-            currentPage={lotsNearDepletionPage}
-            totalPages={lotsNearDepletionTotalPages}
-            onPageChange={setLotsNearDepletionPage}
-            variant="compact"
-            className="text-xs"
-          />
-        </div>
+        {/* Lotes próximos de esgotamento - mobile (mesmo card do desktop) */}
+        <LotsNearDepletionCard
+          className="mb-6"
+          paginationClassName="text-xs"
+          lots={paginatedLotsNearDepletion}
+          sliceStart={lotsNearDepletionSliceStart}
+          page={lotsNearDepletionPage}
+          totalPages={lotsNearDepletionTotalPages}
+          onPageChange={setLotsNearDepletionPage}
+        />
 
         {/* Heatmap - mobile */}
         <div className="bg-gray-1 border border-gray-6 rounded-xl mb-6 overflow-hidden">
           <SalesHeatmap data={dashboardData.salesHeatmap} />
-        </div>
-
-        {/* Cidades - mobile */}
-        <div className="grid grid-cols-1 gap-3">
-          {dashboardData.topCities.map((city, index) => {
-            const isFirst = index === 0;
-            return (
-              <div
-                key={index}
-                className={`${isFirst ? "bg-primary-2 border-primary-6" : "bg-blue-2 border-blue-6"} border rounded-xl p-3`}
-              >
-                <div className={`inline-block px-2 py-1 rounded text-sm font-family-dm-sans font-medium mb-2 ${isFirst ? "bg-primary-5 text-primary-12" : "bg-blue-5 text-blue-12"}`}>
-                  {isFirst ? "1º Cidade com mais vendas" : "2º Cidade com mais vendas"}
-                </div>
-                <p className="font-family-dm-sans font-semibold text-base text-gray-12 mb-1">{city.city}</p>
-                <p className="font-family-dm-sans font-normal text-sm text-gray-11">
-                  QT de compras: <span className="font-semibold text-gray-12">{city.purchases}</span>
-                </p>
-              </div>
-            );
-          })}
-        </div>
-
-        {/* Mapa de calor geográfico — logo antes do último gráfico (mobile). */}
-        <div className="mt-6">
-          <PurchaseHeatmap data={dashboardData.purchaseLocations} pending={dashboardData.purchaseLocationsPending} />
         </div>
 
         {/* Ingressos de lotes - mobile (componente compartilhado com financeiro). */}

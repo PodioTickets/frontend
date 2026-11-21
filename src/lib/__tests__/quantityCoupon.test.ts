@@ -1,8 +1,13 @@
 import { describe, it, expect } from "vitest";
 import {
+  autoDiscountOnTickets,
+  combineQuantityCoupons,
   pickBestAutoCoupon,
+  quantityCouponForTicket,
+  selectQuantityCoupons,
   quantityCouponCandidates,
   quantityCouponCardPreview,
+  stackableQuantityCoupons,
   type QuantityAutoCoupon,
 } from "../quantityCoupon";
 
@@ -23,7 +28,7 @@ const first = (coupons: QuantityAutoCoupon[], s: ReturnType<typeof sel>, subtota
 
 describe("quantityCouponCandidates", () => {
   it("dentro da faixa (bordas inclusivas) → aplica sobre o subtotal coberto", () => {
-    expect(first([qc()], sel(3), 300)).toEqual({ coupon: qc(), discount: 30 });
+    expect(first([qc()], sel(3), 300)).toMatchObject({ coupon: qc(), discount: 30, coveredTicketIds: [expect.any(String)] });
     expect(first([qc()], sel(5), 500)?.discount).toBe(50);
   });
 
@@ -67,6 +72,39 @@ describe("quantityCouponCandidates", () => {
   });
 });
 
+describe("selectQuantityCoupons (só competem cupons do mesmo ingresso)", () => {
+  const cand = (id: string, discount: number, coveredTicketIds: string[], appliesTo: string | null = null) => ({
+    coupon: { id, type: "PERCENTAGE" as const, value: 10, appliesTo, minCartValue: null, minQuantity: null, maxQuantity: null, createdAt: "2026-01-01" },
+    discount,
+    coveredTicketIds,
+  });
+  const ids = (list: Array<{ coupon: { id: string } }>) => list.map((c) => c.coupon.id);
+
+  it("ingressos diferentes: valem juntos, maior desconto primeiro", () => {
+    expect(ids(selectQuantityCoupons([cand("a", 20, ["t1"]), cand("b", 60, ["t2"])]))).toEqual(["b", "a"]);
+  });
+
+  it("mesmo ingresso: vale só o que mais desconta", () => {
+    expect(ids(selectQuantityCoupons([cand("a", 20, ["t1"]), cand("b", 60, ["t1"])]))).toEqual(["b"]);
+  });
+
+  it("cobertura parcial: o maior tira os concorrentes dos ingressos dele", () => {
+    const list = [cand("x", 100, ["a", "b"]), cand("y", 60, ["a"]), cand("z", 60, ["b"])];
+    expect(ids(selectQuantityCoupons(list))).toEqual(["x"]);
+  });
+
+  it("combineQuantityCoupons soma os descontos; sem cupom é null", () => {
+    expect(combineQuantityCoupons(selectQuantityCoupons([cand("a", 20, ["t1"]), cand("b", 60, ["t2"])]))?.discount).toBe(80);
+    expect(combineQuantityCoupons([])).toBeNull();
+  });
+
+  it("quantityCouponForTicket: cada card usa o cupom do próprio ingresso", () => {
+    const list = [cand("a", 20, ["t1"], '["t1"]'), cand("b", 60, ["t2"], '["t2"]')];
+    expect(quantityCouponForTicket(list, "t2")?.id).toBe("b");
+    expect(quantityCouponForTicket(list, "t3")).toBeNull();
+  });
+});
+
 describe("pickBestAutoCoupon (mesma regra do backend)", () => {
   const c = (id: string, discount: number, createdAt: string) => ({ id, discount, createdAt });
 
@@ -92,5 +130,70 @@ describe("quantityCouponCardPreview", () => {
   it("risca só os ingressos do appliesTo; 'all' = todos", () => {
     expect(quantityCouponCardPreview(qc({ appliesTo: '["tk-A"]' })).appliesTo).toEqual(["tk-A"]);
     expect(quantityCouponCardPreview(qc()).appliesTo).toBeNull();
+  });
+});
+
+describe("stackableQuantityCoupons", () => {
+  const list = [qc({ id: "solo" }), qc({ id: "outro" })];
+  // Sem categoria: cada ingresso bloqueia só ele mesmo.
+  const all = [{ id: "tk-A" }, { id: "tk-B" }];
+
+  it("sem cupom de código: todos valem", () => {
+    expect(stackableQuantityCoupons(list, null, all)?.map((c) => c.id)).toEqual(["solo", "outro"]);
+  });
+
+  it("cupom de código em todos os ingressos: nenhum automático", () => {
+    expect(stackableQuantityCoupons(list, { appliesTo: null }, all)).toEqual([]);
+  });
+
+  it("automático perde só os ingressos do cupom de código (2026-11-11)", () => {
+    const r = stackableQuantityCoupons(list, { appliesTo: ["tk-A"] }, all);
+    expect(r?.map((c) => [c.id, c.appliesTo])).toEqual([["solo", '["tk-B"]'], ["outro", '["tk-B"]']]);
+    const scoped = [qc({ id: "ab", appliesTo: '["tk-A","tk-B"]' })];
+    expect(stackableQuantityCoupons(scoped, { appliesTo: ["tk-B"] }, all)?.map((c) => c.appliesTo)).toEqual(['["tk-A"]']);
+  });
+
+  it("sem ingresso sobrando o automático sai", () => {
+    expect(stackableQuantityCoupons([qc({ id: "b", appliesTo: '["tk-B"]' })], { appliesTo: ["tk-B"] }, all)).toEqual([]);
+  });
+
+  it("cupom de código em outro ingresso: o automático vale junto, igual", () => {
+    const scoped = [qc({ id: "a", appliesTo: '["tk-A"]' })];
+    expect(stackableQuantityCoupons(scoped, { appliesTo: ["tk-B"] }, all)).toEqual(scoped);
+  });
+
+  it("cupom de código tira o automático da categoria inteira (2026-11-13)", () => {
+    // 5K/10K = Corrida; KIDS = Kids; AVULSO sem categoria.
+    const tickets = [
+      { id: "5K", categoryId: "corrida" },
+      { id: "10K", categoryId: "corrida" },
+      { id: "KIDS", categoryId: "kids" },
+      { id: "AVULSO" },
+    ];
+    const scope = (appliesTo: string, manual: string[]) =>
+      stackableQuantityCoupons([qc({ appliesTo })], { appliesTo: manual }, tickets)?.map((c) => c.appliesTo);
+    expect(scope("all", ["5K"])).toEqual(['["KIDS","AVULSO"]']);
+    expect(scope('["10K"]', ["5K"])).toEqual([]);
+    expect(scope('["10K","KIDS"]', ["5K"])).toEqual(['["KIDS"]']);
+    expect(scope("all", ["AVULSO"])).toEqual(['["5K","10K","KIDS"]']);
+  });
+});
+
+describe("autoDiscountOnTickets", () => {
+  const selected = [
+    { id: "tk-A", price: 100, quantity: 3 },
+    { id: "tk-B", price: 50, quantity: 1 },
+  ];
+
+  it("automático em outro ingresso não entra no rebase do manual", () => {
+    const auto = quantityCouponCandidates([qc({ appliesTo: '["tk-A"]' })], selected, 350);
+    expect(autoDiscountOnTickets(auto, selected, ["tk-B"])).toBe(0);
+    expect(autoDiscountOnTickets(auto, selected, ["tk-A"])).toBe(30);
+    expect(autoDiscountOnTickets(auto, selected, null)).toBe(30);
+  });
+
+  it("automático em vários ingressos: só a parte dos ingressos do manual", () => {
+    const auto = quantityCouponCandidates([qc({ maxQuantity: null })], selected, 350);
+    expect(autoDiscountOnTickets(auto, selected, ["tk-B"])).toBe(5);
   });
 });

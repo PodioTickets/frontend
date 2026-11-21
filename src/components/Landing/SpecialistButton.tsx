@@ -4,6 +4,7 @@ import Link from "next/link";
 import { Button } from "@/components/Button";
 import { cn } from "@/utils/cn";
 import { trackPlatformMetaPixel } from "@/lib/metaPixel";
+import { useT } from "@/i18n/client";
 
 /**
  * CTA "Criar meu evento" da landing. É client para disparar o evento `Lead` do
@@ -18,6 +19,7 @@ export function SpecialistButton({
   href: string;
   className?: string;
 }) {
+  const t = useT("landing");
   return (
     <Button
       asChild
@@ -27,7 +29,7 @@ export function SpecialistButton({
       )}
     >
       <Link href={href} onClick={() => trackPlatformMetaPixel("Lead")}>
-        Criar meu evento
+        {t("ctaCreateEvent")}
       </Link>
     </Button>
   );

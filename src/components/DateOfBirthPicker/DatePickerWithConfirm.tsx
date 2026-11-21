@@ -8,6 +8,7 @@ import { CalendarIcon } from "../Icons/CalendarIcon";
 import { useState, useEffect, useMemo, useRef } from "react";
 import { ArrowButton } from "../ArrowButton";
 import { Button } from "../Button";
+import { useT } from "@/i18n/client";
 
 const formatDate = (date: Date | null | string) => {
   if (!date) return "00/00/0000";
@@ -67,6 +68,7 @@ export function DatePickerWithConfirm({
   error?: boolean;
 }) {
   const [isOpen, setIsOpen] = useState(false);
+  const t = useT("ui");
 
   // Helper function to parse value to Date
   const parseValueToDate = (val: Date | null | string): Date | null => {
@@ -242,7 +244,7 @@ export function DatePickerWithConfirm({
               disabled={!tempDate}
               className="w-1/2 h-8 text-xs"
             >
-              Confirmar
+              {t("confirm")}
             </Button>
           </div>
         </div>

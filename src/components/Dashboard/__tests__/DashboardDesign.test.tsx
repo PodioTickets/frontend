@@ -53,8 +53,10 @@ describe("DashboardRankingLabels", () => {
     expect(screen.getAllByText("Pista").length).toBeGreaterThanOrEqual(1);
   });
 
-  it("usa o emptyDisplay quando vazio", () => {
-    render(<DashboardRankingCategoryLabel category="   " />);
-    expect(screen.getAllByText("—").length).toBeGreaterThanOrEqual(1);
+  it("categoria: não renderiza nada quando vazia ou 'Sem categoria'", () => {
+    const { container: empty } = render(<DashboardRankingCategoryLabel category="   " />);
+    expect(empty).toBeEmptyDOMElement();
+    const { container: none } = render(<DashboardRankingCategoryLabel category="Sem categoria" />);
+    expect(none).toBeEmptyDOMElement();
   });
 });

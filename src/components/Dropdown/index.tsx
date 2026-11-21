@@ -14,6 +14,7 @@ import { createPortal } from "react-dom";
 import Link from "next/link";
 import { Checkbox } from "../CheckBox";
 import { VirtualList } from "../VirtualList";
+import { useT } from "@/i18n/client";
 
 export interface DropdownOption {
   icon?: any;
@@ -215,6 +216,7 @@ const OptionItem = memo(
       onSelect(option);
     }, [option, onSelect]);
 
+    const t = useT("ui");
     const isOrganizerRequest = option.label === "organizer";
     const isIconComponent = option?.icon && typeof option.icon !== "string";
     const isIconString = option?.icon && typeof option.icon === "string";
@@ -224,10 +226,10 @@ const OptionItem = memo(
         {isOrganizerRequest ? (
           <div className="min-h-[112px] px-4 flex flex-col items-start justify-center gap-2 bg-[url('/images/become-organizer.png')] bg-cover bg-center">
             <h1 className="text-sm font-bold text-gray-12">
-              Torne-se um organizador
+              {t("becomeOrganizerTitle")}
             </h1>
             <p className="text-sm font-normal text-gray-12 pr-4">
-              Quer tirar seu evento do papel? Vire organizador e publique
+              {t("becomeOrganizerText")}
             </p>
           </div>
         ) : (
@@ -261,7 +263,7 @@ const OptionItem = memo(
                   {option.label}
                 </span>
                 <span className="text-xs font-semibold text-gray-10 shrink-0">
-                  Esgotado
+                  {t("soldOut")}
                 </span>
               </div>
             ) : option.suffix != null ? (

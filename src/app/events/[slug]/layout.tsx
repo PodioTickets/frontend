@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { formatDateBR } from "@/utils/datetimeBR";
+import { getT } from "@/i18n/server";
 
 /**
  * Server Component que injeta as meta tags Open Graph / Twitter Card da página
@@ -23,8 +24,6 @@ const SITE_URL = (
 ).replace(/\/$/, "");
 
 const DEFAULT_TITLE = "PódioTicket";
-const DEFAULT_DESCRIPTION =
-  "Descubra e inscreva-se em eventos esportivos na PódioTicket.";
 
 /**
  * Dimensões declaradas do `og:image`, na MESMA proporção do banner padrão do
@@ -77,6 +76,9 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { slug } = await params;
   const event = await fetchEventBySlug(slug);
+  // Crawlers não mandam o cookie de idioma → preview sempre em pt-BR.
+  const t = await getT("event");
+  const DEFAULT_DESCRIPTION = t("metaDefaultDescription");
 
   const canonicalUrl = `${SITE_URL}/events/${slug}`;
 
@@ -98,7 +100,9 @@ export async function generateMetadata({
 
   const title = event.name;
   // "Inscrições abertas a partir de dd/mm/aaaa" (data em UTC, padrão do projeto).
-  const description = `Inscrições abertas a partir de ${formatDateBR(event.registrationStartDate)}`;
+  const description = t("metaRegistrationOpensFrom", {
+    date: formatDateBR(event.registrationStartDate),
+  });
 
   // OG/SEO usa o BANNER do evento (logoUrl descontinuado).
   const imageUrl = toAbsoluteImageUrl(event.bannerUrl);

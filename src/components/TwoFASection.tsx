@@ -6,6 +6,7 @@ import toast from "react-hot-toast";
 import { cn } from "@/utils/cn";
 import { OtpCodeInput } from "@/components/OtpCodeInput";
 import { userService } from "@/services";
+import { useT } from "@/i18n/client";
 
 interface TwoFASectionProps {
   /** E-mail do usuário exibido na instrução de código */
@@ -33,6 +34,7 @@ export function TwoFASection({
   variant = "user",
 }: TwoFASectionProps) {
   const isOrganizer = variant === "organizer";
+  const t = useT("user");
 
   const [enabled, setEnabled] = useState(initialEnabled);
   const [showInput, setShowInput] = useState(false);
@@ -47,8 +49,8 @@ export function TwoFASection({
   // Countdown de reenvio
   useEffect(() => {
     if (resendCooldown <= 0) return;
-    const t = setTimeout(() => setResendCooldown((c) => c - 1), 1000);
-    return () => clearTimeout(t);
+    const timer = setTimeout(() => setResendCooldown((c) => c - 1), 1000);
+    return () => clearTimeout(timer);
   }, [resendCooldown]);
 
   // Sincroniza quando initialEnabled muda (ex: refetchUser no pai)
@@ -74,7 +76,7 @@ export function TwoFASection({
       setCode("");
       setResendCooldown(60);
     } catch (err: any) {
-      toast.error(err?.message || "Erro ao enviar código. Tente novamente.");
+      toast.error(err?.message || t("sendCodeError"));
     } finally {
       setSending(false);
     }
@@ -85,11 +87,11 @@ export function TwoFASection({
     setCodeError("");
     try {
       await userService.send2FACode();
-      toast.success("Novo código enviado para o seu e-mail.");
+      toast.success(t("newCodeSent"));
       setCode("");
       setResendCooldown(60);
     } catch (err: any) {
-      toast.error(err?.message || "Erro ao reenviar código.");
+      toast.error(err?.message || t("resendCodeError"));
     } finally {
       setSending(false);
     }
@@ -98,7 +100,7 @@ export function TwoFASection({
   const handleConfirm = async () => {
     if (!pendingAction) return;
     if (code.length < 6) {
-      setCodeError("Preencha todos os 6 dígitos do código.");
+      setCodeError(t("fillAllCodeDigits"));
       return;
     }
     setConfirming(true);
@@ -107,11 +109,11 @@ export function TwoFASection({
       if (pendingAction === "enable") {
         await userService.enable2FA(code);
         setEnabled(true);
-        toast.success("2FA ativado com sucesso!");
+        toast.success(t("twoFAEnabled"));
       } else {
         await userService.disable2FA(code);
         setEnabled(false);
-        toast.success("2FA desativado com sucesso!");
+        toast.success(t("twoFADisabled"));
       }
       setShowInput(false);
       setPendingAction(null);
@@ -119,9 +121,7 @@ export function TwoFASection({
       // Sincroniza perfil no contexto para refletir mfaEnabled atualizado
       await onToggled?.();
     } catch {
-      setCodeError(
-        "Código incorreto ou expirado. Tente novamente ou reenvie um novo código."
-      );
+      setCodeError(t("codeIncorrectOrExpired"));
     } finally {
       setConfirming(false);
     }
@@ -140,13 +140,11 @@ export function TwoFASection({
       <div className="flex flex-col items-start w-full gap-[16px]">
         <p className="font-manrope font-bold text-gray-12"
           style={{ fontSize: 20, lineHeight: "22px" }}>
-          Segurança
+          {t("security")}
         </p>
         <p className="font-family-dm-sans font-normal text-gray-11 w-full"
           style={{ fontSize: 16, lineHeight: "20.8px" }}>
-          Ative o 2FA para adicionar uma camada extra de segurança à sua conta.
-          Sempre que fizer login em um novo dispositivo, você precisará informar
-          um código enviado para o seu e-mail.
+          {t("twoFAHint")}
         </p>
       </div>
 
@@ -175,7 +173,7 @@ export function TwoFASection({
             )}
             <span className="font-family-dm-sans font-normal text-gray-12 text-left"
               style={{ fontSize: 16, lineHeight: "20.8px" }}>
-              {sending ? "Enviando código..." : "Ligar dois fatores de segurança"}
+              {sending ? t("sendingCode") : t("enable2FA")}
             </span>
           </div>
 
@@ -204,11 +202,11 @@ export function TwoFASection({
               <div className="flex flex-col items-start w-full gap-[16px]">
                 <p className="font-manrope font-bold text-gray-12"
                   style={{ fontSize: 18, lineHeight: "19.8px" }}>
-                  Informe o código de segurança
+                  {t("enterSecurityCode")}
                 </p>
                 <p className="font-family-dm-sans font-medium text-gray-11 w-full"
                   style={{ fontSize: 16, lineHeight: "20.8px" }}>
-                  Para continuar com a verificação em duas etapas em nossa plataforma, por favor, insira abaixo o código recebido por e-mail em sua caixa de entrada
+                  {t("enterSecurityCodeHint")}
                 </p>
               </div>
             </div>
@@ -254,7 +252,7 @@ export function TwoFASection({
                   )}
                   style={{ fontSize: 16, lineHeight: "17.6px" }}
                 >
-                  {sending ? "Reenviando..." : resendCooldown > 0 ? `Reenviar em ${resendCooldown}s` : "Reenviar código"}
+                  {sending ? t("resending") : resendCooldown > 0 ? t("resendIn", { seconds: resendCooldown }) : t("resendCode")}
                 </button>
                 <button
                   type="button"
@@ -268,7 +266,7 @@ export function TwoFASection({
                   )}
                   style={{ fontSize: 16, lineHeight: "17.6px" }}
                 >
-                  {confirming ? "Confirmando..." : "Confirmar código"}
+                  {confirming ? t("confirming") : t("confirmCode")}
                 </button>
                 <button
                   type="button"
@@ -276,7 +274,7 @@ export function TwoFASection({
                   className="font-family-dm-sans text-gray-11 hover:text-gray-12 underline"
                   style={{ fontSize: 14 }}
                 >
-                  Cancelar
+                  {t("cancel")}
                 </button>
               </div>
             </div>

@@ -1,4 +1,9 @@
-import type { OrderCoupon } from "@/interfaces/order";
+import type { OrderAutoCoupon, OrderCoupon } from "@/interfaces/order";
+import { ptBR } from "@/i18n/messages/pt-BR";
+import { createTranslator, type Translator } from "@/i18n/translate";
+
+/** Rótulos em pt-BR por padrão; o componente passa `useT("checkout")` do idioma ativo. */
+const ptT = createTranslator(ptBR, "checkout");
 
 /**
  * Resultado normalizado do preview de `/coupons/.../preview`. O endpoint
@@ -13,6 +18,8 @@ export type CouponPreviewResult =
       type: "PERCENTAGE" | "FIXED";
       couponType?: string;
       applyToProducts?: boolean;
+      /** Cupom automático que acumula com este manual: o manual incide sobre o valor já descontado. */
+      stackedOn?: CouponPreviewResult | null;
       /**
        * Ingressos cobertos pelo cupom (espelha o ramo do voucher). Já
        * normalizado no boundary do `UserService`: `null` = todos ("all"/ausente);
@@ -40,8 +47,11 @@ export type CouponPreviewResult =
     };
 
 /** Label inline do voucher pra linhas de resumo (paralelo a `formatCouponLineLabel`). */
-export function formatVoucherLineLabel(code: string | null | undefined): string {
-  return code ? `Voucher ${code}` : "Voucher aplicado";
+export function formatVoucherLineLabel(
+  code: string | null | undefined,
+  t: Translator<"checkout"> = ptT,
+): string {
+  return code ? t("voucherNamed", { code }) : t("voucherApplied");
 }
 
 /**
@@ -74,18 +84,50 @@ export function computeVoucherTicketsDiscount(
  * - `Cupom automático (10% OFF)`
  * - `Cupom PODIO500`
  */
-export function formatCouponLineLabel(coupon: OrderCoupon): string {
+export function formatCouponLineLabel(
+  coupon: OrderCoupon,
+  t: Translator<"checkout"> = ptT,
+): string {
   const isAutomatic =
     coupon.couponType === "QUANTITY" || coupon.couponType === "AGE";
   const base = isAutomatic
-    ? "Cupom automático"
+    ? t("couponAutomatic")
     : coupon.code
-      ? `Cupom ${coupon.code}`
-      : "Cupom aplicado";
+      ? t("couponNamed", { name: coupon.code })
+      : t("couponApplied");
   if (coupon.type === "PERCENTAGE" && coupon.value > 0) {
     return `${base} (${coupon.value}% OFF)`;
   }
   return base;
+}
+
+/** Uma linha por cupom automático do pedido, em REAIS. */
+export function orderAutoCouponLines(
+  coupons: OrderAutoCoupon[] | null | undefined,
+  t: Translator<"checkout"> = ptT,
+): Array<{ id: string; label: string; amount: number }> {
+  return (coupons ?? [])
+    .filter((c) => c.discount > 0)
+    .map((c) => ({ id: c.id, label: formatCouponLineLabel(c, t), amount: c.discount / 100 }));
+}
+
+/**
+ * Cupons de 1 unidade do pedido, com a parte de cada um em CENTAVOS. O pedido pode ter vários
+ * cupons, cada um num ingresso: o selo do participante precisa do cupom daquela unidade.
+ */
+export function orderUnitCoupons(
+  unit: { unitDiscount?: number; productsDiscount?: number; autoCouponId?: string; autoCouponDiscount?: number } | undefined,
+  orderCoupon: OrderCoupon | null | undefined,
+  autoCoupons: OrderAutoCoupon[] | null | undefined,
+): Array<{ coupon: OrderCoupon; amount: number }> {
+  const total = (unit?.unitDiscount ?? 0) + (unit?.productsDiscount ?? 0);
+  const auto = autoCoupons?.find((c) => c.id === unit?.autoCouponId);
+  const autoAmount = auto ? Math.min(total, unit?.autoCouponDiscount ?? total) : 0;
+  const rest = total - autoAmount;
+  return [
+    ...(auto && autoAmount > 0 ? [{ coupon: auto, amount: autoAmount }] : []),
+    ...(orderCoupon && rest > 0 ? [{ coupon: orderCoupon, amount: rest }] : []),
+  ];
 }
 
 /**

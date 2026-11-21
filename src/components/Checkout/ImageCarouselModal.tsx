@@ -9,6 +9,7 @@ import {
   orderCarouselItemsWithPreferredInCenter,
   type ImageCarouselItem,
 } from "@/utils/ticketProductVisuals";
+import { useT } from "@/i18n/client";
 
 export type { ImageCarouselItem } from "@/utils/ticketProductVisuals";
 
@@ -84,6 +85,7 @@ export function ImageCarouselModal({
   ticketName,
   preferredProductId,
 }: ImageCarouselModalProps) {
+  const t = useT("checkoutInfo");
   const preferredIndex = useMemo(() => {
     if (preferredProductId) {
       const i = items.findIndex((x) => x.id === preferredProductId);
@@ -218,7 +220,7 @@ export function ImageCarouselModal({
               <button
                 onClick={onClose}
                 className="absolute top-4 right-4 z-10 size-10 flex items-center justify-center rounded-full bg-black/50 hover:bg-black/70 text-white transition-colors"
-                aria-label="Fechar"
+                aria-label={t("close")}
               >
                 <X className="size-6" />
               </button>
@@ -235,7 +237,7 @@ export function ImageCarouselModal({
                   <button
                     onClick={handlePrevious}
                     className="absolute left-4 z-10 size-12 flex items-center justify-center rounded-full bg-black/50 hover:bg-black/70 text-white transition-colors"
-                    aria-label="Imagem anterior"
+                    aria-label={t("previousImage")}
                   >
                     <ChevronLeft className="size-6" />
                   </button>
@@ -264,7 +266,7 @@ export function ImageCarouselModal({
                   <button
                     onClick={handleNext}
                     className="absolute right-4 z-10 size-12 flex items-center justify-center rounded-full bg-black/50 hover:bg-black/70 text-white transition-colors"
-                    aria-label="Próxima imagem"
+                    aria-label={t("nextImage")}
                   >
                     <ChevronRight className="size-6" />
                   </button>
@@ -284,7 +286,7 @@ export function ImageCarouselModal({
                         ? "border-primary-11 scale-110"
                         : "border-gray-6 hover:border-gray-6"
                         }`}
-                      aria-label={`Ver imagem ${index + 1}`}
+                      aria-label={t("viewImage", { n: index + 1 })}
                     >
                       <ImageWithInitialFallback
                         src={item.src}

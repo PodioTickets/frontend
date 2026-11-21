@@ -16,6 +16,7 @@ import { brasiliaTodayCivilStart } from "@/utils/datetimeBR";
 import { buttonVariants } from "@/components/Button";
 import { Button } from "@/components/Button";
 import { Dropdown, type DropdownOption } from "@/components/Dropdown";
+import { useLocale, useT } from "@/i18n/client";
 
 const YearRangeContext = React.createContext<{ fromYear: number; toYear: number }>({
   fromYear: new Date().getFullYear(),
@@ -63,6 +64,8 @@ function CalendarCaption({
   ...props
 }: MonthCaptionProps) {
   const { goToMonth, previousMonth, nextMonth, months } = useDayPicker();
+  const t = useT("ui");
+  const { intl } = useLocale();
   const numberOfMonths = months.length;
   const isFirstMonth = displayIndex === 0;
   const isLastMonth = displayIndex === numberOfMonths - 1;
@@ -91,7 +94,7 @@ function CalendarCaption({
           className="h-7 w-7 p-0 text-gray-11 hover:text-gray-12 hover:bg-gray-4 transition-all duration-200 hover:scale-110 active:scale-95"
           onClick={handlePreviousClick}
           disabled={!previousMonth}
-          aria-label="Mês anterior"
+          aria-label={t("previousMonth")}
         >
           <ChevronLeftIcon className="h-4 w-4 transition-transform duration-200 group-hover:-translate-x-0.5" />
         </Button>
@@ -99,7 +102,7 @@ function CalendarCaption({
         <div className="w-7" />
       )}
       <h2 className="text-sm font-medium text-gray-12 whitespace-nowrap absolute left-1/2 -translate-x-1/2 transition-all duration-300">
-        {calendarMonth.date.toLocaleDateString("pt-BR", {
+        {calendarMonth.date.toLocaleDateString(intl, {
           month: "long",
           year: "numeric",
         })}
@@ -111,7 +114,7 @@ function CalendarCaption({
           className="h-7 w-7 p-0 text-gray-11 hover:text-gray-12 hover:bg-gray-4 ml-auto transition-all duration-200 hover:scale-110 active:scale-95"
           onClick={handleNextClick}
           disabled={!nextMonth}
-          aria-label="Próximo mês"
+          aria-label={t("nextMonth")}
         >
           <ChevronRightIcon className="h-4 w-4 transition-transform duration-200 group-hover:translate-x-0.5" />
         </Button>
@@ -122,15 +125,21 @@ function CalendarCaption({
   );
 }
 
-const monthNames = [
-  "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
-  "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro",
-];
+/** "Janeiro".."Dezembro" no idioma do site (Intl + 1ª maiúscula — igual à lista fixa antiga em pt-BR). */
+function monthNamesFor(intl: string): string[] {
+  const fmt = new Intl.DateTimeFormat(intl, { month: "long" });
+  return Array.from({ length: 12 }, (_, i) => {
+    const name = fmt.format(new Date(2000, i, 1));
+    return name.charAt(0).toUpperCase() + name.slice(1);
+  });
+}
 
 function CalendarCaptionWithDropdowns({ calendarMonth }: MonthCaptionProps) {
   const { goToMonth } = useDayPicker();
   const { fromYear, toYear } = React.useContext(YearRangeContext);
   const current = calendarMonth.date;
+  const { intl } = useLocale();
+  const monthNames = useMemo(() => monthNamesFor(intl), [intl]);
 
   // Quando o ano exibido for o atual, lista comeca pelo mes atual e da a volta
   // (ex.: Maio, ..., Dezembro, Janeiro, ..., Abril) — usuario provavelmente
@@ -149,7 +158,7 @@ function CalendarCaptionWithDropdowns({ calendarMonth }: MonthCaptionProps) {
       list.push({ id: String(i), label: monthNames[i] });
     }
     return list;
-  }, [startIdx]);
+  }, [startIdx, monthNames]);
 
   const yearOptions: DropdownOption[] = useMemo(() => {
     const currentYear = brasiliaTodayCivilStart().getFullYear();
@@ -234,6 +243,7 @@ function Calendar({
   // idêntico pra qualquer usuário, mesmo acessando de outro país.
   const todayStart = brasiliaTodayCivilStart();
   const currentYear = todayStart.getFullYear();
+  const { intl } = useLocale();
   const resolvedFromYear = fromYear ?? currentYear;
   const resolvedToYear = toYear ?? currentYear + 10;
 
@@ -279,7 +289,7 @@ function Calendar({
         captionLayout === "dropdown"
           ? {
             formatMonthDropdown: (date: Date) =>
-              date.toLocaleDateString("pt-BR", { month: "long" }),
+              date.toLocaleDateString(intl, { month: "long" }),
             formatYearDropdown: (date: Date) => date.getFullYear().toString(),
           }
           : undefined

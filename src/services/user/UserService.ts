@@ -2,6 +2,7 @@ import { AuthService } from "./AuthService";
 import type { CouponPreviewResult } from "@/lib/orderCouponDiscount";
 import type { AgeCouponEligibility } from "@/lib/ageCoupon";
 import { normalizeNationality } from "@/utils/nationality";
+import { serviceMessage } from "@/i18n/serviceMessages";
 
 /**
  * Dominio de dados do usuario (perfil, ingressos/pedidos, cupom/voucher preview,
@@ -202,6 +203,17 @@ export class UserService extends AuthService {
             minQuantity: typeof q.minQuantity === "number" ? q.minQuantity : null,
             maxQuantity: typeof q.maxQuantity === "number" ? q.maxQuantity : null,
             createdAt: typeof q.createdAt === "string" ? q.createdAt : null,
+          }))
+          : [],
+        ageCoupons: Array.isArray(d.ageCoupons)
+          ? d.ageCoupons.map((a: any) => ({
+            id: String(a.id),
+            type: a.type === "FIXED" ? "FIXED" : "PERCENTAGE",
+            value: Number(a.value) || 0,
+            appliesTo: typeof a.appliesTo === "string" ? a.appliesTo : null,
+            // Chave ausente (interceptor tira null) = sem limite naquele lado.
+            minAge: typeof a.minAge === "number" ? a.minAge : null,
+            maxAge: typeof a.maxAge === "number" ? a.maxAge : null,
           }))
           : [],
       };
@@ -437,7 +449,7 @@ export class UserService extends AuthService {
 
       return response.data;
     } catch (error: any) {
-      let errorMessage = "Erro ao salvar usuário. Tente novamente.";
+      let errorMessage = serviceMessage("saveUserError");
       if (error?.response?.data?.message) {
         errorMessage = error.response.data.message;
       } else if (error?.response?.data?.error) {

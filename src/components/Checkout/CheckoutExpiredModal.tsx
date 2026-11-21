@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/Button";
+import { useT } from "@/i18n/client";
 
 interface CheckoutExpiredModalProps {
   open: boolean;
@@ -12,6 +13,7 @@ interface CheckoutExpiredModalProps {
 
 export function CheckoutExpiredModal({ open, onConfirm }: CheckoutExpiredModalProps) {
   const [mounted, setMounted] = useState(false);
+  const t = useT("checkout");
 
   useEffect(() => {
     setMounted(true);
@@ -45,10 +47,10 @@ export function CheckoutExpiredModal({ open, onConfirm }: CheckoutExpiredModalPr
               />
               <div className="flex flex-col gap-4 items-center w-full">
                 <p className="text-gray-12 text-xl font-semibold font-family-dm-sans leading-[1.3]">
-                  Tempo esgotado!
+                  {t("expiredTitle")}
                 </p>
                 <p className="text-gray-11 text-base font-normal font-family-dm-sans leading-[1.3] text-center">
-                  O tempo para finalizar sua inscrição expirou e os itens foram liberados. Você pode iniciar uma nova inscrição, sujeita à disponibilidade de vagas
+                  {t("expiredDescription")}
                 </p>
               </div>
             </div>
@@ -59,7 +61,7 @@ export function CheckoutExpiredModal({ open, onConfirm }: CheckoutExpiredModalPr
               className="w-full border-gray-6 text-gray-12 font-bold font-manrope"
               onClick={onConfirm}
             >
-              Voltar para o evento
+              {t("expiredBackToEvent")}
             </Button>
           </motion.div>
         </motion.div>

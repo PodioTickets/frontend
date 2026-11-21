@@ -38,6 +38,8 @@ import { TopicRichContent } from "@/components/TopicRichContent";
 import { trackMetaPixel } from "@/lib/metaPixel";
 import { initEventGoogleTags } from "@/lib/googleTag";
 import { trackEventPageView } from "@/lib/activityTelemetry";
+import { useLocale, useT } from "@/i18n/client";
+import { ptBRTranslator } from "@/i18n/translate";
 
 const sanitizeUrl = (url: string | null | undefined): string | null => {
   if (!url) return null;
@@ -57,6 +59,8 @@ export default function EventPage() {
   const eventSlug = params.slug as string;
   const { event, loading: isLoading, error } = useEventBySlug(eventSlug);
   const queryClient = useQueryClient();
+  const t = useT("event");
+  const { intl } = useLocale();
 
   // "Agora" OFICIAL (hora do servidor, nunca o relógio do dispositivo) que muda no
   // instante em que a inscrição abre/encerra ou o evento vira realizado → a barra
@@ -164,16 +168,16 @@ export default function EventPage() {
     return (
       <section className="flex flex-col min-h-dvh items-center max-w-[1280px] mx-auto lg:px-8 py-20">
         <div className="flex flex-col items-center justify-center">
-          <h1 className="text-2xl font-bold mb-4">Evento não encontrado</h1>
+          <h1 className="text-2xl font-bold mb-4">{t("notFoundTitle")}</h1>
           <p className="text-gray-11 mb-6">
-            O evento que você está procurando não existe.
+            {t("notFoundText")}
           </p>
           <Link
             href="/"
             className="flex items-center gap-2 text-primary-10 hover:text-primary-7 transition-colors"
           >
             <ArrowLeft className="w-4 h-4" />
-            Voltar para a página inicial
+            {t("backToHome")}
           </Link>
         </div>
       </section>
@@ -207,7 +211,7 @@ export default function EventPage() {
             new Date(boundaryNow).getUTCFullYear()
             ? { year: "numeric" }
             : {}),
-        })
+        }, intl)
       : "";
 
   const registrationSlotsSoldOut =
@@ -238,7 +242,8 @@ export default function EventPage() {
   // "Denunciar evento" → WhatsApp do suporte PodioTickets (mesmo número do contato),
   // com mensagem pré-preenchida identificando o evento (nome + slug).
   const reportWhatsappUrl = `https://wa.me/${PODIO_SUPPORT_WHATSAPP}?text=${encodeURIComponent(
-    `Olá! Gostaria de denunciar o evento "${event.name}".`,
+    // Vai pro suporte (brasileiro) → pt-BR independente do idioma do site.
+    ptBRTranslator("event")("reportWhatsappMessage", { name: event.name }),
   )}`;
 
   const safeStravaId =
@@ -352,7 +357,7 @@ export default function EventPage() {
             <>
               <div className="flex flex-col gap-3 my-4">
                 <h2 className="text-lg font-bold text-gray-12">
-                  Regulamento
+                  {t("regulation")}
                 </h2>
                 <a
                   href={sanitizeUrl(event.regulationUrl)!}
@@ -363,7 +368,7 @@ export default function EventPage() {
                     variant="outline"
                     className="text-gray-12 border-gray-6"
                   >
-                    Ler regulamento
+                    {t("readRegulation")}
                   </Button>
                 </a>
               </div>
@@ -374,7 +379,7 @@ export default function EventPage() {
           {/* Onde acontecerá o evento */}
           <div className="my-4">
             <h2 className="text-base font-bold text-gray-12 mb-3">
-              Onde acontecerá o evento
+              {t("whereEventHappens")}
             </h2>
             <div className="rounded-lg overflow-hidden mb-3">
               <EventMap
@@ -397,7 +402,7 @@ export default function EventPage() {
                   frameBorder="0"
                   scrolling="no"
                   src={`https://www.strava.com/routes/${safeStravaId}/embed`}
-                  title={`Rota do ${event.name} no Strava`}
+                  title={t("stravaRouteIframeTitle", { name: event.name })}
                   className="w-full h-full"
                   allowFullScreen
                 />
@@ -462,7 +467,7 @@ export default function EventPage() {
                 {/* Mesmo texto do card mobile ("Sábado, 25 de julho às 20:00");
                     a linha "Inscrições até" saiu da barra. */}
                 <span className="text-xs">
-                  {formatEventDateWithTimeBR(event.eventDate)}
+                  {formatEventDateWithTimeBR(event.eventDate, intl)}
                 </span>
               </div>
             </div>
@@ -477,7 +482,7 @@ export default function EventPage() {
                 disabled
                 variant="outline"
               >
-                Inscreva-se
+                {t("register")}
               </Button>
             ) : eventRealizationPassed ? (
               <Button
@@ -485,7 +490,7 @@ export default function EventPage() {
                 disabled
                 variant="outline"
               >
-                Evento realizado
+                {t("eventHappened")}
               </Button>
             ) : registrationPeriodEnded ? (
               <Button
@@ -493,7 +498,7 @@ export default function EventPage() {
                 disabled
                 variant="outline"
               >
-                Inscrições encerradas!
+                {t("registrationClosed")}
               </Button>
             ) : eventSuspendedByOrganizer ? (
               <Button
@@ -501,7 +506,7 @@ export default function EventPage() {
                 disabled
                 variant="outline"
               >
-                Inscreva-se
+                {t("register")}
               </Button>
             ) : registrationSlotsSoldOut ? (
               <Button
@@ -509,7 +514,7 @@ export default function EventPage() {
                 disabled
                 variant="outline"
               >
-                Esgotado
+                {t("soldOut")}
               </Button>
             ) : registrationsNotOpenYet ? (
               <Button
@@ -517,11 +522,11 @@ export default function EventPage() {
                 disabled
                 variant="outline"
               >
-                Em breve!
+                {t("comingSoon")}
               </Button>
             ) : (
               <Button onClick={handleCheckoutClick} className="w-full">
-                Inscreva-se
+                {t("register")}
               </Button>
             )}
             </div>
@@ -594,7 +599,7 @@ export default function EventPage() {
                 <>
                   <div className="flex flex-col gap-6 my-10">
                     <h1 className="text-2xl font-bold text-gray-12">
-                      Regulamento
+                      {t("regulation")}
                     </h1>
                     <a
                       href={sanitizeUrl(event.regulationUrl)!}
@@ -606,7 +611,7 @@ export default function EventPage() {
                         variant="outline"
                         className="text-gray-12 border-gray-6"
                       >
-                        Ler regulamento
+                        {t("readRegulation")}
                       </Button>
                     </a>
                   </div>
@@ -617,7 +622,7 @@ export default function EventPage() {
               <div className="flex flex-col gap-4 my-10">
                 <div className="flex flex-col gap-2">
                   <h1 className="text-2xl font-bold text-gray-12">
-                    Onde acontecerá o evento
+                    {t("whereEventHappens")}
                   </h1>
                 </div>
                 <EventMap
@@ -634,7 +639,7 @@ export default function EventPage() {
                   <div className="flex flex-col gap-4 mt-10">
                     <div className="flex flex-col gap-2">
                       <h1 className="text-2xl font-bold text-gray-12">
-                        Rota no Strava
+                        {t("stravaRoute")}
                       </h1>
                     </div>
                     <div className="w-full h-[400px] rounded-xl overflow-hidden border border-gray-6 shadow-lg relative bg-gray-2">
@@ -644,7 +649,7 @@ export default function EventPage() {
                         frameBorder="0"
                         scrolling="no"
                         src={`https://www.strava.com/routes/${safeStravaId}/embed`}
-                        title={`Rota do ${event.name} no Strava`}
+                        title={t("stravaRouteIframeTitle", { name: event.name })}
                         className="w-full h-full"
                         allowFullScreen
                       />

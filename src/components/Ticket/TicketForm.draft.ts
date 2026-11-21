@@ -15,6 +15,8 @@ export type TicketDraftStoredForm = {
   maxAge: string;
   minPurchaseQuantity?: string;
   maxPurchaseQuantity?: string;
+  autoSoldOutDate?: string;
+  autoSoldOutTime?: string;
   hasKit: boolean;
   selectedGroupId: string;
   batches: Batch[];
@@ -109,6 +111,8 @@ export function applyTicketDraftForm(
     setMaxAge: (v: string) => void;
     setMinPurchaseQuantity?: (v: string) => void;
     setMaxPurchaseQuantity?: (v: string) => void;
+    setAutoSoldOutDate?: (v: string) => void;
+    setAutoSoldOutTime?: (v: string) => void;
     setHasKit: (v: boolean) => void;
     setSelectedGroupId: (v: string) => void;
     setBatches: (v: Batch[]) => void;
@@ -126,6 +130,8 @@ export function applyTicketDraftForm(
   a.setMaxAge(draft.maxAge ?? "");
   a.setMinPurchaseQuantity?.(draft.minPurchaseQuantity ?? "");
   a.setMaxPurchaseQuantity?.(draft.maxPurchaseQuantity ?? "");
+  a.setAutoSoldOutDate?.(draft.autoSoldOutDate ?? "");
+  a.setAutoSoldOutTime?.(draft.autoSoldOutTime ?? "");
   a.setHasKit(!!draft.hasKit);
   a.setSelectedGroupId(draft.selectedGroupId ?? "");
   if (Array.isArray(draft.batches) && draft.batches.length > 0) {

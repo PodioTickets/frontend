@@ -5,7 +5,8 @@ import { useRouter } from "next/navigation";
 import { type TurnstileInstance } from "@marsidev/react-turnstile";
 import { useLoginModal } from "@/stores/modalStore";
 import { useAuth } from "@/hooks/useAuth";
-import { loginSchema, type LoginFormData } from "@/validators/Auth.validator";
+import { buildLoginSchema, type LoginFormData } from "@/validators/Auth.validator";
+import { useT } from "@/i18n/client";
 import {
   saveReturnPath,
   sanitizeReturnPath,
@@ -30,6 +31,7 @@ export function useLoginFlow() {
   const { isOpen, closeLoginModal, openLoginModal } = useLoginModal();
   const router = useRouter();
   const { login, finishLoginMfa, isLoading: authLoading } = useAuth();
+  const t = useT("auth");
 
   // Form data state
   const [formData, setFormData] = useState({
@@ -166,7 +168,7 @@ export function useLoginFlow() {
     setIsSubmitting(true);
 
     try {
-      const validatedData: LoginFormData = loginSchema.parse(formData);
+      const validatedData: LoginFormData = buildLoginSchema(t).parse(formData);
 
       const result = await login({
         emailOrCpf: validatedData.email,
@@ -181,7 +183,7 @@ export function useLoginFlow() {
         return;
       }
 
-      toast.success("Login realizado com sucesso!");
+      toast.success(t("loginSuccess"));
       closeLoginModal();
       setFormData({ email: "", password: "" });
       setErrors({});
@@ -234,27 +236,27 @@ export function useLoginFlow() {
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        toast.error(data?.message || "Erro ao reenviar código.");
+        toast.error(data?.message || t("resendCodeError"));
         return;
       }
       setMfaResendCooldown(60);
-      toast.success("Código reenviado para seu e-mail.");
+      toast.success(t("codeResentToEmail"));
     } catch {
-      toast.error("Erro ao reenviar código. Tente novamente.");
+      toast.error(t("resendCodeErrorRetry"));
     }
   };
 
   const handleMfaConfirm = async () => {
     if (!mfaToken) return;
     if (mfaCode.length < 6) {
-      setMfaError("Preencha todos os 6 dígitos do código.");
+      setMfaError(t("fillAllCodeDigits"));
       return;
     }
     setMfaConfirming(true);
     setMfaError("");
     try {
       await finishLoginMfa(mfaToken, mfaCode);
-      toast.success("Login realizado com sucesso!");
+      toast.success(t("loginSuccess"));
       closeLoginModal();
       setFormData({ email: "", password: "" });
       setErrors({});
@@ -269,7 +271,7 @@ export function useLoginFlow() {
         router.replace(returnTo);
       }
     } catch (err: any) {
-      setMfaError(err?.message || "Código inválido. Tente novamente.");
+      setMfaError(err?.message || t("invalidCodeRetry"));
       setMfaResendCooldown(60);
     } finally {
       setMfaConfirming(false);

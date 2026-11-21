@@ -11,9 +11,38 @@ import { eventWindowInstant } from "@/utils/datetimeBR";
 import { statusOptions, orderOptions } from "@/constants";
 import { resolveLegacyLocationSlug } from "@/constants/legacyLocationSlugs";
 import type { DateRange } from "react-day-picker";
+import { useT } from "@/i18n/client";
+
+/** id da opção (em `@/constants`) → chave do dicionário `home`; o rótulo resolve no render. */
+const STATUS_LABEL_KEYS = {
+  "inscricoes-abertas": "statusRegistrationOpen",
+  "inscricoes-encerradas": "statusRegistrationClosed",
+  "evento-encerrado": "statusEventEnded",
+} as const;
+const ORDER_LABEL_KEYS = {
+  "date-asc": "orderDateAsc",
+  "date-desc": "orderDateDesc",
+  "price-asc": "orderPriceAsc",
+  "price-desc": "orderPriceDesc",
+  "name-asc": "orderNameAsc",
+  "name-desc": "orderNameDesc",
+} as const;
+
+/** Filtros da busca na URL (busca, local, datas, modalidade, preço, status, ordenação). */
+const SEARCH_FILTER_KEYS = [
+  "q", "country", "state", "city", "location", "dateFrom", "dateTo", "includePast",
+  "modalities", "priceMin", "priceMax", "status", "orderBy",
+];
+
+/** Destaque primeiro SÓ sem nenhum filtro; com filtro, destacado ordena como os demais
+ *  (o backend pagina só por data com `featuredFirst=false`). Mesma regra no mobile e desktop. */
+const isFeaturedFirst = (sp: { get(key: string): string | null }) =>
+  !SEARCH_FILTER_KEYS.some((key) => sp.get(key));
 
 function MobileAdvancedSearch() {
   const searchParams = useSearchParams();
+  const t = useT("home");
+  const featuredFirst = isFeaturedFirst(searchParams);
 
   const legacyLocation = searchParams.get("location");
   const stateFromUrl = searchParams.get("state");
@@ -62,6 +91,7 @@ function MobileAdvancedSearch() {
     // mexeu no slider (piso > 0 / teto < 1000), então é seguro repassar direto.
     minPrice: priceMin ? parseFloat(priceMin) : undefined,
     maxPrice: priceMax ? parseFloat(priceMax) : undefined,
+    featuredFirst,
     limit: 20,
   });
 
@@ -124,10 +154,10 @@ function MobileAdvancedSearch() {
           <div className="mt-2">
             <h2 className="text-xl font-extrabold text-gray-12">
               {isLoading
-                ? "Carregando..."
+                ? t("loading")
                 : hasFilters
-                  ? `Resultados (${pagination.total})`
-                  : `Todos os eventos (${pagination.total})`}
+                  ? t("resultsCount", { count: pagination.total })
+                  : t("allEventsCount", { count: pagination.total })}
             </h2>
           </div>
         </div>
@@ -136,17 +166,17 @@ function MobileAdvancedSearch() {
         <div className="px-4 pb-8">
           {isLoading && events.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-20">
-              <p className="text-lg text-gray-11 mb-4">Carregando eventos...</p>
+              <p className="text-lg text-gray-11 mb-4">{t("loadingEvents")}</p>
             </div>
           ) : events.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-20">
               <p className="text-lg text-gray-11 mb-4">
-                Nenhum evento encontrado
+                {t("noEventsFound")}
               </p>
               <p className="text-sm text-gray-10 text-center">
                 {query
-                  ? `Nenhum resultado para "${query}". Tente ajustar os filtros ou buscar por outros termos.`
-                  : "Tente ajustar os filtros ou buscar por outros termos"}
+                  ? t("noResultsForQuery", { query })
+                  : t("noResultsHint")}
               </p>
             </div>
           ) : (
@@ -164,7 +194,7 @@ function MobileAdvancedSearch() {
                   variant="outline"
                   disabled={isFetchingNextPage}
                 >
-                  {isFetchingNextPage ? "Carregando..." : "Carregar mais eventos"}
+                  {isFetchingNextPage ? t("loading") : t("loadMoreEvents")}
                 </Button>
               )}
             </>
@@ -178,6 +208,16 @@ function MobileAdvancedSearch() {
 function SearchContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
+  const t = useT("home");
+
+  const translatedStatusOptions = useMemo(
+    () => statusOptions.map((o) => ({ ...o, label: t(STATUS_LABEL_KEYS[o.id as keyof typeof STATUS_LABEL_KEYS]) })),
+    [t],
+  );
+  const translatedOrderOptions = useMemo(
+    () => orderOptions.map((o) => ({ ...o, label: t(ORDER_LABEL_KEYS[o.id as keyof typeof ORDER_LABEL_KEYS]) })),
+    [t],
+  );
 
   // Extrair parâmetros da URL
   const searchQuery = searchParams.get("q") || undefined;
@@ -204,6 +244,7 @@ function SearchContent() {
   const priceMax = searchParams.get("priceMax");
   const statusFilter = searchParams.get("status") || null;
   const orderBy = searchParams.get("orderBy") || "date-asc";
+  const featuredFirst = isFeaturedFirst(searchParams);
 
   // Converter datas para formato ISO se necessário
   const startDate = dateFrom
@@ -235,6 +276,7 @@ function SearchContent() {
     // client-side antigo, que comparava `event.price` (nunca retornado) e não funcionava.
     minPrice: priceMin ? parseFloat(priceMin) : undefined,
     maxPrice: priceMax ? parseFloat(priceMax) : undefined,
+    featuredFirst,
     limit: 20,
   });
 
@@ -292,7 +334,7 @@ function SearchContent() {
       });
     }
 
-    // Destaque PRIMEIRO só na ordem PADRÃO (data crescente). Ordenações explícitas
+    // Destaque PRIMEIRO só sem nenhum filtro (`featuredFirst`). Ordenações explícitas
     // do usuário (nome, data-desc) respeitam a escolha dele. `featuredOrder` nulo =
     // não destacado → vai para o fim (Infinity). O backend já pagina destaque-primeiro,
     // então a página atual traz os destacados; aqui só garantimos a ordem dentro dela.
@@ -321,7 +363,7 @@ function SearchContent() {
       const cb = isCompleted(b);
       if (ca !== cb) return ca ? 1 : -1;
       if (ca) return time(b.eventDate) - time(a.eventDate);
-      const f = byFeatured(a, b);
+      const f = featuredFirst ? byFeatured(a, b) : 0;
       if (f !== 0) return f;
       if (!a.eventDate || !b.eventDate) return 0;
       return time(a.eventDate) - time(b.eventDate);
@@ -343,7 +385,7 @@ function SearchContent() {
           return byDefaultOrder(a, b);
       }
     });
-  }, [events, priceMin, priceMax, statusFilter, orderBy]);
+  }, [events, priceMin, priceMax, statusFilter, orderBy, featuredFirst]);
 
   const hasFilters = useMemo(() => {
     return !!(
@@ -396,8 +438,8 @@ function SearchContent() {
   };
 
   const getStatusLabel = () => {
-    const option = statusOptions.find((opt) => opt.id === statusFilter);
-    return option?.label || "Status";
+    const option = translatedStatusOptions.find((opt) => opt.id === statusFilter);
+    return option?.label || t("statusLabel");
   };
 
   const handleLoadMore = () => {
@@ -447,12 +489,12 @@ function SearchContent() {
           <div className="flex items-center justify-between mb-6 gap-4">
             <h1 className="text-[28px] font-extrabold">
               {hasFilters
-                ? `Resultados da busca (${resultCount})`
-                : "Todos os eventos"}
+                ? t("searchResultsCount", { count: resultCount })
+                : t("allEvents")}
             </h1>
             <div className="flex items-center gap-3">
               <Dropdown
-                options={statusOptions}
+                options={translatedStatusOptions}
                 dataAttribute="status-filter"
                 width="w-[200px]"
                 maxHeight="max-h-[200px]"
@@ -468,7 +510,7 @@ function SearchContent() {
                 )}
               />
               <Dropdown
-                options={orderOptions}
+                options={translatedOrderOptions}
                 dataAttribute="order-filter"
                 width="w-[220px]"
                 maxHeight="max-h-[250px]"
@@ -478,7 +520,7 @@ function SearchContent() {
                 trigger={() => (
                   <div className="flex items-center gap-2 px-4 py-2 bg-gray-2 border border-gray-6 rounded-lg cursor-pointer hover:bg-gray-4 transition-colors">
                     <span className="text-sm text-gray-12 font-medium">
-                      Ordenar por
+                      {t("orderBy")}
                     </span>
                   </div>
                 )}
@@ -488,7 +530,7 @@ function SearchContent() {
                   onClick={handleClearFilters}
                   className="text-sm text-gray-12 font-medium cursor-pointer hover:text-gray-11 transition-colors"
                 >
-                  Limpar
+                  {t("clear")}
                 </h1>
               )}
             </div>
@@ -496,17 +538,17 @@ function SearchContent() {
 
           {(isLoading || isAutoLoading) && filteredEvents.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-20">
-              <p className="text-xl text-gray-11 mb-4">Carregando eventos...</p>
+              <p className="text-xl text-gray-11 mb-4">{t("loadingEvents")}</p>
             </div>
           ) : filteredEvents.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-20">
               <p className="text-xl text-gray-11 mb-4">
-                Nenhum evento encontrado
+                {t("noEventsFound")}
               </p>
               <p className="text-sm text-gray-10">
                 {query
-                  ? `Nenhum resultado para "${query}". Tente ajustar os filtros ou buscar por outros termos.`
-                  : "Tente ajustar os filtros ou buscar por outros termos"}
+                  ? t("noResultsForQuery", { query })
+                  : t("noResultsHint")}
               </p>
             </div>
           ) : (
@@ -528,15 +570,15 @@ function SearchContent() {
                   disabled={isFetchingNextPage}
                 >
                   {isFetchingNextPage
-                    ? "Carregando..."
-                    : "Carregar mais eventos"}
+                    ? t("loading")
+                    : t("loadMoreEvents")}
                 </Button>
               )}
               {/* Filtro de status ativo: acúmulo automático. Mostra progresso
                   em vez do botão manual, que aqui seria "fantasma". */}
               {isAutoLoading && (
                 <p className="w-full mt-8 text-center text-sm text-gray-11">
-                  Carregando mais eventos…
+                  {t("loadingMoreEvents")}
                 </p>
               )}
             </>
@@ -548,13 +590,14 @@ function SearchContent() {
 }
 
 export default function SearchPage() {
+  const t = useT("home");
   return (
     <Suspense
       fallback={
         <section className="flex flex-col min-h-screen items-center max-w-[1280px] mx-auto lg:px-8">
           <div className="w-full mt-14 px-4">
             <div className="flex items-center justify-between mb-6">
-              <h1 className="text-[28px] font-extrabold">Carregando...</h1>
+              <h1 className="text-[28px] font-extrabold">{t("loading")}</h1>
             </div>
           </div>
         </section>

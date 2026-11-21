@@ -1,31 +1,48 @@
 import { z } from "zod";
 import { isValidCPF } from "@/utils/cpf";
 import { isPhoneValidForCountry } from "@/utils/phone";
+import { ptBR } from "@/i18n/messages/pt-BR";
+import { createTranslator, type Translator } from "@/i18n/translate";
 
-export const loginSchema = z.object({
-  email: z
-    .string()
-    .min(1, "Email é obrigatório")
-    .email("Email inválido"),
-  password: z
-    .string()
-    .min(1, "Senha é obrigatória")
-    .min(6, "A senha deve ter pelo menos 6 caracteres"),
-});
+/**
+ * i18n: as mensagens vêm do namespace `auth`. Cada schema tem uma factory
+ * `buildXxxSchema(t)` (o fluxo do participante passa o `t` do idioma atual) e o
+ * export antigo (`loginSchema`, ...) continua existindo em pt-BR — painéis de
+ * organizador/admin, que só falam pt-BR, seguem usando-os sem mudança.
+ */
+type AuthT = Translator<"auth">;
+const ptT: AuthT = createTranslator(ptBR, "auth");
 
-export const forgotPasswordStep1Schema = loginSchema.pick({ email: true });
+export const buildLoginSchema = (t: AuthT = ptT) =>
+  z.object({
+    email: z
+      .string()
+      .min(1, t("vEmailRequired"))
+      .email(t("vEmailInvalid")),
+    password: z
+      .string()
+      .min(1, t("vPasswordRequired"))
+      .min(6, t("vPasswordMin6")),
+  });
+export const loginSchema = buildLoginSchema();
+
+export const buildForgotPasswordStep1Schema = (t: AuthT = ptT) =>
+  buildLoginSchema(t).pick({ email: true });
+export const forgotPasswordStep1Schema = buildForgotPasswordStep1Schema();
 
 // Step 1a: Identidade (nome + nacionalidade) — primeira tela de dados pessoais.
-export const registerStep1aSchema = z.object({
-  nome: z
-    .string()
-    .min(1, "Nome completo é obrigatório")
-    .refine(
-      (v) => v.trim().split(/\s+/).length >= 2,
-      { message: "Informe o nome completo" }
-    ),
-  nacionalidade: z.string().min(1, "Nacionalidade é obrigatória"),
-});
+export const buildRegisterStep1aSchema = (t: AuthT = ptT) =>
+  z.object({
+    nome: z
+      .string()
+      .min(1, t("vFullNameRequired"))
+      .refine(
+        (v) => v.trim().split(/\s+/).length >= 2,
+        { message: t("vFullNameIncomplete") }
+      ),
+    nacionalidade: z.string().min(1, t("vNationalityRequired")),
+  });
+export const registerStep1aSchema = buildRegisterStep1aSchema();
 
 /**
  * Decide se a pessoa é brasileira a partir do campo `nacionalidade`.
@@ -53,19 +70,23 @@ export function isBrazilianCountry(country: string | undefined | null): boolean 
  * A função é definida após `registerStep1bSchema` para reutilizar o shape
  * dos outros campos (dataNascimento, sexo, etc).
  */
-export function buildRegisterStep1bSchema(country: string | undefined | null) {
+export function buildRegisterStep1bSchema(
+  country: string | undefined | null,
+  t: AuthT = ptT,
+) {
+  const baseSchema = buildRegisterStep1bBaseSchema(t);
   const docSchema = isBrazilianCountry(country)
-    ? registerStep1bSchema.shape.cpf
+    ? baseSchema.shape.cpf
     : z
       .string()
-      .min(4, "Documento deve ter pelo menos 4 caracteres")
-      .max(30, "Documento deve ter no máximo 30 caracteres");
+      .min(4, t("vDocumentMin"))
+      .max(30, t("vDocumentMax"));
 
   const telefoneSchema = z
     .string()
-    .min(1, "Telefone é obrigatório")
+    .min(1, t("vPhoneRequired"))
     .refine((phone) => isPhoneValidForCountry(phone, country), {
-      message: "Telefone inválido para o país selecionado",
+      message: t("vPhoneInvalidForCountry"),
     });
 
   // Opcional: vazio passa; preenchido precisa ser válido pro país.
@@ -75,10 +96,10 @@ export function buildRegisterStep1bSchema(country: string | undefined | null) {
     .refine(
       (phone) =>
         !phone || phone.trim() === "" || isPhoneValidForCountry(phone, country),
-      { message: "Telefone de emergência inválido para o país selecionado" },
+      { message: t("vEmergencyPhoneInvalidForCountry") },
     );
 
-  return registerStep1bSchema.extend({
+  return baseSchema.extend({
     cpf: docSchema,
     telefone: telefoneSchema,
     telefoneEmergencia: telefoneEmergenciaSchema,
@@ -89,27 +110,27 @@ export function buildRegisterStep1bSchema(country: string | undefined | null) {
 // Mantido como CPF brasileiro por compatibilidade com tipos exportados (form
 // data type). A validação real em runtime usa `buildRegisterStep1bSchema()`
 // que considera a nacionalidade selecionada.
-export const registerStep1bSchema = z.object({
+const buildRegisterStep1bBaseSchema = (t: AuthT = ptT) => z.object({
   cpf: z
     .string()
-    .min(1, "CPF é obrigatório")
+    .min(1, t("vCpfRequired"))
     .refine(
       (cpf) => cpf.replace(/\D/g, "").length === 11,
-      { message: "CPF deve ter 11 dígitos" },
+      { message: t("vCpfDigits") },
     )
     .refine((cpf) => isValidCPF(cpf), {
       message:
-        "CPF inválido",
+        t("vCpfInvalid"),
     }),
   dataNascimento: z
-    .date({ message: "Data de nascimento é obrigatória" })
+    .date({ message: t("vBirthDateRequired") })
     .refine(
       (date) => {
         const today = new Date();
         today.setHours(23, 59, 59, 999);
         return date <= today;
       },
-      { message: "Data de nascimento não pode ser no futuro" }
+      { message: t("vBirthDateFuture") }
     )
     .refine(
       (date) => {
@@ -124,17 +145,17 @@ export const registerStep1bSchema = z.object({
         }
         return age >= 18;
       },
-      { message: "Você deve ter pelo menos 18 anos" }
+      { message: t("vMinAge18") }
     ),
   telefone: z
     .string()
-    .min(1, "Telefone é obrigatório")
+    .min(1, t("vPhoneRequired"))
     .refine(
       (phone) => {
         const numbers = phone.replace(/\D/g, "");
         return numbers.length === 11;
       },
-      { message: "Telefone deve ter 11 dígitos" }
+      { message: t("vPhoneDigits") }
     ),
   telefoneEmergencia: z
     .string()
@@ -145,51 +166,54 @@ export const registerStep1bSchema = z.object({
         const numbers = phone.replace(/\D/g, "");
         return numbers.length === 11 || numbers.length === 0;
       },
-      { message: "Telefone de emergência deve ter 11 dígitos" }
+      { message: t("vEmergencyPhoneDigits") }
     ),
-  sexo: z.string().min(1, "Sexo é obrigatório"),
+  sexo: z.string().min(1, t("vSexRequired")),
 });
+export const registerStep1bSchema = buildRegisterStep1bBaseSchema();
 
 // Composição: dados pessoais completos (1a + 1b) — usado no payload final.
 export const registerStep1Schema = registerStep1aSchema.merge(registerStep1bSchema);
 
 // Step 2: Account Access
-export const registerStep2Schema = z
+export const buildRegisterStep2Schema = (t: AuthT = ptT) => z
   .object({
-    email: z.string().min(1, "Email é obrigatório").email("Email inválido"),
+    email: z.string().min(1, t("vEmailRequired")).email(t("vEmailInvalid")),
     senha: z
       .string()
-      .min(1, "Senha é obrigatória")
-      .min(8, "Senha deve ter pelo menos 8 caracteres")
+      .min(1, t("vPasswordRequired"))
+      .min(8, t("vPasswordMin8"))
       .regex(
         /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/,
-        "Senha deve conter pelo menos uma letra maiúscula, uma minúscula e um número"
+        t("vPasswordStrength")
       ),
-    confirmarSenha: z.string().min(1, "Confirmação de senha é obrigatória"),
+    confirmarSenha: z.string().min(1, t("vConfirmPasswordRequired")),
   })
   .refine((data) => data.senha === data.confirmarSenha, {
-    message: "As senhas não coincidem",
+    message: t("vPasswordsMismatch"),
     path: ["confirmarSenha"],
   });
+export const registerStep2Schema = buildRegisterStep2Schema();
 
 export const registerSchema = registerStep1Schema.merge(registerStep2Schema);
 
-export const resetPasswordSchema = z
+export const buildResetPasswordSchema = (t: AuthT = ptT) => z
   .object({
     password: z
       .string()
-      .min(1, "Senha é obrigatória")
-      .min(8, "Senha deve ter pelo menos 8 caracteres")
+      .min(1, t("vPasswordRequired"))
+      .min(8, t("vPasswordMin8"))
       .regex(
         /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/,
-        "Senha deve conter pelo menos uma letra maiúscula, uma minúscula e um número"
+        t("vPasswordStrength")
       ),
-    confirmPassword: z.string().min(1, "Confirmação de senha é obrigatória"),
+    confirmPassword: z.string().min(1, t("vConfirmPasswordRequired")),
   })
   .refine((data) => data.password === data.confirmPassword, {
-    message: "As senhas não coincidem",
+    message: t("vPasswordsMismatch"),
     path: ["confirmPassword"],
   });
+export const resetPasswordSchema = buildResetPasswordSchema();
 
 export type ResetPasswordFormData = z.infer<typeof resetPasswordSchema>;
 

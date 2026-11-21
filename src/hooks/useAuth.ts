@@ -10,6 +10,7 @@ import React, {
 import { adminService, userService, organizerService } from "@/services";
 import { userCacheKey, LEGACY_USER_CACHE_KEY } from "@/lib/authSurface";
 import type { OrganizerSignupRequest } from "@/services/organizer/OrganizerService.types";
+import { useT } from "@/i18n/client";
 
 interface User {
   id: string;
@@ -83,6 +84,7 @@ interface AuthProviderProps {
 }
 
 export const AuthProvider = ({ children }: AuthProviderProps) => {
+  const t = useT("auth");
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -242,13 +244,13 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         }
       } else {
         const errorMessage =
-          response.error || "Erro ao fazer login. Tente novamente.";
+          response.error || t("loginError");
         setError(errorMessage as any);
         throw new Error(errorMessage);
       }
     } catch (err: any) {
       const errorMessage =
-        err.message || "Erro ao fazer login. Tente novamente.";
+        err.message || t("loginError");
       setError(errorMessage);
       throw new Error(errorMessage);
     } finally {
@@ -271,12 +273,12 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
           await refetchUser();
         }
       } else {
-        const errorMessage = response.error || "Código inválido. Tente novamente.";
+        const errorMessage = response.error || t("invalidCodeRetry");
         setError(errorMessage as any);
         throw new Error(errorMessage);
       }
     } catch (err: any) {
-      const errorMessage = err.message || "Código inválido. Tente novamente.";
+      const errorMessage = err.message || t("invalidCodeRetry");
       setError(errorMessage);
       throw new Error(errorMessage);
     } finally {
@@ -335,7 +337,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       });
 
       if (!createdUser) {
-        throw new Error("Erro ao realizar cadastro: usuário não retornado");
+        throw new Error(t("signupNoUser"));
       }
 
       /* Estabelece a SESSÃO httpOnly pós-cadastro.
@@ -360,9 +362,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
           // Propaga pra o fluxo de cadastro tratar (toast) em vez de seguir com
           // uma sessão fantasma.
           console.error("Falha ao estabelecer sessão pós-cadastro:", sessionErr);
-          throw new Error(
-            "Conta criada, mas houve um problema ao iniciar sua sessão. Faça login para continuar.",
-          );
+          throw new Error(t("signupSessionError"));
         }
       }
 
@@ -396,7 +396,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     } catch (err: unknown) {
       console.error("Registration error:", err);
       const e = err as Error;
-      const errorMessage = e?.message || "Erro ao realizar cadastro. Tente novamente.";
+      const errorMessage = e?.message || t("signupErrorRetry");
       setError(errorMessage as any);
       if (e instanceof Error) throw e;
       throw new Error(errorMessage);

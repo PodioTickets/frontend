@@ -45,6 +45,8 @@ interface AwaitingReleaseDrawerProps {
   categoryName?: string;
   onNavigatePrev?: () => void;
   onNavigateNext?: () => void;
+  /** Chamado depois de uma ação que muda os valores (antecipação) — a página recarrega os cards. */
+  onDataChanged?: () => void;
 }
 
 type FinancialTab = "avista" | "parcelados";
@@ -76,6 +78,7 @@ export function AwaitingReleaseDrawer({
   categoryName = "Nome da categoria",
   onNavigatePrev,
   onNavigateNext,
+  onDataChanged,
 }: AwaitingReleaseDrawerProps) {
   const [activeTab, setActiveTab] = useState<FinancialTab>("avista");
   const [currentPage, setCurrentPage] = useState(1);
@@ -583,14 +586,14 @@ export function AwaitingReleaseDrawer({
                     </p>
                   </div>
                 </div>
-                {/*  <Button
-                  type="button"l
+                <Button
+                  type="button"
                   variant="outline"
                   onClick={() => setIsAnticipationOpen(true)}
                   className="border-gray-6 text-gray-12 font-manrope font-bold text-base"
                 >
                   Solicitar antecipação
-                </Button> */}
+                </Button>
               </div>
 
               {/* Tabs + Search */}
@@ -785,7 +788,11 @@ export function AwaitingReleaseDrawer({
           eventId={eventId}
           eventName={eventName}
           onClose={() => setIsAnticipationOpen(false)}
-          onSuccess={() => loadPendingReleases(currentPage)}
+          onSuccess={() => {
+            loadPendingReleases(currentPage);
+            loadInstallments();
+            onDataChanged?.();
+          }}
         />
       )}
 

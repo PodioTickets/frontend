@@ -2,6 +2,7 @@
 
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { cn } from "@/utils/cn";
+import { useT } from "@/i18n/client";
 
 /**
  * `default`      — barra centralizada, para listas/cards e views mobile.
@@ -66,6 +67,7 @@ export function Pagination({
   className,
   variant = "default",
 }: PaginationProps) {
+  const t = useT("home");
   // Uma única página (ou nenhuma) não tem o que paginar: o controle some.
   // A regra vive aqui, e não em cada chamador, para que nenhuma tela nova
   // esqueça o `totalPages > 1` e acabe renderizando uma barra inútil.
@@ -89,7 +91,7 @@ export function Pagination({
           className={navBtn}
           disabled={disabled || currentPage <= 1}
           onClick={goPrev}
-          aria-label="Página anterior"
+          aria-label={t("paginationPrev")}
         >
           <ChevronLeft className="size-4 text-gray-11" />
         </button>
@@ -103,7 +105,7 @@ export function Pagination({
           className={navBtn}
           disabled={disabled || currentPage >= totalPages}
           onClick={goNext}
-          aria-label="Próxima página"
+          aria-label={t("paginationNext")}
         >
           <ChevronRight className="size-4 text-gray-11" />
         </button>
@@ -139,7 +141,7 @@ export function Pagination({
           onClick={goPrev}
           disabled={disabled || currentPage <= 1}
           className="size-8 shrink-0 rounded-lg border border-gray-6 bg-gray-4/80 hover:bg-gray-4 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center transition-colors"
-          aria-label="Página anterior"
+          aria-label={t("paginationPrev")}
         >
           <ChevronLeft className="size-4 text-gray-12" />
         </button>
@@ -175,7 +177,7 @@ export function Pagination({
           onClick={goNext}
           disabled={disabled || currentPage >= totalPages}
           className="size-8 shrink-0 rounded-lg border border-gray-6 bg-gray-4/80 hover:bg-gray-4 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center transition-colors"
-          aria-label="Próxima página"
+          aria-label={t("paginationNext")}
         >
           <ChevronRight className="size-4 text-gray-12" />
         </button>

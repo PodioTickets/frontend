@@ -13,6 +13,7 @@ import { formatPhoneForCountry } from "@/utils/phone";
 import { isBrazilianCountry } from "@/validators/Auth.validator";
 import { formatDateBR } from "@/utils/datetimeBR";
 import { formatBRL as formatPrice } from "@/lib/money";
+import { useT } from "@/i18n/client";
 
 interface Product {
   id: string;
@@ -77,6 +78,7 @@ export function ParticipantSummaryModal({
   products = [],
   productsMap = {},
 }: ParticipantSummaryModalProps) {
+  const t = useT("checkoutInfo");
   const [currentIndex, setCurrentIndex] = useState(initialParticipantIndex);
   const [isAnimating, setIsAnimating] = useState(false);
 
@@ -135,12 +137,12 @@ export function ParticipantSummaryModal({
   const getGenderLabel = (gender?: string) => {
     if (!gender) return "";
     const labels: Record<string, string> = {
-      male: "Masculino",
-      masculino: "Masculino",
-      female: "Feminino",
-      feminino: "Feminino",
-      other: "Outro",
-      outro: "Outro",
+      male: t("genderMale"),
+      masculino: t("genderMale"),
+      female: t("genderFemale"),
+      feminino: t("genderFemale"),
+      other: t("genderOther"),
+      outro: t("genderOther"),
     };
     return labels[gender.toLowerCase()] || gender;
   };
@@ -215,7 +217,7 @@ export function ParticipantSummaryModal({
         {/* Header */}
         <div className="flex items-center justify-between px-4 py-3 border-b border-gray-6 shrink-0">
           <p className="font-family-dm-sans font-semibold text-xl leading-[1.3] text-gray-12">
-            Resumo do participante {currentIndex + 1}
+            {t("participantSummaryTitle", { n: currentIndex + 1 })}
           </p>
           <button
             onClick={handleClose}
@@ -243,7 +245,7 @@ export function ParticipantSummaryModal({
                   </div>
                   <div className="flex flex-col gap-3 items-start justify-center">
                     <p className="font-manrope font-semibold text-base leading-[1.1] text-gray-12">
-                      {participant.name || `Participante ${currentIndex + 1}`}
+                      {participant.name || t("participantN", { n: currentIndex + 1 })}
                     </p>
                     <div className="flex gap-2 items-center">
                       {participant.birthDate && (
@@ -275,51 +277,51 @@ export function ParticipantSummaryModal({
               {/* Participant Information */}
               <div className="flex flex-col gap-4">
                 <p className="font-manrope font-bold text-xl leading-[1.1] text-gray-12">
-                  Informações do participante
+                  {t("participantInfo")}
                 </p>
                 <div className="grid grid-cols-2">
                   <div className="flex flex-col gap-2 pb-4">
-                    <p className="font-family-dm-sans font-normal text-base leading-[1.3] text-gray-12">Nome</p>
+                    <p className="font-family-dm-sans font-normal text-base leading-[1.3] text-gray-12">{t("name")}</p>
                     <p className="font-family-dm-sans font-medium text-base leading-[1.3] text-gray-12">
-                      {participant.name || "Não informado"}
+                      {participant.name || t("notInformed")}
                     </p>
                   </div>
                   <div className="flex flex-col gap-2 pb-4">
-                    <p className="font-family-dm-sans font-normal text-base leading-[1.3] text-gray-12">Email</p>
+                    <p className="font-family-dm-sans font-normal text-base leading-[1.3] text-gray-12">{t("email")}</p>
                     <p className="font-family-dm-sans font-medium text-base leading-[1.3] text-gray-12">
-                      {participant.email || "Não informado"}
+                      {participant.email || t("notInformed")}
                     </p>
                   </div>
                   <div className="flex flex-col gap-2 py-4">
                     <p className="font-family-dm-sans font-normal text-base leading-[1.3] text-gray-12">
-                      {isBr ? "CPF" : "Documento"}
+                      {isBr ? "CPF" : t("document")}
                     </p>
                     <p className="font-family-dm-sans font-medium text-base leading-[1.3] text-gray-12">
                       {participant.cpf
                         ? isBr
                           ? participant.cpf.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4")
                           : participant.cpf
-                        : "Não informado"}
+                        : t("notInformed")}
                     </p>
                   </div>
                   <div className="flex flex-col gap-2 py-4">
                     <p className="font-family-dm-sans font-normal text-base leading-[1.3] text-gray-12">
-                      Data de nascimento
+                      {t("birthDate")}
                     </p>
                     <p className="font-family-dm-sans font-medium text-base leading-[1.3] text-gray-12">
-                      {participant.birthDate ? formatDate(participant.birthDate) : "Não informado"}
-                    </p>
-                  </div>
-                  <div className="flex flex-col gap-2 py-4">
-                    <p className="font-family-dm-sans font-normal text-base leading-[1.3] text-gray-12">Telefone</p>
-                    <p className="font-family-dm-sans font-medium text-base leading-[1.3] text-gray-12">
-                      {formatPhoneForCountry(participant.phone, isBr ? participant.nationality || "Brasil" : participant.nationality) || "Não informado"}
+                      {participant.birthDate ? formatDate(participant.birthDate) : t("notInformed")}
                     </p>
                   </div>
                   <div className="flex flex-col gap-2 py-4">
-                    <p className="font-family-dm-sans font-normal text-base leading-[1.3] text-gray-12">Sexo</p>
+                    <p className="font-family-dm-sans font-normal text-base leading-[1.3] text-gray-12">{t("phone")}</p>
                     <p className="font-family-dm-sans font-medium text-base leading-[1.3] text-gray-12">
-                      {getGenderLabel(participant.gender) || "Não informado"}
+                      {formatPhoneForCountry(participant.phone, isBr ? participant.nationality || "Brasil" : participant.nationality) || t("notInformed")}
+                    </p>
+                  </div>
+                  <div className="flex flex-col gap-2 py-4">
+                    <p className="font-family-dm-sans font-normal text-base leading-[1.3] text-gray-12">{t("gender")}</p>
+                    <p className="font-family-dm-sans font-medium text-base leading-[1.3] text-gray-12">
+                      {getGenderLabel(participant.gender) || t("notInformed")}
                     </p>
                   </div>
                 </div>
@@ -328,7 +330,7 @@ export function ParticipantSummaryModal({
 
             {/* Ticket Section */}
             <div className="flex flex-col gap-4">
-              <p className="font-manrope font-bold text-lg leading-[1.1] text-gray-12">Ingresso</p>
+              <p className="font-manrope font-bold text-lg leading-[1.1] text-gray-12">{t("ticket")}</p>
               <div className="bg-gray-2 border border-gray-6 rounded-xl p-4 flex flex-col gap-3">
                 <div className="flex gap-5 items-center">
                   {/* Ticket Info */}
@@ -365,7 +367,7 @@ export function ParticipantSummaryModal({
                     {ticket.ageLimit?.min && ticket.ageLimit?.max && (
                       <div className="bg-yellow-3 px-4 py-2 rounded-full w-fit">
                         <p className="font-family-dm-sans font-medium text-sm text-yellow-12 text-center">
-                          Limite de idade: de {ticket.ageLimit.min} a {ticket.ageLimit.max} anos
+                          {t("ageLimitLabel")} {t("ageRangeBetween", { min: ticket.ageLimit.min, max: ticket.ageLimit.max })}
                         </p>
                       </div>
                     )}
@@ -375,7 +377,7 @@ export function ParticipantSummaryModal({
                 {/* Ticket Price */}
                 <div className="flex items-center justify-between text-center">
                   <p className="font-family-dm-sans font-normal text-base leading-[1.3] text-gray-11">
-                    Valor do ingresso:
+                    {t("ticketValue")}
                   </p>
                   <p className="font-manrope font-bold text-xl leading-[1.1] text-gray-12">
                     {formatPrice(getTicketPrice())}
@@ -388,7 +390,7 @@ export function ParticipantSummaryModal({
             {requiredProducts.length > 0 && (
               <div className="flex flex-col gap-4">
                 <p className="font-manrope font-bold text-lg leading-[1.1] text-gray-12">
-                  Produtos do kit (obrigatório)
+                  {t("kitProductsRequired")}
                 </p>
                 <div className="flex gap-3 flex-wrap">
                   {requiredProducts.map((product) => (
@@ -408,18 +410,18 @@ export function ParticipantSummaryModal({
                             {product.name}
                           </p>
                           <p className="font-manrope font-semibold text-base leading-[1.1] text-gray-11">
-                            {product.isIncludedInTicket ? "Grátis" : formatPrice(product.basePrice / 100)}
+                            {product.isIncludedInTicket ? t("free") : formatPrice(product.basePrice / 100)}
                           </p>
                         </div>
                       </div>
                       <div className="p-4">
                         <div className="flex flex-col gap-2">
                           <p className="font-family-dm-sans font-normal text-base leading-[1.3] text-gray-12">
-                            {product.variationType || "Escolha o tamanho"}
+                            {product.variationType || t("chooseSize")}
                           </p>
                           <div className="flex items-center justify-between gap-2 min-w-0">
                             <p className="font-family-dm-sans font-normal text-base leading-[1.3] text-gray-12 truncate min-w-0">
-                              {product.selectedVariation?.name || "Não selecionado"}
+                              {product.selectedVariation?.name || t("notSelected")}
                             </p>
                             {product.selectedVariation ? (
                               <p className="font-family-dm-sans font-bold text-base leading-[1.3] text-gray-12 shrink-0 tabular-nums">
@@ -447,7 +449,7 @@ export function ParticipantSummaryModal({
             {additionalProducts.length > 0 && (
               <div className="flex flex-col gap-4">
                 <p className="font-manrope font-bold text-lg leading-[1.1] text-gray-12">
-                  Produtos adicionais (opcional)
+                  {t("additionalProductsOptional")}
                 </p>
                 <div className="flex gap-3 flex-wrap">
                   {additionalProducts.map((product) => (
@@ -467,18 +469,18 @@ export function ParticipantSummaryModal({
                             {product.name}
                           </p>
                           <p className="font-manrope font-semibold text-base leading-[1.1] text-gray-12">
-                            {product.isIncludedInTicket ? "Grátis" : formatPrice(product.basePrice / 100)}
+                            {product.isIncludedInTicket ? t("free") : formatPrice(product.basePrice / 100)}
                           </p>
                         </div>
                       </div>
                       <div className="p-4">
                         <div className="flex flex-col gap-2">
                           <p className="font-family-dm-sans font-normal text-base leading-[1.3] text-gray-12">
-                            {product.variationType || "Escolha o tamanho"}
+                            {product.variationType || t("chooseSize")}
                           </p>
                           <div className="flex items-center justify-between gap-2 min-w-0">
                             <p className="font-family-dm-sans font-normal text-base leading-[1.3] text-gray-12 truncate min-w-0">
-                              {product.selectedVariation?.name || "Não selecionado"}
+                              {product.selectedVariation?.name || t("notSelected")}
                             </p>
                             {product.selectedVariation ? (
                               <p className="font-family-dm-sans font-bold text-base leading-[1.3] text-gray-12 shrink-0 tabular-nums">
@@ -504,7 +506,7 @@ export function ParticipantSummaryModal({
         {participants.length > 1 && (
           <div className="bg-gray-2 border-t border-gray-6 px-4 py-3 flex items-center justify-between shrink-0">
             <p className="font-family-dm-sans font-semibold text-xl leading-[1.3] text-gray-12">
-              Próximo participante
+              {t("nextParticipant")}
             </p>
             <div className="flex gap-2 items-center">
               <button

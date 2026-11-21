@@ -1,6 +1,7 @@
 "use client";
 
 import { Fragment, useEffect, useMemo, useRef, useState } from "react";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import toast from "react-hot-toast";
@@ -110,6 +111,7 @@ export function AdminTicketSwap({ registrationId }: { registrationId: string }) 
   const [variations, setVariations] = useState<Record<string, string | null>>({});
   const [submitting, setSubmitting] = useState(false);
   const [emailSent, setEmailSent] = useState(true);
+  const [newRegistrationId, setNewRegistrationId] = useState("");
   const busyRef = useRef(false);
 
   useEffect(() => {
@@ -164,6 +166,7 @@ export function AdminTicketSwap({ registrationId }: { registrationId: string }) 
         products: buildSwapProductsPayload(newProducts, variations),
       });
       setEmailSent(res.emailSent);
+      setNewRegistrationId(res.registrationId);
       // Drawer de usuários do admin também lista as inscrições do participante.
       queryClient.invalidateQueries({ queryKey: [...queryKeys.admin.users.all(), "registrations"] });
       setStep("done");
@@ -207,7 +210,7 @@ export function AdminTicketSwap({ registrationId }: { registrationId: string }) 
   const activeStepId = step === "tickets" ? 1 : step === "products" ? 2 : 3;
   const stepLabel = SWAP_STEPS[activeStepId - 1].label;
 
-  const getVariationOptions = (product: Product): DropdownOption[] =>
+  const getVariationOptions = (product: Product, _participantIndex?: number): DropdownOption[] =>
     (product.variations ?? []).map((v, i) => {
       const soldOut = isVariationSoldOut(product, v);
       return { id: v.id || `${product.id}-${i}`, label: v.name, suffix: soldOut ? "Esgotado" : undefined, disabled: soldOut };
@@ -220,12 +223,6 @@ export function AdminTicketSwap({ registrationId }: { registrationId: string }) 
     Object.entries(variations).map(([productId, v]) => [getVariationKey(0, productId), v]),
   );
 
-  const currentTicketLabel = [registration.ticket?.category?.name, registration.ticket?.name]
-    .filter(Boolean)
-    .join(" · ");
-  const newTicketLabel = selectedTicket
-    ? [categoryNameById.get(selectedTicket.groupId), selectedTicket.name].filter(Boolean).join(" · ")
-    : "";
   const documentDisplay = participant?.cpf || participant?.documentNumber || "";
   const subLine = [
     participant?.birthDate ? formatDateShort(participant.birthDate) : "",
@@ -248,53 +245,68 @@ export function AdminTicketSwap({ registrationId }: { registrationId: string }) 
     (step === "products" && hasMissingRequiredVariation(newProducts, variations));
   const ctaLabel = step === "products" || (selectedTicket && !hasSelectableProducts) ? "Concluir" : "Próximo";
 
+  // Caixa de ingresso (Figma 7280:156031 atual / 7280:156035 novo): categoria em cima, nome embaixo.
+  const ticketBox = (label: string, category: string | undefined, name: string | undefined, isNew: boolean) => (
+    <div
+      className={`flex flex-col gap-2 p-3.5 rounded-xl break-words ${
+        isNew ? "bg-primary-2 border border-primary-4" : "bg-gray-3"
+      }`}
+    >
+      <p className={`text-xs font-medium font-family-dm-sans leading-[1.3] ${isNew ? "text-primary-11" : "text-gray-10"}`}>
+        {label}
+      </p>
+      {category && <p className="text-sm text-gray-11 font-family-dm-sans leading-[1.3]">{category}</p>}
+      <p className="text-base font-semibold font-manrope text-gray-12 leading-[1.1]">{name}</p>
+    </div>
+  );
+
   const summary = (
     <div className="bg-gray-2 border border-gray-6 rounded-xl overflow-hidden pb-6">
-      <div className="flex flex-col gap-4 px-4 py-5 border-b border-gray-6">
-        <p className="text-base text-gray-11 font-family-dm-sans leading-[1.3]">Trocando ingresso de:</p>
-        <div className="flex items-center gap-2 min-w-0">
-          <ImageWithInitialFallback
-            src={null}
-            alt={participant?.name ?? "Participante"}
-            name={participant?.name ?? "P"}
-            width={52}
-            height={52}
-            className="size-[52px] rounded-full shrink-0"
-            letterClassName="text-lg"
-          />
-          <div className="flex flex-col gap-3 min-w-0">
-            <p className="text-base font-semibold font-manrope text-gray-12 leading-[1.1] truncate">{participant?.name}</p>
-            <p className="flex flex-wrap items-center gap-2 text-sm text-gray-11 font-family-dm-sans leading-[1.3]">
-              {subLine.map((item, i) => (
-                <Fragment key={i}>
-                  {i > 0 && <span className="size-1 rounded-full bg-gray-11" aria-hidden />}
-                  <span>{item}</span>
-                </Fragment>
-              ))}
-            </p>
-          </div>
+      <div className="flex items-center gap-3 px-4 py-[18px] border-b border-gray-6 min-w-0">
+        <ImageWithInitialFallback
+          src={null}
+          alt={participant?.name ?? "Participante"}
+          name={participant?.name ?? "P"}
+          width={52}
+          height={52}
+          className="size-[52px] rounded-full shrink-0"
+          letterClassName="text-lg"
+        />
+        <div className="flex flex-col gap-1 min-w-0">
+          <p className="text-sm text-gray-11 font-family-dm-sans leading-[1.3]">Trocando ingresso de</p>
+          <p className="text-base font-semibold font-manrope text-gray-12 leading-[1.1] truncate">{participant?.name}</p>
+          <p className="flex flex-wrap items-center gap-2 text-sm text-gray-11 font-family-dm-sans leading-[1.3]">
+            {subLine.map((item, i) => (
+              <Fragment key={i}>
+                {i > 0 && <span className="size-1 rounded-full bg-gray-11" aria-hidden />}
+                <span>{item}</span>
+              </Fragment>
+            ))}
+          </p>
         </div>
       </div>
-      <div className="flex flex-col gap-4 p-4 border-b border-gray-6">
-        <p className="text-base text-gray-11 font-family-dm-sans leading-[1.3]">Ingresso atual:</p>
-        <div className="flex flex-col gap-3">
-          <p className="text-base font-semibold font-manrope text-gray-12 leading-[1.1]">{currentTicketLabel}</p>
-        </div>
+      <div className="flex flex-col p-4 border-b border-gray-6">
+        {ticketBox("Ingresso atual", registration.ticket?.category?.name, registration.ticket?.name, false)}
+        {selectedTicket && (
+          <>
+            {/* Faixa de 8px (o gap do Figma) com o ícone de troca centralizado, sobrepondo as duas caixas. */}
+            <div className="relative z-10 h-2 flex items-center justify-center">
+              <span className="size-[30px] shrink-0 flex items-center justify-center rounded-full bg-gray-1 border border-gray-5">
+                <Image src="/images/swap-arrows.svg" alt="" width={16} height={16} unoptimized />
+              </span>
+            </div>
+            {ticketBox("Novo ingresso", categoryNameById.get(selectedTicket.groupId), selectedTicket.name, true)}
+          </>
+        )}
       </div>
-      {step === "products" && selectedTicket && (
-        <div className="flex flex-col gap-4 p-4 border-b border-gray-6">
-          <p className="text-base text-gray-11 font-family-dm-sans leading-[1.3]">Novo ingresso selecionado:</p>
-          <p className="text-base font-semibold font-manrope text-gray-12 leading-[1.1]">{newTicketLabel}</p>
-        </div>
-      )}
-      {/* Só aparece com diferença real; sem ela o CTA ganha o respiro que a linha dava. */}
+      {/* Só aparece com diferença real. */}
       {difference !== 0 && (
         <div className="flex items-center justify-between px-4 py-4 text-base text-gray-12 font-manrope leading-[1.1]">
           <p className="font-semibold">Diferença de valor:</p>
           <p className="font-bold">{formatDifference(difference)}</p>
         </div>
       )}
-      <div className={difference !== 0 ? "px-4 pt-1" : "px-4 pt-4"}>
+      <div className="px-4 pt-4">
         <Button
           type="button"
           onClick={step === "products" ? submit : handleTicketsNext}
@@ -332,7 +344,10 @@ export function AdminTicketSwap({ registrationId }: { registrationId: string }) 
                 : "Ingresso trocado, mas o e-mail não foi enviado. Reenvie pelo ingresso."
             }
             actionLabel="Ver nas inscrições"
-            onAction={() => router.push(registrationsHref)}
+            // `swapped`: a lista destaca a inscrição nova (ver `.swap-highlight` no globals.css).
+            onAction={() =>
+              router.push(newRegistrationId ? `${registrationsHref}?swapped=${newRegistrationId}` : registrationsHref)
+            }
           />
         </div>
       ) : (
@@ -424,7 +439,19 @@ export function AdminTicketSwap({ registrationId }: { registrationId: string }) 
                 </div>
               )}
             </div>
-            <div className="w-full lg:w-[406px] shrink-0 lg:sticky lg:top-8">{summary}</div>
+            {/* No desktop o nome fica fora do fluxo (absolute, no respiro do mt-9) para o card
+                continuar alinhado ao topo da lista; 1 linha (truncate) para não invadir o subtítulo. */}
+            <div className="w-full lg:w-[406px] shrink-0 lg:sticky lg:top-8">
+              {step === "tickets" && event.name && (
+                <p
+                  className="mb-3 lg:absolute lg:bottom-full lg:inset-x-0 lg:truncate text-lg font-bold font-manrope text-gray-12 leading-[1.1] break-words"
+                  title={event.name}
+                >
+                  {event.name}
+                </p>
+              )}
+              {summary}
+            </div>
           </div>
         </div>
       )}

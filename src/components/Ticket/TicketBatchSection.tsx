@@ -61,7 +61,6 @@ export function TicketBatchSection({
             : parseInt(batch.quantity, 10);
         const quantityBelowSold =
           sold > 0 && !Number.isNaN(qtyParsed) && qtyParsed < sold;
-        const priceLocked = sold > 0;
 
         return (
           <div
@@ -140,7 +139,6 @@ export function TicketBatchSection({
                   type="text"
                   value={batch.price}
                   onChange={(e) => {
-                    if (priceLocked) return;
                     const value = e.target.value.replace(/\D/g, "");
                     const formatted = value
                       ? `R$${(parseInt(value) / 100).toFixed(2).replace(".", ",")}`
@@ -149,25 +147,16 @@ export function TicketBatchSection({
                     if (formatted) onClearFieldError(`batch_price_${batch.id}`);
                   }}
                   onBlur={() => {
-                    if (!priceLocked && !batch.price.trim())
+                    if (!batch.price.trim())
                       onSetFieldError(`batch_price_${batch.id}`, "Preço é obrigatório");
                   }}
                   placeholder="R$0,00"
-                  readOnly={priceLocked}
-                  className={`h-12 ${priceLocked ? "bg-gray-4 text-gray-11 cursor-not-allowed" : formErrors[`batch_price_${batch.id}`] ? "border-red-8 focus-visible:ring-red-8" : ""}`}
+                  className={`h-12 ${formErrors[`batch_price_${batch.id}`] ? "border-red-8 focus-visible:ring-red-8" : ""}`}
                 />
-                {formErrors[`batch_price_${batch.id}`] && !priceLocked && (
+                {formErrors[`batch_price_${batch.id}`] && (
                   <p className="text-red-11 text-sm font-family-dm-sans">
                     {formErrors[`batch_price_${batch.id}`]}
                   </p>
-                )}
-                {priceLocked && (
-                  <div className="flex items-center gap-1">
-                    <Info className="size-5 text-gray-11" />
-                    <span className="text-gray-11 text-base font-normal font-family-dm-sans leading-[1.3]">
-                      Preço não pode ser alterado - já possui vendas
-                    </span>
-                  </div>
                 )}
               </div>
             </div>

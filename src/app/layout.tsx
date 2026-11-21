@@ -15,6 +15,8 @@ import { OrganizerAppSurfaceProvider } from "@/contexts/OrganizerAppSurfaceConte
 import { AdminAppSurfaceProvider } from "@/contexts/AdminAppSurfaceContext";
 import { isTrackingEnabled, TRACKING_META } from "@/lib/trackingEnabled";
 import { robotsDirective } from "@/lib/searchIndexing";
+import { getLocale, loadMessages } from "@/i18n/server";
+import { DEFAULT_LOCALE } from "@/i18n/config";
 
 const manrope = Manrope({
   variable: "--font-manrope",
@@ -129,8 +131,12 @@ export default async function RootLayout({
   // X-Robots-Tag no proxy. Ver lib/searchIndexing.ts.
   const robots = robotsDirective();
 
+  // Idioma do seletor (cookie). pt-BR não manda dicionário: ele já está no bundle client.
+  const locale = await getLocale();
+  const messages = locale === DEFAULT_LOCALE ? undefined : await loadMessages(locale);
+
   return (
-    <html lang="pt-BR" className={`${manrope.variable} ${dmSans.variable}`}>
+    <html lang={locale} className={`${manrope.variable} ${dmSans.variable}`}>
       <head>
         <link rel="icon" href="/images/logo.png" />
         <meta name="robots" content={robots} />
@@ -201,7 +207,7 @@ export default async function RootLayout({
         <AdminAppSurfaceProvider value={isAdminSurface}>
           <OrganizerAppSurfaceProvider value={isAppOrganizerSurface}>
             <ToasterWrapper />
-            <Providers>
+            <Providers locale={locale} messages={messages}>
               <div className="flex flex-col min-h-dvh bg-gray-2 overflow-x-clip">
                 <Header />
 

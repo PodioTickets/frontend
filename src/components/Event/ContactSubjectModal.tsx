@@ -12,6 +12,11 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/utils/cn";
+import { useT } from "@/i18n/client";
+import { ptBRTranslator } from "@/i18n/translate";
+import type eventMessages from "@/i18n/messages/pt-BR/event";
+
+type EventMessageKey = keyof typeof eventMessages;
 
 /**
  * Número de WhatsApp do suporte PodioTicket — apenas dígitos, com DDI
@@ -23,8 +28,9 @@ export const PODIO_SUPPORT_WHATSAPP = "5511940868733";
 interface ContactSubject {
   id: string;
   icon: LucideIcon;
-  title: string;
-  description: string;
+  /** Chaves do namespace `event` — resolvidas no render (idioma atual). */
+  title: EventMessageKey;
+  description: EventMessageKey;
 }
 
 /** Assuntos que levam ao WhatsApp do suporte PodioTicket. */
@@ -32,32 +38,32 @@ const WHATSAPP_SUBJECTS: ContactSubject[] = [
   {
     id: "payment",
     icon: CreditCard,
-    title: "Problemas com pagamento",
-    description: "Dificuldades para concluir ou confirmar o pagamento da inscrição.",
+    title: "subjectPaymentTitle",
+    description: "subjectPaymentDescription",
   },
   {
     id: "coupon",
     icon: TicketPercent,
-    title: "Não consigo aplicar meu cupom",
-    description: "Cupom inválido ou desconto não aplicado.",
+    title: "subjectCouponTitle",
+    description: "subjectCouponDescription",
   },
   {
     id: "confirmation-email",
     icon: Mail,
-    title: "Não recebi o e-mail de confirmação",
-    description: "E-mail não recebido ou inscrição não confirmada",
+    title: "subjectConfirmationEmailTitle",
+    description: "subjectConfirmationEmailDescription",
   },
   {
     id: "refund",
     icon: XCircle,
-    title: "Solicitar cancelamento ou estorno",
-    description: "Desejo cancelar a inscrição ou solicitar reembolso",
+    title: "subjectRefundTitle",
+    description: "subjectRefundDescription",
   },
   {
     id: "account",
     icon: UserRound,
-    title: "Não consigo acessar minha conta",
-    description: "Não consigo entrar ou redefinir minha senha",
+    title: "subjectAccountTitle",
+    description: "subjectAccountDescription",
   },
 ];
 
@@ -65,8 +71,8 @@ const WHATSAPP_SUBJECTS: ContactSubject[] = [
 const OTHER_SUBJECT: ContactSubject = {
   id: "other",
   icon: FileText,
-  title: "Outro assunto",
-  description: "Minha dúvida não se encaixa nas opções acima",
+  title: "otherSubject",
+  description: "subjectOtherDescription",
 };
 
 interface ContactSubjectModalProps {
@@ -84,10 +90,13 @@ export function ContactSubjectModal({
   eventName,
   onOtherSubject,
 }: ContactSubjectModalProps) {
+  const t = useT("event");
   if (!isOpen) return null;
 
-  const openWhatsApp = (subjectTitle: string) => {
-    const message = `Olá! Sobre o evento *${eventName}*, preciso de ajuda com: ${subjectTitle}.`;
+  // Mensagem vai pro suporte (brasileiro) → sempre pt-BR, qualquer que seja o idioma do site.
+  const openWhatsApp = (subjectKey: ContactSubject["title"]) => {
+    const ptT = ptBRTranslator("event");
+    const message = ptT("whatsappHelpMessage", { name: eventName, subject: ptT(subjectKey) });
     const url = `https://wa.me/${PODIO_SUPPORT_WHATSAPP}?text=${encodeURIComponent(message)}`;
     window.open(url, "_blank", "noopener,noreferrer");
     onClose();
@@ -107,10 +116,10 @@ export function ContactSubjectModal({
         </span>
         <span className="flex flex-col gap-1 flex-1 min-w-0">
           <span className="font-semibold text-base leading-tight text-gray-12 font-family-dm-sans">
-            {subject.title}
+            {t(subject.title)}
           </span>
           <span className="text-sm leading-[1.3] text-gray-11 font-family-dm-sans">
-            {subject.description}
+            {t(subject.description)}
           </span>
         </span>
         <ChevronRight className="size-5 text-gray-11 shrink-0" />
@@ -130,7 +139,7 @@ export function ContactSubjectModal({
       type="button"
       onClick={onClose}
       className="flex items-center justify-center size-8 rounded-lg hover:bg-gray-3 transition-colors shrink-0"
-      aria-label="Fechar modal"
+      aria-label={t("closeModal")}
     >
       <X className="size-[18px] text-gray-12" />
     </button>
@@ -143,7 +152,7 @@ export function ContactSubjectModal({
         size === "xl" ? "text-xl" : "text-base"
       )}
     >
-      Selecione o assunto desejado
+      {t("selectSubjectTitle")}
     </h2>
   );
 

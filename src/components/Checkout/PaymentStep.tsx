@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { useThreeDS, ThreeDSError } from "@/hooks/useThreeDS";
-import { OrderSummary } from "./OrderSummary";
+import { OrderSummary, type ParticipantCoupon } from "./OrderSummary";
 import { ParticipantSummaryModal } from "./ParticipantSummaryModal";
 import {
   CheckoutAddressSection,
@@ -50,14 +50,19 @@ import {
   type PayOrderDebitCardRequest,
 } from "@/interfaces/order";
 
-const COUPON_ERROR_MESSAGES: Record<string, string> = {
-  COUPON_NOT_FOUND: "Cupom inválido ou não encontrado.",
-  COUPON_EXPIRED: "Cupom expirado.",
-  COUPON_MIN_VALUE: "Pedido abaixo do valor mínimo do cupom.",
-  VOUCHER_NOT_FOUND: "Voucher inválido ou não encontrado.",
-  VOUCHER_EXPIRED: "Voucher expirado.",
-  VOUCHER_ALREADY_USED: "Este voucher já foi utilizado.",
-  DISCOUNT_CONFLICT: "Cupom e voucher não podem ser usados juntos.",
+import { useT } from "@/i18n/client";
+import { orderAutoCouponLines, orderUnitCoupons } from "@/lib/orderCouponDiscount";
+import type { Translator } from "@/i18n/translate";
+
+/** Código de erro do backend → chave do dicionário `checkout` (texto resolvido no render). */
+const COUPON_ERROR_KEYS: Record<string, Parameters<Translator<"checkout">>[0]> = {
+  COUPON_NOT_FOUND: "couponErrNotFound",
+  COUPON_EXPIRED: "couponErrExpired",
+  COUPON_MIN_VALUE: "couponErrMinValue",
+  VOUCHER_NOT_FOUND: "voucherErrNotFound",
+  VOUCHER_EXPIRED: "voucherErrExpired",
+  VOUCHER_ALREADY_USED: "voucherErrAlreadyUsed",
+  DISCOUNT_CONFLICT: "discountConflict",
 };
 import { validateCardNumber, validateExpiry, validateCVV } from "@/utils/cardValidation";
 import { getPendingCoupon, getPendingCouponKind } from "@/hooks/usePendingCoupon";
@@ -78,6 +83,11 @@ interface PaymentStepProps {
 }
 
 export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
+  const t = useT("checkout");
+  const couponErrorText = (code: string | null | undefined): string | undefined => {
+    const key = code ? COUPON_ERROR_KEYS[code] : undefined;
+    return key ? t(key) : undefined;
+  };
   const [selectedPaymentMethod, setSelectedPaymentMethod] =
     useState<PaymentMethod>("credit");
   const [selectedInstallments, setSelectedInstallments] = useState<string>("1");
@@ -631,8 +641,7 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
         gender?: string;
         nationality?: string;
       };
-      couponCode?: string;
-      couponDiscount?: number;
+      coupons?: ParticipantCoupon[];
       voucherCode?: string;
       voucherDiscount?: number;
     }> = [];
@@ -657,7 +666,15 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
         // couponApplied vem do servidor por reserva; fallback para presença do cupom + desconto.
         const couponApplied = reservedTicket?.couponApplied ?? (!!orderCoupon && unitDiscount > 0);
 
-        const hasCoupon = !!orderCoupon && couponApplied && unitDiscount > 0;
+        const coupons = couponApplied
+          ? orderUnitCoupons(reservedTicket, orderCoupon, currentOrder?.autoCoupons).map(({ coupon, amount }) => ({
+            id: coupon.id,
+            code: coupon.code,
+            couponType: coupon.couponType,
+            percent: coupon.type === "PERCENTAGE" ? coupon.value : undefined,
+            amount: amount / 100,
+          }))
+          : [];
         const hasVoucher = !!orderVoucher && !orderCoupon && unitDiscount > 0;
 
         data.push({
@@ -675,8 +692,7 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
             nationality: participant.nationality,
           },
           additionalProducts: products.length > 0 ? products : undefined,
-          couponCode: hasCoupon ? (orderCoupon!.code ?? "Desconto automático") : undefined,
-          couponDiscount: hasCoupon ? unitDiscount / 100 : undefined,
+          coupons: coupons.length > 0 ? coupons : undefined,
           voucherCode: hasVoucher ? orderVoucher!.code : undefined,
           voucherDiscount: hasVoucher ? unitDiscount / 100 : undefined,
         });
@@ -684,7 +700,7 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
     });
 
     return data;
-  }, [participantsWithTickets, participants, productsData, currentOrder, reservedTicketsByTicketId]);
+  }, [participantsWithTickets, participants, productsData, currentOrder, reservedTicketsByTicketId, t]);
 
   // Calcular produtos selecionados a partir do contexto (productVariations de cada participante)
   const orderItems = useMemo((): Array<{
@@ -810,8 +826,7 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
     : 0;
   // Cupom automático acumulado com o manual (linha própria; 0 sem acúmulo).
   const autoCouponDiscount = (currentOrder?.pricing.autoCouponDiscount ?? 0) / 100;
-  const autoCouponPercent =
-    currentOrder?.autoCoupon?.type === "PERCENTAGE" ? currentOrder.autoCoupon.value : undefined;
+  const autoCouponLines = orderAutoCouponLines(currentOrder?.autoCoupons, t);
 
   const voucherDiscount = currentOrder?.pricing.voucherDiscount
     ? currentOrder.pricing.voucherDiscount / 100
@@ -851,7 +866,7 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
   const isCouponApplied = !!currentOrder?.coupon;
   const isVoucherApplied = !!currentOrder?.voucher;
   const isAutomaticCoupon = currentOrder?.coupon?.couponType === "QUANTITY" || currentOrder?.coupon?.couponType === "AGE";
-  const appliedCouponName = currentOrder?.coupon?.code ?? (isCouponApplied ? (isAutomaticCoupon ? "Cupom automático" : "Desconto automático") : undefined);
+  const appliedCouponName = currentOrder?.coupon?.code ?? (isCouponApplied ? (isAutomaticCoupon ? t("couponAutomatic") : t("autoDiscount")) : undefined);
   const appliedVoucherName = currentOrder?.voucher?.code
 
   // Percentual do cupom vem diretamente do objeto coupon da API.
@@ -871,12 +886,12 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
       const installmentValue = totalValue / i;
       const label =
         i === 1
-          ? `1x de ${formatPrice(totalValue)} (à vista)`
-          : `${i}x de ${formatPrice(installmentValue)} sem juros`;
+          ? t("installmentCash", { value: formatPrice(totalValue) })
+          : t("installmentInterestFree", { n: i, value: formatPrice(installmentValue) });
       options.push({ id: String(i), label });
     }
     return options;
-  }, [totalValue, event.maxInstallments]);
+  }, [totalValue, event.maxInstallments, t]);
 
   // PIX não tem desconto no produto: o valor à vista é o total cheio (o backend
   // cobra `pricing.total` e o payload de /pay não envia nenhum desconto de PIX).
@@ -885,11 +900,11 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
 
   const handleApplyCoupon = async () => {
     if (!couponCode.trim()) {
-      setCouponError("Digite um código de cupom.");
+      setCouponError(t("couponEnterCode"));
       return;
     }
     if (!orderId) {
-      toast.error("Sua reserva expirou. Volte para selecionar os ingressos.");
+      toast.error(t("reservationExpiredGoBack"));
       return;
     }
     setCouponLoading(true);
@@ -903,14 +918,14 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
       // mostra o motivo e NÃO trata como aplicado.
       if (updated.couponRejected) {
         const reason = updated.couponRejected.reason;
-        setCouponError(COUPON_ERROR_MESSAGES[reason] ?? reason ?? "Cupom inválido.");
+        setCouponError(couponErrorText(reason) ?? reason ?? t("couponInvalid"));
         return;
       }
     } catch (err) {
       if (err instanceof OrderApiError) {
-        setCouponError(COUPON_ERROR_MESSAGES[err.code] ?? err.message ?? "Cupom inválido.");
+        setCouponError(couponErrorText(err.code) ?? err.message ?? t("couponInvalid"));
       } else {
-        setCouponError("Erro ao aplicar cupom. Tente novamente.");
+        setCouponError(t("couponApplyError"));
       }
     } finally {
       setCouponLoading(false);
@@ -923,19 +938,19 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
     const isForeign = country !== "Brasil";
     const postalConfig = getPostalCodeConfig(country);
     if (!country) {
-      toast.error("Selecione o país no endereço de cobrança.");
+      toast.error(t("billingSelectCountry"));
       return null;
     }
     if (!postalConfig.isValid(a.cep)) {
       toast.error(
         isForeign
-          ? "Informe um código postal válido no endereço de cobrança."
-          : "Informe um CEP válido (8 dígitos) no endereço de cobrança."
+          ? t("billingInvalidPostalCode")
+          : t("billingInvalidCep")
       );
       return null;
     }
     if (!a.stateUf?.trim()) {
-      toast.error("Selecione o estado no endereço de cobrança.");
+      toast.error(t("billingSelectState"));
       return null;
     }
     // Bairro só é exigido no Brasil — estrangeiro não preenche o campo.
@@ -947,8 +962,8 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
     if (missingRequired) {
       toast.error(
         isForeign
-          ? "Preencha rua, número e cidade no endereço de cobrança."
-          : "Preencha rua, número, bairro e cidade no endereço de cobrança."
+          ? t("billingMissingFieldsForeign")
+          : t("billingMissingFields")
       );
       return null;
     }
@@ -983,32 +998,32 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
     };
     if (err instanceof OrderApiError) {
       if (err.code === "ORDER_NOT_PENDING" || err.code === "ORDER_NOT_FOUND") {
-        toast.error("Sua reserva expirou.");
+        toast.error(t("reservationExpired"));
         clearTimer();
         return;
       }
       if (err.code === "PAYMENT_REFUSED") {
         regenerateIdempotencyKey();
-        showFailure("Pagamento não aprovado. Tente novamente.");
+        showFailure(t("paymentNotApprovedRetry"));
         return;
       }
       if (err.code === "BILLING_ADDRESS_REQUIRED") {
-        toast.error("Confirme o endereço de cobrança antes de pagar.");
+        toast.error(t("confirmBillingBeforePay"));
         return;
       }
       if (err.code === "PARTICIPANTS_REQUIRED") {
-        toast.error("Preencha os dados dos participantes antes de pagar.");
+        toast.error(t("fillParticipantsBeforePay"));
         return;
       }
       if (err.code === "IDEMPOTENCY_KEY_MISMATCH") {
         regenerateIdempotencyKey();
-        toast.error("Tente novamente.");
+        toast.error(t("tryAgain"));
         return;
       }
-      showFailure("Erro ao processar pagamento. Tente novamente.");
+      showFailure(t("paymentProcessError"));
       return;
     }
-    showFailure("Erro ao processar pagamento. Tente novamente.");
+    showFailure(t("paymentProcessError"));
   };
 
   /**
@@ -1022,7 +1037,7 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
       return;
     }
     if (!orderId) {
-      toast.error("Sua reserva expirou. Volte para selecionar os ingressos.");
+      toast.error(t("reservationExpiredGoBack"));
       return;
     }
     const payload = buildBillingAddressPayload();
@@ -1070,13 +1085,13 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
           err.code === "ORDER_NOT_PENDING" ||
           err.code === "ORDER_NOT_FOUND"
         ) {
-          toast.error("Sua reserva expirou.");
+          toast.error(t("reservationExpired"));
           clearTimer();
         } else {
-          toast.error(err.message || "Erro ao salvar endereço.");
+          toast.error(err.message || t("billingSaveError"));
         }
       } else {
-        toast.error("Erro ao salvar endereço.");
+        toast.error(t("billingSaveError"));
       }
     } finally {
       setBillingAddressSaving(false);
@@ -1124,11 +1139,11 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
   const handleProcessPixCheckout = async () => {
     if (checkoutLoadingRef.current) return;
     if (!orderId) {
-      toast.error("Sua reserva expirou. Volte para selecionar os ingressos.");
+      toast.error(t("reservationExpiredGoBack"));
       return;
     }
     if (!billingAddressConfirmed) {
-      toast.error("Confirme o endereço de cobrança antes de pagar.");
+      toast.error(t("confirmBillingBeforePay"));
       return;
     }
     fireAddPaymentInfo();
@@ -1153,7 +1168,7 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
         setPixData(pix);
         setIsPixModalOpen(true);
       } else {
-        toast.error("Erro ao gerar QR Code PIX. Tente novamente.");
+        toast.error(t("pixGenerateError"));
       }
     } catch (err) {
       handlePayError(err);
@@ -1167,11 +1182,11 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
   const handleProcessFreeCheckout = async () => {
     if (checkoutLoadingRef.current) return;
     if (!orderId) {
-      toast.error("Sua reserva expirou. Volte para selecionar os ingressos.");
+      toast.error(t("reservationExpiredGoBack"));
       return;
     }
     if (!billingAddressConfirmed) {
-      toast.error("Confirme o endereço de cobrança antes de finalizar.");
+      toast.error(t("confirmBillingBeforeFinish"));
       return;
     }
     fireAddPaymentInfo();
@@ -1184,7 +1199,7 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
       };
       const result = await payOrder(orderId, payload, idempotencyKeyRef.current);
       clearTimer();
-      toast.success("Pedido finalizado!");
+      toast.success(t("orderCompleted"));
       onSuccess?.(result.orderId);
     } catch (err) {
       handlePayError(err);
@@ -1201,37 +1216,37 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
     const newCardErrors: CardErrors = {};
 
     if (!cardName?.trim()) {
-      newCardErrors.cardName = "Informe o nome impresso no cartão.";
+      newCardErrors.cardName = t("cardNameRequired");
     }
     if (!cardNumber) {
-      newCardErrors.cardNumber = "Informe o número do cartão.";
+      newCardErrors.cardNumber = t("cardNumberRequired");
     } else if (!validateCardNumber(cardNumber)) {
-      newCardErrors.cardNumber = "Número do cartão inválido.";
+      newCardErrors.cardNumber = t("cardNumberInvalid");
     }
     if (!cardExpiry) {
-      newCardErrors.cardExpiry = "Informe a data de validade.";
+      newCardErrors.cardExpiry = t("cardExpiryRequired");
     } else if (!validateExpiry(cardExpiry)) {
-      newCardErrors.cardExpiry = "Cartão expirado ou data inválida.";
+      newCardErrors.cardExpiry = t("cardExpiryInvalid");
     }
     if (!cardCVV) {
-      newCardErrors.cardCVV = "Informe o CVV.";
+      newCardErrors.cardCVV = t("cardCvvRequired");
     } else if (!validateCVV(cardCVV)) {
-      newCardErrors.cardCVV = "CVV inválido.";
+      newCardErrors.cardCVV = t("cardCvvInvalid");
     }
 
     if (Object.keys(newCardErrors).length > 0) {
       setCardErrors(newCardErrors);
-      toast.error("Por favor, corrija os campos do cartão.");
+      toast.error(t("cardFixFields"));
       return;
     }
     setCardErrors({});
 
     if (!orderId) {
-      toast.error("Sua reserva expirou. Volte para selecionar os ingressos.");
+      toast.error(t("reservationExpiredGoBack"));
       return;
     }
     if (!billingAddressConfirmed) {
-      toast.error("Confirme o endereço de cobrança antes de pagar.");
+      toast.error(t("confirmBillingBeforePay"));
       return;
     }
 
@@ -1258,14 +1273,14 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
 
       if (result.status === "PAID") {
         clearTimer();
-        toast.success("Pagamento aprovado!");
+        toast.success(t("paymentApproved"));
         onSuccess?.(result.orderId);
       } else {
         // Sincroniza o estado do timer imediatamente.
         // Se o servidor retornou CANCELLED, dispara handleCancelledByServer → redirect silencioso.
         // Se ainda PENDING, apenas atualiza o timer.
         syncFromOrder(result);
-        toast.error("Pagamento não aprovado. Tente novamente.");
+        toast.error(t("paymentNotApprovedRetry"));
         regenerateIdempotencyKey();
       }
     } catch (err) {
@@ -1282,35 +1297,35 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
 
     // 1. Validar campos do cartão
     const newErrors: CardErrors = {};
-    if (!debitCardName.trim()) newErrors.cardName = "Informe o nome impresso no cartão.";
+    if (!debitCardName.trim()) newErrors.cardName = t("cardNameRequired");
     if (!debitCardNumber) {
-      newErrors.cardNumber = "Informe o número do cartão.";
+      newErrors.cardNumber = t("cardNumberRequired");
     } else if (!validateCardNumber(debitCardNumber)) {
-      newErrors.cardNumber = "Número do cartão inválido.";
+      newErrors.cardNumber = t("cardNumberInvalid");
     }
     if (!debitCardExpiry) {
-      newErrors.cardExpiry = "Informe a data de validade.";
+      newErrors.cardExpiry = t("cardExpiryRequired");
     } else if (!validateExpiry(debitCardExpiry)) {
-      newErrors.cardExpiry = "Cartão expirado ou data inválida.";
+      newErrors.cardExpiry = t("cardExpiryInvalid");
     }
     if (!debitCardCVV) {
-      newErrors.cardCVV = "Informe o CVV.";
+      newErrors.cardCVV = t("cardCvvRequired");
     } else if (!validateCVV(debitCardCVV)) {
-      newErrors.cardCVV = "CVV inválido.";
+      newErrors.cardCVV = t("cardCvvInvalid");
     }
     if (Object.keys(newErrors).length > 0) {
       setDebitCardErrors(newErrors);
-      toast.error("Por favor, corrija os campos do cartão.");
+      toast.error(t("cardFixFields"));
       return;
     }
     setDebitCardErrors({});
 
     if (!orderId) {
-      toast.error("Sua reserva expirou. Volte para selecionar os ingressos.");
+      toast.error(t("reservationExpiredGoBack"));
       return;
     }
     if (!billingAddressConfirmed) {
-      toast.error("Confirme o endereço de cobrança antes de pagar.");
+      toast.error(t("confirmBillingBeforePay"));
       return;
     }
 
@@ -1357,7 +1372,7 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
       const result = await payOrder(orderId, payload, idempotencyKeyRef.current);
       if (result.status === "PAID") {
         clearTimer();
-        toast.success("Pagamento aprovado!");
+        toast.success(t("paymentApproved"));
         onSuccess?.(result.orderId);
         return;
       }
@@ -1375,7 +1390,7 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
       // toast do crédito; o modal "Pagamento não aprovado" fica reservado a
       // erro/cancelamento do 3DS (tratado no catch abaixo).
       syncFromOrder(result);
-      toast.error("Pagamento não aprovado. Tente novamente.");
+      toast.error(t("paymentNotApprovedRetry"));
       regenerateIdempotencyKey();
     } catch (err) {
       if (err instanceof ThreeDSError) {
@@ -1393,21 +1408,21 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
             setCardErrorModalOpen(true);
             break;
           case "UNSUPPORTED_BRAND":
-            toast.error("Bandeira do cartão não suportada para autenticação de débito.");
+            toast.error(t("threeDsUnsupportedBrand"));
             break;
           case "TOKEN_ERROR":
-            toast.error("Erro ao iniciar autenticação 3DS. Tente novamente.");
+            toast.error(t("threeDsTokenError"));
             break;
           case "DISABLED":
-            toast.error("Autenticação 3DS desabilitada para este estabelecimento.");
+            toast.error(t("threeDsDisabled"));
             break;
           case "SDK_ERROR":
             toast.error(
-              `Erro no 3DS: ${err.message}${err.returnCode ? ` (cod. ${err.returnCode})` : ""}`,
+              `${t("threeDsSdkError", { message: err.message })}${err.returnCode ? t("threeDsReturnCode", { code: err.returnCode }) : ""}`,
             );
             break;
           default:
-            toast.error("Erro na autenticação 3DS. Tente novamente.");
+            toast.error(t("threeDsGenericError"));
         }
         regenerateIdempotencyKey();
         return;
@@ -1531,10 +1546,6 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
             key={participantIndex}
             className={`${index > 0 ? "border-t border-gray-6 pt-4" : "pb-4"}`}
           >
-            <p className="text-sm font-semibold text-gray-12 mb-4 font-family-dm-sans">
-              Participante {participantIndex + 1}
-            </p>
-
             {/* Card do participante */}
             <div className="border border-gray-6 rounded-xl p-2 mb-4 w-full">
               <div className="flex items-center gap-2">
@@ -1559,7 +1570,7 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-semibold text-gray-12 font-family-dm-sans">
-                    {participant.name || `Participante ${participantIndex + 1}`}
+                    {participant.name || t("participantN", { n: participantIndex + 1 })}
                   </p>
                   <div className="flex items-center gap-2 text-xs text-gray-11 font-family-dm-sans">
                     {participant.birthDate && (
@@ -1593,7 +1604,7 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
             <div className="flex items-end justify-between gap-3 mb-3">
               <div className="flex flex-col gap-0.5 min-w-0">
                 <p className="font-family-dm-sans font-normal text-xs leading-[1.3] text-gray-11 truncate">
-                  {categoryName || "Ingresso Avulso"}
+                  {categoryName || t("singleTicketTitle")}
                 </p>
                 <p className="font-manrope font-bold text-sm leading-[1.2] text-gray-12 truncate">
                   {ticket.name}
@@ -1622,7 +1633,7 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
                   {optionalProducts.length > 0 && (
                     <div className="mb-3">
                       <SummaryRow
-                        label={`${optionalProducts.length}x ${optionalProducts.length > 1 ? "Itens adicionais" : "Item adicional"}`}
+                        label={`${optionalProducts.length}x ${optionalProducts.length > 1 ? t("additionalItems") : t("additionalItem")}`}
                         value={formatPrice(optionalTotal)}
                       />
                     </div>
@@ -1630,7 +1641,7 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
 
                   {includedProducts.length > 0 && (
                     <div className="mb-3 flex items-baseline gap-1 text-gray-12 font-family-manrope">
-                      <span className={"text-sm font-medium"}>{includedProducts.length}x {includedProducts.length > 1 ? "Itens inclusos" : "Item incluso"}</span>
+                      <span className={"text-sm font-medium"}>{includedProducts.length}x {includedProducts.length > 1 ? t("includedItems") : t("includedItem")}</span>
                     </div>
                   )}
 
@@ -1659,7 +1670,7 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
                               </div>
                               <p className="text-sm font-semibold text-gray-12 font-manrope">
                                 {product.isIncluded
-                                  ? "Incluso"
+                                  ? t("included")
                                   : formatPrice(product.price / 100)}
                               </p>
                             </div>
@@ -1667,7 +1678,7 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
                           <div className="px-3 py-2.5">
                             <div className="flex gap-1 items-center">
                               <p className="text-sm text-gray-12 font-family-dm-sans">
-                                Tamanho:
+                                {t("sizeLabel")}
                               </p>
                               <p className="text-sm font-semibold text-gray-12 font-manrope">
                                 {product.size || "N/A"}
@@ -1690,7 +1701,7 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
                       }}
                       className="text-sm font-medium text-gray-11 font-family-dm-sans underline"
                     >
-                      {expandedProducts[participantIndex] ? "Mostrar menos" : "Mostrar mais"}
+                      {expandedProducts[participantIndex] ? t("showLess") : t("showMore")}
                     </button>
                   )}
                 </>
@@ -1718,10 +1729,10 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
         <div className="pb-6">
           <p className="text-sm text-gray-11 font-family-dm-sans">
             {!billingAddressConfirmed
-              ? "Informe e confirme o endereço de cobrança para escolher a forma de pagamento."
+              ? t("paymentHintAddress")
               : isFreeOrder
-                ? "Clique em Finalizar pedido para confirmar. Os ingressos serão liberados imediatamente."
-                : "Revise seu pedido e finalize com cartão ou Pix. Os ingressos serão liberados após a aprovação do pagamento."}
+                ? t("paymentHintFree")
+                : t("paymentHintReview")}
           </p>
         </div>
 
@@ -1753,7 +1764,7 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
                   isLoading={checkoutLoading}
                   className="w-full bg-gray-12 text-gray-1 font-bold font-manrope disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  Finalizar pedido
+                  {t("finishOrder")}
                 </Button>
               </div>
             )}
@@ -1769,8 +1780,7 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
               coupon={{
                 code: couponCode,
                 discount: couponDiscount,
-                autoDiscount: autoCouponDiscount,
-                autoPercent: autoCouponPercent,
+                autoLines: autoCouponLines,
                 name: appliedCouponName,
                 percent: couponPercent,
                 type: currentOrder?.coupon?.type ?? undefined,
@@ -1816,7 +1826,7 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
                         }`}
                     />
                     <span className="text-base font-semibold text-primary-12 font-manrope">
-                      Cartão
+                      {t("card")}
                     </span>
                   </div>
                   <div className="flex gap-1 items-center">
@@ -1838,14 +1848,14 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
                           checked={selectedPaymentMethod === "credit"}
                           onCheckedChange={() => setSelectedPaymentMethod("credit")}
                         />
-                        <span className="text-sm font-semibold text-gray-12 font-manrope">Crédito</span>
+                        <span className="text-sm font-semibold text-gray-12 font-manrope">{t("credit")}</span>
                       </label>}
                       {allowDebit && <label className="flex items-center gap-2 cursor-pointer">
                         <Checkbox
                           checked={selectedPaymentMethod === "debit"}
                           onCheckedChange={() => setSelectedPaymentMethod("debit")}
                         />
-                        <span className="text-sm font-semibold text-gray-12 font-manrope">Débito</span>
+                        <span className="text-sm font-semibold text-gray-12 font-manrope">{t("debit")}</span>
                       </label>}
                     </div>
 
@@ -1873,7 +1883,7 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
                           isLoading={checkoutLoading}
                           className="w-full mt-4 font-bold font-manrope disabled:opacity-50 disabled:cursor-not-allowed"
                         >
-                          Finalizar compra
+                          {t("finishPurchase")}
                         </Button>
                       </>
                     )}
@@ -1898,7 +1908,7 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
                           isLoading={debitLoading}
                           className="w-full mt-4 font-bold font-manrope disabled:opacity-50 disabled:cursor-not-allowed"
                         >
-                          Finalizar compra
+                          {t("finishPurchase")}
                         </Button>
                       </>
                     )}
@@ -1948,7 +1958,7 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
                       isLoading={checkoutLoading}
                       className="w-full font-bold font-manrope"
                     >
-                      Gerar QR CODE
+                      {t("generateQrCodeUpper")}
                     </Button>
                   </div>
                 )}
@@ -1972,20 +1982,20 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
         subtotal={ticketSubtotalLocal + additionalProductsTotal}
         discount={
           isCouponApplied && couponDiscount > 0 && autoCouponDiscount > 0
-            ? { label: "Descontos", amount: couponDiscount + autoCouponDiscount }
+            ? { label: t("discounts"), amount: couponDiscount + autoCouponDiscount }
             : isCouponApplied && couponDiscount > 0
             ? {
               label: `${isAutomaticCoupon
-                ? "Cupom automático"
+                ? t("couponAutomatic")
                 : appliedCouponName
-                  ? `Cupom ${appliedCouponName}`
-                  : "Cupom"
+                  ? t("couponNamed", { name: appliedCouponName })
+                  : t("coupon")
                 }${couponPercent != null && couponPercent > 0 ? ` (-${couponPercent}%)` : ""}`,
               amount: couponDiscount,
             }
             : isVoucherApplied && voucherDiscount > 0
               ? {
-                label: appliedVoucherName ? `Voucher ${appliedVoucherName}` : "Voucher",
+                label: appliedVoucherName ? t("voucherNamed", { code: appliedVoucherName }) : "Voucher",
                 amount: voucherDiscount,
               }
               : null
@@ -2020,15 +2030,15 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
                   <ArrowButton isOpen={false} />
                 </button>
                 <h1 className="text-[28px] font-bold text-gray-12 font-manrope leading-[1.1]">
-                  Pagamento
+                  {t("stepPayment")}
                 </h1>
               </div>
               <p className="text-sm text-gray-11 font-family-dm-sans leading-[1.3]">
                 {!billingAddressConfirmed
-                  ? "Informe e confirme o endereço de cobrança para escolher a forma de pagamento."
+                  ? t("paymentHintAddress")
                   : isFreeOrder
-                    ? "Clique em Finalizar pedido para confirmar. Os ingressos serão liberados imediatamente."
-                    : "Revise seu pedido e finalize com cartão ou Pix. Os ingressos serão liberados após a aprovação do pagamento."}
+                    ? t("paymentHintFree")
+                    : t("paymentHintReview")}
               </p>
             </div>
 
@@ -2055,7 +2065,7 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
                 isLoading={checkoutLoading}
                 className="w-full font-bold font-manrope disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                Finalizar pedido
+                {t("finishOrder")}
               </Button>
             )}
             {billingAddressConfirmed && !isFreeOrder ? (
@@ -2063,7 +2073,7 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
                 {/* Cartão (crédito + débito unificados) */}
                 {allowCard && <div>
                   <PaymentMethodOption
-                    option={{ id: "credit", name: "Cartão", description: "", icons: cardIcons }}
+                    option={{ id: "credit", name: t("card"), description: "", icons: cardIcons }}
                     isSelected={isCardSelected}
                     onSelect={() => { if (!isCardSelected) setSelectedPaymentMethod(defaultCardMethod); }}
                   />
@@ -2076,14 +2086,14 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
                             checked={selectedPaymentMethod === "credit"}
                             onCheckedChange={() => setSelectedPaymentMethod("credit")}
                           />
-                          <span className="text-sm font-semibold text-gray-12 font-manrope">Crédito</span>
+                          <span className="text-sm font-semibold text-gray-12 font-manrope">{t("credit")}</span>
                         </label>}
                         {allowDebit && <label className="flex items-center gap-2 cursor-pointer">
                           <Checkbox
                             checked={selectedPaymentMethod === "debit"}
                             onCheckedChange={() => setSelectedPaymentMethod("debit")}
                           />
-                          <span className="text-sm font-semibold text-gray-12 font-manrope">Débito</span>
+                          <span className="text-sm font-semibold text-gray-12 font-manrope">{t("debit")}</span>
                         </label>}
                       </div>
 
@@ -2111,7 +2121,7 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
                             isLoading={checkoutLoading}
                             className="w-full mt-4 font-bold font-manrope disabled:opacity-50 disabled:cursor-not-allowed"
                           >
-                            Finalizar compra
+                            {t("finishPurchase")}
                           </Button>
                         </>
                       )}
@@ -2136,7 +2146,7 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
                             isLoading={debitLoading}
                             className="w-full mt-4 font-bold font-manrope disabled:opacity-50 disabled:cursor-not-allowed"
                           >
-                            Finalizar compra
+                            {t("finishPurchase")}
                           </Button>
                         </>
                       )}
@@ -2181,8 +2191,7 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
             coupon={{
               code: couponCode,
               discount: couponDiscount,
-              autoDiscount: autoCouponDiscount,
-              autoPercent: autoCouponPercent,
+              autoLines: autoCouponLines,
               name: appliedCouponName,
               percent: couponPercent,
               type: currentOrder?.coupon?.type ?? undefined,

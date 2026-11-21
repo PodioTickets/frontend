@@ -13,6 +13,7 @@ import { PasswordIcon } from "../Icons/PasswordIcon";
 import { ForgotPasswordPanel, ForgotPasswordEnterCodePanel, ForgotPasswordNewPasswordPanel } from "./ForgotPasswordPanels";
 import { useForgotPasswordFlow } from "./useForgotPasswordFlow";
 import { useLoginFlow } from "./useLoginFlow";
+import { useT, useTurnstileLanguage } from "@/i18n/client";
 
 const TURNSTILE_SITE_KEY = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY ?? "";
 
@@ -46,6 +47,8 @@ const GoogleIcon = ({ className = "size-6" }: { className?: string }) => (
 );
 
 export function LoginModal() {
+  const t = useT("auth");
+  const turnstileLanguage = useTurnstileLanguage();
   const { isOpen, closeLoginModal, openLoginModal } = useLoginModal();
   const { openRegisterModal } = useRegisterModal();
   const {
@@ -114,14 +117,14 @@ export function LoginModal() {
         <div className="flex items-center gap-2">
           <Shield className="size-5 text-[#646464] shrink-0" strokeWidth={1.5} />
           <span className="font-family-dm-sans font-semibold text-xl text-[#202020] leading-[1.3]">
-            Verifique sua identidade
+            {t("mfaTitle")}
           </span>
         </div>
         <button
           type="button"
           onClick={fecharMfa}
           className="flex items-center justify-center size-8 rounded-lg hover:bg-gray-3 transition-colors shrink-0"
-          aria-label="Fechar"
+          aria-label={t("close")}
         >
           <X className="size-[18px] text-[#646464]" strokeWidth={1.5} />
         </button>
@@ -130,7 +133,7 @@ export function LoginModal() {
       {/* Corpo */}
       <div className="flex flex-col gap-6 p-6">
         <p className="font-family-dm-sans text-base text-[#646464] leading-[1.3]">
-          Enviamos um código de 6 dígitos para o seu e-mail. Digite ou cole o código abaixo para acessar sua conta.
+          {t("mfaDescription")}
         </p>
 
         <OtpCodeInput
@@ -149,7 +152,7 @@ export function LoginModal() {
           >
             <Info className="size-5 shrink-0 text-[#641723]" strokeWidth={1.5} aria-hidden />
             <p className="font-family-dm-sans font-medium text-sm text-[#641723]">
-              Código inválido. Verifique e tente novamente
+              {t("mfaInvalidCode")}
             </p>
           </div>
         )}
@@ -158,7 +161,7 @@ export function LoginModal() {
         <div className="flex justify-end">
           {mfaResendCooldown > 0 ? (
             <span className="font-family-dm-sans font-semibold text-sm text-[#646464]">
-              Aguarde ({mfaResendCooldown} seg) para reenviar
+              {t("mfaWaitToResend", { seconds: mfaResendCooldown })}
             </span>
           ) : (
             <button
@@ -166,7 +169,7 @@ export function LoginModal() {
               onClick={handleMfaResend}
               className="font-family-dm-sans font-semibold text-sm text-[#646464] hover:text-[#202020] transition-colors"
             >
-              Enviar código
+              {t("sendCode")}
             </button>
           )}
         </div>
@@ -180,7 +183,7 @@ export function LoginModal() {
           disabled={mfaConfirming || mfaCode.length < 6}
           className="h-12 px-8 bg-[#59E373] rounded-lg font-manrope font-bold text-lg text-[#141A15] disabled:opacity-50 hover:bg-[#4fd066] transition-colors"
         >
-          {mfaConfirming ? "Verificando..." : "Confirmar"}
+          {mfaConfirming ? t("verifying") : t("confirm")}
         </button>
       </div>
     </div>
@@ -266,7 +269,7 @@ export function LoginModal() {
                     <button
                       onClick={closeLoginModal}
                       className="absolute top-4 right-4 z-20 flex items-center justify-center size-8 rounded-full bg-gray-1 hover:bg-gray-3 transition-colors"
-                      aria-label="Fechar modal"
+                      aria-label={t("closeModal")}
                     >
                       <X className="size-5 text-gray-12" />
                     </button>
@@ -304,7 +307,7 @@ export function LoginModal() {
                     {/* Welcome text — mesmo texto do desktop */}
                     <div className="flex flex-col items-center justify-center pt-6 px-4 pb-0 text-center">
                       <p className="font-normal text-lg leading-[1.3] text-gray-11 font-family-dm-sans">
-                        Sua próxima largada começa aqui!
+                        {t("welcome")}
                       </p>
                     </div>
 
@@ -317,13 +320,13 @@ export function LoginModal() {
                         {/* Email input */}
                         <div className="flex flex-col gap-2 items-start w-full">
                           <label className="font-normal text-base leading-[1.3] text-gray-11 font-family-dm-sans">
-                            Email
+                            {t("email")}
                           </label>
                           <div className="relative w-full">
                             <EmailIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-11" />
                             <Input
                               type="email"
-                              placeholder="Digite seu email"
+                              placeholder={t("emailPlaceholder")}
                               value={formData.email}
                               onChange={(e) =>
                                 handleInputChange("email", e.target.value)
@@ -345,13 +348,13 @@ export function LoginModal() {
                         {/* Password input */}
                         <div className="flex flex-col gap-2 items-start w-full">
                           <label className="font-normal text-base leading-[1.3] text-gray-11 font-family-dm-sans">
-                            Senha
+                            {t("password")}
                           </label>
                           <div className="relative w-full">
                             <PasswordIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-11 pointer-events-none" />
                             <Input
                               type={showPassword ? "text" : "password"}
-                              placeholder="Digite sua senha"
+                              placeholder={t("passwordPlaceholder")}
                               value={formData.password}
                               onChange={(e) =>
                                 handleInputChange("password", e.target.value)
@@ -366,7 +369,7 @@ export function LoginModal() {
                               type="button"
                               onClick={() => setShowPassword((v) => !v)}
                               className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-11 hover:text-gray-12 transition-colors"
-                              aria-label={showPassword ? "Ocultar senha" : "Mostrar senha"}
+                              aria-label={showPassword ? t("hidePassword") : t("showPassword")}
                             >
                               {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                             </button>
@@ -383,7 +386,7 @@ export function LoginModal() {
                           <div className="flex items-center gap-2 w-full rounded-lg border border-red-6 bg-gradient-to-r from-red-4 to-red-3 p-3">
                             <Info className="size-5 shrink-0 text-red-12" strokeWidth={1.75} aria-hidden />
                             <p className="font-medium text-sm leading-[1.3] text-red-12 font-family-dm-sans">
-                              E-mail ou senha incorretos. Verifique suas credenciais e tente novamente
+                              {t("credentialsError")}
                             </p>
                           </div>
                         )}
@@ -394,7 +397,7 @@ export function LoginModal() {
                           onClick={() => startForgotFlowFrom(formData.email)}
                           className="font-semibold text-sm leading-[1.3] text-gray-11 hover:text-primary-10 transition-colors font-family-dm-sans cursor-pointer underline"
                         >
-                          Esqueci minha senha
+                          {t("forgotPassword")}
                         </button>
                       </div>
 
@@ -412,7 +415,7 @@ export function LoginModal() {
                               onError={() => setTurnstileToken(null)}
                               onExpire={() => setTurnstileToken(null)}
                               style={{ width: "100%", display: "block" }}
-                              options={{ theme: "light", size: "flexible", appearance: "interaction-only" }}
+                              options={{ theme: "light", size: "flexible", appearance: "interaction-only", language: turnstileLanguage }}
                             />
                           </div>
                         </div>
@@ -425,8 +428,8 @@ export function LoginModal() {
                         className="w-full h-11 font-bold text-base font-manrope disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         {isSubmitting || authLoading
-                          ? "Conectando..."
-                          : "Entrar"}
+                          ? t("connecting")
+                          : t("logIn")}
                       </Button>
                     </form>
 
@@ -437,7 +440,7 @@ export function LoginModal() {
                         <div className="flex gap-2.5 items-center justify-center w-full">
                           <div className="flex-1 h-px bg-gray-6" />
                           <p className="font-normal text-sm leading-[1.3] text-gray-11 text-center font-family-dm-sans whitespace-nowrap">
-                            Ou conecte-se com
+                            {t("orConnectWith")}
                           </p>
                           <div className="flex-1 h-px bg-gray-6" />
                         </div>
@@ -450,7 +453,7 @@ export function LoginModal() {
                           >
                             <GoogleIcon />
                             <span className="font-normal text-sm leading-[1.3] text-gray-12 font-family-dm-sans">
-                              Entrar com Google
+                              {t("logInWithGoogle")}
                             </span>
                           </Button>
                         </div>
@@ -459,7 +462,7 @@ export function LoginModal() {
                       {/* Sign up link */}
                       <div className="flex gap-1 items-center">
                         <p className="font-medium text-sm leading-[1.3] text-gray-12 text-center font-family-dm-sans">
-                          Ainda não possui uma conta?
+                          {t("noAccount")}
                         </p>
                         <button
                           onClick={() => {
@@ -468,7 +471,7 @@ export function LoginModal() {
                           }}
                           className="font-semibold text-base leading-[1.3] text-primary-10 underline hover:text-primary-11 transition-colors font-family-dm-sans cursor-pointer"
                         >
-                          Criar conta
+                          {t("signUp")}
                         </button>
                       </div>
                     </div>
@@ -509,7 +512,7 @@ export function LoginModal() {
                     <button
                       onClick={closeLoginModal}
                       className="absolute top-4 right-4 z-20 flex items-center justify-center size-8 rounded-full bg-gray-1 hover:bg-gray-3 transition-colors"
-                      aria-label="Fechar modal"
+                      aria-label={t("closeModal")}
                     >
                       <X className="size-5 text-gray-12" />
                     </button>
@@ -545,7 +548,7 @@ export function LoginModal() {
                     {/* Welcome text */}
                     <div className="flex flex-col gap-4 items-center justify-center pt-6 pb-0 px-6 text-center">
                       <p className="font-normal text-lg leading-[1.3] text-gray-11 font-family-dm-sans">
-                        Sua próxima largada começa aqui!
+                        {t("welcome")}
                       </p>
                     </div>
 
@@ -558,13 +561,13 @@ export function LoginModal() {
                         {/* Email input */}
                         <div className="flex flex-col gap-1 items-start w-full">
                           <label className="font-normal text-base leading-[1.3] text-gray-11 font-family-dm-sans">
-                            Email
+                            {t("email")}
                           </label>
                           <div className="relative w-full">
                             <EmailIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-11" />
                             <Input
                               type="email"
-                              placeholder="Digite seu email"
+                              placeholder={t("emailPlaceholder")}
                               value={formData.email}
                               onChange={(e) =>
                                 handleInputChange("email", e.target.value)
@@ -586,13 +589,13 @@ export function LoginModal() {
                         {/* Password input */}
                         <div className="flex flex-col gap-1 items-start w-full">
                           <label className="font-normal text-base leading-[1.3] text-gray-11 font-family-dm-sans">
-                            Senha
+                            {t("password")}
                           </label>
                           <div className="relative w-full">
                             <PasswordIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-11 pointer-events-none" />
                             <Input
                               type={showPassword ? "text" : "password"}
-                              placeholder="Digite sua senha"
+                              placeholder={t("passwordPlaceholder")}
                               value={formData.password}
                               onChange={(e) =>
                                 handleInputChange("password", e.target.value)
@@ -607,7 +610,7 @@ export function LoginModal() {
                               type="button"
                               onClick={() => setShowPassword((v) => !v)}
                               className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-11 hover:text-gray-12 transition-colors"
-                              aria-label={showPassword ? "Ocultar senha" : "Mostrar senha"}
+                              aria-label={showPassword ? t("hidePassword") : t("showPassword")}
                             >
                               {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                             </button>
@@ -624,7 +627,7 @@ export function LoginModal() {
                           <div className="flex items-center gap-2 w-full rounded-lg border border-red-6 bg-gradient-to-r from-red-4 to-red-3 p-3">
                             <Info className="size-5 shrink-0 text-red-12" strokeWidth={1.75} aria-hidden />
                             <p className="font-medium text-sm leading-[1.3] text-red-12 font-family-dm-sans">
-                              E-mail ou senha incorretos. Verifique suas credenciais e tente novamente
+                              {t("credentialsError")}
                             </p>
                           </div>
                         )}
@@ -635,7 +638,7 @@ export function LoginModal() {
                           onClick={() => startForgotFlowFrom(formData.email)}
                           className="font-semibold text-base leading-[1.3] text-gray-11 hover:text-primary-10 transition-colors font-family-dm-sans cursor-pointer underline"
                         >
-                          Esqueci minha senha
+                          {t("forgotPassword")}
                         </button>
                       </div>
 
@@ -653,7 +656,7 @@ export function LoginModal() {
                               onError={() => setTurnstileToken(null)}
                               onExpire={() => setTurnstileToken(null)}
                               style={{ width: "100%", display: "block" }}
-                              options={{ theme: "light", size: "flexible", appearance: "interaction-only" }}
+                              options={{ theme: "light", size: "flexible", appearance: "interaction-only", language: turnstileLanguage }}
                             />
                           </div>
                         </div>
@@ -666,8 +669,8 @@ export function LoginModal() {
                         className="w-full h-12 font-bold text-lg font-manrope disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         {isSubmitting || authLoading
-                          ? "Conectando..."
-                          : "Entrar"}
+                          ? t("connecting")
+                          : t("logIn")}
                       </Button>
                     </form>
 
@@ -678,7 +681,7 @@ export function LoginModal() {
                         <div className="flex gap-2.5 items-center justify-center w-full">
                           <div className="flex-1 h-px bg-gray-6" />
                           <p className="font-normal text-base leading-[1.3] text-gray-11 text-center font-family-dm-sans whitespace-nowrap">
-                            Ou conecte-se com
+                            {t("orConnectWith")}
                           </p>
                           <div className="flex-1 h-px bg-gray-6" />
                         </div>
@@ -691,7 +694,7 @@ export function LoginModal() {
                           >
                             <GoogleIcon className="size-6" />
                             <span className="font-normal text-sm leading-[1.3] text-gray-12 font-family-dm-sans">
-                              Entrar com Google
+                              {t("logInWithGoogle")}
                             </span>
                           </Button>
                         </div>
@@ -700,7 +703,7 @@ export function LoginModal() {
                       {/* Sign up link */}
                       <div className="flex gap-1 items-start">
                         <p className="font-normal text-base leading-[1.3] text-gray-12 text-center font-family-dm-sans">
-                          Ainda não possui uma conta?
+                          {t("noAccount")}
                         </p>
                         <button
                           onClick={() => {
@@ -709,7 +712,7 @@ export function LoginModal() {
                           }}
                           className="font-semibold text-base leading-[1.3] text-primary-10 underline hover:text-primary-11 transition-colors font-family-dm-sans cursor-pointer"
                         >
-                          Criar conta
+                          {t("signUp")}
                         </button>
                       </div>
                     </div>

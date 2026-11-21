@@ -1,6 +1,7 @@
 "use client";
 
 import { cn } from "@/utils/cn";
+import { useT } from "@/i18n/client";
 import {
   formatRemaining,
   useCheckoutTimer,
@@ -13,6 +14,7 @@ interface CheckoutTimerProps {
 
 export function CheckoutTimer({ className, compact }: CheckoutTimerProps) {
   const { isActive, remainingMs } = useCheckoutTimer();
+  const t = useT("checkout");
 
   if (!isActive) return null;
 
@@ -25,9 +27,9 @@ export function CheckoutTimer({ className, compact }: CheckoutTimerProps) {
         )}
         role="timer"
         aria-live="polite"
-        aria-label="Tempo restante da reserva"
+        aria-label={t("timerAriaLabel")}
       >
-        <span className="text-gray-11">Tempo:</span>
+        <span className="text-gray-11">{t("timerCompactLabel")}</span>
         <span className="tabular-nums">{formatRemaining(remainingMs)}</span>
       </div>
     );
@@ -41,10 +43,10 @@ export function CheckoutTimer({ className, compact }: CheckoutTimerProps) {
       )}
       role="timer"
       aria-live="polite"
-      aria-label="Tempo restante da reserva"
+      aria-label={t("timerAriaLabel")}
     >
       <div className="flex items-center gap-2 w-full">
-        <span className="text-gray-11">Tempo restante:</span>
+        <span className="text-gray-11">{t("timerLabel")}</span>
         <span className="tabular-nums">{formatRemaining(remainingMs)}</span>
       </div>
 

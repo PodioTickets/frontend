@@ -26,7 +26,7 @@ import {
   type ImageUploadWithCropRef,
 } from "@/components/ImageUploadWithCrop";
 import { EVENT_IMAGE_SPECS } from "@/lib/eventImageSpecs";
-import { BookIcon } from "../Icons/BookIcon";
+import { InfoIcon } from "../Icons/InfoIcon";
 import { CalendarIcon } from "../Icons/CalendarIcon";
 import { LoadingAnimation } from "@/components/Loading";
 import { cn } from "@/utils/cn";
@@ -57,6 +57,10 @@ import { ProductPreview } from "@/components/Product/ProductPreview";
 import { ProductVariationMobileSheets } from "@/components/Product/ProductVariationMobileSheets";
 import { ProductVariations } from "@/components/Product/ProductVariations";
 
+/** Fotos do produto/kit: formatos e tamanho aceitos, e o erro que os explica. */
+const PRODUCT_IMAGE_ACCEPT = "image/jpeg,image/jpg,image/png";
+const PRODUCT_IMAGE_MAX_MB = 10;
+const PRODUCT_IMAGE_RULE_ERROR = "PNG ou JPG, máximo 10MB cada";
 
 export function CreateProductModal() {
   const {
@@ -950,7 +954,7 @@ export function CreateProductModal() {
                             className="inline-flex cursor-help text-gray-11 hover:text-gray-12 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-8 rounded"
                             aria-label="Informação: produto incluso no ingresso"
                           >
-                            <BookIcon className="size-5 shrink-0" />
+                            <InfoIcon className="size-5 shrink-0 md:size-4" />
                           </button>
                         </Tooltip>
                       </div>
@@ -1046,7 +1050,7 @@ export function CreateProductModal() {
                               className="inline-flex cursor-help text-gray-11 hover:text-gray-12 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-8 rounded"
                               aria-label="Informação: produto obrigatório ou opcional"
                             >
-                              <BookIcon className="size-5 shrink-0" />
+                              <InfoIcon className="size-5 shrink-0 md:size-4" />
                             </button>
                           </Tooltip>
                         </div>
@@ -1085,13 +1089,10 @@ export function CreateProductModal() {
                         </h3>
                         <p className="text-base font-normal font-family-dm-sans leading-[1.3] text-gray-11">
                           <span className="md:hidden">
-                            Crie opções como tamanhos e controle estoque por
-                            variação.
+                            Crie variações, como tamanhos e cores, e controle o estoque de cada opção.
                           </span>
                           <span className="hidden md:inline">
-                            Crie opções como tamanhos e controle estoque por
-                            variação. Você pode reaproveitar um conjunto de
-                            variações para não repetir trabalho.
+                            Crie variações, como tamanhos e cores, e controle o estoque de cada opção.
                           </span>
                         </p>
                       </div>
@@ -1199,7 +1200,11 @@ export function CreateProductModal() {
             outputBaseName="produto"
             modalTitle="Ajustar imagem do produto"
             onCropped={handleProductCropped}
-            onInvalidFile={(msg) => toast.error(msg)}
+            // Produto e kit: só PNG/JPG até 10MB. A regra não fica escrita na área de fotos,
+            // só no erro (pedido do usuário, 17/11), no canto inferior direito (18/11).
+            accept={PRODUCT_IMAGE_ACCEPT}
+            maxFileSizeMb={PRODUCT_IMAGE_MAX_MB}
+            onInvalidFile={() => toast.error(PRODUCT_IMAGE_RULE_ERROR)}
             onCropFailed={(msg) => toast.error(msg)}
           />
 

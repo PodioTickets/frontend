@@ -12,6 +12,7 @@ import { cn } from "@/utils/cn";
 import { WheelPicker, WheelPickerWrapper } from "../ui/wheel-picker";
 import { ClockIcon } from "../Icons/ClockIcon";
 import { HourIcon } from "../Icons/HourIcon";
+import { useT } from "@/i18n/client";
 
 interface TimePickerProps {
   value?: string; // Format: "HH:MM" (24-hour format)
@@ -46,6 +47,7 @@ export function TimePicker({
   hideTimezone = false,
 }: TimePickerProps) {
   const [isOpen, setIsOpen] = React.useState(false);
+  const t = useT("ui");
   const [internalValue, setInternalValue] = React.useState<string>(
     defaultValue || ""
   );
@@ -166,7 +168,7 @@ export function TimePicker({
               onClick={handleConfirm}
               className="w-full h-8 text-xs"
             >
-              Confirmar
+              {t("confirm")}
             </Button>
           </div>
         </div>

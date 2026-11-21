@@ -7,6 +7,7 @@ import { RemoveIcon } from "../Icons/RemoveIcon";
 import { formatBRL as formatPrice } from "@/lib/money";
 import { useCheckoutReservation } from "@/hooks/useCheckoutReservation";
 import { type OrderPixInfo } from "@/interfaces/order";
+import { useT } from "@/i18n/client";
 
 const API_URL = (process.env.NEXT_PUBLIC_API_URL ?? "").replace(/\/$/, "");
 
@@ -26,6 +27,7 @@ export function PixModal({
   const [timeLeft, setTimeLeft] = useState(30 * 60);
   const [status, setStatus] = useState<"PENDING" | "PAID" | "CANCELLED" | null>(null);
   const { getPaymentStatus } = useCheckoutReservation();
+  const t = useT("checkout");
 
   // Refs estáveis — nunca mudam de referência, evitam re-execução dos effects
   const confirmedRef = useRef(false);
@@ -37,9 +39,9 @@ export function PixModal({
     if (confirmedRef.current) return;
     confirmedRef.current = true;
     setStatus("PAID");
-    toast.success("Pagamento confirmado!");
+    toast.success(t("pixPaymentConfirmed"));
     onPaymentConfirmedRef.current?.();
-  }, []);
+  }, [t]);
 
   // WebSocket — canal primário; só roda quando isOpen/orderId mudam
   useEffect(() => {
@@ -158,7 +160,7 @@ export function PixModal({
     const code = pixData?.pixCode ?? pixData?.qrCode;
     if (code) {
       navigator.clipboard.writeText(code);
-      toast.success("Código PIX copiado!");
+      toast.success(t("pixCodeCopied"));
     }
   };
 
@@ -168,7 +170,7 @@ export function PixModal({
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
       <div className="bg-white rounded-xl mx-4 shadow-2xl w-[730px]">
         <div className="text-[20px] font-bold text-gray-12 flex items-center justify-between border-b border-gray-6 pb-4 p-4">
-          <p>Pix gerado com sucesso</p>
+          <p>{t("pixGeneratedTitle")}</p>
           <button className="cursor-pointer" onClick={onClose}>
             <RemoveIcon className="size-4" />
           </button>
@@ -176,8 +178,7 @@ export function PixModal({
         <div className="text-center space-y-4 p-4">
           <div className="space-y-2">
             <p className="text-sm text-gray-12 px-4">
-              Mantenha esta página aberta. Assim que o banco confirmar o
-              pagamento, vamos atualizar automaticamente o status do seu pedido
+              {t("pixKeepPageOpen")}
             </p>
 
             {/* Countdown */}
@@ -187,7 +188,7 @@ export function PixModal({
             </p>
 
             <p className="text-sm text-gray-12">
-              Tempo para conclusão do pagamento
+              {t("pixTimeToPay")}
             </p>
           </div>
 
@@ -197,7 +198,7 @@ export function PixModal({
               {pixData?.qrCodeBase64 ? (
                 <Image
                   src={`data:image/png;base64,${pixData.qrCodeBase64}`}
-                  alt="QR Code PIX"
+                  alt={t("pixQrCodeAlt")}
                   width={192}
                   height={192}
                   // QR já vem como data-URI PNG: serve como está (não passa pelo
@@ -208,7 +209,7 @@ export function PixModal({
               ) : (
                 <div className="w-48 h-48 bg-gray-5 rounded-lg mx-auto flex items-center justify-center">
                   <span className="text-xs text-gray-11 text-center">
-                    QR Code PIX
+                    {t("pixQrCodeAlt")}
                   </span>
                 </div>
               )}
@@ -219,7 +220,7 @@ export function PixModal({
           {status === 'PAID' && (
             <div className="bg-green-2 border border-green-6 rounded-lg p-4">
               <p className="text-sm font-semibold text-green-11">
-                Pagamento confirmado!
+                {t("pixPaymentConfirmed")}
               </p>
             </div>
           )}
@@ -230,7 +231,7 @@ export function PixModal({
               className="w-full py-4 text-lg font-bold"
               onClick={copyPixCode}
             >
-              Copiar pix
+              {t("pixCopy")}
             </Button>
           </div>
         </div>
@@ -254,20 +255,21 @@ export function PixForm({
   loading?: boolean;
   submitDisabled?: boolean;
 }) {
+  const t = useT("checkout");
 
   return (
     <div className="flex flex-col gap-4">
       <div className="text-center space-y-4 rounded-lg border border-gray-6 p-4">
         <div className="flex items-center justify-center gap-1">
           <p className="text-base text-gray-12 font-family-dm-sans">
-            Valor à vista:
+            {t("pixCashValue")}
           </p>
           <p className="text-lg font-bold text-gray-12 font-manrope">
             {formatPrice(pixValue || 0)}
           </p>
         </div>
         <p className="text-base text-gray-12 font-family-dm-sans">
-          Prazo de até 30 minutos para compensar
+          {t("pixClearingTime")}
         </p>
       </div>
       {!isMobile && (
@@ -277,7 +279,7 @@ export function PixForm({
           isLoading={loading}
           className="w-full font-bold font-manrope disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          Gerar QR Code
+          {t("pixGenerateQrCode")}
         </Button>
       )}
     </div>

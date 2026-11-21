@@ -97,6 +97,12 @@ export interface AdminUserActivityItem {
   occurredAt: string;
 }
 
+/** Contadores agregados de organizações (`GET /admin/organizations/stats`). */
+export interface AdminOrganizationStats {
+  organizersWithEvents: number;
+  organizersWithoutEvents: number;
+}
+
 /** Métricas agregadas do dashboard (`GET /admin/user-activity/stats`). */
 export interface AdminUserActivityStats {
   range: { from: string; to: string };
@@ -698,6 +704,18 @@ export class AdminService {
     );
     const body = res.data as any;
     return (body?.data ?? body) as AdminProfile;
+  }
+
+  async getAdminOrganizationStats(): Promise<AdminOrganizationStats> {
+    const res = await this.apiClient.get<Record<string, unknown>>(
+      `${ADMIN_ORGANIZATIONS_PATH}/stats`
+    );
+    const body = res.data as any;
+    const data = body?.data ?? body;
+    return {
+      organizersWithEvents: Number(data?.organizersWithEvents ?? 0),
+      organizersWithoutEvents: Number(data?.organizersWithoutEvents ?? 0),
+    };
   }
 
   async getAdminOrganizations(params?: {

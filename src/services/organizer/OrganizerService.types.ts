@@ -743,12 +743,15 @@ export interface LotNearDepletionBatch {
 export interface LotNearDepletion {
   ticketId: string;
   ticketName: string;
+  /** Categoria do ingresso (null = sem categoria). Ausente em resposta antiga. */
+  categoryName?: string | null;
   status: "Normal" | "Atenção" | "Crítico";
   sold: number;
   total: number;
   remaining: number;
   percentageSold: number;
-  activeBatch?: { id: string; number: number; label: string } | null;
+  /** `count` = total de lotes do ingresso ("Lote 3 de 3"). */
+  activeBatch?: { id: string; number: number; count?: number; label: string } | null;
   /** Shape detalhado a partir da rota `/dashboard/rankings`. */
   batches?: LotNearDepletionBatch[];
 }
@@ -932,6 +935,8 @@ export interface FinancialTicketBatch {
   price: number;
   /** Unidades vendidas do lote (agregado pelo backend). */
   quantitySold?: number;
+  /** Centavos vendidos a preço de compra (preço do lote pode mudar depois). Só no dashboard. */
+  soldValue?: number;
   createdAt?: string;
 }
 

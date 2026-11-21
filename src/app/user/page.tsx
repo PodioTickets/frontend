@@ -47,6 +47,17 @@ import { ImageWithInitialFallback } from "@/components/ImageWithInitialFallback"
 import { TwoFASection } from "@/components/TwoFASection";
 import { DeleteAccountSection } from "@/components/DeleteAccountSection";
 import UserLoading from "./loading";
+import { useT, useLocale } from "@/i18n/client";
+import { countryDisplayName, countryMatches, countryOptions } from "@/i18n/countryName";
+
+/* Sexo: `formData.gender` guarda o rótulo pt-BR (valor convertido pro enum do
+ * backend em `formatGenderToBackend`); a tradução é só na exibição. */
+const GENDER_KEYS = {
+  masculino: "genderMale",
+  feminino: "genderFemale",
+  outro: "genderOther",
+  "prefiro não informar": "genderPreferNotToSay",
+} as const;
 
 /** Alinha valores antigos da API («Brasileira», etc.) ao nome do país da lista de cadastro. */
 function mapStoredCountryToPickerValue(raw: string | null | undefined): string {
@@ -134,6 +145,12 @@ const formatGenderToBackend = (
 
 export default function UserProfilePage() {
   const router = useRouter();
+  const t = useT("user");
+  const { intl } = useLocale();
+  const genderLabel = (value: string) => {
+    const key = GENDER_KEYS[value.toLowerCase().trim() as keyof typeof GENDER_KEYS];
+    return key ? t(key) : value;
+  };
   const { user, refetchUser, logout } = useAuth();
   const queryClient = useQueryClient();
   const { openChangeEmailModal } = useChangeEmailModal();
@@ -335,31 +352,11 @@ export default function UserProfilePage() {
   const nationalityDropdownRef = useRef<HTMLDivElement>(null);
   const [showGenderDropdown, setShowGenderDropdown] = useState(false);
 
-  const nationalityOptions = useMemo(
-    () =>
-      COUNTRIES_PT_BR.map((name) => ({
-        id: name
-          .toLowerCase()
-          .normalize("NFD")
-          .replace(/\p{Diacritic}/gu, "")
-          .replace(/\s+/g, "-"),
-        label: name,
-      })),
-    [],
-  );
-
-  const normalizeNationalitySearch = (s: string) =>
-    s
-      .toLowerCase()
-      .normalize("NFD")
-      .replace(/\p{Diacritic}/gu, "");
+  const nationalityOptions = useMemo(() => countryOptions(intl), [intl]);
 
   const filteredNationalityOptions = useMemo(() => {
     if (!nationalitySearch.trim()) return nationalityOptions;
-    const q = normalizeNationalitySearch(nationalitySearch);
-    return nationalityOptions.filter((opt) =>
-      normalizeNationalitySearch(opt.label).includes(q),
-    );
+    return nationalityOptions.filter((opt) => countryMatches(opt, nationalitySearch));
   }, [nationalityOptions, nationalitySearch]);
 
   useEffect(() => {
@@ -484,29 +481,34 @@ export default function UserProfilePage() {
       const fullNameTrimmed = fullNameInput.trim();
       const nameParts = fullNameTrimmed.split(/\s+/).filter(Boolean);
       if (!fullNameTrimmed) {
-        errors.firstName = "Nome completo é obrigatório";
+        errors.firstName = t("vFullNameRequired");
       } else if (nameParts.length < 2) {
-        errors.firstName = "Informe nome e sobrenome";
+        errors.firstName = t("vFirstAndLastName");
       }
 
       if (!formData.phone?.trim()) {
-        errors.phone = "Telefone é obrigatório";
+        errors.phone = t("vPhoneRequired");
       } else if (!isPhoneValidForCountry(formData.phone, formData.nationality)) {
         // Valida formato conforme o país selecionado (libphonenumber-js),
         // alinhando o perfil ao modal de cadastro e ao checkout.
-        errors.phone = "Informe um telefone válido";
+        errors.phone = t("vPhoneInvalid");
       }
 
       const userIsBr = isBrazilianCountry(formData.nationality);
       if (!formData.documentNumber?.trim()) {
-        errors.documentNumber = userIsBr ? "CPF é obrigatório" : "Documento é obrigatório";
+        errors.documentNumber = userIsBr ? t("vCpfRequired") : t("vDocumentRequired");
       } else if (userIsBr) {
+        // `getCpfValidationMessage` (compartilhado) devolve texto pt-BR fixo → chave.
         const cpfError = getCpfValidationMessage(formData.documentNumber);
-        if (cpfError) errors.documentNumber = cpfError;
+        if (cpfError)
+          errors.documentNumber =
+            cpfError === "CPF deve ter 11 dígitos" ? t("vCpfDigits")
+              : cpfError === "CPF inválido" ? t("vCpfInvalid")
+                : t("vCpfRequired");
       } else {
         const len = formData.documentNumber.trim().length;
-        if (len < 4) errors.documentNumber = "Documento deve ter pelo menos 4 caracteres";
-        else if (len > 30) errors.documentNumber = "Documento deve ter no máximo 30 caracteres";
+        if (len < 4) errors.documentNumber = t("vDocumentMin");
+        else if (len > 30) errors.documentNumber = t("vDocumentMax");
       }
 
       if (Object.keys(errors).length > 0) {
@@ -588,11 +590,11 @@ export default function UserProfilePage() {
        * idade ANTIGA até dar refresh. Invalida pra refazer no próximo mount. */
       queryClient.invalidateQueries({ queryKey: ["age-coupon-eligibility"] });
 
-      toast.success("Dados atualizados com sucesso!");
+      toast.success(t("profileUpdated"));
     } catch (error: any) {
       console.error("Error updating profile:", error);
       toast.error(
-        error?.message || "Erro ao atualizar dados. Tente novamente."
+        error?.message || t("profileUpdateError")
       );
     } finally {
       setIsSavingProfile(false);
@@ -624,12 +626,12 @@ export default function UserProfilePage() {
             {/* Mobile: Centered title */}
             <div className="flex items-center justify-center px-4 py-0 md:hidden">
               <h1 className="text-2xl font-extrabold leading-[1.1] text-gray-12 font-manrope">
-                Meu perfil
+                {t("myProfile")}
               </h1>
             </div>
             {/* Desktop: Left aligned title */}
             <h1 className="hidden md:block text-[28px] font-extrabold leading-[1.1] text-gray-12">
-              Meu perfil
+              {t("myProfile")}
             </h1>
 
             {/* Profile Picture Section */}
@@ -637,7 +639,7 @@ export default function UserProfilePage() {
               <div className="relative size-24 shrink-0 overflow-hidden rounded-full">
                 <ImageWithInitialFallback
                   src={pendingAvatar.resolveSrc(user?.avatarUrl)}
-                  alt="Profile"
+                  alt={t("profileAlt")}
                   fill
                   // Original sem o otimizador do Next: ele recomprime (qualidade 75) e a foto
                   // ficava pior DEPOIS de salvar que na prévia (blob:, que já pula o otimizador).
@@ -658,7 +660,7 @@ export default function UserProfilePage() {
                     disabled={isSavingProfile}
                   >
                     <Plus className="size-5" />
-                    Alterar imagem
+                    {t("changeImage")}
                   </Button>
                   <Button
                     variant="outline"
@@ -670,7 +672,7 @@ export default function UserProfilePage() {
                       (!user?.avatarUrl && !pendingAvatar.file)
                     }
                   >
-                    Remover imagem
+                    {t("removeImage")}
                   </Button>
                 </div>
                 {/* Desktop: Row layout */}
@@ -682,7 +684,7 @@ export default function UserProfilePage() {
                     disabled={isSavingProfile}
                   >
                     <Plus className="size-5" />
-                    Alterar imagem
+                    {t("changeImage")}
                   </Button>
                   <Button
                     variant="outline"
@@ -694,11 +696,11 @@ export default function UserProfilePage() {
                       (!user?.avatarUrl && !pendingAvatar.file)
                     }
                   >
-                    Remover imagem
+                    {t("removeImage")}
                   </Button>
                 </div>
                 <p className="text-sm text-gray-11 font-family-dm-sans md:text-sm">
-                  Suportamos imagens em PNGs, JPEGs até 10MB
+                  {t("imageHint")}
                 </p>
               </div>
             </div>
@@ -709,11 +711,10 @@ export default function UserProfilePage() {
             {/* Mobile: Left aligned */}
             <div className="flex flex-col gap-3 items-start w-full md:flex-col md:gap-3">
               <h2 className="text-lg font-bold leading-[1.1] text-gray-12 font-manrope md:text-xl md:font-bold">
-                Dados pessoais
+                {t("personalData")}
               </h2>
               <p className="text-sm text-gray-11 font-family-dm-sans md:text-base">
-                Usamos esses dados nas inscrições de eventos. Preencha
-                exatamente como está no seu documento.
+                {t("personalDataHint")}
               </p>
             </div>
 
@@ -721,7 +722,7 @@ export default function UserProfilePage() {
               {/* Name */}
               <div className="flex flex-1 flex-col gap-2 min-w-[283px] w-full md:w-auto">
                 <label className="text-base text-gray-12 font-family-dm-sans md:text-base md:text-gray-12">
-                  Nome
+                  {t("name")}
                 </label>
                 <div className={cn("flex h-12 items-center gap-1 rounded-lg border bg-transparent px-3 md:gap-2.5", formErrors.firstName ? "border-red-500" : "border-gray-6")}>
                   <User className="size-5 shrink-0 text-gray-11" />
@@ -741,7 +742,7 @@ export default function UserProfilePage() {
                       }));
                       if (formErrors.firstName) setFormErrors((prev) => ({ ...prev, firstName: "" }));
                     }}
-                    placeholder="Seu nome"
+                    placeholder={t("namePlaceholderShort")}
                     className="h-auto border-0 bg-transparent p-0 shadow-none focus-visible:ring-0 text-base text-gray-11 font-family-dm-sans placeholder:text-gray-11 md:hidden"
                   />
                   {/* Desktop Input */}
@@ -760,7 +761,7 @@ export default function UserProfilePage() {
                       }));
                       if (formErrors.firstName) setFormErrors((prev) => ({ ...prev, firstName: "" }));
                     }}
-                    placeholder="Nome completo"
+                    placeholder={t("fullNamePlaceholder")}
                     className="hidden md:block h-auto border-0 bg-transparent p-0 shadow-none focus-visible:ring-0"
                   />
                 </div>
@@ -772,7 +773,7 @@ export default function UserProfilePage() {
               {/* Date of Birth */}
               <div className="flex flex-1 flex-col gap-2 min-w-[283px] w-full md:w-auto">
                 <label className="text-base text-gray-12 font-family-dm-sans md:text-base md:text-gray-12">
-                  Data de nascimento
+                  {t("birthDate")}
                 </label>
                 {/* Mobile DateOfBirthPicker */}
                 <div className="md:hidden">
@@ -817,7 +818,7 @@ export default function UserProfilePage() {
               {/* Nationality — mesma lista + busca do cadastro (RegisterModal) */}
               <div className="relative flex flex-1 flex-col gap-2 min-w-[283px] w-full md:w-auto">
                 <label className="text-base text-gray-12 font-family-dm-sans md:text-base md:text-gray-12">
-                  Nacionalidade
+                  {t("nationality")}
                 </label>
                 <div className="w-full relative" ref={nationalityDropdownRef}>
                   <button
@@ -836,7 +837,7 @@ export default function UserProfilePage() {
                       <span
                         className={`truncate font-family-dm-sans text-base leading-[1.3] ${formData.nationality ? "text-gray-12" : "text-gray-11"}`}
                       >
-                        {formData.nationality || "Selecione"}
+                        {countryDisplayName(formData.nationality, intl) || t("select")}
                       </span>
                     </div>
                     <div className="flex-none -scale-y-100 shrink-0 md:scale-y-100">
@@ -850,7 +851,7 @@ export default function UserProfilePage() {
                           <Search className="absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-gray-11" />
                           <input
                             type="text"
-                            placeholder="Pesquisar país"
+                            placeholder={t("searchCountry")}
                             value={nationalitySearch}
                             onChange={(e) =>
                               setNationalitySearch(e.target.value)
@@ -863,7 +864,7 @@ export default function UserProfilePage() {
                       <div className="max-h-[220px] overflow-y-auto [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-gray-6 [&::-webkit-scrollbar]:w-2">
                         {filteredNationalityOptions.length === 0 ? (
                           <div className="px-3 py-4 text-center font-family-dm-sans text-sm text-gray-11">
-                            Nenhum país encontrado
+                            {t("noCountryFound")}
                           </div>
                         ) : (
                           filteredNationalityOptions.map((option) => (
@@ -889,7 +890,7 @@ export default function UserProfilePage() {
                               }}
                               className="w-full px-3 py-2.5 text-left font-family-dm-sans text-sm text-gray-12 transition-colors hover:bg-gray-3"
                             >
-                              {option.label}
+                              {option.display}
                             </button>
                           ))
                         )}
@@ -902,7 +903,7 @@ export default function UserProfilePage() {
               {/* Phone */}
               <div className="flex flex-1 flex-col gap-2 min-w-[283px] w-full md:w-auto">
                 <label className="text-base text-gray-12 font-family-dm-sans md:text-base md:text-gray-12">
-                  Telefone
+                  {t("phone")}
                 </label>
                 <div className={cn("flex h-12 items-center gap-1 rounded-lg border bg-transparent px-3 md:gap-2.5", formErrors.phone ? "border-red-500" : "border-gray-6")}>
                   <Phone className="size-5 shrink-0 text-gray-11" />
@@ -934,7 +935,7 @@ export default function UserProfilePage() {
 
               <div className="flex flex-1 flex-col gap-2 min-w-[283px] w-full md:w-auto">
                 <label className="text-base text-gray-12 font-family-dm-sans md:text-base md:text-gray-12">
-                  {isBrazilianCountry(formData.nationality) ? "CPF" : "Documento"}
+                  {isBrazilianCountry(formData.nationality) ? "CPF" : t("document")}
                 </label>
                 <div className={cn("flex h-12 items-center gap-1 rounded-lg border bg-transparent px-3 md:gap-2.5", formErrors.documentNumber ? "border-red-500" : "border-gray-6")}>
                   <CPFIcon className="size-5 shrink-0 text-gray-11" />
@@ -967,7 +968,7 @@ export default function UserProfilePage() {
               {/* Gender */}
               <div className="relative flex flex-1 flex-col gap-2 min-w-[283px] w-full md:w-auto">
                 <label className="text-base text-gray-12 font-family-dm-sans md:text-base md:text-gray-12">
-                  Sexo
+                  {t("sex")}
                 </label>
                 <button
                   type="button"
@@ -977,7 +978,7 @@ export default function UserProfilePage() {
                   <div className="flex items-center gap-1 md:gap-2.5">
                     <HeartIcon className="size-5 shrink-0 text-gray-11" />
                     <span className="text-base text-gray-11 font-family-dm-sans">
-                      {formData.gender || "Selecione"}
+                      {formData.gender ? genderLabel(formData.gender) : t("select")}
                     </span>
                   </div>
                   <div className="flex-none -scale-y-100 shrink-0 md:scale-y-100">
@@ -1003,7 +1004,7 @@ export default function UserProfilePage() {
                         }}
                         className="flex w-full items-center gap-2 border-b border-gray-4 px-3 py-4 text-left text-base text-gray-12 hover:bg-gray-2 last:border-0"
                       >
-                        {gender}
+                        {genderLabel(gender)}
                       </button>
                     ))}
                   </div>
@@ -1024,7 +1025,7 @@ export default function UserProfilePage() {
                   (!isProfileDirty && !pendingAvatar.isDirty) || !user || isSavingProfile
                 }
               >
-                {isSavingProfile ? "Salvando..." : "Salvar alterações"}
+                {isSavingProfile ? t("saving") : t("saveChanges")}
               </Button>
             </div>
             {/* Desktop: Right aligned button */}
@@ -1037,7 +1038,7 @@ export default function UserProfilePage() {
                   (!isProfileDirty && !pendingAvatar.isDirty) || !user || isSavingProfile
                 }
               >
-                {isSavingProfile ? "Salvando..." : "Salvar alterações"}
+                {isSavingProfile ? t("saving") : t("saveChanges")}
               </Button>
             </div>
           </div>
@@ -1047,11 +1048,10 @@ export default function UserProfilePage() {
             {/* Mobile: Left aligned */}
             <div className="flex flex-col gap-3 items-start w-full md:flex-col md:gap-3">
               <h2 className="text-lg font-bold leading-[1.1] text-gray-12 font-manrope md:text-xl md:font-bold">
-                Conta e segurança
+                {t("accountSecurity")}
               </h2>
               <p className="text-sm text-gray-11 font-family-dm-sans md:text-base">
-                Gerencie o e-mail e a senha que você usa para entrar no
-                PódioTicket.
+                {t("accountSecurityHint")}
               </p>
             </div>
 
@@ -1065,7 +1065,7 @@ export default function UserProfilePage() {
                 <div className="flex items-center gap-1">
                   <Mail className="size-6 shrink-0 text-gray-12" />
                   <span className="text-base text-gray-12 font-family-dm-sans">
-                    Deseja alterar seu email?
+                    {t("changeEmailPrompt")}
                   </span>
                 </div>
                 <ChevronDown className="size-5 shrink-0 -rotate-90 text-gray-12" />
@@ -1079,7 +1079,7 @@ export default function UserProfilePage() {
                 <div className="flex items-center gap-1">
                   <Lock className="size-6 shrink-0 text-gray-12" />
                   <span className="text-base text-gray-12 font-medium font-family-dm-sans">
-                    Deseja alterar sua senha?
+                    {t("changePasswordPrompt")}
                   </span>
                 </div>
                 <ChevronDown className="size-5 shrink-0 -rotate-90 text-gray-12" />
@@ -1096,7 +1096,7 @@ export default function UserProfilePage() {
                 <div className="flex items-center gap-2">
                   <Mail className="size-6 shrink-0 text-gray-12" />
                   <span className="text-base text-gray-12 font-family-dm-sans">
-                    Deseja alterar seu email?
+                    {t("changeEmailPrompt")}
                   </span>
                 </div>
                 <ChevronDown className="size-5 shrink-0 -rotate-90 text-gray-12" />
@@ -1110,7 +1110,7 @@ export default function UserProfilePage() {
                 <div className="flex items-center gap-2">
                   <Lock className="size-6 shrink-0 text-gray-12" />
                   <span className="text-base text-gray-12 font-family-dm-sans">
-                    Deseja alterar sua senha?
+                    {t("changePasswordPrompt")}
                   </span>
                 </div>
               </button>
@@ -1147,7 +1147,7 @@ export default function UserProfilePage() {
           cropShape="round"
           maxFileSizeMb={10}
           accept="image/jpeg,image/jpg,image/png"
-          modalTitle="Ajustar foto de perfil"
+          modalTitle={t("avatarCropTitle")}
           onCropped={(file) => pendingAvatar.stageFile(file)}
           onInvalidFile={(msg) => toast.error(msg)}
           onCropFailed={(msg) => toast.error(msg)}

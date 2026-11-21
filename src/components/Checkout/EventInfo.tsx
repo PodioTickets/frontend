@@ -17,7 +17,14 @@ import { useCouponPreview } from "@/hooks/useCouponPreview";
 import { useAgeCouponEligibility } from "@/hooks/useAgeCouponEligibility";
 import { useAuth } from "@/hooks/useAuth";
 import { computeAgeCouponTicketDiscount, formatAgeCouponLineLabel } from "@/lib/ageCoupon";
-import { pickBestAutoCoupon, quantityCouponCandidates } from "@/lib/quantityCoupon";
+import {
+  autoDiscountOnTickets,
+  combineQuantityCoupons,
+  pickBestAutoCoupon,
+  quantityCouponCandidates,
+  selectQuantityCoupons,
+  stackableQuantityCoupons,
+} from "@/lib/quantityCoupon";
 import type { OrderCoupon, OrderVoucher } from "@/interfaces/order";
 import {
   computeLinkCouponTicketDiscount,
@@ -31,6 +38,7 @@ import {
   normalizeCouponAppliesTo,
   stackedManualDiscount,
 } from "@/lib/orderCouponDiscount";
+import { useT } from "@/i18n/client";
 
 interface EventInfoProps {
   event: Event;
@@ -53,6 +61,7 @@ interface EventInfoProps {
 }
 
 export function EventInfo({ event, onNext, isSubmitting = false, tickets = [], categorizedTickets = [], uncategorizedTickets = [], appliedCoupon = null, appliedVoucher = null, voucherDiscountOverride = 0, disableNext = false }: EventInfoProps) {
+  const t = useT("checkout");
   const { raceQuantities } = useCheckout();
   const hidePricing = useHidePricing();
   const [isContactModalOpen, setIsContactModalOpen] = useState(false);
@@ -284,6 +293,14 @@ export function EventInfo({ event, onNext, isSubmitting = false, tickets = [], c
     );
   }, [useLinkCoupon, resolvedCoupon, categorizedTickets, uncategorizedTickets, raceQuantities, totalPrice]);
 
+  // Escopo do cupom de código (null = todos os ingressos): o do link enquanto não há cupom real no pedido.
+  const manualScope = useMemo(
+    () => hasManualCoupon
+      ? { appliesTo: useLinkCoupon ? couponData?.appliesTo ?? null : normalizeCouponAppliesTo(resolvedCoupon?.appliesTo) }
+      : null,
+    [hasManualCoupon, useLinkCoupon, couponData, resolvedCoupon],
+  );
+
   // Cupons AUTOMÁTICOS (idade × quantidade) — espelha o ModalitiesStep: o que MAIS
   // desconta; empate → o já aplicado no pedido, senão o 1º criado.
   const quantityAuto = useMemo(() => {
@@ -299,26 +316,43 @@ export function EventInfo({ event, onNext, isSubmitting = false, tickets = [], c
       const quantity = raceQuantities[ticket.id] || 0;
       if (quantity > 0) selected.push({ id: ticket.id, price: getTicketPrice(ticket), quantity });
     });
+    // Cupom de código tira os de quantidade das categorias dele — igual ao ModalitiesStep.
+    const candidates = quantityCouponCandidates(
+      stackableQuantityCoupons(
+        ageEligibility?.quantityCoupons,
+        manualScope,
+        [
+          ...categorizedTickets.flatMap((c) => c.tickets.map((ticket) => ({ id: ticket.id, categoryId: c.id }))),
+          ...uncategorizedTickets.map((ticket) => ({ id: ticket.id })),
+        ],
+      ),
+      selected,
+      totalPrice,
+    );
+    const currentCouponId = hasRealOrderCoupon ? appliedCoupon?.id : null;
     const choice = pickBestAutoCoupon(
       [
         ...(ageCoupon
           ? [{ id: ageCoupon.id, discount: ageDiscount, createdAt: ageCoupon.createdAt, quantity: null }]
           : []),
-        ...quantityCouponCandidates(ageEligibility?.quantityCoupons, selected, totalPrice).map(
+        ...candidates.map(
           (c) => ({ id: c.coupon.id, discount: c.discount, createdAt: c.coupon.createdAt, quantity: c }),
         ),
       ],
-      hasRealOrderCoupon ? appliedCoupon?.id : null,
+      currentCouponId,
     );
-    return choice?.quantity ?? null;
-  }, [useVoucher, ageCoupon, ageDiscount, ageEligibility, hasRealOrderCoupon, appliedCoupon, categorizedTickets, uncategorizedTickets, raceQuantities, totalPrice]);
+    // Cupons de ingressos diferentes não competem: valem juntos, cada um no próprio ingresso.
+    const combined = choice?.quantity ? combineQuantityCoupons(selectQuantityCoupons(candidates, currentCouponId)) : null;
+    // `onManual` = parte nos ingressos do manual (base do rebase do manual).
+    return combined && { ...combined, onManual: autoDiscountOnTickets(combined.coupons, selected, manualScope?.appliesTo ?? null) };
+  }, [useVoucher, ageCoupon, ageDiscount, ageEligibility, manualScope, hasRealOrderCoupon, appliedCoupon, categorizedTickets, uncategorizedTickets, raceQuantities, totalPrice]);
 
   // Acúmulo automático + manual: o manual incide sobre o valor já descontado pelo
   // automático, capado no subtotal — espelha o ModalitiesStep e o backend.
   const autoPreviewDiscount = quantityAuto ? quantityAuto.discount : ageCoupon ? ageDiscount : 0;
   const manualPreviewDiscount = stackedManualDiscount(
     (useLinkCoupon ? linkCouponDiscount : orderManualCouponDiscount) ?? 0,
-    autoPreviewDiscount,
+    quantityAuto ? quantityAuto.onManual : autoPreviewDiscount,
     resolvedCoupon,
   );
   const stackedPreview = (hasManualCoupon || useLinkCoupon) && !useVoucher && autoPreviewDiscount > 0 && manualPreviewDiscount > 0;
@@ -376,17 +410,22 @@ export function EventInfo({ event, onNext, isSubmitting = false, tickets = [], c
   );
   const serviceFee = pricing.serviceFee;
   const hasCouponLine = pricing.showCouponDiscount && pricing.couponDiscount > 0;
+  // Uma linha por cupom quando mais de um automático vale junto.
+  const quantityCouponLines =
+    hasCouponLine && !useVoucher && !stackedPreview && (quantityAuto?.coupons.length ?? 0) > 1
+      ? quantityAuto!.coupons
+      : [];
   // Label da linha de desconto: "Voucher CÓDIGO", "Cupom idade (X% OFF)" ou "Cupom CÓDIGO (...)".
   const discountLineLabel = useVoucher
-    ? formatVoucherLineLabel(voucherData?.code ?? appliedVoucher?.code)
+    ? formatVoucherLineLabel(voucherData?.code ?? appliedVoucher?.code, t)
     : stackedPreview
-      ? "Descontos"
+      ? t("discounts")
     : quantityAuto
-      ? formatAgeCouponLineLabel(quantityAuto.coupon)
+      ? formatAgeCouponLineLabel(quantityAuto.coupon, t)
     : ageCoupon
-      ? formatAgeCouponLineLabel(ageCoupon)
+      ? formatAgeCouponLineLabel(ageCoupon, t)
       : resolvedCoupon
-        ? formatCouponLineLabel(resolvedCoupon)
+        ? formatCouponLineLabel(resolvedCoupon, t)
         : "";
   // Cupom do link sem desconto ainda calculado. Voucher é client-side: quando
   // não cobre a seleção (desconto 0), a linha do voucher simplesmente não aparece.
@@ -438,7 +477,7 @@ export function EventInfo({ event, onNext, isSubmitting = false, tickets = [], c
       </div>
 
       <div className="p-4">
-        <p className="text-sm text-gray-11">Seu pedido:</p>
+        <p className="text-sm text-gray-11">{t("yourOrder")}</p>
         <h1 className="text-lg font-bold mb-2">{event.name}</h1>
         <div className="flex flex-col w-full mt-4 gap-2">
           {groupedTickets.length > 0 ? (
@@ -449,7 +488,7 @@ export function EventInfo({ event, onNext, isSubmitting = false, tickets = [], c
                   className="text-sm font-semibold text-gray-12 flex items-end justify-between w-full"
                 >
                   <div className="flex flex-col items-start w-[80%]">
-                    <span className="text-gray-11 text-xs truncate w-full line-clamp-1">{ticket.categoryName ? `${ticket.categoryName}` : "Ingresso Avulso"}</span>
+                    <span className="text-gray-11 text-xs truncate w-full line-clamp-1">{ticket.categoryName ? `${ticket.categoryName}` : t("singleTicketTitle")}</span>
                     <span className="text-gray-12 text-sm truncate">({ticket.quantity}x){" "} {ticket.ticketName}:{" "}</span>
                   </div>
                   {!hidePricing && (
@@ -462,13 +501,13 @@ export function EventInfo({ event, onNext, isSubmitting = false, tickets = [], c
             </>
           ) : (
             <p className="text-sm text-gray-11 text-center py-2">
-              Nenhum ingresso selecionado
+              {t("noTicketSelected")}
             </p>
           )}
         </div>
         {!hidePricing && (
         <div className="mt-4 flex items-center justify-between w-full text-sm text-gray-12">
-          <p className="font-semibold">Subtotal:</p>
+          <p className="font-semibold">{t("subtotalLabel")}</p>
           <p className="font-bold">{formatPrice(totalPrice)}</p>
         </div>
         )}
@@ -476,25 +515,32 @@ export function EventInfo({ event, onNext, isSubmitting = false, tickets = [], c
         {!hidePricing && groupedTickets.length > 0 && (
           <>
 
-            {hasCouponLine ? (
+            {quantityCouponLines.length > 0 ? (
+              quantityCouponLines.map(({ coupon, discount }) => (
+                <div key={coupon.id} className="mt-2 flex items-center justify-between w-full text-sm text-gray-12">
+                  <p className="font-semibold">{formatAgeCouponLineLabel(coupon, t)}:</p>
+                  <p className="font-bold">-{formatPrice(discount)}</p>
+                </div>
+              ))
+            ) : hasCouponLine ? (
               <div className="mt-2 flex items-center justify-between w-full text-sm text-gray-12">
                 <p className="font-semibold">{discountLineLabel}:</p>
                 <p className="font-bold">-{formatPrice(pricing.couponDiscount)}</p>
               </div>
             ) : couponPending ? (
               <div className="mt-2 flex items-center justify-between w-full text-sm text-gray-12">
-                <p className="font-semibold">Cupom {pendingCoupon}:</p>
+                <p className="font-semibold">{t("couponNamed", { name: pendingCoupon ?? "" })}:</p>
                 <p className="font-bold">{couponPercentSuffix}</p>
               </div>
             ) : null}
             {serviceFee > 0 && (
               <div className="mt-2 flex items-center justify-between w-full text-sm text-gray-12">
-                <p className="font-semibold">Taxa de serviço:</p>
+                <p className="font-semibold">{t("serviceFeeLabel")}</p>
                 <p className="font-bold">{formatPrice(serviceFee)}</p>
               </div>
             )}
             <h1 className="text-lg font-bold text-gray-12 flex items-center justify-between w-full mt-4 border-t border-gray-6 pt-4">
-              Total:{" "}
+              {t("totalLabel")}{" "}
               <span className="text-gray-12">
                 {formatPrice(pricing.total)}
               </span>
@@ -508,7 +554,7 @@ export function EventInfo({ event, onNext, isSubmitting = false, tickets = [], c
           disabled={totalParticipants === 0 || disableNext}
           isLoading={isSubmitting}
         >
-          Proximo
+          {t("nextUnaccented")}
         </Button>
       </div>
 

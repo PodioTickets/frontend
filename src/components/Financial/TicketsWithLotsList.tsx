@@ -48,7 +48,7 @@ const formatBRL = (cents: number) =>
 
 const batchSold = (batch: FinancialTicketBatch) => batch.quantitySold ?? 0;
 const batchGrossCents = (batch: FinancialTicketBatch) =>
-  batchSold(batch) * (batch.price || 0);
+  batch.soldValue ?? batchSold(batch) * (batch.price || 0);
 
 /** Categoria do ingresso; ingressos avulsos não têm categoria. */
 const ticketSubtitle = (ticket: FinancialTicket) =>

@@ -1,6 +1,7 @@
 "use client";
 
 import { QRCodeCanvas } from "qrcode.react";
+import { useT } from "@/i18n/client";
 
 interface RegistrationQRCodeProps {
   qrCodeData: string | {
@@ -18,6 +19,8 @@ export function RegistrationQRCode({
   size = 120,
   className = ""
 }: RegistrationQRCodeProps) {
+  // Também usado no painel do organizador — lá o provider força pt-BR.
+  const t = useT("user");
   let qrCodeString = "";
 
   if (typeof qrCodeData === "string") {
@@ -45,7 +48,7 @@ export function RegistrationQRCode({
         style={{ width: size, height: size }}
       >
         <span className="text-xs text-gray-11 text-center px-2">
-          QR Code não disponível
+          {t("qrUnavailable")}
         </span>
       </div>
     );

@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
 import toast from "react-hot-toast";
+import { useT } from "@/i18n/client";
 
 interface UseClipboardResult {
   copyToClipboard: (text: string) => Promise<void>;
@@ -11,6 +12,7 @@ interface UseClipboardResult {
 export function useClipboard(): UseClipboardResult {
   const [isCopied, setIsCopied] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const t = useT("ui");
 
   const copyToClipboard = async (text: string): Promise<void> => {
     try {
@@ -37,10 +39,10 @@ export function useClipboard(): UseClipboardResult {
         }
       }
       setIsCopied(true);
-      toast.success("Copiado para a área de transferência!", { duration: 3000 });
+      toast.success(t("copied"), { duration: 3000 });
       setTimeout(() => setIsCopied(false), 2000);
     } catch (err) {
-      const errorMessage = "Erro ao copiar";
+      const errorMessage = t("copyError");
       setError(errorMessage);
       toast.error(errorMessage, {
         duration: 3000,

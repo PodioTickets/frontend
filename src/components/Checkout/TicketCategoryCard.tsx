@@ -25,6 +25,13 @@ import type { CouponPreviewResult } from "@/lib/orderCouponDiscount";
 import { isAgeWithinTicketLimit } from "@/lib/ageCoupon";
 import { stepTicketQuantity, ticketQuantityCap } from "@/lib/ticketMinQuantity";
 import { TicketPickControl, useTicketPick } from "@/contexts/TicketPickContext";
+import type { AutoCouponOffer } from "@/lib/autoCouponBadges";
+import { AutoCouponSeal } from "./AutoCouponBadges";
+import { useT } from "@/i18n/client";
+import type { Translator } from "@/i18n/translate";
+
+/** Selos de cupom automático por ingresso (null/ausente = sem selos). */
+export type AutoCouponsForBadges = Record<string, AutoCouponOffer> | null;
 
 /* Aplica preview de cupom (`?coupon=` na URL) ao preço base do ticket pra
  * exibir "R$ X (com desconto)  R$ Y (riscado)" nos cards. Backend é fonte
@@ -68,6 +75,14 @@ function resolvePreviewPrice(
 ): { discounted: number; original: number; hasDiscount: boolean } {
   const full = { discounted: price, original: price, hasDiscount: false };
   if (!preview) return full;
+  if (preview.kind === "coupon" && preview.stackedOn) {
+    // Acúmulo: automático primeiro, manual sobre o resultado (mesma ordem do backend).
+    const auto = resolvePreviewPrice(price, ticketId, preview.stackedOn, ticketQuantity);
+    const { discounted } = resolvePreviewPrice(
+      auto.discounted, ticketId, { ...preview, stackedOn: null }, ticketQuantity, voucherFreeTicketId, couponConditionsMet,
+    );
+    return { discounted, original: price, hasDiscount: discounted < price };
+  }
   if (preview.kind === "voucher") {
     const isFree =
       !!voucherFreeTicketId &&
@@ -101,7 +116,8 @@ interface TicketCategoryCardProps {
   userAge?: number | null;
   /** Preview de cupom injetado (ex.: cupom automático de idade) quando não há
    *  cupom de link na URL — desconta os preços dos cards igual ao cupom de link. */
-  couponPreviewOverride?: CouponPreviewResult | null;
+  /** Por ingresso: cupons automáticos diferentes podem cobrir ingressos do mesmo card. */
+  couponPreviewOverride?: (ticketId: string) => CouponPreviewResult | null;
   /** Id do ingresso "vencedor" do voucher (maior valor entre os elegíveis) —
    *  o único card que o voucher zera. Calculado no step (lista global). */
   voucherFreeTicketId?: string | null;
@@ -109,6 +125,9 @@ interface TicketCategoryCardProps {
    *  `false` suprime o strike-through nos cards — o appliesTo (quais ingressos)
    *  já vem no próprio preview. Default `true` (sem cupom de link gated). */
   couponConditionsMet?: boolean;
+  autoCoupons?: AutoCouponsForBadges;
+  /** Selo do cupom que cobre todos os ingressos à venda da categoria. */
+  categoryCoupon?: AutoCouponOffer;
 }
 
 const formatPrice = (price: number) => {
@@ -129,11 +148,11 @@ const formatDisplayPrice = (breakdown: {
     ? formatPriceCurrency(breakdown.discounted)
     : formatPrice(breakdown.discounted);
 
-const formatAgeLimit = (ageLimit?: { min?: number; max?: number }) => {
+const formatAgeLimit = (ageLimit: { min?: number; max?: number } | undefined, t: Translator<"checkout">) => {
   if (!ageLimit) return null;
-  if (ageLimit.min && ageLimit.max) return `de ${ageLimit.min} a ${ageLimit.max} anos`;
-  if (ageLimit.min) return `a partir de ${ageLimit.min} anos`;
-  if (ageLimit.max) return `até ${ageLimit.max} anos`;
+  if (ageLimit.min && ageLimit.max) return t("ageRangeBetween", { min: ageLimit.min, max: ageLimit.max });
+  if (ageLimit.min) return t("ageRangeFrom", { min: ageLimit.min });
+  if (ageLimit.max) return t("ageRangeUpTo", { max: ageLimit.max });
   return null;
 };
 
@@ -162,6 +181,7 @@ const TicketItemMobile = memo(({
   userAge,
   voucherFreeTicketId,
   couponConditionsMet,
+  autoCoupons,
 }: {
   ticket: Ticket;
   event: Event;
@@ -176,7 +196,9 @@ const TicketItemMobile = memo(({
   voucherFreeTicketId?: string | null;
   /** Condições globais do cupom de link atendidas (suprime strike se false). */
   couponConditionsMet?: boolean;
+  autoCoupons?: AutoCouponsForBadges;
 }) => {
+  const t = useT("checkout");
   const [isImageModalOpen, setIsImageModalOpen] = useState(false);
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
   const hidePricing = useHidePricing();
@@ -186,7 +208,7 @@ const TicketItemMobile = memo(({
   const distanceKm = getDistanceKm(ticket);
   const distanceUnit = ticket?.distanceUnit === "KM" || ticket?.distanceUnit === "Km" ? "km" : "m"
   const ignoreAgeLimit = useIgnoreAgeLimit();
-  const ageLimitText = formatAgeLimit(ticket.ageLimit);
+  const ageLimitText = formatAgeLimit(ticket.ageLimit, t);
   // Badge de limite de idade: `userAge` undefined (prop ausente, ex.: preview do
   // organizador) → comportamento antigo (sempre mostra); null (anônimo / sem
   // nascimento) → esconde; número → mostra só se a idade estiver FORA do limite.
@@ -252,13 +274,53 @@ const TicketItemMobile = memo(({
 
   const hasDescription = !!ticket.description?.trim();
 
+  const couponOffer = !pick && !hidePricing && !isBatchSoldOut ? autoCoupons?.[ticket.id] : undefined;
+
+  // Sem foto: card compacto — modalidade desce pro lugar do preço (rodapé, à
+  // esquerda), preço vai pro lado do stepper e o aviso de vagas sobe pra linha
+  // do título. Some uma linha inteira do card.
+  const compact = productItems.length === 0;
+
+  const modalityEl = modalityInfo && distanceKm > 0 ? (
+    <div className="flex items-center gap-2 shrink-0">
+      {modalityInfo.icon ? (
+        <div className="size-6 shrink-0 relative rounded overflow-hidden flex items-center justify-center">
+          <ImageWithInitialFallback
+            src={modalityInfo.icon}
+            alt={modalityInfo.name}
+            name={modalityInfo.name}
+            width={24}
+            height={24}
+            className="size-6 bg-transparent border-0"
+            imgClassName="object-contain bg-transparent border-0"
+            letterClassName="text-[10px]"
+            nativeImg
+          />
+        </div>
+      ) : (
+        <div className="size-6 shrink-0 rounded bg-gray-4" aria-hidden />
+      )}
+      <p className="text-lg font-medium text-gray-12 font-family-dm-sans leading-[1.3] whitespace-nowrap">
+        {distanceKm} {distanceUnit}
+      </p>
+    </div>
+  ) : null;
+
+  const lowStockEl = showLowStock ? (
+    <p className="text-xs font-medium text-red-11 whitespace-nowrap">
+      {t(ticket.availableQuantity === 1 ? "spotsLeftOne" : "spotsLeftOther", { n: ticket.availableQuantity ?? 0 })}
+    </p>
+  ) : null;
+
   return (
     // Wrapper: card + descrição empilhados. A descrição fica FORA do card,
     // logo abaixo dele (respiro do `gap-2`), em vez de dentro junto ao título.
     // Com descrição, um respiro extra embaixo (`mb-2`) separa melhor do próximo
     // ticket — sem ele, a descrição encostaria no card seguinte (lista `gap-3`).
-    <div className={cn("flex flex-col gap-2", hasDescription && "mb-2")}>
-      <div className="bg-gray-2 border border-gray-6 rounded-xl p-4 flex flex-col gap-2 md:gap-6">
+    // Selo fica 13px acima do card: respiro de 24px até o item de cima (Figma 7589:71877).
+    <div className={cn("flex flex-col gap-2", hasDescription && "mb-2", couponOffer && "mt-2 not-first:mt-3")}>
+      <div className="relative bg-gray-2 border border-gray-6 rounded-xl p-4 flex flex-col gap-2 md:gap-6">
+        {couponOffer && <AutoCouponSeal offer={couponOffer} tooltipTrigger="click" />}
         {isSingleImageLayout ? (
           <div className="flex gap-3 items-start w-full">
             {/* Imagem principal */}
@@ -266,7 +328,7 @@ const TicketItemMobile = memo(({
               type="button"
               onClick={() => handleImageClick(0)}
               className="size-[136px] relative shrink-0 rounded-lg border border-gray-6 overflow-hidden cursor-pointer hover:opacity-90 transition-opacity"
-              aria-label="Ver imagem em destaque"
+              aria-label={t("viewFeaturedImage")}
             >
               {mainImage ? (
                 <ImageWithInitialFallback
@@ -324,7 +386,7 @@ const TicketItemMobile = memo(({
                   type="button"
                   onClick={() => handleImageClick(0)}
                   className="size-[136px] relative shrink-0 rounded-lg border border-gray-6 overflow-hidden cursor-pointer hover:opacity-90 transition-opacity"
-                  aria-label="Ver imagem em destaque"
+                  aria-label={t("viewFeaturedImage")}
                 >
                   {mainImage ? (
                     <ImageWithInitialFallback
@@ -364,8 +426,8 @@ const TicketItemMobile = memo(({
                                 className="size-[64px] relative shrink-0 rounded-lg border border-gray-6 overflow-hidden cursor-pointer hover:opacity-90 transition-opacity"
                                 aria-label={
                                   showOverlay
-                                    ? `Ver mais ${remainingCount} imagens`
-                                    : "Ver imagem"
+                                    ? t("viewMoreImages", { n: remainingCount })
+                                    : t("viewImage")
                                 }
                               >
                                 <ImageWithInitialFallback
@@ -398,46 +460,23 @@ const TicketItemMobile = memo(({
             )}
 
             <div className="flex flex-col gap-2">
-              <div className="flex flex-col gap-1">
-                <h2 className="text-lg font-bold text-gray-12 font-manrope leading-[1.1]">
+              <div className="flex items-center justify-between gap-3">
+                <h2 className="text-lg font-bold text-gray-12 font-manrope leading-[1.1] min-w-0">
                   {ticket.name}
                 </h2>
+                {compact && lowStockEl}
               </div>
               {/* Modalidade + distância — espelha o desktop: o ícone vem da
                 modality (fallback p/ placeholder cinza) e o texto exibe a
-                distância. Sem `DistanceIcon` separado nem nome da modality. */}
-              <div className="flex items-center gap-8 flex-wrap min-w-0 w-full">
-                {modalityInfo && distanceKm > 0 && (
-                  <div className="flex items-center gap-2">
-                    {modalityInfo.icon ? (
-                      <div className="size-6 shrink-0 relative rounded overflow-hidden flex items-center justify-center">
-                        <ImageWithInitialFallback
-                          src={modalityInfo.icon}
-                          alt={modalityInfo.name}
-                          name={modalityInfo.name}
-                          width={24}
-                          height={24}
-                          className="size-6 bg-transparent border-0"
-                          imgClassName="object-contain bg-transparent border-0"
-                          letterClassName="text-[10px]"
-                          nativeImg
-                        />
-                      </div>
-                    ) : (
-                      <div className="size-6 shrink-0 rounded bg-gray-4" aria-hidden />
-                    )}
-                    <p className="text-lg font-medium text-gray-12 font-family-dm-sans leading-[1.3]">
-                      {distanceKm} {distanceUnit}
-                    </p>
-                  </div>
-                )}
-              </div>
+                distância. Sem foto (`compact`) ela vai pro rodapé. */}
+              {!compact && modalityEl}
               {/* Limite de idade em linha própria, alinhado à esquerda (fluxo
-                normal, sem `absolute`) — espelha o layout single-image. */}
+                normal, sem `absolute`) — espelha o layout single-image.
+                `mb-6` abre espaço pro aviso de vagas (absolute) acima do stepper. */}
               {showAgeLimit ? (
-                <div className="bg-yellow-3 rounded-full px-2.5 py-0.5 self-start max-w-full max-md:mb-6">
+                <div className={cn("bg-yellow-3 rounded-full px-2.5 py-0.5 self-start max-w-full", !compact && "max-md:mb-6")}>
                   <p className="text-[11px] font-medium text-yellow-12 font-family-dm-sans">
-                    Limite de idade: {ageLimitText}
+                    {t("ageLimitLabel", { range: ageLimitText ?? "" })}
                   </p>
                 </div>
               ) : null}
@@ -449,29 +488,40 @@ const TicketItemMobile = memo(({
         {isSingleImageLayout && showAgeLimit ? (
           <div className="bg-yellow-3 rounded-full px-2.5 py-0.5 self-start max-w-full">
             <p className="text-[11px] font-medium text-yellow-12 font-family-dm-sans leading-[1.3]">
-              Limite de idade: {ageLimitText}
+              {t("ageLimitLabel", { range: ageLimitText ?? "" })}
             </p>
           </div>
         ) : null}
 
         {pick ? (
           /* Modo seleção (troca de ingresso no admin): sem preço, checkbox à direita. */
-          <div className="flex items-center justify-end">
-            <TicketPickControl ticket={ticket} soldOut={isBatchSoldOut} />
+          <div className="flex items-center justify-between gap-3">
+            {compact && modalityEl}
+            <div className="ml-auto">
+              <TicketPickControl ticket={ticket} soldOut={isBatchSoldOut} />
+            </div>
           </div>
         ) : (
-        <div className="flex items-center justify-between">
+        <div className={cn("flex items-center justify-between", compact ? "flex-wrap gap-2" : "gap-3")}>
+          {/* Sem foto a linha fica cheia (modalidade + preço + stepper em ~290px):
+            `flex-wrap` joga preço+stepper pra baixo em vez de vazar do card quando
+            não cabe (preço de 4 dígitos, telas de 320px). */}
+          {compact && modalityEl}
+          {/* Sem foto: preço colado ao stepper (à direita). Com foto, `contents`
+            some com o wrapper e o rodapé fica igual ao de antes. */}
+          <div className={compact ? "ml-auto flex items-center gap-2" : "contents"}>
           {hidePricing ? (
             <p className="text-xl font-bold text-gray-11 font-manrope leading-[1.1]">
               Voucher
             </p>
           ) : (
-            <div className="flex items-baseline gap-2">
-              <p className="text-xl font-bold text-gray-12 font-manrope leading-[1.1]">
+            // Sem foto o preço riscado vai pra baixo do preço (falta largura na linha).
+            <div className={cn("flex items-baseline gap-2", compact && "flex-col items-end gap-0.5")}>
+              <p className={cn("font-bold text-gray-12 font-manrope leading-[1.1] whitespace-nowrap", compact ? "text-lg" : "text-xl")}>
                 {formatDisplayPrice(priceBreakdown)}
               </p>
               {priceBreakdown.hasDiscount && (
-                <p className="text-sm font-medium text-gray-11 font-manrope leading-[1.1] line-through">
+                <p className="text-sm font-medium text-gray-11 font-manrope leading-[1.1] line-through whitespace-nowrap">
                   {formatPrice(priceBreakdown.original)}
                 </p>
               )}
@@ -481,17 +531,12 @@ const TicketItemMobile = memo(({
             // Lote esgotado: badge cinza no lugar do stepper (não dá pra adicionar).
             // `h-11` = mesma altura do stepper (mobile) pra o card não encolher.
             <span className="shrink-0 inline-flex items-center h-11 rounded-full bg-gray-4 px-4 text-sm font-semibold text-gray-11 font-manrope leading-[1.1] whitespace-nowrap">
-              Lote esgotado
+              {t("batchSoldOut")}
             </span>
           ) : (
             <div className="relative">
               <div className="absolute bottom-full right-0 pb-1 pointer-events-none">
-                {showLowStock ? (
-                  <p className="text-xs font-medium text-red-11 whitespace-nowrap">
-                    Restam apenas {ticket.availableQuantity}{" "}
-                    {ticket.availableQuantity === 1 ? "vaga" : "vagas"}!
-                  </p>
-                ) : null}
+                {!compact && lowStockEl}
               </div>
               <div className="flex items-center bg-primary-3 rounded-full px-2 py-2 h-11">
                 <button
@@ -499,11 +544,11 @@ const TicketItemMobile = memo(({
                   onClick={() => onDecrease(ticket.id)}
                   disabled={quantity === 0}
                   className="size-6 cursor-pointer rounded-full flex items-center justify-center bg-gray-12 hover:bg-gray-11 text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed shrink-0 p-1"
-                  aria-label="Diminuir quantidade"
+                  aria-label={t("counterDecrease")}
                 >
                   <Minus className="size-4" />
                 </button>
-                <span className="min-w-[24px] text-center text-lg font-semibold text-gray-12 px-6 font-manrope leading-[1.1]">
+                <span className={cn("min-w-[24px] text-center text-lg font-semibold text-gray-12 font-manrope leading-[1.1]", compact ? "px-3" : "px-6")}>
                   {quantity}
                 </span>
                 <button
@@ -511,13 +556,14 @@ const TicketItemMobile = memo(({
                   onClick={() => onIncrease(ticket.id)}
                   disabled={isAtMax}
                   className="size-6 cursor-pointer rounded-full flex items-center justify-center bg-gray-12 hover:bg-gray-11 text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed shrink-0 p-1"
-                  aria-label="Aumentar quantidade"
+                  aria-label={t("counterIncrease")}
                 >
                   <Plus className="size-4" />
                 </button>
               </div>
             </div>
           )}
+          </div>
         </div>
         )}
 
@@ -556,6 +602,7 @@ const TicketItemDesktop = memo(({
   userAge,
   voucherFreeTicketId,
   couponConditionsMet,
+  autoCoupons,
 }: {
   ticket: Ticket;
   event: Event;
@@ -570,7 +617,9 @@ const TicketItemDesktop = memo(({
   voucherFreeTicketId?: string | null;
   /** Condições globais do cupom de link atendidas (suprime strike se false). */
   couponConditionsMet?: boolean;
+  autoCoupons?: AutoCouponsForBadges;
 }) => {
+  const t = useT("checkout");
   const hidePricing = useHidePricing();
   const pick = useTicketPick();
   const [isImageModalOpen, setIsImageModalOpen] = useState(false);
@@ -581,7 +630,7 @@ const TicketItemDesktop = memo(({
   const distanceKm = getDistanceKm(ticket);
   const distanceUnit = ticket?.distanceUnit === "KM" || ticket?.distanceUnit === "Km" ? "km" : "m"
   const ignoreAgeLimit = useIgnoreAgeLimit();
-  const ageLimitText = formatAgeLimit(ticket.ageLimit);
+  const ageLimitText = formatAgeLimit(ticket.ageLimit, t);
   // Badge de limite de idade: `userAge` undefined (prop ausente, ex.: preview do
   // organizador) → comportamento antigo (sempre mostra); null (anônimo / sem
   // nascimento) → esconde; número → mostra só se a idade estiver FORA do limite.
@@ -673,6 +722,58 @@ const TicketItemDesktop = memo(({
 
   const hasDescription = !!ticket.description?.trim();
 
+  const couponOffer = !pick && !hidePricing && !isBatchSoldOut ? autoCoupons?.[ticket.id] : undefined;
+
+  // Sem foto: card compacto — a linha da modalidade some; modalidade + idade
+  // descem pro rodapé (lugar antigo do preço) e o preço vai pro lado do stepper.
+  const compact = productItems.length === 0;
+
+  const modalityEl = modalityInfo && distanceKm > 0 ? (
+    <div className="flex items-center gap-2 shrink-0">
+      {modalityInfo.icon ? (
+        <div className="size-6 shrink-0 relative rounded overflow-hidden flex items-center justify-center">
+          <ImageWithInitialFallback
+            src={modalityInfo.icon}
+            alt={modalityInfo.name}
+            name={modalityInfo.name}
+            width={24}
+            height={24}
+            className="size-6 bg-transparent border-0"
+            imgClassName="object-contain bg-transparent border-0"
+            letterClassName="text-[10px]"
+            nativeImg
+          />
+        </div>
+      ) : (
+        <div className="size-6 shrink-0 rounded bg-gray-4" aria-hidden />
+      )}
+      <p className="text-lg font-medium text-gray-12 font-family-dm-sans leading-[1.3] whitespace-nowrap">
+        {distanceKm} {distanceUnit}
+      </p>
+    </div>
+  ) : null;
+
+  const ageEl = showAgeLimit ? (
+    <div className="shrink-0 bg-yellow-3 text-yellow-12 rounded-full px-3 py-1 max-w-full">
+      <p className="text-xs font-medium font-family-dm-sans whitespace-nowrap">
+        {t("ageLimitLabel", { range: ageLimitText ?? "" })}
+      </p>
+    </div>
+  ) : null;
+
+  const lowStockEl = showLowStock ? (
+    <p className="shrink-0 text-xs font-medium text-red-11 whitespace-nowrap">
+      {t(ticket.availableQuantity === 1 ? "spotsLeftOne" : "spotsLeftOther", { n: ticket.availableQuantity ?? 0 })}
+    </p>
+  ) : null;
+
+  const footerLeftEl = modalityEl || ageEl ? (
+    <div className="flex items-center gap-3 flex-wrap min-w-0">
+      {modalityEl}
+      {ageEl}
+    </div>
+  ) : null;
+
   // Controle de quantidade (esgotado OU aviso de estoque + stepper). Função pra
   // ser reusada em DOIS lugares: na linha de preço (checkout normal) ou, no modo
   // sem preço (cortesia/`hidePricing`), na PRÓPRIA linha da modalidade — assim a
@@ -686,15 +787,14 @@ const TicketItemDesktop = memo(({
         // Lote esgotado: badge cinza no lugar do stepper (não dá pra adicionar).
         // `h-10` = mesma altura do stepper (size-6 + py-2) pra o card não encolher.
         <span className="shrink-0 inline-flex items-center h-10 rounded-full bg-gray-4 px-4 text-sm font-semibold text-gray-11 font-manrope leading-[1.1] whitespace-nowrap">
-          Lote esgotado
+          {t("batchSoldOut")}
         </span>
       ) : (
         // Aviso de estoque baixo IN-FLOW (não `absolute`), logo acima do stepper.
         <>
           {withWarning && showLowStock ? (
             <p className="text-xs font-medium text-red-11 whitespace-nowrap">
-              Restam apenas {ticket.availableQuantity}{" "}
-              {ticket.availableQuantity === 1 ? "vaga" : "vagas"}!
+              {t(ticket.availableQuantity === 1 ? "spotsLeftOne" : "spotsLeftOther", { n: ticket.availableQuantity ?? 0 })}
             </p>
           ) : null}
           <div className="flex items-center justify-center w-max gap-2 bg-primary-4 rounded-full px-2 py-2">
@@ -703,7 +803,7 @@ const TicketItemDesktop = memo(({
               onClick={() => onDecrease(ticket.id)}
               disabled={quantity === 0}
               className="size-6 cursor-pointer rounded-full flex items-center justify-center bg-gray-12 hover:bg-gray-11 text-gray-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
-              aria-label="Diminuir quantidade"
+              aria-label={t("counterDecrease")}
             >
               <Minus className="size-4" />
             </button>
@@ -715,7 +815,7 @@ const TicketItemDesktop = memo(({
               onClick={() => onIncrease(ticket.id)}
               disabled={isAtMax}
               className="size-6 cursor-pointer rounded-full flex items-center justify-center bg-gray-12 hover:bg-gray-11 text-gray-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
-              aria-label="Aumentar quantidade"
+              aria-label={t("counterIncrease")}
             >
               <Plus className="size-4" />
             </button>
@@ -732,7 +832,7 @@ const TicketItemDesktop = memo(({
     // fotos sem o antigo espaçador invisível, que abria vão grande entre os cards.
     // Com descrição, um respiro extra embaixo (`mb-2`) separa melhor do próximo
     // ticket — sem ele, a descrição encostaria no card seguinte (lista `gap-3`).
-    <div className={cn("w-full flex flex-col", hasDescription && "mb-2")}>
+    <div className={cn("w-full flex flex-col", hasDescription && "mb-2", couponOffer && "not-first:mt-3")}>
       <div className={cn(productItems.length > 0 ? "flex gap-4 items-center" : "flex flex-col")}>
         {productItems.length > 0 && (
           <div className="shrink-0">
@@ -759,7 +859,7 @@ const TicketItemDesktop = memo(({
                   <button
                     onClick={handlePreviousImage}
                     className="w-[18px] h-4 flex items-center justify-center shrink-0 cursor-pointer hover:opacity-70 transition-opacity"
-                    aria-label="Imagem anterior"
+                    aria-label={t("previousImage")}
                   >
                     <ArrowButton isOpen={false} className="-rotate-90" />
                   </button>
@@ -786,7 +886,7 @@ const TicketItemDesktop = memo(({
                   <button
                     onClick={handleNextImage}
                     className="w-[18px] h-4 flex items-center justify-center shrink-0 cursor-pointer hover:opacity-70 transition-opacity"
-                    aria-label="Próxima imagem"
+                    aria-label={t("nextImage")}
                   >
                     <ArrowButton isOpen={true} />
                   </button>
@@ -798,85 +898,64 @@ const TicketItemDesktop = memo(({
         {/* Card: `flex-1` ocupa o resto da largura ao lado das imagens; sem
           imagens, `w-full`. */}
         <div className={cn("min-w-0 flex flex-col", productItems.length > 0 ? "flex-1" : "w-full")}>
-          <div className="bg-gray-2 border border-gray-6 rounded-xl p-5 flex flex-col gap-2 w-full">
+          <div className="relative bg-gray-2 border border-gray-6 rounded-xl p-5 flex flex-col gap-2 w-full">
+            {couponOffer && <AutoCouponSeal offer={couponOffer} tooltipTrigger="hover" />}
             <div className="flex flex-col justify-center gap-1">
-              <h2 className="text-xl font-bold font-manrope leading-[1.1] text-gray-12">
-                {ticket.name}
-              </h2>
-
-              <div className="flex items-center gap-3 flex-wrap min-w-0 w-full">
-                {modalityInfo && distanceKm > 0 && (
-                  <div className="flex items-center gap-2">
-                    {modalityInfo.icon ? (
-                      <div className="size-6 shrink-0 relative rounded overflow-hidden flex items-center justify-center">
-                        <ImageWithInitialFallback
-                          src={modalityInfo.icon}
-                          alt={modalityInfo.name}
-                          name={modalityInfo.name}
-                          width={24}
-                          height={24}
-                          className="size-6 bg-transparent border-0"
-                          imgClassName="object-contain bg-transparent border-0"
-                          letterClassName="text-[10px]"
-                          nativeImg
-                        />
-                      </div>
-                    ) : (
-                      <div className="size-6 shrink-0 rounded bg-gray-4" aria-hidden />
-                    )}
-                    <p className="text-lg font-medium text-gray-12 font-family-dm-sans leading-[1.3]">
-                      {distanceKm} {distanceUnit}
-                    </p>
-                  </div>
-                )}
-                {/* "Limite de idade" AO LADO da modalidade/distância (não empurrado
-                    pra direita). No modo cortesia (hidePricing) some via ignoreAgeLimit. */}
-                {showAgeLimit ? (
-                  <div className="shrink-0 bg-yellow-3 text-yellow-12 rounded-full px-3 py-1 max-w-full">
-                    <p className="text-xs font-medium font-family-dm-sans whitespace-nowrap">
-                      Limite de idade: {ageLimitText}
-                    </p>
-                  </div>
-                ) : null}
-                {/* "Restam apenas N vagas" na MESMA linha, empurrado pra DIREITA. */}
-                {showLowStock ? (
-                  <p className="ml-auto shrink-0 text-xs font-medium text-red-11 whitespace-nowrap">
-                    Restam apenas {ticket.availableQuantity}{" "}
-                    {ticket.availableQuantity === 1 ? "vaga" : "vagas"}!
-                  </p>
-                ) : null}
+              <div className="flex items-center justify-between gap-3">
+                <h2 className="text-xl font-bold font-manrope leading-[1.1] text-gray-12 min-w-0">
+                  {ticket.name}
+                </h2>
+                {/* Sem foto: aviso de vagas sobe pra linha do título (a linha da modalidade some). */}
+                {compact && lowStockEl}
               </div>
+
+              {!compact && (
+                <div className="flex items-center gap-3 flex-wrap min-w-0 w-full">
+                  {modalityEl}
+                  {/* "Limite de idade" AO LADO da modalidade/distância (não empurrado
+                      pra direita). No modo cortesia (hidePricing) some via ignoreAgeLimit. */}
+                  {ageEl}
+                  {/* "Restam apenas N vagas" na MESMA linha, empurrado pra DIREITA. */}
+                  {lowStockEl && <div className="ml-auto shrink-0">{lowStockEl}</div>}
+                </div>
+              )}
 
             </div>
 
             {/* Linha de preço + controle. No checkout com preço mostra o valor;
                 no modo cortesia (hidePricing) mostra o texto "Voucher" no lugar do
-                preço — o controle de quantidade permanece à direita, mantendo a
-                modalidade colada ao título (não vai mais pra linha da modalidade). */}
+                preço. Sem foto (`compact`): modalidade + idade à esquerda (lugar
+                antigo do preço) e preço colado ao stepper à direita. */}
             {pick ? (
               /* Modo seleção (troca de ingresso no admin): sem preço (Figma), checkbox à direita. */
-              <div className="flex items-end justify-end pt-4">
-                <TicketPickControl ticket={ticket} soldOut={isBatchSoldOut} />
+              <div className={cn("flex justify-between gap-4", compact ? "items-center" : "items-end pt-4")}>
+                {compact && footerLeftEl}
+                <div className="ml-auto">
+                  <TicketPickControl ticket={ticket} soldOut={isBatchSoldOut} />
+                </div>
               </div>
             ) : (
-            <div className="flex items-end justify-between">
+            <div className={cn("flex justify-between gap-4", compact ? "items-center" : "items-end")}>
+              {compact && footerLeftEl}
+              <div className={compact ? "ml-auto flex items-center gap-4" : "contents"}>
               {hidePricing ? (
                 <p className="text-xl font-bold text-gray-11 font-manrope leading-[1.1]">
                   Voucher
                 </p>
               ) : (
                 <div className="flex items-baseline gap-2">
-                  <p className="text-xl font-bold text-gray-12">{formatDisplayPrice(priceBreakdown)}</p>
+                  <p className="text-xl font-bold text-gray-12 whitespace-nowrap">{formatDisplayPrice(priceBreakdown)}</p>
                   {priceBreakdown.hasDiscount && (
-                    <p className="text-sm font-medium text-gray-11 line-through">
+                    <p className="text-sm font-medium text-gray-11 line-through whitespace-nowrap">
                       {formatPrice(priceBreakdown.original)}
                     </p>
                   )}
                 </div>
               )}
               {/* Aviso "Restam apenas N vagas" NÃO fica no controle — está na linha
-                  da modalidade (junto de distância + limite de idade). */}
+                  da modalidade (ou do título, sem foto). */}
               {renderQuantityControl(false)}
+              </div>
             </div>
             )}
           </div>
@@ -924,17 +1003,32 @@ export function TicketCategoryCard({
   couponPreviewOverride,
   voucherFreeTicketId,
   couponConditionsMet = true,
+  autoCoupons,
+  categoryCoupon,
 }: TicketCategoryCardProps) {
   const kitSelectionDisplay = kitSelectionDisplayProp ?? defaultEventKitSelectionDisplay();
-  const [isExpanded, setIsExpanded] = useState(expandedByDefault ?? index === 0);
+  const t = useT("checkout");
+  // `null` = a pessoa ainda não clicou: segue o padrão, que pode mudar quando os cupons
+  // chegam (categoria com cupom começa fechada). Depois do 1º clique vale o clique.
+  const [userExpanded, setUserExpanded] = useState<boolean | null>(null);
+  const isExpanded = userExpanded ?? expandedByDefault ?? index === 0;
   const { raceQuantities, updateRaceQuantity } = useCheckout();
   const hidePricing = useHidePricing();
+  const pick = useTicketPick();
+  const categorySeal = !pick && !hidePricing ? categoryCoupon : undefined;
   // Preview do cupom da URL pra renderizar preço descontado com strike-through.
   // Backend reconcilia no PaymentStep; aqui é só feedback visual no /ingressos.
   const pendingCoupon = usePendingCouponSnapshot();
   const { data: couponPreview } = useCouponPreview(event?.id, pendingCoupon);
   // Cupom de link (URL) tem prioridade; senão usa o override injetado (idade).
-  const effectivePreview = couponPreview ?? couponPreviewOverride ?? null;
+  const previewFor = (ticketId: string): CouponPreviewResult | null => {
+    const auto = couponPreviewOverride?.(ticketId) ?? null;
+    if (!couponPreview) return auto;
+    // Só cupom manual acumula; link de cupom automático é o próprio automático.
+    return couponPreview.kind === "coupon" && couponPreview.couponType === "DISCOUNT"
+      ? { ...couponPreview, stackedOn: auto }
+      : couponPreview;
+  };
 
   const totalQuantity = useMemo(
     () => Object.values(raceQuantities).reduce((s, q) => s + q, 0),
@@ -962,12 +1056,12 @@ export function TicketCategoryCard({
     for (const t of validTickets) {
       dMin = Math.min(
         dMin,
-        resolvePreviewPrice(getTicketPrice(t), t.id, effectivePreview, raceQuantities[t.id] || 0, voucherFreeTicketId, couponConditionsMet).discounted,
+        resolvePreviewPrice(getTicketPrice(t), t.id, previewFor(t.id), raceQuantities[t.id] || 0, voucherFreeTicketId, couponConditionsMet).discounted,
       );
     }
     const discounted = dMin === Infinity ? minPrice : dMin;
     return { discounted, original: minPrice, hasDiscount: discounted < minPrice };
-  }, [validTickets, minPrice, effectivePreview, raceQuantities, voucherFreeTicketId, couponConditionsMet]);
+  }, [validTickets, minPrice, couponPreview, couponPreviewOverride, raceQuantities, voucherFreeTicketId, couponConditionsMet]);
 
   const showCategoryLevelKit =
     !!categoryId &&
@@ -1010,8 +1104,8 @@ export function TicketCategoryCard({
   const expanded = isExpanded || hasSelectedTicket;
   const handleToggle = useCallback(() => {
     if (hasSelectedTicket) return;
-    setIsExpanded((prev) => !prev);
-  }, [hasSelectedTicket]);
+    setUserExpanded(!isExpanded);
+  }, [hasSelectedTicket, isExpanded]);
 
   // Quantidade mínima por pedido: + pula de 0 para N e − volta de N para 0.
   const minOf = useCallback(
@@ -1045,10 +1139,11 @@ export function TicketCategoryCard({
               onIncrease={handleIncrease}
               kitSelectionDisplay={kitSelectionDisplay}
               showProductImages={showTicketLevelImages}
-              couponPreview={effectivePreview}
+              couponPreview={previewFor(ticket.id)}
               userAge={userAge}
               voucherFreeTicketId={voucherFreeTicketId}
               couponConditionsMet={couponConditionsMet}
+              autoCoupons={autoCoupons}
             />
           ))}
         </div>
@@ -1064,10 +1159,11 @@ export function TicketCategoryCard({
               onIncrease={handleIncrease}
               kitSelectionDisplay={kitSelectionDisplay}
               showProductImages={showTicketLevelImages}
-              couponPreview={effectivePreview}
+              couponPreview={previewFor(ticket.id)}
               userAge={userAge}
               voucherFreeTicketId={voucherFreeTicketId}
               couponConditionsMet={couponConditionsMet}
+              autoCoupons={autoCoupons}
             />
           ))}
         </div>
@@ -1077,8 +1173,9 @@ export function TicketCategoryCard({
 
   return (
     <>
-      {/* Mobile Layout */}
-      <div className="w-full md:hidden">
+      {/* Mobile Layout. Selo fora do `overflow-hidden` do card, que o cortaria. */}
+      <div className={cn("relative w-full md:hidden", categorySeal && "mt-2")}>
+        {categorySeal && <AutoCouponSeal offer={categorySeal} tooltipTrigger="click" />}
         <div className="border border-gray-6 rounded-xl overflow-hidden bg-gray-1">
           <div
             className={`flex items-center justify-between gap-3 px-3 py-4 ${hasSelectedTicket ? "cursor-default" : "cursor-pointer"}`}
@@ -1105,7 +1202,7 @@ export function TicketCategoryCard({
                 </h1>
                 {!expanded && !hidePricing ? (
                   <div className="flex flex-wrap items-center gap-1 text-base">
-                    <p className="text-gray-11 font-family-dm-sans leading-[1.3]">A partir de:</p>
+                    <p className="text-gray-11 font-family-dm-sans leading-[1.3]">{t("startingFrom")}</p>
                     <span className="text-gray-12 font-bold font-manrope">
                       {formatDisplayPrice(minPriceBreakdown)}
                     </span>
@@ -1151,10 +1248,11 @@ export function TicketCategoryCard({
                     onIncrease={handleIncrease}
                     kitSelectionDisplay={kitSelectionDisplay}
                     showProductImages={showTicketLevelImages}
-                    couponPreview={effectivePreview}
+                    couponPreview={previewFor(ticket.id)}
                     userAge={userAge}
                     voucherFreeTicketId={voucherFreeTicketId}
                     couponConditionsMet={couponConditionsMet}
+                    autoCoupons={autoCoupons}
                   />
                 ))}
               </div>
@@ -1164,7 +1262,8 @@ export function TicketCategoryCard({
       </div>
 
       {/* Desktop Layout */}
-      <div className="hidden md:block w-full">
+      <div className="relative hidden md:block w-full">
+        {categorySeal && <AutoCouponSeal offer={categorySeal} tooltipTrigger="hover" />}
         <div className="rounded-xl border border-gray-6 overflow-hidden bg-gray-1">
           <div
             className={`flex items-center w-full justify-between gap-3 border-b border-gray-6 px-4 py-4 transition-colors ${hasSelectedTicket ? "cursor-default" : "cursor-pointer hover:bg-gray-2/80"}`}
@@ -1191,7 +1290,7 @@ export function TicketCategoryCard({
                 </h1>
                 {!expanded && !hidePricing ? (
                   <div className="flex items-center gap-1 text-base">
-                    <p className="text-gray-11 font-family-dm-sans leading-[1.3]">A partir de:</p>
+                    <p className="text-gray-11 font-family-dm-sans leading-[1.3]">{t("startingFrom")}</p>
                     <span className="text-gray-12 font-bold font-manrope leading-[1.1]">
                       {formatDisplayPrice(minPriceBreakdown)}
                     </span>
@@ -1237,10 +1336,11 @@ export function TicketCategoryCard({
                     onIncrease={handleIncrease}
                     kitSelectionDisplay={kitSelectionDisplay}
                     showProductImages={showTicketLevelImages}
-                    couponPreview={effectivePreview}
+                    couponPreview={previewFor(ticket.id)}
                     userAge={userAge}
                     voucherFreeTicketId={voucherFreeTicketId}
                     couponConditionsMet={couponConditionsMet}
+                    autoCoupons={autoCoupons}
                   />
                 ))}
               </div>

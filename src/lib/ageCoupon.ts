@@ -12,6 +12,12 @@
  * `minCartValue` (valor mínimo do carrinho).
  */
 import type { QuantityAutoCoupon } from "./quantityCoupon";
+import type { AgeDisplayCoupon } from "./autoCouponBadges";
+import { ptBR } from "@/i18n/messages/pt-BR";
+import { createTranslator, type Translator } from "@/i18n/translate";
+
+/** Rótulo em pt-BR por padrão; o componente passa `useT("checkout")` do idioma ativo. */
+const ptT = createTranslator(ptBR, "checkout");
 
 /** Cupom de idade que será aplicado (shape do `appliedCoupon` do endpoint). */
 export interface AgeAppliedCoupon {
@@ -41,15 +47,20 @@ export interface AgeCouponEligibility {
   appliedCoupon: AgeAppliedCoupon | null;
   /** Cupons automáticos por quantidade do evento (vêm na mesma resposta; ver `quantityCoupon.ts`). */
   quantityCoupons: QuantityAutoCoupon[];
+  /** Faixas de TODOS os cupons de idade exibíveis — só para os selos dos cards (`autoCouponBadges.ts`). */
+  ageCoupons: AgeDisplayCoupon[];
 }
 
 /** Label inline do cupom de idade pras linhas de resumo (paralelo ao cupom/voucher). */
 // Também serve ao cupom automático por quantidade (mesmo rótulo "Cupom automático").
-export function formatAgeCouponLineLabel(coupon: Pick<AgeAppliedCoupon, "type" | "value">): string {
+export function formatAgeCouponLineLabel(
+  coupon: Pick<AgeAppliedCoupon, "type" | "value">,
+  t: Translator<"checkout"> = ptT,
+): string {
   if (coupon.type === "PERCENTAGE" && coupon.value > 0) {
-    return `Cupom automático (${coupon.value}% OFF)`;
+    return `${t("couponAutomatic")} (${coupon.value}% OFF)`;
   }
-  return "Cupom automático";
+  return t("couponAutomatic");
 }
 
 function round2(n: number): number {

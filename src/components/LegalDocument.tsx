@@ -178,10 +178,13 @@ export function LegalDocument({
   title,
   blocks,
   updatedAt,
+  updatedAtLabel = "Última atualização",
 }: {
   title: string;
   blocks: LegalBlock[];
   updatedAt?: string;
+  /** Rótulo traduzido de "Última atualização" (o corpo legal segue em pt-BR). */
+  updatedAtLabel?: string;
 }) {
   return (
     <main className="w-full bg-gray-2">
@@ -199,7 +202,7 @@ export function LegalDocument({
           </h1>
           {updatedAt && (
             <p className="font-manrope font-semibold text-base lg:text-lg text-gray-11 whitespace-nowrap shrink-0">
-              Última atualização: {updatedAt}
+              {updatedAtLabel}: {updatedAt}
             </p>
           )}
         </div>

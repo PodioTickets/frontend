@@ -169,6 +169,8 @@ export const queryKeys = {
       all: () => [...queryKeys.admin.all, "organizations"] as const,
       list: (params: { page: number; search: string; status: string }) =>
         [...queryKeys.admin.organizations.all(), "list", params] as const,
+      stats: () =>
+        [...queryKeys.admin.organizations.all(), "stats"] as const,
     },
     users: {
       all: () => [...queryKeys.admin.all, "users"] as const,

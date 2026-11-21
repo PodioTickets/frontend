@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/Button";
+import { useT } from "@/i18n/client";
 
 export type UnsavedChangesModalProps = {
   open: boolean;
@@ -20,11 +21,12 @@ export function UnsavedChangesModal({
   open,
   onClose,
   onLeaveWithoutSaving,
-  title = "Alterações não salvas",
-  description = "Você fez alterações nesta página. Se sair agora, elas serão perdidas.",
+  title,
+  description,
   onSaveAndLeave,
-  saveButtonLabel = "Salvar alterações",
+  saveButtonLabel,
 }: UnsavedChangesModalProps) {
+  const t = useT("ui");
   const [mounted, setMounted] = useState(false);
   const [saving, setSaving] = useState(false);
 
@@ -68,10 +70,10 @@ export function UnsavedChangesModal({
             <div className="flex flex-col items-center justify-center px-5 pt-6 pb-5 gap-8">
               <div className="flex flex-col gap-3 items-center justify-center w-full">
                 <p className="font-semibold text-[20px] leading-[1.3] text-gray-12 font-family-dm-sans text-center">
-                  {title}
+                  {title ?? t("unsavedTitle")}
                 </p>
                 <p className="font-normal text-base leading-[1.4] text-gray-11 font-family-dm-sans text-center">
-                  {description}
+                  {description ?? t("unsavedDescription")}
                 </p>
               </div>
 
@@ -83,7 +85,7 @@ export function UnsavedChangesModal({
                   disabled={saving}
                   className="w-full h-12 min-h-12 border-[1.5px] border-gray-6 text-gray-12 font-bold text-base font-manrope leading-[1.1] hover:bg-gray-2 rounded-lg"
                 >
-                  Continuar editando
+                  {t("unsavedKeepEditing")}
                 </Button>
                 <Button
                   type="button"
@@ -92,7 +94,7 @@ export function UnsavedChangesModal({
                   disabled={saving}
                   className="w-full h-12 min-h-12 text-gray-11 font-bold text-base font-manrope leading-[1.1] rounded-lg hover:bg-gray-3"
                 >
-                  Sair sem salvar
+                  {t("unsavedLeave")}
                 </Button>
               </div>
             </div>

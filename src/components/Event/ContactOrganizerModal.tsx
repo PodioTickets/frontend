@@ -15,14 +15,16 @@ import toast from "react-hot-toast";
 import { useModalSubmitState } from "@/hooks/useModalSubmitState";
 import { MessageSentModal } from "./MessageSentModal";
 import { LoadingAnimation } from "@/components/Loading";
+import { useT, useTurnstileLanguage } from "@/i18n/client";
+import { ptBRTranslator } from "@/i18n/translate";
 
 const TURNSTILE_SITE_KEY = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY ?? "";
 
-const SUBJECTS = [
-  "Kit do atleta e produtos",
-  "Regulamento e regras",
-  "Outro assunto",
-];
+// Chaves do namespace `event` — o rótulo é resolvido no render (idioma atual).
+const SUBJECTS = ["subjectKit", "subjectRules", "otherSubject"] as const;
+type Subject = (typeof SUBJECTS)[number];
+// O que vai PARA o organizador (assunto/corpo) sai sempre em pt-BR; `form.subject` guarda a chave.
+const ptT = ptBRTranslator("event");
 
 function maskCpf(value: string): string {
   const n = value.replace(/\D/g, "");
@@ -75,6 +77,8 @@ export function ContactOrganizerModal({
   eventId,
 }: ContactOrganizerModalProps) {
   const { user } = useAuth();
+  const t = useT("event");
+  const turnstileLanguage = useTurnstileLanguage();
   const { isSubmitting, runSubmit } = useModalSubmitState();
   const [sent, setSent] = useState(false);
 
@@ -97,8 +101,8 @@ export function ContactOrganizerModal({
    * (estrangeiro). Usa o country da conta logada — quando não há user
    * (anônimo), assume brasileiro (default histórico). */
   const isBrUser = isBrazilianCountry((user as any)?.country ?? null);
-  const docLabel = isBrUser ? "CPF" : "Documento";
-  const docPlaceholder = isBrUser ? "000.000.000-00" : "Passaporte / documento";
+  const docLabel = isBrUser ? "CPF" : t("document");
+  const docPlaceholder = isBrUser ? "000.000.000-00" : t("documentPlaceholder");
   const docMaxLength = isBrUser ? 14 : 30;
 
   useEffect(() => {
@@ -157,34 +161,34 @@ export function ContactOrganizerModal({
     const next: FormErrors = {};
 
     const nameParts = form.name.trim().split(/\s+/).filter(Boolean);
-    if (!form.name.trim()) next.name = "Nome é obrigatório";
-    else if (nameParts.length < 2) next.name = "Informe o nome completo";
+    if (!form.name.trim()) next.name = t("nameRequired");
+    else if (nameParts.length < 2) next.name = t("fullNameRequired");
 
     if (isBrUser) {
       const cpfDigits = form.cpf.replace(/\D/g, "");
       if (!cpfDigits) {
-        next.cpf = "CPF é obrigatório";
+        next.cpf = t("cpfRequired");
       } else if (cpfDigits.length !== 11) {
-        next.cpf = "CPF deve ter 11 dígitos";
+        next.cpf = t("cpfLength");
       } else if (!isValidCPF(form.cpf)) {
-        next.cpf = "CPF inválido";
+        next.cpf = t("cpfInvalid");
       }
     } else {
       const doc = form.cpf.trim();
       if (!doc) {
-        next.cpf = "Documento é obrigatório";
+        next.cpf = t("documentRequired");
       } else if (doc.length < 4) {
-        next.cpf = "Documento deve ter pelo menos 4 caracteres";
+        next.cpf = t("documentMin");
       } else if (doc.length > 30) {
-        next.cpf = "Documento deve ter no máximo 30 caracteres";
+        next.cpf = t("documentMax");
       }
     }
 
-    if (!form.email.trim()) next.email = "E-mail é obrigatório";
-    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) next.email = "E-mail inválido";
+    if (!form.email.trim()) next.email = t("emailRequired");
+    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) next.email = t("emailInvalid");
 
-    if (!form.subject) next.subject = "Selecione o assunto";
-    if (!form.message.trim()) next.message = "Mensagem é obrigatória";
+    if (!form.subject) next.subject = t("selectSubject");
+    if (!form.message.trim()) next.message = t("messageRequired");
 
     setErrors(next);
     return Object.keys(next).length === 0;
@@ -194,14 +198,15 @@ export function ContactOrganizerModal({
     e.preventDefault();
     if (!validate()) return;
 
+    const subjectPt = form.subject ? ptT(form.subject as Subject) : "";
     // Prefere envio via API (com template de email bonito); fallback para mailto: se não tiver organizationId
     if (!organizationId) {
       const body = [
-        `Nome: ${form.name}`,
-        `${docLabel}: ${form.cpf}`,
-        `Email: ${form.email}`,
-        form.phone ? `Telefone: ${form.phone}` : null,
-        `Assunto: ${form.subject}`,
+        `${ptT("mailName")}: ${form.name}`,
+        `${isBrUser ? "CPF" : ptT("document")}: ${form.cpf}`,
+        `${ptT("mailEmail")}: ${form.email}`,
+        form.phone ? `${ptT("phone")}: ${form.phone}` : null,
+        `${ptT("subject")}: ${subjectPt}`,
         ``,
         form.message,
       ]
@@ -209,7 +214,7 @@ export function ContactOrganizerModal({
         .join("\n");
 
       const mailtoUrl = `mailto:${organizerEmail}?subject=${encodeURIComponent(
-        `[${form.subject}] ${eventName}`
+        `[${subjectPt}] ${eventName}`
       )}&body=${encodeURIComponent(body)}`;
 
       window.location.href = mailtoUrl;
@@ -228,7 +233,7 @@ export function ContactOrganizerModal({
             email: form.email,
             phone: form.phone || undefined,
             cpf: form.cpf || undefined,
-            subject: form.subject || undefined,
+            subject: subjectPt || undefined,
             message: form.message,
             eventId: eventId || undefined,
           }),
@@ -244,7 +249,7 @@ export function ContactOrganizerModal({
         mobileTurnstileRef.current?.reset();
         desktopTurnstileRef.current?.reset();
       } catch {
-        toast.error("Erro ao enviar mensagem. Tente novamente.");
+        toast.error(t("sendError"));
       }
     });
   };
@@ -261,7 +266,7 @@ export function ContactOrganizerModal({
       )}
     >
       <span className={`text-base font-normal leading-[1.3] font-family-dm-sans truncate min-w-0 ${form.subject ? "text-gray-12" : "text-gray-11"}`}>
-        {form.subject || "Selecione o assunto"}
+        {form.subject ? t(form.subject as Subject) : t("selectSubject")}
       </span>
       <ChevronRight className={`size-5 text-gray-11 shrink-0 transition-transform ${isOpen ? "rotate-90" : ""}`} />
     </div>
@@ -276,7 +281,7 @@ export function ContactOrganizerModal({
       )}
     >
       <span className={`text-base font-normal leading-[1.3] font-family-dm-sans ${form.subject ? "text-gray-12" : "text-gray-11"}`}>
-        {form.subject || "Selecione o assunto"}
+        {form.subject ? t(form.subject as Subject) : t("selectSubject")}
       </span>
       <svg
         className={`size-5 text-gray-11 shrink-0 transition-transform ${isOpen ? "rotate-180" : ""}`}
@@ -293,8 +298,8 @@ export function ContactOrganizerModal({
         <>
           {/* Nome */}
           <div className="flex flex-col gap-2">
-            <label className="font-normal text-base leading-[1.3] text-gray-12 font-family-dm-sans">Nome completo</label>
-            <Input type="text" placeholder="Nome Sobrenome" value={form.name} onChange={handleField("name")}
+            <label className="font-normal text-base leading-[1.3] text-gray-12 font-family-dm-sans">{t("fullName")}</label>
+            <Input type="text" placeholder={t("namePlaceholder")} value={form.name} onChange={handleField("name")}
               className={fieldClass(errors.name)} />
             {errors.name && <p className="text-sm text-red-9 font-family-dm-sans">{errors.name}</p>}
           </div>
@@ -307,25 +312,25 @@ export function ContactOrganizerModal({
           </div>
           {/* Email */}
           <div className="flex flex-col gap-2">
-            <label className="font-normal text-base leading-[1.3] text-gray-12 font-family-dm-sans">E-mail</label>
-            <Input type="email" placeholder="seu@email.com" value={form.email} onChange={handleField("email")}
+            <label className="font-normal text-base leading-[1.3] text-gray-12 font-family-dm-sans">{t("email")}</label>
+            <Input type="email" placeholder={t("emailPlaceholder")} value={form.email} onChange={handleField("email")}
               className={fieldClass(errors.email)} />
             {errors.email && <p className="text-sm text-red-9 font-family-dm-sans">{errors.email}</p>}
           </div>
           {/* Telefone */}
           <div className="flex flex-col gap-2">
-            <label className="font-normal text-base leading-[1.3] text-gray-12 font-family-dm-sans">Telefone</label>
+            <label className="font-normal text-base leading-[1.3] text-gray-12 font-family-dm-sans">{t("phone")}</label>
             <Input type="tel" placeholder="(00) 00000-0000" value={form.phone} onChange={handlePhoneChange} maxLength={15}
               className={fieldClass(errors.phone)} />
             {errors.phone && <p className="text-sm text-red-9 font-family-dm-sans">{errors.phone}</p>}
           </div>
           {/* Assunto */}
           <div className="flex flex-col gap-2">
-            <label className="font-normal text-base leading-[1.3] text-gray-12 font-family-dm-sans">Assunto</label>
+            <label className="font-normal text-base leading-[1.3] text-gray-12 font-family-dm-sans">{t("subject")}</label>
             <Dropdown
-              options={SUBJECTS.map((s) => ({ label: s, id: s }))}
+              options={SUBJECTS.map((s) => ({ label: t(s), id: s }))}
               onSelect={(opt) => {
-                setForm((prev) => ({ ...prev, subject: opt.label }));
+                setForm((prev) => ({ ...prev, subject: opt.id ?? "" }));
                 if (errors.subject) setErrors((prev) => ({ ...prev, subject: undefined }));
               }}
               width="w-full"
@@ -336,9 +341,9 @@ export function ContactOrganizerModal({
           </div>
           {/* Mensagem */}
           <div className="flex flex-col gap-2">
-            <label className="font-normal text-base leading-[1.3] text-gray-12 font-family-dm-sans">Mensagem</label>
+            <label className="font-normal text-base leading-[1.3] text-gray-12 font-family-dm-sans">{t("message")}</label>
             <textarea
-              placeholder="Descreva sua dúvida ou solicitação..."
+              placeholder={t("messagePlaceholder")}
               value={form.message}
               onChange={handleField("message")}
               rows={4}
@@ -354,8 +359,8 @@ export function ContactOrganizerModal({
         <div className="flex flex-wrap gap-x-4 gap-y-5 items-start w-full">
           {/* Nome completo */}
           <div className="flex flex-col gap-2 flex-1 min-w-[230px]">
-            <label className="font-normal text-base leading-[1.3] text-gray-12 font-family-dm-sans">Nome completo</label>
-            <Input type="text" placeholder="Nome Sobrenome" value={form.name} onChange={handleField("name")}
+            <label className="font-normal text-base leading-[1.3] text-gray-12 font-family-dm-sans">{t("fullName")}</label>
+            <Input type="text" placeholder={t("namePlaceholder")} value={form.name} onChange={handleField("name")}
               className={fieldClass(errors.name)} />
             {errors.name && <p className="text-sm text-red-9 font-family-dm-sans">{errors.name}</p>}
           </div>
@@ -368,25 +373,25 @@ export function ContactOrganizerModal({
           </div>
           {/* Email */}
           <div className="flex flex-col gap-2 flex-1 min-w-[230px]">
-            <label className="font-normal text-base leading-[1.3] text-gray-12 font-family-dm-sans">E-mail</label>
-            <Input type="email" placeholder="seu@email.com" value={form.email} onChange={handleField("email")}
+            <label className="font-normal text-base leading-[1.3] text-gray-12 font-family-dm-sans">{t("email")}</label>
+            <Input type="email" placeholder={t("emailPlaceholder")} value={form.email} onChange={handleField("email")}
               className={fieldClass(errors.email)} />
             {errors.email && <p className="text-sm text-red-9 font-family-dm-sans">{errors.email}</p>}
           </div>
           {/* Telefone */}
           <div className="flex flex-col gap-2 flex-1 min-w-[230px]">
-            <label className="font-normal text-base leading-[1.3] text-gray-12 font-family-dm-sans">Telefone</label>
+            <label className="font-normal text-base leading-[1.3] text-gray-12 font-family-dm-sans">{t("phone")}</label>
             <Input type="tel" placeholder="(00) 00000-0000" value={form.phone} onChange={handlePhoneChange} maxLength={15}
               className={fieldClass(errors.phone)} />
             {errors.phone && <p className="text-sm text-red-9 font-family-dm-sans">{errors.phone}</p>}
           </div>
           {/* Assunto */}
           <div className="flex flex-col gap-2 w-full sm:w-[calc(50%-8px)]">
-            <label className="font-normal text-base leading-[1.3] text-gray-12 font-family-dm-sans">Assunto</label>
+            <label className="font-normal text-base leading-[1.3] text-gray-12 font-family-dm-sans">{t("subject")}</label>
             <Dropdown
-              options={SUBJECTS.map((s) => ({ label: s, id: s }))}
+              options={SUBJECTS.map((s) => ({ label: t(s), id: s }))}
               onSelect={(opt) => {
-                setForm((prev) => ({ ...prev, subject: opt.label }));
+                setForm((prev) => ({ ...prev, subject: opt.id ?? "" }));
                 if (errors.subject) setErrors((prev) => ({ ...prev, subject: undefined }));
               }}
               width="w-full"
@@ -397,9 +402,9 @@ export function ContactOrganizerModal({
           </div>
           {/* Mensagem */}
           <div className="flex flex-col gap-2 w-full">
-            <label className="font-normal text-base leading-[1.3] text-gray-12 font-family-dm-sans">Mensagem</label>
+            <label className="font-normal text-base leading-[1.3] text-gray-12 font-family-dm-sans">{t("message")}</label>
             <textarea
-              placeholder="Descreva sua dúvida ou solicitação..."
+              placeholder={t("messagePlaceholder")}
               value={form.message}
               onChange={handleField("message")}
               rows={5}
@@ -435,13 +440,13 @@ export function ContactOrganizerModal({
           {/* Header */}
           <div className="flex items-center justify-between px-4 py-3 border-b border-gray-6 shrink-0">
             <h2 className="font-semibold text-base leading-[1.3] text-gray-12 font-family-dm-sans">
-              Mensagem para organizador
+              {t("messageToOrganizer")}
             </h2>
             <button
               type="button"
               onClick={onClose}
               className="flex items-center justify-center size-8 rounded-lg hover:bg-gray-3 transition-colors shrink-0"
-              aria-label="Fechar modal"
+              aria-label={t("closeModal")}
             >
               <X className="size-[18px] text-gray-12" />
             </button>
@@ -466,7 +471,7 @@ export function ContactOrganizerModal({
                         onError={() => setTurnstileToken(null)}
                         onExpire={() => setTurnstileToken(null)}
                         style={{ width: "100%", display: "block" }}
-                        options={{ theme: "light", size: "flexible", appearance: "interaction-only" }}
+                        options={{ theme: "light", size: "flexible", appearance: "interaction-only", language: turnstileLanguage }}
                       />
                     </div>
                   </div>
@@ -478,7 +483,7 @@ export function ContactOrganizerModal({
                     className="flex-1 border-gray-6 text-gray-12 h-11"
                     onClick={onClose}
                   >
-                    Cancelar
+                    {t("cancel")}
                   </Button>
                   <button
                     type="submit"
@@ -486,7 +491,7 @@ export function ContactOrganizerModal({
                     className="flex-1 h-11 rounded-lg font-semibold text-base font-family-dm-sans transition-opacity hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
                     style={{ backgroundColor: "#59e373", color: "#141a15" }}
                   >
-                    {isSubmitting ? "Enviando..." : "Enviar"}
+                    {isSubmitting ? t("sending") : t("send")}
                   </button>
                 </div>
               </div>
@@ -514,13 +519,13 @@ export function ContactOrganizerModal({
           {/* Header */}
           <div className="flex items-center justify-between px-4 py-4 border-b border-gray-6 shrink-0">
             <h2 className="font-semibold text-xl leading-[1.3] text-gray-12 font-family-dm-sans">
-              Falar com o organizador
+              {t("contactOrganizer")}
             </h2>
             <button
               type="button"
               onClick={onClose}
               className="flex items-center justify-center size-8 rounded-lg hover:bg-gray-3 transition-colors shrink-0"
-              aria-label="Fechar modal"
+              aria-label={t("closeModal")}
             >
               <X className="size-[18px] text-gray-12" />
             </button>
@@ -530,7 +535,7 @@ export function ContactOrganizerModal({
           <form onSubmit={handleSubmit} noValidate>
               <div className="pt-4 pb-4">
                 <p className="font-medium text-base leading-[1.3] text-gray-12 font-family-dm-sans px-6 mb-8">
-                  Preencha os campos abaixo para enviar sua mensagem.
+                  {t("fillFieldsBelow")}
                 </p>
                 {formFields(false)}
               </div>
@@ -545,7 +550,7 @@ export function ContactOrganizerModal({
                     onError={() => setTurnstileToken(null)}
                     onExpire={() => setTurnstileToken(null)}
                     style={{ width: "100%", display: "block" }}
-                    options={{ theme: "light", size: "flexible", appearance: "interaction-only" }}
+                    options={{ theme: "light", size: "flexible", appearance: "interaction-only", language: turnstileLanguage }}
                     className="w-full"
                   />
                 )}
@@ -556,10 +561,10 @@ export function ContactOrganizerModal({
                     className="border-gray-6 text-gray-12"
                     onClick={onClose}
                   >
-                    Cancelar
+                    {t("cancel")}
                   </Button>
                   <Button type="submit" disabled={(!!TURNSTILE_SITE_KEY && !turnstileToken) || isSubmitting}>
-                    {isSubmitting ? "Enviando..." : "Enviar mensagem"}
+                    {isSubmitting ? t("sending") : t("sendMessage")}
                   </Button>
                 </div>
               </div>

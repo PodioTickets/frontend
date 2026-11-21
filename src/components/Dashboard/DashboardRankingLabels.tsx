@@ -63,12 +63,17 @@ export function DashboardRankingTruncatedLabel({
   );
 }
 
+// O backend (dashboard.service) devolve este texto quando o ingresso não tem categoria.
+const NO_CATEGORY = "Sem categoria";
+
 export function DashboardRankingCategoryLabel({ category }: { category: string }) {
+  // Sem categoria: a linha mostra só o nome do ingresso.
+  if (!category?.trim() || category === NO_CATEGORY) return null;
   return (
     <DashboardRankingTruncatedLabel
       text={category}
       mobileTapAriaLabel="Toque para ver o nome completo da categoria"
-      lineClassName="font-family-dm-sans font-normal text-[14px] leading-[1.3] text-gray-11 overflow-hidden text-ellipsis whitespace-nowrap w-full max-w-full min-w-0"
+      lineClassName="font-family-dm-sans font-normal text-[12px] leading-[1.3] text-gray-11 overflow-hidden text-ellipsis whitespace-nowrap w-full max-w-full min-w-0"
     />
   );
 }

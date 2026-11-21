@@ -6,9 +6,10 @@ import { useForgotPassword } from "@/hooks/useForgotPassword";
 import { useResetPassword } from "@/hooks/useResetPassword";
 import { getCpfValidationMessage } from "@/utils/cpf";
 import {
-  forgotPasswordStep1Schema,
-  resetPasswordSchema,
+  buildForgotPasswordStep1Schema,
+  buildResetPasswordSchema,
 } from "@/validators/Auth.validator";
+import { useT } from "@/i18n/client";
 import type { ForgotMethod } from "./ForgotPasswordPanels";
 
 /** Passo atual do fluxo de recuperação de senha. */
@@ -43,6 +44,7 @@ export function useForgotPasswordFlow() {
     isVerifying: forgotPasswordVerifying,
   } = useForgotPassword();
   const { resetPassword, isPending: resetPasswordPending } = useResetPassword();
+  const t = useT("auth");
 
   const [forgotFlow, setForgotFlow] = useState<ForgotFlow>("idle");
   const [forgotMethod, setForgotMethod] = useState<ForgotMethod>("email");
@@ -112,11 +114,11 @@ export function useForgotPasswordFlow() {
 
   /** Abre o fluxo a partir da tela de login, pré-preenchendo email/CPF pelo digitado. */
   const startForgotFlowFrom = (typed: string) => {
-    const t = typed.trim();
-    const isCpfLike = t !== "" && /^[\d.\-\s]+$/.test(t);
+    const value = typed.trim();
+    const isCpfLike = value !== "" && /^[\d.\-\s]+$/.test(value);
     setForgotMethod(isCpfLike ? "cpf" : "email");
-    setForgotEmail(isCpfLike ? "" : t);
-    setForgotCpf(isCpfLike ? maskCPF(t) : "");
+    setForgotEmail(isCpfLike ? "" : value);
+    setForgotCpf(isCpfLike ? maskCPF(value) : "");
     setForgotEmailError(undefined);
     setForgotFlow("email");
   };
@@ -162,7 +164,7 @@ export function useForgotPasswordFlow() {
         // retorna ao passo do código com o tempo restante. Identificador
         // diferente = pedido novo → segue o fluxo normal abaixo.
         if (forgotResendCooldown > 0 && passwordResetCpf === cpfDigits) {
-          toast.error(`Aguarde ${forgotResendCooldown}s para reenviar o código.`);
+          toast.error(t("waitToResendCode", { seconds: forgotResendCooldown }));
           setForgotFlow("enter-code");
           return;
         }
@@ -174,7 +176,7 @@ export function useForgotPasswordFlow() {
         // do código. Ausente = CPF sem conta; mantém a mensagem genérica.
         setPasswordResetMaskedEmail(result?.maskedEmail ?? "");
       } else {
-        forgotPasswordStep1Schema.parse({ email: forgotEmail });
+        buildForgotPasswordStep1Schema(t).parse({ email: forgotEmail });
         setForgotEmailError(undefined);
 
         // Mesmo cooldown para o fluxo por e-mail (comparação canônica: trim +
@@ -183,7 +185,7 @@ export function useForgotPasswordFlow() {
           passwordResetEmail.trim().toLowerCase() ===
           forgotEmail.trim().toLowerCase();
         if (forgotResendCooldown > 0 && sameEmail) {
-          toast.error(`Aguarde ${forgotResendCooldown}s para reenviar o código.`);
+          toast.error(t("waitToResendCode", { seconds: forgotResendCooldown }));
           setForgotFlow("enter-code");
           return;
         }
@@ -200,7 +202,7 @@ export function useForgotPasswordFlow() {
     } catch (error) {
       if (error instanceof ZodError) {
         const first = error.issues[0];
-        setForgotEmailError(first?.message ?? "Email inválido");
+        setForgotEmailError(first?.message ?? t("vEmailInvalid"));
         if (first?.message) toast.error(first.message);
         return;
       }
@@ -211,7 +213,7 @@ export function useForgotPasswordFlow() {
   const handleCodeSubmit = async (e: FormEvent) => {
     e.preventDefault();
     if (resetCode.length !== 6) {
-      setResetCodeError("Digite os 6 dígitos do código");
+      setResetCodeError(t("enterSixDigits"));
       return;
     }
     try {
@@ -286,11 +288,11 @@ export function useForgotPasswordFlow() {
   const handleNewPasswordSubmit = async (e: FormEvent) => {
     e.preventDefault();
     if (!resetPasswordToken) {
-      toast.error("Link inválido ou expirado. Solicite um novo e-mail.");
+      toast.error(t("resetLinkInvalid"));
       return;
     }
     try {
-      const validated = resetPasswordSchema.parse({
+      const validated = buildResetPasswordSchema(t).parse({
         password: newPassword,
         confirmPassword: confirmNewPassword,
       });
@@ -318,7 +320,7 @@ export function useForgotPasswordFlow() {
       const msg =
         err?.response?.data?.message ||
         err?.message ||
-        "Erro ao redefinir senha. Tente novamente.";
+        t("resetPasswordError");
       if (msg.toLowerCase().includes("igual")) {
         setResetPasswordFieldErrors({ password: msg });
       } else {

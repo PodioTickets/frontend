@@ -9,6 +9,7 @@ import { formatDocumentDisplay, isPersonBr } from "@/utils/documentDisplay";
 import { formatDateBR } from "@/utils/datetimeBR";
 import { formatBRL as formatPrice } from "@/lib/money";
 import { SeeDetailsIcon } from "../Icons/SeeDetailsIcon";
+import { useT } from "@/i18n/client";
 
 interface OrderItem {
   name: string;
@@ -46,10 +47,19 @@ interface ParticipantData {
     /** Nacionalidade (PT-BR) — decide formatação do documento (CPF vs cru). */
     nationality?: string;
   };
-  couponCode?: string;
-  couponDiscount?: number;
+  /** Cupons que caíram neste ingresso (o pedido pode ter vários, um em cada ingresso). */
+  coupons?: ParticipantCoupon[];
   voucherCode?: string;
   voucherDiscount?: number;
+}
+
+export interface ParticipantCoupon {
+  id: string;
+  code: string | null;
+  couponType: "DISCOUNT" | "QUANTITY" | "AGE";
+  percent?: number;
+  /** Em reais. */
+  amount: number;
 }
 
 export interface OrderSummaryCoupon {
@@ -60,9 +70,8 @@ export interface OrderSummaryCoupon {
   type?: "PERCENTAGE" | "FIXED";
   couponType?: "DISCOUNT" | "QUANTITY" | "AGE";
   fixedValue?: number;
-  /** Cupom automático ACUMULADO com o manual (linha própria acima do manual). */
-  autoDiscount?: number;
-  autoPercent?: number;
+  /** Cupons automáticos além do principal/manual (uma linha cada, acima do cupom). */
+  autoLines?: Array<{ id: string; label: string; amount: number }>;
   error?: string | null;
   isApplied?: boolean;
   isLoading?: boolean;
@@ -107,16 +116,15 @@ export function OrderSummary({
   event,
   onShowDetails,
 }: OrderSummaryProps) {
+  const t = useT("checkout");
   const {
     code: externalCouponCode = "",
     discount: couponDiscount = 0,
     name: couponName,
     percent: couponPercent,
-    type: couponValueType,
     couponType,
     fixedValue: couponFixedValue,
-    autoDiscount: autoCouponDiscount = 0,
-    autoPercent: autoCouponPercent,
+    autoLines: autoCouponLines = [],
     error: couponError = null,
     isApplied: isCouponApplied = false,
     isLoading: isCouponLoading = false,
@@ -150,9 +158,9 @@ export function OrderSummary({
   const getGenderLabel = (gender?: string) => {
     if (!gender) return "";
     const labels: Record<string, string> = {
-      male: "Masculino",
-      female: "Feminino",
-      other: "Outro",
+      male: t("genderMale"),
+      female: t("genderFemale"),
+      other: t("genderOther"),
     };
     return labels[gender] || gender;
   };
@@ -186,7 +194,7 @@ export function OrderSummary({
           </p>
 
           <div className="flex md:hidden items-center justify-between text-sm text-gray-12">
-            <p className="font-manrope font-medium md:font-semibold">Participantes:</p>
+            <p className="font-manrope font-medium md:font-semibold">{t("participantsLabel")}</p>
             <p className="font-manrope font-semibold md:font-bold">{totalParticipants}</p>
           </div>
 
@@ -199,7 +207,7 @@ export function OrderSummary({
                 >
                   <div className="flex flex-1 flex-col min-w-0">
                     <p className="font-family-dm-sans font-normal text-sm leading-[1.3] text-gray-11 truncate">
-                      {ticket.categoryName || "Ingresso avulso"}
+                      {ticket.categoryName || t("singleTicket")}
                     </p>
                     <p className="font-manrope font-medium md:font-semibold text-sm leading-[1.1] text-gray-12 truncate">
                       ({ticket.quantity}x) {ticket.raceName}
@@ -218,7 +226,7 @@ export function OrderSummary({
             <div className="hidden md:flex gap-8 items-center">
               <div className="flex flex-1 flex-col">
                 <p className="font-manrope font-medium md:font-semibold text-sm leading-[1.1] text-gray-12">
-                  ({items.length}x) {items.length > 1 ? "Itens adicionais" : "Item adicional"}:
+                  ({items.length}x) {items.length > 1 ? t("additionalItems") : t("additionalItem")}:
                 </p>
               </div>
               <div className="flex flex-col items-end">
@@ -230,33 +238,27 @@ export function OrderSummary({
           )}
 
           <div className="flex items-center justify-between text-sm text-gray-12">
-            <p className="font-manrope font-medium md:font-semibold">Subtotal:</p>
+            <p className="font-manrope font-medium md:font-semibold">{t("subtotalLabel")}</p>
             <p className="font-manrope font-semibold md:font-bold">{formatPrice(subtotal)}</p>
           </div>
 
-          {/* Cupom automático acumulado com o manual */}
-          {autoCouponDiscount > 0 && (
-            <div className="flex items-center justify-between text-sm text-gray-12">
-              <p className="font-manrope font-medium md:font-semibold">
-                Cupom automático
-                {autoCouponPercent != null && autoCouponPercent > 0 ? ` (${autoCouponPercent}% OFF)` : ""}
-                :
-              </p>
-              <p className="font-manrope font-semibold md:font-bold">
-                -{formatPrice(autoCouponDiscount)}
-              </p>
+          {/* Cupons automáticos além do principal/manual */}
+          {autoCouponLines.map((line) => (
+            <div key={line.id} className="flex items-center justify-between text-sm text-gray-12">
+              <p className="font-manrope font-medium md:font-semibold">{line.label}:</p>
+              <p className="font-manrope font-semibold md:font-bold">-{formatPrice(line.amount)}</p>
             </div>
-          )}
+          ))}
 
           {/* Cupom aplicado */}
           {isCouponApplied && couponDiscount > 0 && (
             <div className="flex items-center justify-between text-sm text-gray-12">
               <p className="font-manrope font-medium md:font-semibold">
                 {couponType === "QUANTITY" || couponType === "AGE"
-                  ? "Cupom automático"
+                  ? t("couponAutomatic")
                   : couponName
-                    ? `Cupom ${couponName}`
-                    : "Cupom aplicado"}
+                    ? t("couponNamed", { name: couponName })
+                    : t("couponApplied")}
                 {couponPercent != null && couponPercent > 0
                   ? ` (${couponPercent}% OFF)`
                   : ""}
@@ -272,7 +274,7 @@ export function OrderSummary({
           {voucherCode && voucherDiscount > 0 && (
             <div className="flex items-center justify-between text-sm text-gray-12">
               <p className="font-manrope font-medium md:font-semibold">
-                {voucherCode ? `Voucher ${voucherCode}` : "Voucher aplicado"}:
+                {voucherCode ? `Voucher ${voucherCode}` : t("voucherApplied")}:
               </p>
               <p className="font-manrope font-semibold md:font-bold">
                 -{formatPrice(voucherDiscount)}
@@ -283,7 +285,7 @@ export function OrderSummary({
           {/* Taxa de serviço — só renderiza quando > 0 */}
           {serviceFee > 0 && (
             <div className="flex items-center justify-between text-sm text-gray-12">
-              <p className="font-manrope font-medium md:font-semibold">Taxa de serviço:</p>
+              <p className="font-manrope font-medium md:font-semibold">{t("serviceFeeLabel")}</p>
               <p className="font-manrope font-semibold md:font-bold">
                 {formatPrice(serviceFee)}
               </p>
@@ -296,7 +298,7 @@ export function OrderSummary({
               onClick={onShowDetails}
               className="md:hidden flex items-center justify-center text-center gap-2 text-primary-11 font-medium text-sm underline cursor-pointer"
             >
-              Ver detalhes <SeeDetailsIcon />
+              {t("seeDetails")} <SeeDetailsIcon />
             </button>
           )}
 
@@ -304,7 +306,7 @@ export function OrderSummary({
 
         {/* Total */}
         <div className="border-t border-gray-6 flex font-manrope font-bold items-center justify-between py-4 md:py-6 text-base text-gray-12">
-          <p>Total:</p>
+          <p>{t("totalLabel")}</p>
           <p>{formatPrice(total)}</p>
         </div>
 
@@ -315,7 +317,7 @@ export function OrderSummary({
               <div className="border-[1.5px] border-gray-8 flex flex-1 h-12 items-center px-3 rounded-lg">
                 <input
                   type="text"
-                  placeholder="Código de cupom"
+                  placeholder={t("couponCodePlaceholder")}
                   value={couponCode}
                   onChange={(e) => {
                     const value = e.target.value.toUpperCase().substring(0, 30);
@@ -331,7 +333,7 @@ export function OrderSummary({
                 isLoading={isCouponLoading}
                 disabled={isCouponLoading}
               >
-                Aplicar
+                {t("couponApply")}
               </Button>
             </div>
             {couponError && (
@@ -348,7 +350,7 @@ export function OrderSummary({
         <div className="flex flex-col items-start px-4 py-1">
           <div className="flex items-center justify-center py-4 w-full">
             <p className="font-family-dm-sans font-semibold text-xl leading-[1.3] text-gray-12">
-              Resumo da sua compra
+              {t("purchaseSummaryTitle")}
             </p>
           </div>
 
@@ -372,14 +374,9 @@ export function OrderSummary({
                   {/* Conteúdo do Card */}
                   <div className="flex items-center px-4 py-6 w-full">
                     <div className="flex flex-1 flex-col gap-5 items-start">
-                      <div className="flex items-center w-full">
-                        <p className="font-family-dm-sans font-normal text-base leading-[1.3] text-gray-12">
-                          Participante {participantData.participantIndex + 1}
-                        </p>
-                      </div>
                       <div className="flex flex-col gap-1">
                         <p className="font-family-dm-sans font-normal text-sm text-gray-11 max-w-[200px] truncate">
-                          {participantData.categoryName || "Ingresso Avulso"}
+                          {participantData.categoryName || t("singleTicketTitle")}
                         </p>
                         <p className="font-manrope font-bold text-lg leading-[1.1] text-gray-12">
                           {participantData.ticketName}
@@ -388,7 +385,7 @@ export function OrderSummary({
 
                       <div className="flex items-end justify-between w-full text-gray-12">
                         <p className="font-family-dm-sans font-normal text-base leading-[1.3]">
-                          Valor do ingresso:
+                          {t("ticketPriceLabel")}
                         </p>
                         <p className="font-manrope font-bold text-lg leading-[1.1]">
                           {formatPrice(participantData.ticketPrice)}
@@ -399,8 +396,8 @@ export function OrderSummary({
                           <div className="flex items-end justify-between w-full text-gray-12">
                             <p className="font-family-dm-sans font-normal text-base leading-[1.3]">
                               {participantData.additionalProducts.length > 1
-                                ? "Produtos adicionais"
-                                : "Produto adicional"}{" "}
+                                ? t("additionalProducts")
+                                : t("additionalProduct")}{" "}
                               ({participantData.additionalProducts.length}):
                             </p>
                             <p className="font-manrope font-bold text-lg leading-[1.1]">
@@ -413,8 +410,7 @@ export function OrderSummary({
 
                   {/* Perfil + Badges */}
                   {(participantData.participant ||
-                    participantData.couponCode ||
-                    (isCouponApplied && participantData.couponDiscount) ||
+                    participantData.coupons ||
                     participantData.voucherCode) && (
                       <div className="border-b border-gray-6 flex flex-col gap-3 items-start pb-5 px-4 w-full">
                         {participantData.participant && (
@@ -435,7 +431,7 @@ export function OrderSummary({
                                 <div className="flex flex-col gap-1 items-start justify-center min-w-0">
                                   <p className="font-family-dm-sans font-semibold text-sm leading-[1.3] text-gray-12 truncate w-full">
                                     {participantData.participant.name ||
-                                      `Participante ${participantData.participantIndex + 1}`}
+                                      t("participantN", { n: participantData.participantIndex + 1 })}
                                   </p>
                                   <div className="flex gap-1 items-center min-w-0 overflow-hidden w-full">
                                     {participantData.participant.birthDate && (
@@ -485,28 +481,26 @@ export function OrderSummary({
                         )}
 
                         {/* Badge de Cupom */}
-                        {(participantData.couponCode || isCouponApplied) &&
-                          participantData.couponDiscount && (
-                            <div className="bg-yellow-4 flex items-center justify-between p-3 rounded-lg w-full">
-                              <div className="flex gap-1 items-center">
-                                <TicketIcon className="size-4 text-yellow-12" />
-                                <p className="font-family-dm-sans font-semibold text-sm leading-[1.3] text-yellow-12">
-                                  {couponType === "QUANTITY" ||
-                                    couponType === "AGE" ||
-                                    !participantData.couponCode
-                                    ? "Cupom automático"
-                                    : `Cupom: ${participantData.couponCode}`}
-                                </p>
-                                <p className="font-family-dm-sans font-semibold text-sm leading-[1.3] text-yellow-12">
-                                  {couponValueType === "PERCENTAGE" &&
-                                    `(-${couponPercent}%)`}
-                                </p>
-                              </div>
-                              <p className="font-family-dm-sans font-semibold text-sm leading-[1.3] text-yellow-12 whitespace-nowrap">
-                                -{formatPrice(participantData.couponDiscount!)}
+                        {participantData.coupons?.map((c) => (
+                          <div key={c.id} className="bg-yellow-4 flex items-center justify-between p-3 rounded-lg w-full">
+                            <div className="flex gap-1 items-center">
+                              <TicketIcon className="size-4 text-yellow-12" />
+                              <p className="font-family-dm-sans font-semibold text-sm leading-[1.3] text-yellow-12">
+                                {c.couponType === "QUANTITY" || c.couponType === "AGE" || !c.code
+                                  ? t("couponAutomatic")
+                                  : t("couponCodeBadge", { code: c.code })}
                               </p>
+                              {c.percent != null && (
+                                <p className="font-family-dm-sans font-semibold text-sm leading-[1.3] text-yellow-12">
+                                  {`(-${c.percent}%)`}
+                                </p>
+                              )}
                             </div>
-                          )}
+                            <p className="font-family-dm-sans font-semibold text-sm leading-[1.3] text-yellow-12 whitespace-nowrap">
+                              -{formatPrice(c.amount)}
+                            </p>
+                          </div>
+                        ))}
 
                         {/* Badge de Voucher */}
                         {participantData.voucherCode &&
@@ -519,7 +513,7 @@ export function OrderSummary({
                                 </p>
                               </div>
                               <p className="font-family-dm-sans font-semibold text-sm leading-[1.3] text-yellow-12 whitespace-nowrap">
-                                100% Cortesia
+                                {t("voucherCourtesy")}
                               </p>
                             </div>
                           )}

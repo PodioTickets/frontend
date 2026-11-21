@@ -1,6 +1,8 @@
 "use client";
 
 import { TicketCategoryCard } from "./TicketCategoryCard";
+import { AutoCouponBanner } from "./AutoCouponBadges";
+import { autoCouponDisplay } from "@/lib/autoCouponBadges";
 import { hasDisplayableDistance } from "@/utils/checkoutModalityDisplay";
 import { EventInfo } from "./EventInfo";
 import type { Event } from "@/interfaces/event";
@@ -39,10 +41,16 @@ import { useCouponPreview } from "@/hooks/useCouponPreview";
 import { useAgeCouponEligibility } from "@/hooks/useAgeCouponEligibility";
 import { computeAgeCouponTicketDiscount, formatAgeCouponLineLabel } from "@/lib/ageCoupon";
 import {
+  autoDiscountOnTickets,
+  combineQuantityCoupons,
   pickBestAutoCoupon,
   quantityCouponCandidates,
   quantityCouponCardPreview,
+  quantityCouponForTicket,
+  selectQuantityCoupons,
+  stackableQuantityCoupons,
 } from "@/lib/quantityCoupon";
+import { useT } from "@/i18n/client";
 
 interface ModalitiesStepProps {
   event: Event;
@@ -55,6 +63,7 @@ interface ModalitiesStepProps {
 }
 
 export function ModalitiesStep({ event, onNext, onBack, isSubmitting = false, disableNext = false }: ModalitiesStepProps) {
+  const t = useT("checkout");
   const { raceQuantities } = useCheckout();
   const { isAuthenticated } = useAuth();
   const { openLoginModal } = useLoginModal();
@@ -230,12 +239,14 @@ export function ModalitiesStep({ event, onNext, onBack, isSubmitting = false, di
   // (`timerCurrentOrder`/`orderData`) OU em preview vindo do link `?coupon=`
   // (`couponPreview`). Cupons automáticos (QUANTITY/AGE) são ignorados aqui — o
   // desconto deles só é revelado no pagamento.
+  // Cupom REAL já aplicado na order (não o preview do link). Cupom manual (DISCOUNT) só
+  // vale com o link na URL: entrando sem `?cupom=`, o de uma visita anterior não aparece
+  // aqui e o `handleNext` de /ingressos o tira do pedido (regra do usuário, 11/11).
+  const rawOrderCoupon = timerCurrentOrder?.coupon ?? orderData?.coupon ?? null;
+  const orderCoupon = rawOrderCoupon?.couponType === "DISCOUNT" && !pendingCoupon ? null : rawOrderCoupon;
   const appliedCoupon = useMemo(
-    () =>
-      timerCurrentOrder?.coupon ??
-      orderData?.coupon ??
-      couponPreviewToOrderCoupon(couponData, pendingCoupon),
-    [timerCurrentOrder, orderData, couponData, pendingCoupon],
+    () => orderCoupon ?? couponPreviewToOrderCoupon(couponData, pendingCoupon),
+    [orderCoupon, couponData, pendingCoupon],
   );
 
   // Voucher pode vir do link (`?voucher=`, preview) OU já estar aplicado na
@@ -243,11 +254,9 @@ export function ModalitiesStep({ event, onNext, onBack, isSubmitting = false, di
   // sem o param escondia a linha do voucher e o desconto. Voucher e cupom são
   // mutuamente exclusivos; o voucher tem prioridade aqui.
   const orderVoucher = timerCurrentOrder?.voucher ?? orderData?.voucher ?? null;
-  // Cupom REAL já aplicado na order (não o preview do link). Voucher e cupom são
-  // exclusivos: voucher da ORDER sempre vale; voucher de LINK só vale se a order
-  // ainda não tem um cupom real — senão o display do voucher sobreporia o cupom
-  // autoritativo que o backend vai cobrar.
-  const orderCoupon = timerCurrentOrder?.coupon ?? orderData?.coupon ?? null;
+  // Voucher e cupom são exclusivos: voucher da ORDER sempre vale; voucher de LINK só
+  // vale se a order ainda não tem um cupom real — senão o display do voucher sobreporia
+  // o cupom autoritativo que o backend vai cobrar.
   const useVoucher = !!orderVoucher || (!!voucherData && !orderCoupon);
 
   // Ingressos selecionados (id/preço/qtd) — base do voucher e do cupom de idade.
@@ -366,6 +375,27 @@ export function ModalitiesStep({ event, onNext, onBack, isSubmitting = false, di
   // aplicado no pedido, senão o 1º criado — mesma regra do backend. O de quantidade
   // aparece assim que a seleção cai na faixa min/max. Voucher e cupom manual/link vêm
   // antes (escolha do usuário).
+  // Cupom manual: anunciado só depois de aplicado (link ou pedido), pois depende de código.
+  const manualCoupon = appliedCoupon?.couponType === "DISCOUNT"
+    ? {
+      ...appliedCoupon,
+      // Preview do link traz o escopo e as condições; o cupom do pedido, só o escopo.
+      appliesTo: orderCoupon ? normalizeCouponAppliesTo(orderCoupon.appliesTo) : couponData?.appliesTo ?? null,
+      minQuantity: orderCoupon ? null : couponData?.minQuantity,
+      minCartValue: orderCoupon ? null : couponData?.minCartValue,
+    }
+    : null;
+  // Cupom de código (link ou pedido) tira os de quantidade das
+  // categorias dele (prévia e anúncios). Nas outras categorias o automático segue valendo.
+  const quantityCoupons = stackableQuantityCoupons(
+    ageEligibility?.quantityCoupons,
+    manualCoupon,
+    [
+      ...categorizedTickets.flatMap((c) => c.tickets.map((ticket) => ({ id: ticket.id, categoryId: c.id }))),
+      ...uncategorizedTickets.map((ticket) => ({ id: ticket.id })),
+    ],
+  );
+  const quantityCandidates = quantityCouponCandidates(quantityCoupons, selectedTickets, totalPrice);
   const autoChoice =
     !useVoucher
       ? pickBestAutoCoupon(
@@ -373,14 +403,17 @@ export function ModalitiesStep({ event, onNext, onBack, isSubmitting = false, di
           ...(ageCoupon
             ? [{ id: ageCoupon.id, discount: ageDiscount, createdAt: ageCoupon.createdAt, quantity: null }]
             : []),
-          ...quantityCouponCandidates(ageEligibility?.quantityCoupons, selectedTickets, totalPrice).map(
+          ...quantityCandidates.map(
             (c) => ({ id: c.coupon.id, discount: c.discount, createdAt: c.coupon.createdAt, quantity: c }),
           ),
         ],
         orderCoupon?.id,
       )
       : null;
-  const quantityAuto = autoChoice?.quantity ?? null;
+  // Cupons de ingressos diferentes não competem: valem juntos, cada um no próprio ingresso.
+  const quantityAuto = autoChoice?.quantity
+    ? combineQuantityCoupons(selectQuantityCoupons(quantityCandidates, orderCoupon?.id))
+    : null;
 
   // Preview pros cards: desconta o preço de cada ingresso (strike-through) igual
   // ao cupom de link. Só quando `appliesTo: "all"` — pra um subconjunto de
@@ -398,16 +431,43 @@ export function ModalitiesStep({ event, onNext, onBack, isSubmitting = false, di
       : null;
   // Strike-through dos cards = o cupom automático ESCOLHIDO. O de quantidade risca assim
   // que "aplica" (seleção na faixa), só nos ingressos do `appliesTo`.
-  const autoCouponCardPreview: CouponPreviewResult | null = quantityAuto
-    ? quantityCouponCardPreview(quantityAuto.coupon)
-    : ageCouponPreview;
+  const autoCouponCardPreview = (ticketId: string): CouponPreviewResult | null => {
+    if (!quantityAuto) return ageCouponPreview;
+    const coupon = quantityCouponForTicket(quantityAuto.coupons, ticketId);
+    return coupon ? quantityCouponCardPreview(coupon) : null;
+  };
+  // Anúncios de cupom automático (voucher é exclusivo → sem anúncios). Ingresso esgotado não
+  // conta: não dá para comprar, então um cupom pode ser "geral" sem cobri-lo.
+  const autoCouponOffers =
+    !useVoucher
+      ? autoCouponDisplay(
+        [
+          ...categorizedTickets.flatMap((c) => c.tickets.map((ticket) => ({ ticket, categoryId: c.id }))),
+          ...uncategorizedTickets.map((ticket) => ({ ticket, categoryId: undefined })),
+        ]
+          .filter(({ ticket }) => ticket.activeBatch?.status !== "SOLD_OUT" && ticket.activeBatchStatus !== "SOLD_OUT")
+          .map(({ ticket, categoryId }) => ({ id: ticket.id, price: getTicketPrice(ticket), ageLimit: ticket.ageLimit, categoryId })),
+        quantityCoupons,
+        ageEligibility?.ageCoupons,
+        t,
+        manualCoupon,
+      )
+      : null;
+  const autoCouponsForBadges = autoCouponOffers?.byTicket ?? null;
+  // Categoria com cupom anunciado (selo na categoria ou em algum ingresso) começa fechada,
+  // mesmo sendo a 1ª (regra do usuário, 11/11). Com ingresso selecionado o card abre sozinho.
+  const categoryHasCouponOffer = (category: { id: string; tickets: Ticket[] }) =>
+    !!autoCouponOffers?.byCategory[category.id] || category.tickets.some((ticket) => !!autoCouponsForBadges?.[ticket.id]);
 
   // Acúmulo automático + manual (link ou da order): o manual incide sobre o valor já
   // descontado pelo automático, capado no subtotal — espelha o backend (autoritativo).
   const autoPreviewDiscount = quantityAuto ? quantityAuto.discount : ageCoupon ? ageDiscount : 0;
+  // O rebase usa só o automático nos ingressos do manual (automático em outro ingresso não o reduz).
   const manualPreviewDiscount = stackedManualDiscount(
     linkCouponDiscount ?? orderManualCouponDiscount ?? 0,
-    autoPreviewDiscount,
+    quantityAuto
+      ? autoDiscountOnTickets(quantityAuto.coupons, selectedTickets, manualCoupon?.appliesTo ?? null)
+      : autoPreviewDiscount,
     appliedCoupon,
   );
   const stackedPreview = hasManualCoupon || useLinkCoupon
@@ -473,15 +533,15 @@ export function ModalitiesStep({ event, onNext, onBack, isSubmitting = false, di
   // Label da linha de desconto: "Voucher CÓDIGO", "Cupom idade (X% OFF)" ou
   // "Cupom CÓDIGO (...)".
   const discountLineLabel = useVoucher
-    ? formatVoucherLineLabel(voucherData?.code ?? orderVoucher?.code)
-    : stackedPreview
-      ? "Descontos"
+    ? formatVoucherLineLabel(voucherData?.code ?? orderVoucher?.code, t)
+    : stackedPreview || (quantityAuto && quantityAuto.coupons.length > 1)
+      ? t("discounts")
     : quantityAuto
-      ? formatAgeCouponLineLabel(quantityAuto.coupon)
+      ? formatAgeCouponLineLabel(quantityAuto.coupon, t)
     : ageCoupon
-      ? formatAgeCouponLineLabel(ageCoupon)
+      ? formatAgeCouponLineLabel(ageCoupon, t)
       : appliedCoupon
-        ? formatCouponLineLabel(appliedCoupon)
+        ? formatCouponLineLabel(appliedCoupon, t)
         : "";
   // Cupom do link ainda sem desconto calculado ("ao continuar"). Voucher e cupom
   // de idade são calculados client-side, então não usam esse fallback.
@@ -552,12 +612,14 @@ export function ModalitiesStep({ event, onNext, onBack, isSubmitting = false, di
         {/* Instruction Card */}
         <div className=" rounded-lg mb-4">
           <p className="text-sm text-gray-11">
-            Escolha seus ingressos e defina a quantidade. Você pode ajustar depois em Informações.
+            {t("selectTicketsHint")}
           </p>
         </div>
 
         {/* Categories List */}
         <div className="flex flex-col gap-4">
+          {autoCouponOffers?.manualGeneral && <AutoCouponBanner offer={autoCouponOffers.manualGeneral} tooltipTrigger="click" />}
+          {autoCouponOffers?.general && <AutoCouponBanner offer={autoCouponOffers.general} tooltipTrigger="click" />}
           {categorizedTickets.length > 0 || uncategorizedTickets.length > 0 ? (
             <>
               {uncategorizedTickets.map((ticket) => (
@@ -569,6 +631,7 @@ export function ModalitiesStep({ event, onNext, onBack, isSubmitting = false, di
                   kitSelectionDisplay={kitSelectionDisplay}
                   userAge={userAge}
                   couponPreviewOverride={autoCouponCardPreview}
+                  autoCoupons={autoCouponsForBadges}
                   voucherFreeTicketId={voucherFreeTicketId}
                   couponConditionsMet={linkCouponConditionsMet}
                 />
@@ -579,14 +642,16 @@ export function ModalitiesStep({ event, onNext, onBack, isSubmitting = false, di
                   categoryId={category.id}
                   categoryName={category.name}
                   categoryDescription={category.description}
+                  categoryCoupon={autoCouponOffers?.byCategory[category.id]}
                   tickets={category.tickets}
                   index={index}
-                  expandedByDefault={index === 0}
+                  expandedByDefault={index === 0 && !categoryHasCouponOffer(category)}
                   event={event}
 
                   kitSelectionDisplay={kitSelectionDisplay}
                   userAge={userAge}
                   couponPreviewOverride={autoCouponCardPreview}
+                  autoCoupons={autoCouponsForBadges}
                   voucherFreeTicketId={voucherFreeTicketId}
                   couponConditionsMet={linkCouponConditionsMet}
                 />
@@ -595,7 +660,7 @@ export function ModalitiesStep({ event, onNext, onBack, isSubmitting = false, di
           ) : (
             <div className="w-full rounded-lg border border-gray-5 px-4 py-8 text-center ">
               <p className="text-gray-11">
-                Nenhum ingresso disponível para este evento.
+                {t("noTicketsAvailable")}
               </p>
             </div>
           )}
@@ -620,12 +685,12 @@ export function ModalitiesStep({ event, onNext, onBack, isSubmitting = false, di
                 : null
             }
             pendingDiscountLabel={
-              couponPending ? `Cupom ${pendingCoupon}${couponPercentSuffix}` : null
+              couponPending ? `${t("couponNamed", { name: pendingCoupon ?? "" })}${couponPercentSuffix}` : null
             }
             serviceFee={serviceFee}
             total={totalWithFee}
             cta={{
-              label: "Selecionar",
+              label: t("select"),
               onClick: handleNext,
               disabled: totalParticipants === 0 || disableNext,
               loading: isSubmitting,
@@ -642,20 +707,22 @@ export function ModalitiesStep({ event, onNext, onBack, isSubmitting = false, di
               <button
                 className="cursor-pointer rotate-180 size-8 flex items-center justify-center rounded-full border border-gray-6"
                 onClick={onBack}
-                aria-label="Voltar para a página do evento"
+                aria-label={t("backToEventPage")}
               >
                 <ArrowButton isOpen={false} />
               </button>
             )}
-            <h1 className="text-2xl font-bold">Selecione seus ingressos</h1>
+            <h1 className="text-2xl font-bold">{t("selectTicketsTitle")}</h1>
           </div>
           <p className="text-sm text-gray-11 mt-4">
-            Escolha seus ingressos e defina a quantidade. Você pode ajustar depois em Informações.
+            {t("selectTicketsHint")}
           </p>
         </div>
 
         <div className="w-full flex items-start gap-11 mt-6">
           <div className="flex-1 flex flex-col gap-6">
+            {autoCouponOffers?.manualGeneral && <AutoCouponBanner offer={autoCouponOffers.manualGeneral} tooltipTrigger="hover" desktop />}
+            {autoCouponOffers?.general && <AutoCouponBanner offer={autoCouponOffers.general} tooltipTrigger="hover" desktop />}
             {categorizedTickets.length > 0 || uncategorizedTickets.length > 0 ? (
               <>
                 {uncategorizedTickets.map((ticket, index) => {
@@ -669,6 +736,7 @@ export function ModalitiesStep({ event, onNext, onBack, isSubmitting = false, di
                         kitSelectionDisplay={kitSelectionDisplay}
                         userAge={userAge}
                         couponPreviewOverride={autoCouponCardPreview}
+                        autoCoupons={autoCouponsForBadges}
                         voucherFreeTicketId={voucherFreeTicketId}
                         couponConditionsMet={linkCouponConditionsMet}
                       />
@@ -685,14 +753,16 @@ export function ModalitiesStep({ event, onNext, onBack, isSubmitting = false, di
                         categoryId={category.id}
                         categoryName={category.name}
                         categoryDescription={category.description}
+                        categoryCoupon={autoCouponOffers?.byCategory[category.id]}
                         tickets={category.tickets}
                         index={index}
-                        expandedByDefault={index === 0}
+                        expandedByDefault={index === 0 && !categoryHasCouponOffer(category)}
                         event={event}
 
                         kitSelectionDisplay={kitSelectionDisplay}
                         userAge={userAge}
                         couponPreviewOverride={autoCouponCardPreview}
+                        autoCoupons={autoCouponsForBadges}
                         voucherFreeTicketId={voucherFreeTicketId}
                         couponConditionsMet={linkCouponConditionsMet}
                       />
@@ -706,7 +776,7 @@ export function ModalitiesStep({ event, onNext, onBack, isSubmitting = false, di
             ) : (
               <div className="w-full rounded-lg border border-gray-5 px-4 py-8 text-center">
                 <p className="text-gray-11">
-                  Nenhum ingresso disponível para este evento.
+                  {t("noTicketsAvailable")}
                 </p>
               </div>
             )}

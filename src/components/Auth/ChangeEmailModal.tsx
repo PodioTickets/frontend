@@ -13,12 +13,14 @@ import { cn } from "@/utils/cn";
 import { useModalSubmitState } from "@/hooks/useModalSubmitState";
 import Image from "next/image";
 import { EmailIcon } from "../Icons/EmailIcon";
+import { useT } from "@/i18n/client";
 
 type Step = "confirm" | "form" | "code" | "success";
 
 export function ChangeEmailModal() {
   const { isOpen, closeChangeEmailModal } = useChangeEmailModal();
   const { user, refetchUser } = useAuth();
+  const t = useT("auth");
 
   const [step, setStep] = useState<Step>("confirm");
   const [newEmail, setNewEmail] = useState("");
@@ -75,12 +77,12 @@ export function ChangeEmailModal() {
     e.preventDefault();
     const errors: { newEmail?: string; currentPassword?: string } = {};
 
-    if (!newEmail.trim()) errors.newEmail = "E-mail é obrigatório";
-    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(newEmail)) errors.newEmail = "E-mail inválido";
+    if (!newEmail.trim()) errors.newEmail = t("changeEmailRequired");
+    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(newEmail)) errors.newEmail = t("changeEmailInvalid");
     else if (newEmail.toLowerCase() === user?.email?.toLowerCase())
-      errors.newEmail = "O novo e-mail deve ser diferente do atual";
+      errors.newEmail = t("changeEmailSameAsCurrent");
 
-    if (!currentPassword.trim()) errors.currentPassword = "Senha é obrigatória";
+    if (!currentPassword.trim()) errors.currentPassword = t("vPasswordRequired");
 
     if (Object.keys(errors).length > 0) {
       setFormErrors(errors);
@@ -95,7 +97,7 @@ export function ChangeEmailModal() {
       setResendCooldown(60);
       setStep("code");
     } catch (err: any) {
-      const msg: string = err?.message || "Erro ao solicitar troca de e-mail.";
+      const msg: string = err?.message || t("changeEmailRequestError");
       const msgLower = msg.toLowerCase();
 
       // UserService.handleError sets formFieldErrors.email for 409 email-in-use responses
@@ -116,7 +118,7 @@ export function ChangeEmailModal() {
       if (isEmailInUse) {
         setFormErrors((p) => ({ ...p, newEmail: err?.formFieldErrors?.email ?? msg }));
       } else if (isWrongPassword) {
-        setFormErrors((p) => ({ ...p, currentPassword: "Senha incorreta." }));
+        setFormErrors((p) => ({ ...p, currentPassword: t("wrongPassword") }));
       } else {
         toast.error(msg);
       }
@@ -128,7 +130,7 @@ export function ChangeEmailModal() {
   const handleCodeSubmit = async () => {
     const codeStr = code.join("");
     if (codeStr.length !== 6) {
-      setCodeError("Preencha todos os 6 dígitos");
+      setCodeError(t("fillAllSixDigits"));
       return;
     }
     await runSubmit(async () => {
@@ -137,7 +139,7 @@ export function ChangeEmailModal() {
       setStep("success");
       refetchUser().catch(() => { });
     } catch (err: any) {
-      const msg = err?.response?.data?.message || err?.message || "Código inválido ou expirado.";
+      const msg = err?.response?.data?.message || err?.message || t("codeInvalidOrExpired");
       toast.error(msg);
       setCode(["", "", "", "", "", ""]);
       setCodeError(msg);
@@ -154,10 +156,10 @@ export function ChangeEmailModal() {
       setResendCooldown(60);
       setCode(["", "", "", "", "", ""]);
       setCodeError("");
-      toast.success("Código reenviado!");
+      toast.success(t("codeResent"));
       setTimeout(() => inputRefs.current[0]?.focus(), 50);
     } catch (err: any) {
-      const msg = err?.response?.data?.message || err?.message || "Erro ao reenviar código.";
+      const msg = err?.response?.data?.message || err?.message || t("resendCodeError");
       toast.error(msg);
     } finally {
       setIsResending(false);
@@ -231,14 +233,14 @@ export function ChangeEmailModal() {
                   <div className="flex flex-col gap-6 items-center w-full">
                     <Image
                       src="/images/change_email.png"
-                      alt="Email Change"
+                      alt={t("emailChangeAlt")}
                       width={116}
                       height={88}
                       draggable={false}
                     />
                     <div className="flex flex-col gap-4 items-center w-full">
                       <h2 className="font-semibold text-[20px] leading-[1.3] text-gray-12 font-family-dm-sans text-center">
-                        Deseja alterar seu e-mail?
+                        {t("changeEmailConfirmTitle")}
                       </h2>
                       {user?.email && (
                         <div className="flex items-center gap-2 px-3 py-2 bg-gray-3 rounded-lg border border-gray-6">
@@ -249,9 +251,7 @@ export function ChangeEmailModal() {
                         </div>
                       )}
                       <p className="font-normal text-base leading-[1.3] text-gray-11 font-family-dm-sans text-center">
-                        Você usa este e-mail para entrar no PódioTicket e receber
-                        confirmações de inscrição. Ao continuar, informe o novo
-                        e-mail e sua senha atual.
+                        {t("changeEmailDescription")}
                       </p>
                     </div>
                   </div>
@@ -261,13 +261,13 @@ export function ChangeEmailModal() {
                       onClick={handleClose}
                       className="flex-1 h-12 px-5 border-[1.5px] border-gray-6 text-gray-12 font-bold text-base leading-[1.1] font-manrope"
                     >
-                      Fechar
+                      {t("close")}
                     </Button>
                     <Button
                       onClick={() => setStep("form")}
                       className="flex-1 h-12 px-5 bg-[#59E373] text-[#141414] hover:bg-[#59E373]/90 font-bold text-base leading-[1.1] font-manrope"
                     >
-                      Alterar e-mail
+                      {t("changeEmail")}
                     </Button>
                   </div>
                 </motion.div>
@@ -288,18 +288,18 @@ export function ChangeEmailModal() {
                       <button
                         onClick={() => setStep("confirm")}
                         className="flex items-center justify-center rounded-lg w-8 h-8 hover:bg-gray-3 transition-colors"
-                        aria-label="Voltar"
+                        aria-label={t("back")}
                       >
                         <ChevronLeft className="w-5 h-5 text-gray-11" />
                       </button>
                       <h2 className="font-semibold text-[20px] leading-[1.3] text-gray-12 font-family-dm-sans">
-                        Novo e-mail
+                        {t("newEmail")}
                       </h2>
                     </div>
                     <button
                       onClick={handleClose}
                       className="flex items-center justify-center rounded-lg w-8 h-8 hover:bg-gray-3 transition-colors"
-                      aria-label="Fechar"
+                      aria-label={t("close")}
                     >
                       <X className="w-5 h-5 text-gray-11" />
                     </button>
@@ -310,7 +310,7 @@ export function ChangeEmailModal() {
                       {/* New email */}
                       <div className="flex flex-col gap-2 w-full">
                         <label className="font-normal text-base leading-[1.3] text-gray-12 font-family-dm-sans">
-                          Novo e-mail
+                          {t("newEmail")}
                         </label>
                         <div className="relative w-full">
                           <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-11 pointer-events-none" />
@@ -318,7 +318,7 @@ export function ChangeEmailModal() {
                             ref={emailInputRef}
                             type="email"
                             autoComplete="email"
-                            placeholder="novo@email.com"
+                            placeholder={t("newEmailPlaceholder")}
                             value={newEmail}
                             onChange={(e) => {
                               setNewEmail(e.target.value);
@@ -335,14 +335,14 @@ export function ChangeEmailModal() {
                       {/* Current password */}
                       <div className="flex flex-col gap-2 w-full">
                         <label className="font-normal text-base leading-[1.3] text-gray-12 font-family-dm-sans">
-                          Senha atual
+                          {t("currentPassword")}
                         </label>
                         <div className="relative w-full">
                           <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-11 pointer-events-none" />
                           <Input
                             type={showPassword ? "text" : "password"}
                             autoComplete="current-password"
-                            placeholder="Digite sua senha atual"
+                            placeholder={t("currentPasswordPlaceholder")}
                             value={currentPassword}
                             onChange={(e) => {
                               setCurrentPassword(e.target.value);
@@ -354,7 +354,7 @@ export function ChangeEmailModal() {
                             type="button"
                             onClick={() => setShowPassword((v) => !v)}
                             className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-11 hover:text-gray-12 transition-colors"
-                            aria-label={showPassword ? "Ocultar senha" : "Mostrar senha"}
+                            aria-label={showPassword ? t("hidePassword") : t("showPassword")}
                           >
                             {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                           </button>
@@ -372,14 +372,14 @@ export function ChangeEmailModal() {
                         onClick={() => setStep("confirm")}
                         className="flex-1 h-12 border-[1.5px] border-gray-6 text-gray-12 font-bold text-base font-manrope"
                       >
-                        Cancelar
+                        {t("cancel")}
                       </Button>
                       <Button
                         type="submit"
                         disabled={isSubmitting}
                         className="flex-1 h-12 bg-[#59E373] text-[#141414] hover:bg-[#59E373]/90 font-bold text-base font-manrope disabled:opacity-50 disabled:cursor-not-allowed"
                       >
-                        {isSubmitting ? "Enviando..." : "Enviar código"}
+                        {isSubmitting ? t("sending") : t("sendCode")}
                       </Button>
                     </div>
                   </form>
@@ -401,18 +401,18 @@ export function ChangeEmailModal() {
                       <button
                         onClick={() => { setStep("form"); setCode(["", "", "", "", "", ""]); setCodeError(""); }}
                         className="flex items-center justify-center rounded-lg w-8 h-8 hover:bg-gray-3 transition-colors"
-                        aria-label="Voltar"
+                        aria-label={t("back")}
                       >
                         <ChevronLeft className="w-5 h-5 text-gray-11" />
                       </button>
                       <h2 className="font-semibold text-[20px] leading-[1.3] text-gray-12 font-family-dm-sans">
-                        Confirme seu e-mail
+                        {t("confirmEmailTitle")}
                       </h2>
                     </div>
                     <button
                       onClick={handleClose}
                       className="flex items-center justify-center rounded-lg w-8 h-8 hover:bg-gray-3 transition-colors"
-                      aria-label="Fechar"
+                      aria-label={t("close")}
                     >
                       <X className="w-5 h-5 text-gray-11" />
                     </button>
@@ -421,9 +421,9 @@ export function ChangeEmailModal() {
                   <div className="flex flex-col items-start w-full">
                     <div className="flex flex-col gap-6 items-start pb-6 pt-4 px-6 w-full">
                       <p className="font-medium text-base leading-[1.3] text-gray-12 font-family-dm-sans">
-                        Enviamos um código de 6 dígitos para{" "}
-                        <span className="font-bold">{maskEmail(user?.email || "")}</span>.
-                        Digite-o abaixo para confirmar a troca.
+                        {t("codeSentToPrefix")}{" "}
+                        <span className="font-bold">{maskEmail(user?.email || "")}</span>
+                        {t("codeSentToSuffix")}
                       </p>
 
                       <div className="flex flex-col gap-3 items-end w-full">
@@ -463,7 +463,7 @@ export function ChangeEmailModal() {
                           disabled={resendCooldown > 0 || isSubmitting || isResending}
                           className="text-primary-10 font-semibold text-base leading-[1.3] underline font-family-dm-sans hover:text-primary-11 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                         >
-                          {isResending ? "Reenviando..." : resendCooldown > 0 ? `Reenviar em ${resendCooldown}s` : "Reenviar código"}
+                          {isResending ? t("resending") : resendCooldown > 0 ? t("resendIn", { seconds: resendCooldown }) : t("resendCode")}
                         </button>
                       </div>
                     </div>
@@ -475,7 +475,7 @@ export function ChangeEmailModal() {
                         onClick={() => { setStep("form"); setCode(["", "", "", "", "", ""]); setCodeError(""); }}
                         className="flex-1 h-12 border-[1.5px] border-gray-6 text-gray-12 font-bold text-base font-manrope"
                       >
-                        Cancelar
+                        {t("cancel")}
                       </Button>
                       <Button
                         type="button"
@@ -483,7 +483,7 @@ export function ChangeEmailModal() {
                         disabled={isSubmitting || code.join("").length !== 6}
                         className="flex-1 h-12 bg-[#59E373] text-[#141414] hover:bg-[#59E373]/90 font-bold text-base font-manrope disabled:opacity-50 disabled:cursor-not-allowed"
                       >
-                        {isSubmitting ? "Confirmando..." : "Confirmar código"}
+                        {isSubmitting ? t("confirming") : t("confirmCode")}
                       </Button>
                     </div>
                   </div>
@@ -503,19 +503,19 @@ export function ChangeEmailModal() {
                   <div className="flex flex-col gap-6 items-center w-full">
                     <Image
                       src="/images/change_email.png"
-                      alt="E-mail alterado"
+                      alt={t("emailChangedAlt")}
                       width={116}
                       height={88}
                       draggable={false}
                     />
                     <div className="flex flex-col gap-4 items-center w-full">
                       <h2 className="font-semibold text-[20px] leading-[1.3] text-gray-12 font-family-dm-sans text-center">
-                        E-mail alterado com sucesso!
+                        {t("emailChangedTitle")}
                       </h2>
                       <p className="font-normal text-base leading-[1.3] text-gray-11 font-family-dm-sans text-center">
-                        Seu e-mail foi atualizado para{" "}
-                        <span className="font-bold text-gray-12">{newEmail}</span>.
-                        Use-o no próximo login.
+                        {t("emailChangedPrefix")}{" "}
+                        <span className="font-bold text-gray-12">{newEmail}</span>
+                        {t("emailChangedSuffix")}
                       </p>
                     </div>
                   </div>
@@ -523,7 +523,7 @@ export function ChangeEmailModal() {
                     onClick={handleClose}
                     className="w-full h-12 font-bold text-base font-manrope"
                   >
-                    Fechar
+                    {t("close")}
                   </Button>
                 </motion.div>
               )}

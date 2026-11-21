@@ -1,11 +1,14 @@
 "use client";
 
+import { useT } from "@/i18n/client";
+
 interface MessageSentModalProps {
   isOpen: boolean;
   onClose: () => void;
 }
 
 export function MessageSentModal({ isOpen, onClose }: MessageSentModalProps) {
+  const t = useT("event");
   if (!isOpen) return null;
 
   return (
@@ -34,10 +37,10 @@ export function MessageSentModal({ isOpen, onClose }: MessageSentModalProps) {
               </div>
               <div className="flex flex-col items-center gap-4 w-full text-center">
                 <p className="font-semibold text-[20px] leading-[1.3] text-gray-12 font-family-dm-sans">
-                  Mensagem enviada
+                  {t("messageSent")}
                 </p>
                 <p className="font-normal text-base leading-[1.3] text-gray-11 font-family-dm-sans">
-                  Mensagem encaminhada. O organizador responderá conforme disponibilidade.
+                  {t("messageSentText")}
                 </p>
               </div>
             </div>
@@ -47,7 +50,7 @@ export function MessageSentModal({ isOpen, onClose }: MessageSentModalProps) {
               className="w-full h-12 rounded-lg font-bold text-base font-manrope transition-opacity hover:opacity-90"
               style={{ backgroundColor: "#59e373", color: "#141a15" }}
             >
-              Fechar
+              {t("close")}
             </button>
           </div>
         </div>
@@ -82,10 +85,10 @@ export function MessageSentModal({ isOpen, onClose }: MessageSentModalProps) {
               </div>
               <div className="flex flex-col items-center gap-4 w-full text-center">
                 <p className="font-semibold text-[20px] leading-[1.3] text-gray-12 font-family-dm-sans">
-                  Mensagem enviada
+                  {t("messageSent")}
                 </p>
                 <p className="font-normal text-base leading-[1.3] text-gray-11 font-family-dm-sans">
-                  Mensagem encaminhada. O organizador responderá conforme disponibilidade.
+                  {t("messageSentText")}
                 </p>
               </div>
             </div>
@@ -95,7 +98,7 @@ export function MessageSentModal({ isOpen, onClose }: MessageSentModalProps) {
               className="w-full h-12 rounded-lg font-bold text-base font-manrope transition-opacity hover:opacity-90"
               style={{ backgroundColor: "#59e373", color: "#141a15" }}
             >
-              Fechar
+              {t("close")}
             </button>
           </div>
         </div>

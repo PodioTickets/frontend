@@ -6,6 +6,7 @@ import type {
   DocumentAvailabilityResult,
 } from "./UserService.types";
 import { userCacheKey, LEGACY_USER_CACHE_KEY } from "@/lib/authSurface";
+import { serviceMessage } from "@/i18n/serviceMessages";
 
 /**
  * Dominio de autenticacao: login/MFA/Google, registro, refresh/logout, reset de
@@ -84,7 +85,7 @@ export class AuthService extends UserServiceBase {
       return { success: true, data: loginData };
     } catch (error: any) {
       const handled = this.parseAuthErrorPayload(error);
-      const fallback = "Erro ao fazer login. Tente novamente.";
+      const fallback = serviceMessage("loginError");
       return {
         success: false,
         error:
@@ -141,7 +142,7 @@ export class AuthService extends UserServiceBase {
         success: false,
         error: handled.message && handled.message !== "An error occurred"
           ? handled.message
-          : error?.message || "Código inválido. Tente novamente.",
+          : error?.message || serviceMessage("invalidCode"),
       };
     }
   }

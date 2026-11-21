@@ -2,6 +2,7 @@
 
 import React, { useRef, useEffect, useState } from "react";
 import { cn } from "@/utils/cn";
+import { useT } from "@/i18n/client";
 
 interface OtpCodeInputProps {
   value: string;
@@ -28,6 +29,7 @@ export function OtpCodeInput({
   containerClassName,
   showSeparator = false,
 }: OtpCodeInputProps) {
+  const t = useT("ui");
   const [digits, setDigits] = useState<string[]>(["", "", "", "", "", ""]);
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
 
@@ -74,7 +76,7 @@ export function OtpCodeInput({
             inputMode="numeric"
             autoComplete={index === 0 ? "one-time-code" : "off"}
             autoFocus={autoFocus && index === 0}
-            aria-label={`Dígito ${index + 1} de 6`}
+            aria-label={t("otpDigit", { n: index + 1, total: 6 })}
             maxLength={1}
             value={digit}
             onChange={(e) => updateDigit(index, e.target.value)}

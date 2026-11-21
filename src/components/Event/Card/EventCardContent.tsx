@@ -43,6 +43,8 @@ interface EventCardContentProps {
   bannerOverlay?: ReactNode;
   /** Linhas extras abaixo da data (ex.: "X pessoas"). */
   children?: ReactNode;
+  /** Textos em 12px abaixo de `md` (grade de 2 colunas da home mobile). */
+  smallTextOnMobile?: boolean;
 }
 
 /**
@@ -64,6 +66,7 @@ export function EventCardContent({
   dividerFromClassName = "from-primary-7",
   bannerOverlay,
   children,
+  smallTextOnMobile = false,
 }: EventCardContentProps) {
   return (
     <>
@@ -99,16 +102,16 @@ export function EventCardContent({
       <div className="min-w-0 w-full pt-2 pb-2 flex items-center">
         <div className={cn("shrink-0 self-stretch w-0.5 rounded-full bg-linear-to-b to-transparent", dividerFromClassName)} />
         <div className="flex min-w-0 w-full flex-col gap-1 pl-2">
-          <p className="[text-box-trim:trim-both] truncate font-manrope text-base font-bold text-[#202020]">
+          <p className={cn("[text-box-trim:trim-both] truncate font-manrope text-base font-bold text-[#202020]", smallTextOnMobile && "max-md:text-xs")}>
             {name}
           </p>
           {addressLabel ? (
-            <p className="[text-box-trim:trim-both] w-full min-w-0 truncate font-family-dm-sans text-sm text-[#646464]">
+            <p className={cn("[text-box-trim:trim-both] w-full min-w-0 truncate font-family-dm-sans text-sm text-[#646464]", smallTextOnMobile && "max-md:text-xs")}>
               {addressLabel}
             </p>
           ) : null}
           {dateLabel ? (
-            <p className={cn("[text-box-trim:trim-both] font-family-dm-sans text-sm font-bold", dateClassName)}>
+            <p className={cn("[text-box-trim:trim-both] font-family-dm-sans text-sm font-bold", smallTextOnMobile && "max-md:text-xs", dateClassName)}>
               {dateLabel}
             </p>
           ) : null}

@@ -52,6 +52,22 @@ export function isVariationSoldOut(
   return (variation.availableStock ?? 0) <= 0;
 }
 
+/**
+ * Variação esgotada considerando também as seleções dos OUTROS participantes
+ * no mesmo pedido. `othersUsing` é quantos outros participantes já escolheram
+ * esta variação — desconta do `availableStock` antes de avaliar.
+ */
+export function isVariationEffectivelySoldOut(
+  product: Pick<Product, "isIncludedInTicket" | "isRequired">,
+  variation: Pick<Product["variations"][number], "stock" | "availableStock">,
+  othersUsing: number,
+): boolean {
+  if (!variationHoldsStock(product)) return false;
+  const stock = variation.stock ?? 0;
+  if (stock <= 0) return false;
+  return (variation.availableStock ?? 0) - othersUsing <= 0;
+}
+
 export const VARIATION_KEY_SEPARATOR = "::";
 
 /** API envia valores monetários em centavos (inteiro ou string numérica). */
@@ -109,8 +125,11 @@ export const previewVariationListPriceLabelForProduct = (
 };
 
 /** Preço exibido no card do produto (preço geral / base), alinhado à prévia do modal. */
-export const formatProductCardBasePriceLabel = (product: Product): string => {
-  if (product.isIncludedInTicket) return "Incluso no ingresso";
+export const formatProductCardBasePriceLabel = (
+  product: Product,
+  includedLabel = "Incluso no ingresso",
+): string => {
+  if (product.isIncludedInTicket) return includedLabel;
   return formatPrice(product.basePrice);
 };
 
@@ -119,8 +138,8 @@ export const formatProductCardBasePriceLabel = (product: Product): string => {
  * é o título completo (ex.: "Escolha o tamanho da camisa"); vazio cai no rótulo
  * padrão "Escolha a variação". Espelha o preview do CreateProductModal.
  */
-export const variationSectionTitle = (product: Product) =>
-  product.variationType?.trim() || "Escolha a variação";
+export const variationSectionTitle = (product: Product, fallback = "Escolha a variação") =>
+  product.variationType?.trim() || fallback;
 
 /**
  * Valor em reais a somar no total do pedido.
