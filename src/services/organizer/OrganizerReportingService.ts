@@ -362,13 +362,14 @@ export class OrganizerReportingService extends OrganizerServiceBase {
   }
 
   /** Solicita a antecipação (o backend recalcula o custo de forma autoritativa). */
+  /** `grossAmount` = bruto a antecipar em centavos (o organizador recebe isso menos a taxa). */
   async requestAnticipation(
     eventId: string,
-    amount: number,
+    grossAmount: number,
   ): Promise<{ message: string; data: { anticipation: unknown } }> {
     const { data } = await this.apiClient.post<{ message: string; data: { anticipation: unknown } }>(
       `/api/v1/events/${eventId}/repasse/anticipations`,
-      { amount },
+      { grossAmount },
     );
     return data;
   }
