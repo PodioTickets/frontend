@@ -185,7 +185,8 @@ export function ProductPreview({
               trigger={(isOpen: boolean) => (
                 <div className="flex h-12 w-full cursor-pointer items-center justify-between rounded-lg border border-gray-6 px-3 py-4 transition-colors hover:border-gray-8">
                   <p className="text-base text-gray-11">
-                    <span className="">Selecione a variação</span>
+                    <span className="">Selecione a opção
+                    </span>
                   </p>
                   <ArrowButton isOpen={isOpen} />
                 </div>
