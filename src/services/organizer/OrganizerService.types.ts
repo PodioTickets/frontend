@@ -766,6 +766,11 @@ export interface SalesHeatmapData {
 export interface TopProductVariationItem {
   variationId: string | null;
   variationName: string;
+  /** Variação (grupo) da opção — kit com várias variações. Ausente em respostas antigas. */
+  groupId?: string | null;
+  groupName?: string | null;
+  /** Rótulo pronto do backend (ex.: "Tamanho da camisa: M"). Tem prioridade na exibição. */
+  variationLabel?: string | null;
   quantitySold: number;
   /** % sobre o total do produto. Opcional pra retro-compat. */
   percentage?: number;

@@ -12,7 +12,6 @@ import { ImageWithInitialFallback } from "@/components/ImageWithInitialFallback"
 import { TicketCategoryCard } from "@/components/Checkout/TicketCategoryCard";
 import { ProductsSection } from "@/components/Checkout/SubscriptionStep";
 import { WizardDoneStep, WizardStepper } from "@/components/Checkout/WizardSteps";
-import type { DropdownOption } from "@/components/Dropdown";
 import {
   formatDateShort,
   getVariationKey,
@@ -25,12 +24,14 @@ import { useEvent } from "@/hooks/useEvent";
 import { useSubscriptionData } from "@/hooks/useSubscriptionData";
 import type { Ticket } from "@/hooks/useTickets";
 import { parseEventKitSelectionDisplay } from "@/lib/eventKitSelectionDisplay";
-import { autoSelectedVariationId, productOffersChoice } from "@/lib/checkoutProductStep";
+import { productOffersChoice } from "@/lib/checkoutProductStep";
 import {
   buildSwapProductsPayload,
+  effectiveSwapSelection,
   hasMissingRequiredVariation,
   swapBlockedReason,
 } from "@/lib/ticketSwap";
+import type { VariationOptionView } from "@/lib/productVariationGroups";
 import { adminService, organizerService } from "@/services";
 import { queryKeys } from "@/services/cache/QueryClient";
 import { formatBRL } from "@/lib/money";
@@ -108,7 +109,8 @@ export function AdminTicketSwap({ registrationId }: { registrationId: string }) 
 
   const [step, setStep] = useState<Step>("tickets");
   const [selectedTicketId, setSelectedTicketId] = useState<string | null>(null);
-  const [variations, setVariations] = useState<Record<string, string | null>>({});
+  /** productId → opções escolhidas (uma por variação do kit) ou só o opt-out. */
+  const [variations, setVariations] = useState<Record<string, string[]>>({});
   const [submitting, setSubmitting] = useState(false);
   const [emailSent, setEmailSent] = useState(true);
   const [newRegistrationId, setNewRegistrationId] = useState("");
@@ -182,12 +184,12 @@ export function AdminTicketSwap({ registrationId }: { registrationId: string }) 
 
   const handleTicketsNext = () => {
     if (!selectedTicket) return;
-    // Pré-seleciona a variação única (mesmo efeito do SubscriptionStep no checkout).
+    // Pré-seleciona as variações de opção única (mesmo efeito do SubscriptionStep no checkout).
     setVariations(
       Object.fromEntries(
         getProductsForTicket(selectedTicket.id)
-          .map((p) => [p.id, autoSelectedVariationId(p)] as const)
-          .filter(([, v]) => !!v),
+          .map((p) => [p.id, effectiveSwapSelection(p, {})] as const)
+          .filter(([, ids]) => ids.length > 0),
       ),
     );
     if (hasSelectableProducts) setStep("products");
@@ -210,17 +212,20 @@ export function AdminTicketSwap({ registrationId }: { registrationId: string }) 
   const activeStepId = step === "tickets" ? 1 : step === "products" ? 2 : 3;
   const stepLabel = SWAP_STEPS[activeStepId - 1].label;
 
-  const getVariationOptions = (product: Product, _participantIndex?: number): DropdownOption[] =>
-    (product.variations ?? []).map((v, i) => {
-      const soldOut = isVariationSoldOut(product, v);
-      return { id: v.id || `${product.id}-${i}`, label: v.name, suffix: soldOut ? "Esgotado" : undefined, disabled: soldOut };
+  const getOptionState = (product: Product, option: VariationOptionView<Product["variations"][number]>) => {
+    const soldOut = isVariationSoldOut(product, option.variation);
+    return { suffix: soldOut ? "Esgotado" : undefined, disabled: soldOut };
+  };
+  const onSelectionChange = (_idx: number, productId: string, ids: string[]) => {
+    const product = newProducts.find((p) => p.id === productId);
+    setVariations((prev) => {
+      const next = { ...prev, [productId]: ids };
+      // Sair do "Sem interesse" re-preenche as variações de opção única.
+      return product ? { ...next, [productId]: effectiveSwapSelection(product, next) } : next;
     });
-  const getSelectedVariation = (_idx: number, product: Product) =>
-    product.variations.find((v, i) => (v.id || `${product.id}-${i}`) === variations[product.id]) ?? null;
-  const onVariationSelect = (_idx: number, productId: string) => (opt: DropdownOption) =>
-    setVariations((prev) => ({ ...prev, [productId]: opt.id || null }));
+  };
   const selectedForSection = Object.fromEntries(
-    Object.entries(variations).map(([productId, v]) => [getVariationKey(0, productId), v]),
+    Object.entries(variations).map(([productId, ids]) => [getVariationKey(0, productId), ids]),
   );
 
   const documentDisplay = participant?.cpf || participant?.documentNumber || "";
@@ -418,9 +423,8 @@ export function AdminTicketSwap({ registrationId }: { registrationId: string }) 
                     products={kitProducts}
                     participantIndex={0}
                     selectedVariations={selectedForSection}
-                    onVariationSelect={onVariationSelect}
-                    getVariationOptions={getVariationOptions}
-                    getSelectedVariation={getSelectedVariation}
+                    onSelectionChange={onSelectionChange}
+                    getOptionState={getOptionState}
                     variant="desktop"
                   />
                   {kitProducts.length > 0 && extraProducts.length > 0 && (
@@ -431,9 +435,8 @@ export function AdminTicketSwap({ registrationId }: { registrationId: string }) 
                     products={extraProducts.filter((p) => (p.variations?.length ?? 0) > 0)}
                     participantIndex={0}
                     selectedVariations={selectedForSection}
-                    onVariationSelect={onVariationSelect}
-                    getVariationOptions={getVariationOptions}
-                    getSelectedVariation={getSelectedVariation}
+                    onSelectionChange={onSelectionChange}
+                    getOptionState={getOptionState}
                     variant="desktop"
                   />
                 </div>

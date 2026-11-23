@@ -21,6 +21,21 @@ import type { Ticket } from "@/hooks/useTickets";
 import { isSemInteresseVariation } from "@/utils/semInteresseVariation";
 import { hasDisplayableDistance } from "@/utils/checkoutModalityDisplay";
 import { buildParticipantTicketSlots } from "@/lib/checkoutProductStep";
+import {
+  type VariationGroupView,
+  type VariationOptionView,
+  autoSelectableOptions,
+  getOptOutOption,
+  getVariationGroups,
+  groupSelection,
+  isOptedOut,
+  isSelectionComplete,
+  productOffersChoice,
+  resolveSelection,
+  selectionIds,
+  selectionLabel,
+  setGroupSelection,
+} from "@/lib/productVariationGroups";
 import { useSubscriptionData } from "@/hooks/useSubscriptionData";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Loading } from "../Loading";
@@ -38,10 +53,9 @@ import {
   parseVariationKey,
   formatDateShort,
   maskCPF,
-  formatDate,
-  isVariationSoldOut,
   isVariationEffectivelySoldOut,
   canConfirmProductStep,
+  primarySelectedVariation,
 } from "./SubscriptionStep.utils";
 import { useT } from "@/i18n/client";
 
@@ -59,6 +73,13 @@ interface SubscriptionStepProps {
    * (Produtos é a última etapa antes da conclusão).
    */
   nextLabel?: string;
+}
+
+/** Mesmas opções, na mesma ordem (seleções são listas — `===` não serve). */
+function sameIds(a: readonly string[] | undefined, b: readonly string[] | undefined): boolean {
+  const x = a ?? [];
+  const y = b ?? [];
+  return x.length === y.length && x.every((id, i) => id === y[i]);
 }
 
 // ---------------------------------------------------------------------------
@@ -206,122 +227,231 @@ function DropdownTrigger({
   );
 }
 
+type ProductOption = VariationOptionView<Product["variations"][number]>;
+
+/** Estado de uma opção no dropdown (esgotado / preço à direita), decidido pela tela. */
+export type ProductOptionState = { disabled?: boolean; suffix?: string };
+
+/**
+ * Card de produto do checkout. Kit com várias variações → um card por variação
+ * (Figma "Prévia do kit"): foto + nome do kit + linha de preço; o preço só no 1º
+ * card, os demais mostram "Incluso no kit". `group` ausente = kit sem variação
+ * (nada para escolher, card sem dropdown).
+ */
 function ProductCard({
   product,
-  selectedVariationId,
-  variationOptions,
+  cardIndex,
+  title,
+  options,
+  selected,
+  selectedId,
   onSelect,
-  selectedVariation,
+  disabled,
+  dataAttribute,
   variant,
-  requiredSection,
+  showMissing,
 }: {
   product: Product;
-  selectedVariationId: string | null | undefined;
-  variationOptions: DropdownOption[];
+  cardIndex: number;
+  /** Título do dropdown (nome da variação). `null` = card sem dropdown. */
+  title: string | null;
+  options: DropdownOption[];
+  selected: Product["variations"][number] | null;
+  selectedId: string | null;
   onSelect: (opt: DropdownOption) => void;
-  selectedVariation: Product["variations"][number] | null;
+  /** Opt-out escolhido na 1ª variação: as demais ficam desabilitadas e limpas. */
+  disabled: boolean;
+  dataAttribute: string;
   variant: "mobile" | "desktop";
-  requiredSection?: boolean;
+  showMissing: boolean;
 }) {
   const t = useT("checkoutInfo");
   const hidePricing = useHidePricing();
-  const sideLabel = selectedVariation && !hidePricing
-    ? previewVariationListPriceLabelForProduct(product, selectedVariation.price, selectedVariation.name)
+  const sideLabel = selected && !hidePricing
+    ? previewVariationListPriceLabelForProduct(product, selected.price, selected.name)
     : undefined;
+  const priceLine =
+    cardIndex === 0
+      ? formatProductCardBasePriceLabel(product, t("includedInTicketPrice"))
+      : t("includedInKit");
+
+  const missingBadge = showMissing && (
+    <span className="self-start inline-flex items-center h-[27px] px-3 rounded-xl bg-[#fff7c2]">
+      <span className="text-xs font-semibold leading-none text-[#4f3422]">{t("variationMissing")}</span>
+    </span>
+  );
+
+  const dropdown = (triggerVariant: "mobile" | "desktop") =>
+    disabled ? (
+      <div className="opacity-50 pointer-events-none" aria-disabled>
+        <DropdownTrigger selected={null} sideLabel={undefined} variant={triggerVariant} />
+      </div>
+    ) : (
+      <Dropdown
+        options={options}
+        dataAttribute={dataAttribute}
+        width="w-full"
+        maxHeight="max-h-[200px]"
+        selectedIds={selectedId ? [selectedId] : []}
+        onSelect={onSelect}
+        trigger={() => (
+          <DropdownTrigger selected={selected} sideLabel={sideLabel} variant={triggerVariant} />
+        )}
+      />
+    );
 
   if (variant === "mobile") {
     return (
       <div className="bg-gray-2 border border-gray-6 rounded-xl">
-        <div className="flex flex-col gap-3 p-4 border-b border-gray-6">
-          {requiredSection && variationOptions.length > 0 && !selectedVariation && (
-            <span className="self-start inline-flex items-center h-[27px] px-3 rounded-xl bg-[#fff7c2]">
-              <span className="text-xs font-semibold leading-none text-[#4f3422]">{t("variationMissing")}</span>
-            </span>
-          )}
+        <div className={`flex flex-col gap-3 p-4 ${title != null ? "border-b border-gray-6" : ""}`}>
+          {missingBadge}
           <div className="flex gap-3">
             <ProductCardGallery product={product} />
             <div className="flex flex-col justify-between flex-1 min-w-0">
               <p className="text-base font-semibold text-gray-12">{product.name}</p>
               {!hidePricing && (
-                <p className="text-sm font-semibold text-gray-11">
-                  {formatProductCardBasePriceLabel(product, t("includedInTicketPrice"))}
-                </p>
+                <p className="text-sm font-semibold text-gray-11">{priceLine}</p>
               )}
             </div>
           </div>
         </div>
-        <div className="p-4">
-          <p className="text-base text-gray-12 mb-2">{variationSectionTitle(product, t("chooseVariation"))}</p>
-          <Dropdown
-            options={variationOptions}
-            dataAttribute={`variation-${product.id}`}
-            width="w-full"
-            maxHeight="max-h-[200px]"
-            selectedIds={selectedVariationId ? [selectedVariationId] : []}
-            onSelect={onSelect}
-            trigger={() => (
-              <DropdownTrigger selected={selectedVariation} sideLabel={sideLabel} variant="mobile" />
-            )}
-          />
-        </div>
+        {title != null && (
+          <div className="p-4">
+            <p className="text-base text-gray-12 mb-2">{title}</p>
+            {dropdown("mobile")}
+          </div>
+        )}
       </div>
     );
   }
 
   return (
     <div className="flex flex-col gap-3 border border-gray-6 rounded-lg p-4">
-      {requiredSection && variationOptions.length > 0 && !selectedVariation && (
-        <span className="self-start inline-flex items-center h-[27px] px-3 rounded-xl bg-[#fff7c2]">
-          <span className="text-xs font-semibold leading-none text-[#4f3422]">{t("variationMissing")}</span>
-        </span>
-      )}
+      {missingBadge}
       <div className="flex items-start gap-3">
         <ProductCardGallery product={product} />
         <div className="flex flex-col h-[100px] justify-between gap-2 flex-1 min-w-0">
           <p className="text-sm text-gray-12 font-semibold truncate">{product.name}</p>
           {!hidePricing && (
-            <p className="text-sm text-gray-11 font-semibold">
-              {formatProductCardBasePriceLabel(product, t("includedInTicketPrice"))}
-            </p>
+            <p className="text-sm text-gray-11 font-semibold">{priceLine}</p>
           )}
         </div>
       </div>
-      <div className="flex flex-col gap-2 border-t border-gray-6 pt-3">
-        <p className="text-sm text-gray-12">{variationSectionTitle(product, t("chooseVariation"))}</p>
-        <Dropdown
-          options={variationOptions}
-          dataAttribute={`variation-${product.id}`}
-          width="w-full"
-          maxHeight="max-h-[200px]"
-          selectedIds={selectedVariationId ? [selectedVariationId] : []}
-          onSelect={onSelect}
-          trigger={() => (
-            <DropdownTrigger selected={selectedVariation} sideLabel={sideLabel} variant="desktop" />
-          )}
-        />
-      </div>
+      {title != null && (
+        <div className="flex flex-col gap-2 border-t border-gray-6 pt-3">
+          <p className="text-sm text-gray-12">{title}</p>
+          {dropdown("desktop")}
+        </div>
+      )}
     </div>
   );
 }
+
+/**
+ * Cards de UM produto: um por variação; o opt-out "Sem interesse" entra só no
+ * dropdown da 1ª variação. Kit sem variação → um card sem dropdown.
+ */
+function ProductVariationCards({
+  product,
+  selection,
+  onChange,
+  getOptionState,
+  variant,
+  requiredSection,
+}: {
+  product: Product;
+  selection: readonly string[];
+  onChange: (ids: string[]) => void;
+  getOptionState?: (product: Product, option: ProductOption) => ProductOptionState;
+  variant: "mobile" | "desktop";
+  requiredSection?: boolean;
+}) {
+  const t = useT("checkoutInfo");
+  const groups = getVariationGroups(product);
+  const optOut = getOptOutOption(product);
+  const optedOut = !!optOut && selection.includes(optOut.id);
+
+  // Só o opt-out (sem variação real): um card cujo dropdown tem só "Sem interesse".
+  const cards: Array<VariationGroupView<Product["variations"][number]> | null> =
+    groups.length > 0
+      ? groups
+      : optOut
+        ? [{ id: OPT_OUT_ONLY_GROUP_ID, name: null, options: [] }]
+        : [null];
+
+  const toDropdownOption = (option: ProductOption): DropdownOption => {
+    const state = getOptionState?.(product, option) ?? {};
+    return { id: option.id, label: option.variation.name, suffix: state.suffix, disabled: state.disabled };
+  };
+
+  return (
+    <>
+      {cards.map((group, index) => {
+        if (!group) {
+          return (
+            <ProductCard
+              key={product.id}
+              product={product}
+              cardIndex={0}
+              title={null}
+              options={[]}
+              selected={null}
+              selectedId={null}
+              onSelect={() => {}}
+              disabled={false}
+              dataAttribute={`variation-${product.id}`}
+              variant={variant}
+              showMissing={false}
+            />
+          );
+        }
+        const isFirst = index === 0;
+        const options = group.options.map(toDropdownOption);
+        if (isFirst && optOut) options.push(toDropdownOption(optOut));
+        const picked = isFirst && optedOut ? optOut : optedOut ? null : groupSelection(group, selection);
+        const disabled = !isFirst && optedOut;
+        return (
+          <ProductCard
+            key={`${product.id}-${group.id}`}
+            product={product}
+            cardIndex={index}
+            title={group.name ?? variationSectionTitle(product, t("chooseVariation"))}
+            options={options}
+            selected={picked?.variation ?? null}
+            selectedId={picked?.id ?? null}
+            onSelect={(opt) => {
+              if (opt.id) onChange(setGroupSelection(product, selection, group.id, opt.id));
+            }}
+            disabled={disabled}
+            dataAttribute={isFirst ? `variation-${product.id}` : `variation-${product.id}-${index}`}
+            variant={variant}
+            showMissing={!!requiredSection && options.length > 0 && !picked && !disabled}
+          />
+        );
+      })}
+    </>
+  );
+}
+
+const OPT_OUT_ONLY_GROUP_ID = "__opt_out_only__";
 
 export function ProductsSection({
   title,
   products,
   participantIndex,
   selectedVariations,
-  onVariationSelect,
-  getVariationOptions,
-  getSelectedVariation,
+  onSelectionChange,
+  getOptionState,
   variant,
   requiredSection,
 }: {
   title: string;
   products: Product[];
   participantIndex: number;
-  selectedVariations: Record<string, string | null>;
-  onVariationSelect: (participantIndex: number, productId: string) => (opt: DropdownOption) => void;
-  getVariationOptions: (product: Product, participantIndex: number) => DropdownOption[];
-  getSelectedVariation: (participantIndex: number, product: Product) => Product["variations"][number] | null;
+  /** `getVariationKey(participantIndex, productId)` → opções escolhidas. */
+  selectedVariations: Record<string, readonly string[] | undefined>;
+  onSelectionChange: (participantIndex: number, productId: string, variationIds: string[]) => void;
+  getOptionState?: (product: Product, option: ProductOption, participantIndex: number) => ProductOptionState;
   variant: "mobile" | "desktop";
   requiredSection?: boolean;
 }) {
@@ -334,13 +464,14 @@ export function ProductsSection({
       </h3>
       <div className={variant === "mobile" ? "flex flex-col gap-3" : "grid grid-cols-2 gap-4"}>
         {products.map((product) => (
-          <ProductCard
+          <ProductVariationCards
             key={product.id}
             product={product}
-            selectedVariationId={selectedVariations[getVariationKey(participantIndex, product.id)]}
-            variationOptions={getVariationOptions(product, participantIndex)}
-            onSelect={onVariationSelect(participantIndex, product.id)}
-            selectedVariation={getSelectedVariation(participantIndex, product)}
+            selection={selectedVariations[getVariationKey(participantIndex, product.id)] ?? []}
+            onChange={(ids) => onSelectionChange(participantIndex, product.id, ids)}
+            getOptionState={
+              getOptionState ? (p, option) => getOptionState(p, option, participantIndex) : undefined
+            }
             variant={variant}
             requiredSection={requiredSection}
           />
@@ -415,7 +546,11 @@ export function SubscriptionStep({
   const productsDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => {
     if (!orderId) return;
-    const payload = buildProductsPatchPayload(participants);
+    // Kit com variação faltando fica de fora até completar (o backend rejeitaria o PATCH).
+    const payload = buildProductsPatchPayload(participants, (productId, ids) => {
+      const product = allProducts.find((p) => p.id === productId);
+      return !product || isSelectionComplete(product, ids);
+    });
     const sig = JSON.stringify(payload);
     if (lastProductsSigRef.current === sig) return;
     lastProductsSigRef.current = sig;
@@ -433,7 +568,7 @@ export function SubscriptionStep({
     return () => {
       if (productsDebounceRef.current) clearTimeout(productsDebounceRef.current);
     };
-  }, [orderId, participants, patchProducts, syncFromOrder, queryClient]);
+  }, [orderId, participants, allProducts, patchProducts, syncFromOrder, queryClient]);
 
   // Map ticketId → preço unitário (em reais) vindo da order.
   const orderTicketPriceById = useMemo(() => {
@@ -459,7 +594,9 @@ export function SubscriptionStep({
     }
   };
 
-  const [selectedVariations, setSelectedVariations] = useState<Record<string, string | null>>({});
+  /* `getVariationKey(participante, produto)` → opções escolhidas (uma por
+   * variação do kit, na ordem dos grupos) ou só o opt-out "Sem interesse". */
+  const [selectedVariations, setSelectedVariations] = useState<Record<string, string[]>>({});
   const [selectedParticipant, setSelectedParticipant] = useState<number>(0);
   const [expandedParticipants, setExpandedParticipants] = useState<Record<number, boolean>>({ 0: true });
   const [completedParticipants, setCompletedParticipants] = useState<Record<number, boolean>>({});
@@ -500,7 +637,7 @@ export function SubscriptionStep({
       return;
     }
 
-    const variationsByParticipant: Record<number, Record<string, string | null>> = {};
+    const variationsByParticipant: Record<number, Record<string, string[]>> = {};
 
     Object.keys(selectedVariations).forEach((key) => {
       try {
@@ -533,7 +670,7 @@ export function SubscriptionStep({
       return;
     }
 
-    const updated: Record<string, string | null> = {};
+    const updated: Record<string, string[]> = {};
 
     const allProductsList = [...requiredProducts, ...additionalProducts];
     const productIdMap = new Map<string, string>();
@@ -555,7 +692,8 @@ export function SubscriptionStep({
 
           if (fullProductId) {
             const variationKey = getVariationKey(participantIndex, fullProductId);
-            updated[variationKey] = participant.productVariations![savedProductId];
+            // Sessão antiga guarda id único (string) → normaliza para lista.
+            updated[variationKey] = selectionIds(participant.productVariations![savedProductId]);
           }
         });
       }
@@ -569,7 +707,7 @@ export function SubscriptionStep({
         prevKeys.every((key, i) => key === updatedKeys[i]);
 
       if (keysMatch) {
-        const valuesMatch = prevKeys.every((key) => prev[key] === updated[key]);
+        const valuesMatch = prevKeys.every((key) => sameIds(prev[key], updated[key]));
         if (valuesMatch) return prev;
       }
 
@@ -581,8 +719,8 @@ export function SubscriptionStep({
     if (loading) return;
 
     setSelectedVariations((prev) => {
-      const additions: Record<string, string> = {};
       const merged = { ...prev };
+      let changed = false;
 
       for (const { participantIndex, ticketId } of participantsWithTickets) {
         const ticketProductIds = ticketProductsMap[ticketId] || [];
@@ -591,85 +729,93 @@ export function SubscriptionStep({
         const ticketProducts = allProducts.filter((p) => ticketProductIds.includes(p.id));
 
         for (const product of ticketProducts) {
-          const needsVariationChoice = product.isRequired || !product.isIncludedInTicket;
-          if (!needsVariationChoice) continue;
-          if (product.variations.length !== 1) continue;
-
           const key = getVariationKey(participantIndex, product.id);
-          const current = merged[key];
-          if (current != null && String(current).trim() !== "") continue;
-
-          const v = product.variations[0];
-          const vid = v.id || `${product.id}-0`;
-          let othersUsing = 0;
-          for (const { participantIndex: pi } of participantsWithTickets) {
-            if (pi === participantIndex) continue;
-            const k = getVariationKey(pi, product.id);
-            if (merged[k] === vid) othersUsing++;
+          const current = merged[key] ?? [];
+          const next = withAutoSelections(merged, participantIndex, product, current);
+          if (!sameIds(current, next)) {
+            merged[key] = next;
+            changed = true;
           }
-          if (isVariationEffectivelySoldOut(product, v, othersUsing)) continue;
-          additions[key] = vid;
-          merged[key] = vid;
         }
       }
 
-      if (Object.keys(additions).length === 0) return prev;
-      return { ...prev, ...additions };
+      return changed ? merged : prev;
     });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loading, participantsWithTickets, allProducts, ticketProductsMap]);
 
-  const countOthersUsingVariation = (
+  /** Quantos OUTROS participantes já escolheram esta opção (desconta do estoque). */
+  const countOthersUsingOption = (
+    selections: Record<string, readonly string[] | undefined>,
     participantIndex: number,
     product: Product,
-    variationId: string,
+    optionId: string,
   ): number => {
     let count = 0;
     for (const { participantIndex: pi } of participantsWithTickets) {
       if (pi === participantIndex) continue;
-      const key = getVariationKey(pi, product.id);
-      if (selectedVariations[key] === variationId) count++;
+      if (selections[getVariationKey(pi, product.id)]?.includes(optionId)) count++;
     }
     return count;
   };
 
-  const getVariationOptions = (product: Product, forParticipantIndex: number): DropdownOption[] => {
-    if (!product.variations || product.variations.length === 0) return [];
-    return product.variations.map((variation, index) => {
-      const vid = variation.id || `${product.id}-${index}`;
-      const othersUsing = countOthersUsingVariation(forParticipantIndex, product, vid);
-      const soldOut = isVariationEffectivelySoldOut(product, variation, othersUsing);
-      return {
-        id: vid,
-        label: variation.name,
-        suffix: soldOut || hidePricing
-          ? undefined
-          : previewVariationListPriceLabelForProduct(product, variation.price, variation.name),
-        disabled: soldOut,
-      };
-    });
+  /* Auto-seleciona as variações de opção única ainda vazias (espelha
+   * `autoSelectableOptions`): não mexe em quem escolheu "Sem interesse" e pula
+   * opção esgotada (contando as escolhas dos outros participantes). */
+  const withAutoSelections = (
+    selections: Record<string, readonly string[] | undefined>,
+    participantIndex: number,
+    product: Product,
+    ids: string[],
+  ): string[] => {
+    if (isOptedOut(product, ids)) return ids;
+    const groups = getVariationGroups(product);
+    let next = ids;
+    for (const { groupId, option } of autoSelectableOptions(product)) {
+      const group = groups.find((g) => g.id === groupId);
+      if (!group || groupSelection(group, next)) continue;
+      const othersUsing = countOthersUsingOption(selections, participantIndex, product, option.id);
+      if (isVariationEffectivelySoldOut(product, option.variation, othersUsing)) continue;
+      next = setGroupSelection(product, next, groupId, option.id);
+    }
+    return next;
   };
 
+  const getOptionState = (
+    product: Product,
+    option: VariationOptionView<Product["variations"][number]>,
+    forParticipantIndex: number,
+  ): ProductOptionState => {
+    const othersUsing = countOthersUsingOption(selectedVariations, forParticipantIndex, product, option.id);
+    const soldOut = isVariationEffectivelySoldOut(product, option.variation, othersUsing);
+    return {
+      suffix: soldOut || hidePricing
+        ? undefined
+        : previewVariationListPriceLabelForProduct(product, option.variation.price, option.variation.name),
+      disabled: soldOut,
+    };
+  };
+
+  const getSelectionIds = (participantIndex: number, product: Product): string[] =>
+    selectedVariations[getVariationKey(participantIndex, product.id)] ??
+    selectionIds(participants[participantIndex]?.productVariations?.[product.id]);
+
+  /** Opção que define o preço (a 1ª escolhida; opt-out quando recusou o kit). */
   const getSelectedVariation = (
     participantIndex: number,
     product: Product,
-  ): Product["variations"][number] | null => {
-    const variationKey = getVariationKey(participantIndex, product.id);
-    const selectedId = selectedVariations[variationKey];
-    if (!selectedId) return null;
-    return (
-      product.variations.find((v, i) => (v.id || `${product.id}-${i}`) === selectedId) ?? null
-    );
-  };
+  ): Product["variations"][number] | null =>
+    primarySelectedVariation(product, getSelectionIds(participantIndex, product));
 
-  const handleVariationSelect =
-    (participantIndex: number, productId: string) =>
-      (option: DropdownOption) => {
-        const variationKey = getVariationKey(participantIndex, productId);
-        setSelectedVariations((prev) => ({
-          ...prev,
-          [variationKey]: option.id || null,
-        }));
-      };
+  const handleSelectionChange = (participantIndex: number, productId: string, ids: string[]) => {
+    const variationKey = getVariationKey(participantIndex, productId);
+    const product = allProducts.find((p) => p.id === productId);
+    setSelectedVariations((prev) => {
+      // Voltar de "Sem interesse" para uma opção real re-preenche as variações de opção única.
+      const next = product ? withAutoSelections(prev, participantIndex, product, ids) : ids;
+      return { ...prev, [variationKey]: next };
+    });
+  };
 
   const handleParticipantSelect = (participantIndex: number) => {
     setExpandedParticipants({ [participantIndex]: true });
@@ -681,24 +827,21 @@ export function SubscriptionStep({
       ...getRequiredProductsForParticipant(participantIndex),
       ...getAdditionalProductsForParticipant(participantIndex),
     ];
-    const productsNeedingSelection = allParticipantProducts.filter(
-      (p) => p.variations.length > 1
-    );
+    // Produto com escolha real (alguma variação com >1 opção, ou opt-out) exige
+    // UMA opção por variação — ou o opt-out sozinho.
+    const productsNeedingSelection = allParticipantProducts.filter(productOffersChoice);
     if (productsNeedingSelection.length === 0) return true;
 
-    const contextVariations = participants[participantIndex]?.productVariations ?? {};
-
-    return productsNeedingSelection.every((product) => {
-      const variationKey = getVariationKey(participantIndex, product.id);
-      const val = selectedVariations[variationKey] ?? contextVariations[product.id];
-      return val != null && val !== "";
-    });
+    return productsNeedingSelection.every((product) =>
+      isSelectionComplete(product, getSelectionIds(participantIndex, product)),
+    );
   };
 
-  const isParticipantComplete = (participantIndex: number): boolean => {
-    if (completedParticipants[participantIndex]) return true;
-    return hasAllRequiredVariations(participantIndex);
-  };
+  /* Sem o atalho de `completedParticipants`: com várias variações dá para
+   * "descompletar" depois de salvar (sair do "Sem interesse" esvazia as outras
+   * variações), e o selo/CTA precisam refletir isso. Salvar já exige completo. */
+  const isParticipantComplete = (participantIndex: number): boolean =>
+    hasAllRequiredVariations(participantIndex);
 
   /* Existe outro participante PENDENTE além deste? Usado pra decidir o label do
    * botão do card no mobile: "Salvar e próximo" quando há um próximo pra abrir,
@@ -801,9 +944,7 @@ export function SubscriptionStep({
     return participantAdditionalProducts.filter((product) => {
       // Incluso é grátis → nunca conta como item adicional (mesmo selecionado).
       if (product.isIncludedInTicket) return false;
-      const variationKey = getVariationKey(participantIndex, product.id);
-      const selectedId = selectedVariations[variationKey];
-      if (selectedId === null || selectedId === undefined) return false;
+      if (getSelectionIds(participantIndex, product).length === 0) return false;
       // "Sem interesse" = opt-out: não conta como item adicional (nem soma — o
       // total já zera via billableReaisForProductSelection). Sem isso, aparecia
       // "1x Item adicional: R$ 0,00".
@@ -993,11 +1134,14 @@ export function SubscriptionStep({
           )
           .map(({ product, variation }) => {
             const priceReais = billableReaisForProductSelection(product, variation);
+            const ids = getSelectionIds(participantIndex, product);
             return {
               product,
               name: product.name,
               priceReais,
-              size: variation?.name ?? null,
+              // 1 escolha: "M" (com o prefixo "Tamanho:"); várias: "Grupo: Opção · Grupo: Opção".
+              size: selectionLabel(product, ids) || (variation?.name ?? null),
+              multiChoice: resolveSelection(product, ids).length > 1,
               isIncluded: priceReais === 0,
             };
           });
@@ -1134,7 +1278,9 @@ export function SubscriptionStep({
                     </div>
                     <div className="px-3 py-2.5">
                       <div className="flex gap-1 items-center">
-                        <p className="text-sm text-gray-12 font-family-dm-sans">{t("sizeLabel")}</p>
+                        {!item.multiChoice && (
+                          <p className="text-sm text-gray-12 font-family-dm-sans">{t("sizeLabel")}</p>
+                        )}
                         <p className="text-sm font-semibold text-gray-12 font-manrope">
                           {item.size || "N/A"}
                         </p>
@@ -1325,9 +1471,8 @@ export function SubscriptionStep({
                       products={getRequiredProductsForParticipant(participantIndex)}
                       participantIndex={participantIndex}
                       selectedVariations={selectedVariations}
-                      onVariationSelect={handleVariationSelect}
-                      getVariationOptions={getVariationOptions}
-                      getSelectedVariation={getSelectedVariation}
+                      onSelectionChange={handleSelectionChange}
+                      getOptionState={getOptionState}
                       variant="mobile"
                     />
 
@@ -1337,9 +1482,8 @@ export function SubscriptionStep({
                         products={getAdditionalProductsForParticipant(participantIndex)}
                         participantIndex={participantIndex}
                         selectedVariations={selectedVariations}
-                        onVariationSelect={handleVariationSelect}
-                        getVariationOptions={getVariationOptions}
-                        getSelectedVariation={getSelectedVariation}
+                        onSelectionChange={handleSelectionChange}
+                        getOptionState={getOptionState}
                         variant="mobile"
                       />
                     </div>
@@ -1471,9 +1615,8 @@ export function SubscriptionStep({
               products={getRequiredProductsForParticipant(selectedParticipant)}
               participantIndex={selectedParticipant}
               selectedVariations={selectedVariations}
-              onVariationSelect={handleVariationSelect}
-              getVariationOptions={getVariationOptions}
-              getSelectedVariation={getSelectedVariation}
+              onSelectionChange={handleSelectionChange}
+              getOptionState={getOptionState}
               variant="desktop"
             />
 
@@ -1482,9 +1625,8 @@ export function SubscriptionStep({
               products={getAdditionalProductsForParticipant(selectedParticipant)}
               participantIndex={selectedParticipant}
               selectedVariations={selectedVariations}
-              onVariationSelect={handleVariationSelect}
-              getVariationOptions={getVariationOptions}
-              getSelectedVariation={getSelectedVariation}
+              onSelectionChange={handleSelectionChange}
+              getOptionState={getOptionState}
               variant="desktop"
             />
 

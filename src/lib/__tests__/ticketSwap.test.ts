@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   ageOnEventDay,
   buildSwapProductsPayload,
+  effectiveSwapSelection,
   hasMissingRequiredVariation,
   swapBlockedReason,
 } from "../ticketSwap";
@@ -32,15 +33,69 @@ describe("ticketSwap", () => {
       { ...base, id: "unica", isRequired: true, isIncludedInTicket: true, variations: [v("U")] },
       { ...base, id: "extra", isRequired: false, isIncludedInTicket: false, variations: [v("G"), v("GG")] },
     ] as unknown as Parameters<typeof buildSwapProductsPayload>[0];
-    expect(buildSwapProductsPayload(products, { kit: "P" })).toEqual([
-      { productId: "kit", variationId: "P" },
-      { productId: "unica", variationId: "U" },
+    expect(buildSwapProductsPayload(products, { kit: ["P"] })).toEqual([
+      { productId: "kit", variationIds: ["P"], variationId: "P" },
+      { productId: "unica", variationIds: ["U"], variationId: "U" },
     ]);
-    expect(buildSwapProductsPayload(products, { kit: "P", extra: "G" })).toContainEqual({
+    expect(buildSwapProductsPayload(products, { kit: ["P"], extra: ["G"] })).toContainEqual({
       productId: "extra",
+      variationIds: ["G"],
       variationId: "G",
     });
+    // Valor legado (id único) continua aceito.
+    expect(buildSwapProductsPayload(products, { kit: "M" })[0]).toEqual({
+      productId: "kit",
+      variationIds: ["M"],
+      variationId: "M",
+    });
     expect(hasMissingRequiredVariation(products, {})).toBe(true);
-    expect(hasMissingRequiredVariation(products, { kit: "P" })).toBe(false);
+    expect(hasMissingRequiredVariation(products, { kit: ["P"] })).toBe(false);
+  });
+
+  it("kit com várias variações: uma opção por variação, auto-seleção da opção única", () => {
+    const v = (id: string) => ({ id, name: id, price: 0, stock: 0 });
+    const kit = {
+      id: "kit",
+      name: "",
+      image: "",
+      basePrice: 0,
+      isRequired: true,
+      isIncludedInTicket: true,
+      variations: [v("P"), v("M"), v("SU")],
+      variationGroups: [
+        { id: "camisa", name: "Tamanho da camisa", variations: [v("P"), v("M")] },
+        { id: "short", name: "Tamanho do short", variations: [v("SU")] },
+      ],
+    } as unknown as Parameters<typeof buildSwapProductsPayload>[0][number];
+    // Short (opção única) é auto-selecionado; falta a camisa.
+    expect(effectiveSwapSelection(kit, {})).toEqual(["SU"]);
+    expect(hasMissingRequiredVariation([kit], {})).toBe(true);
+    expect(buildSwapProductsPayload([kit], {})).toEqual([]);
+    expect(buildSwapProductsPayload([kit], { kit: ["M"] })).toEqual([
+      { productId: "kit", variationIds: ["M", "SU"], variationId: "M" },
+    ]);
+    expect(hasMissingRequiredVariation([kit], { kit: ["M"] })).toBe(false);
+  });
+
+  it("opcional começado e incompleto bloqueia; opt-out completa sozinho", () => {
+    const v = (id: string, name = id) => ({ id, name, price: 0, stock: 0 });
+    const extra = {
+      id: "extra",
+      name: "",
+      image: "",
+      basePrice: 0,
+      isRequired: false,
+      isIncludedInTicket: false,
+      variations: [v("P"), v("M"), v("G"), v("GG"), v("NO", "Sem interesse")],
+      variationGroups: [
+        { id: "camisa", name: "Camisa", variations: [v("P"), v("M")] },
+        { id: "short", name: "Short", variations: [v("G"), v("GG")] },
+      ],
+    } as unknown as Parameters<typeof buildSwapProductsPayload>[0][number];
+    expect(hasMissingRequiredVariation([extra], {})).toBe(false);
+    expect(hasMissingRequiredVariation([extra], { extra: ["P"] })).toBe(true);
+    expect(buildSwapProductsPayload([extra], { extra: ["NO"] })).toEqual([
+      { productId: "extra", variationIds: ["NO"], variationId: "NO" },
+    ]);
   });
 });

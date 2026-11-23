@@ -8,11 +8,20 @@ import { userService } from "@/services";
 import { getApiClient } from "@/services/base/ApiClient";
 import toast from "react-hot-toast";
 import { formatDateBR } from "@/utils/datetimeBR";
+import {
+  type ChosenVariation,
+  getVariationGroups,
+  groupSelection,
+  isSelectionComplete,
+  resolveSelection,
+  setGroupSelection,
+} from "@/lib/productVariationGroups";
 
 interface ProductVariation {
   id: string;
   name: string;
   price: number;
+  groupId?: string | null;
   /** Limite configurado pelo organizador. `0` = ILIMITADO (sentinela do backend). */
   stock: number;
   /** Restante disponível; só significativo quando `stock > 0`. Pode faltar em respostas legadas. */
@@ -48,7 +57,21 @@ export interface IncludedProduct {
   variationEdited: boolean;
   canEditVariation: boolean;
   selectedVariation?: { id: string; name: string; price: number };
+  /** Opções vivas do produto (lista plana; cada uma pode trazer `groupId`). */
   variations?: ProductVariation[];
+  /** Variações do kit (grupos) com suas opções. Ausente → 1 grupo com `variationType`. */
+  variationGroups?: Array<{
+    id: string;
+    name: string;
+    sortOrder?: number;
+    variations?: ProductVariation[];
+  }>;
+  /** Todas as opções escolhidas (uma por variação). Ausente → `[selectedVariation.id]`. */
+  selectedVariationIds?: string[];
+  /** Escolhas com o nome da variação (contrato `variations[]` da inscrição). */
+  chosenVariations?: ChosenVariation[];
+  /** Rótulo pronto: "M" ou "Tamanho da camisa: M · Tamanho do short: G". */
+  variationLabel?: string | null;
 }
 
 interface Props {
@@ -57,7 +80,8 @@ interface Props {
   registrationId: string;
   /** Produto incluso no ingresso (brinde): exibe "Incluso" no lugar do preço. */
   isIncluded?: boolean;
-  onVariationUpdated?: (productId: string, variationId: string) => void;
+  /** `variationIds` = todas as escolhas (uma por variação), na ordem dos grupos. */
+  onVariationUpdated?: (productId: string, variationIds: string[]) => void;
 }
 
 function computeBanner(
@@ -139,9 +163,16 @@ export function ProductVariationCard({
 }: Props) {
   const [isSelecting, setIsSelecting] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-  const [localSelected, setLocalSelected] = useState(
-    product.selectedVariation ?? null
-  );
+  // Escolhas atuais (uma por variação). Legado: só a variação única.
+  const initialIds =
+    product.selectedVariationIds && product.selectedVariationIds.length > 0
+      ? product.selectedVariationIds
+      : product.selectedVariation
+        ? [product.selectedVariation.id]
+        : [];
+  const [localIds, setLocalIds] = useState<string[]>(initialIds);
+  // Rascunho da edição com várias variações (salva tudo de uma vez).
+  const [draftIds, setDraftIds] = useState<string[]>(initialIds);
   const [localVariationEdited, setLocalVariationEdited] = useState(
     product.variationEdited
   );
@@ -152,24 +183,45 @@ export function ProductVariationCard({
   const canAlter =
     product.canEditVariation && !localVariationEdited && !isEditExpired;
 
-  const handleSelectVariation = async (variation: ProductVariation) => {
-    if (isSaving || localSelected?.id === variation.id) {
-      setIsSelecting(false);
-      return;
-    }
-    // Defesa: não seleciona variação esgotada (o botão já é `disabled`, mas o
-    // PATCH /products seria rejeitado pelo backend de qualquer forma).
-    if (isVariationSoldOut(variation)) return;
+  const groups = getVariationGroups(product);
+  const isMultiVariation = groups.length > 1;
+
+  /* Exibição: com as opções em mãos monta "Variação: Opção" por variação; senão
+   * cai nas escolhas/rótulo que vieram na inscrição. */
+  const resolved = resolveSelection(product, localIds);
+  const displayRows: Array<{ key: string; title: string | null; value: string }> =
+    resolved.length > 0
+      ? resolved.map(({ group, option }) => ({
+          key: option.id,
+          title: group?.name ?? product.variationType ?? null,
+          value: option.variation.name,
+        }))
+      : product.chosenVariations && product.chosenVariations.length > 0
+        ? product.chosenVariations.map((c) => ({
+            key: c.id,
+            title: c.groupName ?? product.variationType ?? null,
+            value: c.name,
+          }))
+        : product.selectedVariation || product.variationLabel
+          ? [{
+              key: "single",
+              title: product.variationType ?? null,
+              value: product.selectedVariation?.name ?? product.variationLabel ?? "",
+            }]
+          : [];
+
+  const saveVariationIds = async (ids: string[]) => {
     setIsSaving(true);
     try {
       await userService.updateRegistrationProductVariation(
         registrationId,
         product.id,
-        variation.id
+        ids
       );
-      setLocalSelected(variation);
+      setLocalIds(ids);
+      setDraftIds(ids);
       setLocalVariationEdited(true);
-      onVariationUpdated?.(product.id, variation.id);
+      onVariationUpdated?.(product.id, ids);
       toast.success("Variação atualizada com sucesso!");
       setIsSelecting(false);
     } catch (err: any) {
@@ -178,6 +230,27 @@ export function ProductVariationCard({
       setIsSaving(false);
     }
   };
+
+  const handleSelectVariation = async (groupId: string, variation: ProductVariation, optionId: string) => {
+    // Defesa: não seleciona variação esgotada (o botão já é `disabled`, mas o
+    // PATCH /products seria rejeitado pelo backend de qualquer forma).
+    if (isSaving || isVariationSoldOut(variation)) return;
+    if (isMultiVariation) {
+      // Várias variações: monta o rascunho; "Salvar" manda todas juntas (a troca
+      // é única — depois de salva, `variationEdited` trava novas edições).
+      setDraftIds((prev) => setGroupSelection(product, prev, groupId, optionId));
+      return;
+    }
+    if (localIds.includes(optionId)) {
+      setIsSelecting(false);
+      return;
+    }
+    await saveVariationIds(setGroupSelection(product, localIds, groupId, optionId));
+  };
+
+  const draftChanged =
+    draftIds.length !== localIds.length || draftIds.some((id, i) => id !== localIds[i]);
+  const canSaveDraft = draftChanged && isSelectionComplete(product, draftIds) && !isSaving;
 
   return (
     <div className="bg-gray-2 border border-gray-6 rounded-xl flex flex-col w-full">
@@ -234,23 +307,34 @@ export function ProductVariationCard({
 
       {/* Footer: variation label + Alterar button */}
       <div className="flex items-center justify-between p-4">
-        <div className="flex gap-1 items-center flex-1 min-w-0">
-          {product.variationType && (
-            <span className="text-base leading-[1.3] text-gray-12 font-family-dm-sans whitespace-nowrap shrink-0">
+        <div className="flex flex-col gap-1 flex-1 min-w-0">
+          {displayRows.length === 0 && product.variationType && (
+            <span className="text-base leading-[1.3] text-gray-12 font-family-dm-sans whitespace-nowrap">
               {product.variationType}:
             </span>
           )}
-          {localSelected && (
-            <span className="text-base font-semibold leading-[1.1] text-gray-12 font-manrope truncate ml-1 min-w-0">
-              {localSelected.name}
-            </span>
-          )}
+          {displayRows.map((row) => (
+            <div key={row.key} className="flex gap-1 items-center min-w-0">
+              {row.title && (
+                <span className="text-base leading-[1.3] text-gray-12 font-family-dm-sans whitespace-nowrap shrink-0">
+                  {row.title}:
+                </span>
+              )}
+              <span className="text-base font-semibold leading-[1.1] text-gray-12 font-manrope truncate ml-1 min-w-0">
+                {row.value}
+              </span>
+            </div>
+          ))}
         </div>
 
         {product.buyerVariationEditAllowed && !localVariationEdited && (
           <button
             type="button"
-            onClick={() => canAlter && setIsSelecting((v) => !v)}
+            onClick={() => {
+              if (!canAlter) return;
+              setDraftIds(localIds);
+              setIsSelecting((v) => !v);
+            }}
             disabled={!canAlter || isSaving}
             className={cn(
               "border border-gray-6 flex items-center justify-center px-6 py-2 rounded-lg shrink-0 h-9 transition-colors",
@@ -267,22 +351,29 @@ export function ProductVariationCard({
       </div>
 
       {/* Inline variation selector */}
-      {isSelecting && (
-        <div className="border-t border-gray-6 flex flex-col">
-          {(product.variations ?? []).map((variation, i) => {
-            const isCurrent = localSelected?.id === variation.id;
+      {/* Seletor inline — um bloco por variação (título = nome da variação quando há várias). */}
+      {isSelecting && groups.map((group, groupIndex) => (
+        <div key={group.id} className="border-t border-gray-6 flex flex-col">
+          {isMultiVariation && (
+            <p className="px-4 pt-3 pb-1 text-sm font-semibold leading-[1.3] text-gray-12 font-family-dm-sans">
+              {group.name ?? product.variationType ?? `Variação ${groupIndex + 1}`}
+            </p>
+          )}
+          {group.options.map(({ id: optionId, variation }, i) => {
+            const activeIds = isMultiVariation ? draftIds : localIds;
+            const isCurrent = groupSelection(group, activeIds)?.id === optionId;
             // Esgotado só bloqueia OUTRAS variações — a já selecionada continua marcada.
             const soldOut = !isCurrent && isVariationSoldOut(variation);
             return (
               <button
-                key={variation.id}
+                key={optionId}
                 type="button"
-                onClick={() => handleSelectVariation(variation)}
+                onClick={() => handleSelectVariation(group.id, variation, optionId)}
                 disabled={isSaving || soldOut}
                 className={cn(
                   "flex items-center gap-2 px-4 py-3 text-left transition-colors",
                   soldOut ? "opacity-50 cursor-not-allowed" : "hover:bg-gray-3",
-                  i < (product.variations!.length - 1) && "border-b border-gray-6",
+                  i < group.options.length - 1 && "border-b border-gray-6",
                   isCurrent && "bg-gray-3"
                 )}
               >
@@ -303,6 +394,24 @@ export function ProductVariationCard({
               </button>
             );
           })}
+        </div>
+      ))}
+
+      {isSelecting && isMultiVariation && (
+        <div className="border-t border-gray-6 flex justify-end p-4">
+          <button
+            type="button"
+            onClick={() => canSaveDraft && saveVariationIds(draftIds)}
+            disabled={!canSaveDraft}
+            className={cn(
+              "border border-gray-6 flex items-center justify-center px-6 py-2 rounded-lg shrink-0 h-9 transition-colors",
+              canSaveDraft ? "hover:bg-gray-3 cursor-pointer" : "opacity-40 cursor-not-allowed"
+            )}
+          >
+            <span className="text-sm font-bold leading-[1.1] text-gray-12 font-manrope whitespace-nowrap">
+              {isSaving ? "Salvando..." : "Salvar"}
+            </span>
+          </button>
         </div>
       )}
     </div>

@@ -819,18 +819,20 @@ export class OrganizerReportingService extends OrganizerServiceBase {
   /**
    * Troca da variação de um produto incluso pelo ORGANIZADOR (sem os limites do
    * comprador). Backend recalcula estoque e reaplica o gate `edit_event`. Retorna
-   * a inscrição re-hidratada (mesmo shape do GET).
+   * a inscrição re-hidratada (mesmo shape do GET). Kit com várias variações manda
+   * TODAS as escolhas (`variationIds`) + `variationId` = a primeira (legado).
    */
   async updateRegistrationProductVariationAsOrganizer(
     registrationId: string,
     productId: string,
-    variationId: string,
+    variation: string | string[],
   ): Promise<Registration> {
+    const variationIds = Array.isArray(variation) ? variation : [variation];
     const { data: response } = await this.apiClient.patch<{
       data: { registration: Registration };
     }>(
       `/api/v1/registrations/${registrationId}/products/${productId}/variation/organizer`,
-      { variationId },
+      { variationIds, variationId: variationIds[0] },
     );
     return response.data.registration;
   }

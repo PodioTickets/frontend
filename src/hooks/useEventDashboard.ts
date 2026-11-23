@@ -14,6 +14,7 @@ import {
 } from "@/hooks/useDashboard";
 import type { Question } from "@/interfaces/event";
 import type { BestSellingVariationItem } from "@/components/Organizer/BestSellingVariations";
+import { topVariationProductTotals, topVariationRowLabel } from "@/lib/productVariationGroups";
 import type { TextAnswerRow } from "@/components/Organizer/QuestionDetailsDrawer";
 import {
   LOTS_NEAR_DEPLETION_PAGE_SIZE,
@@ -267,6 +268,9 @@ export function useEventDashboard(
         variations: (p.variations ?? []).map((v) => ({
           variationId: v.variationId ?? null,
           variationName: v.variationName ?? "—",
+          groupId: v.groupId ?? null,
+          groupName: v.groupName ?? null,
+          variationLabel: v.variationLabel ?? null,
           quantitySold: v.quantitySold ?? 0,
           percentage: v.percentage,
           remainingStock: v.remainingStock ?? undefined,
@@ -367,10 +371,13 @@ export function useEventDashboard(
   const bestSellingVariations = useMemo((): BestSellingVariationItem[] => {
     const top = dashboardData.topProductVariations ?? [];
     return top.map((product) => {
-      const variations = product.variations ?? [];
-      const totalQty = variations.reduce((s, v) => s + (v.quantitySold ?? 0), 0);
-      const totalStock = variations.reduce((s, v) => s + (v.totalStock ?? 0), 0);
-      const remainingStock = variations.reduce((s, v) => s + (v.remainingStock ?? 0), 0);
+      // Kit com várias variações: cada kit aparece em cada variação — totais por
+      // variação, não a soma de todas as linhas.
+      const {
+        quantity: totalQty,
+        totalStock,
+        remainingStock,
+      } = topVariationProductTotals(product.variations ?? []);
       return {
         id: product.productId,
         productId: product.productId,
@@ -409,7 +416,7 @@ export function useEventDashboard(
         const stockStatus: "Esgotado" | "Normal" | undefined =
           v.remainingStock != null ? (v.remainingStock === 0 ? "Esgotado" : "Normal") : undefined;
         return {
-          variationName: v.variationName,
+          variationName: topVariationRowLabel(v),
           quantitySold: String(v.quantitySold),
           percentage: v.percentage ?? 0,
           stock: stockStr,
@@ -455,7 +462,7 @@ export function useEventDashboard(
 
   const selectedProductTotalStock: number | undefined = useMemo(() => {
     if (!selectedProductFromApi?.variations?.length) return undefined;
-    const sum = selectedProductFromApi.variations.reduce((s, v) => s + (v.totalStock ?? 0), 0);
+    const sum = topVariationProductTotals(selectedProductFromApi.variations).totalStock;
     return sum > 0 ? sum : undefined;
   }, [selectedProductFromApi]);
 

@@ -1,5 +1,6 @@
 import type { Ticket } from "@/hooks/useTickets";
 import type { Product } from "@/components/Checkout/SubscriptionStep.utils";
+import { autoSelectedVariationIds, isSelectionComplete } from "@/lib/productVariationGroups";
 
 /**
  * Slot participante↔ingresso do checkout.
@@ -45,32 +46,27 @@ export function buildParticipantTicketSlots(
 }
 
 /**
- * Um produto representa uma ESCOLHA real do usuário quando tem mais de uma
- * variação (qual selecionar — ou recusar, via "sem interesse"). Produtos de
- * variação única são auto-resolvidos (incluído/auto-selecionado) e, portanto,
- * não justificam exibir a etapa de Produtos.
+ * Um produto representa uma ESCOLHA real do usuário quando alguma variação tem
+ * mais de uma opção, ou quando há o opt-out "Sem interesse" (recusar o kit).
+ * Variações de opção única são auto-resolvidas e, portanto, não justificam
+ * exibir a etapa de Produtos. Regra em `productVariationGroups`.
  */
-export function productOffersChoice(product: Product): boolean {
-  return (product.variations?.length ?? 0) > 1;
-}
+export { productOffersChoice } from "@/lib/productVariationGroups";
 
 /**
- * Variação a ser auto-selecionada para um produto, espelhando EXATAMENTE o efeito
- * de auto-seleção do `SubscriptionStep`: o produto exige variação
- * (`isRequired || !isIncludedInTicket`) e tem variação única. Retorna `null`
- * quando não há auto-seleção. O fallback de id (`${id}-0`) também espelha o
+ * Opções auto-selecionadas para um produto (uma por variação de opção única),
+ * espelhando EXATAMENTE o efeito de auto-seleção do `SubscriptionStep`: o
+ * produto exige variação (`isRequired || !isIncludedInTicket`). Lista vazia =
+ * nada a auto-selecionar. O fallback de id (`${id}-<índice>`) espelha o
  * componente (variação sem id explícito).
  */
-export function autoSelectedVariationId(product: Product): string | null {
-  const needsVariationChoice = product.isRequired || !product.isIncludedInTicket;
-  if (!needsVariationChoice) return null;
-  if ((product.variations?.length ?? 0) !== 1) return null;
-  const variation = product.variations[0];
-  return variation.id || `${product.id}-0`;
-}
+export { autoSelectedVariationIds } from "@/lib/productVariationGroups";
 
 export interface AutoSelectedProduct {
   productId: string;
+  /** Todas as opções (uma por variação, na ordem dos grupos). */
+  variationIds: string[];
+  /** Legado = `variationIds[0]`. */
   variationId: string;
   quantity: number;
   participantEmail: string;
@@ -97,11 +93,14 @@ export function buildAutoSelectedProductsPayload(
     if (!participantEmail) continue;
 
     for (const product of getProductsForTicket(slot.ticketId)) {
-      const variationId = autoSelectedVariationId(product);
-      if (!variationId) continue;
+      const variationIds = autoSelectedVariationIds(product);
+      // Só entra produto resolvido por inteiro (uma opção por variação) — o
+      // backend rejeita kit com variação faltando.
+      if (variationIds.length === 0 || !isSelectionComplete(product, variationIds)) continue;
       payload.push({
         productId: product.id,
-        variationId,
+        variationIds,
+        variationId: variationIds[0],
         quantity: 1,
         participantEmail,
         participantIndex: slot.participantIndex,

@@ -97,6 +97,29 @@ export function useSubscriptionData(eventId: string | undefined) {
     if (!productsData?.products) return [];
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const mapVariation = (v: any): Product["variations"][number] => ({
+      id: v.id,
+      name: v.name,
+      price: productPriceFromApiToReais(v.price),
+      stock: typeof v.stock === "number" ? v.stock : parseInt(String(v.stock), 10) || 0,
+      // Estoque restante (limitado): usado pra marcar variação esgotada no
+      // dropdown. Ausente em respostas legadas → fica undefined (não esgota).
+      availableStock:
+        typeof v.availableStock === "number"
+          ? v.availableStock
+          : v.availableStock != null
+            ? parseInt(String(v.availableStock), 10) || 0
+            : undefined,
+      soldCount:
+        typeof v.soldCount === "number"
+          ? v.soldCount
+          : v.soldCount != null
+            ? parseInt(String(v.soldCount), 10) || 0
+            : undefined,
+      groupId: typeof v.groupId === "string" ? v.groupId : null,
+    });
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     return productsData.products.map((product: any): Product => ({
       id: product.id,
       name: product.name,
@@ -111,27 +134,17 @@ export function useSubscriptionData(eventId: string | undefined) {
           : typeof product.variation_type === "string" && product.variation_type.trim()
             ? product.variation_type.trim()
             : null,
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      variations: (product.variations || []).map((v: any) => ({
-        id: v.id,
-        name: v.name,
-        price: productPriceFromApiToReais(v.price),
-        stock: typeof v.stock === "number" ? v.stock : parseInt(String(v.stock), 10) || 0,
-        // Estoque restante (limitado): usado pra marcar variação esgotada no
-        // dropdown. Ausente em respostas legadas → fica undefined (não esgota).
-        availableStock:
-          typeof v.availableStock === "number"
-            ? v.availableStock
-            : v.availableStock != null
-              ? parseInt(String(v.availableStock), 10) || 0
-              : undefined,
-        soldCount:
-          typeof v.soldCount === "number"
-            ? v.soldCount
-            : v.soldCount != null
-              ? parseInt(String(v.soldCount), 10) || 0
-              : undefined,
-      })),
+      variations: (product.variations || []).map(mapVariation),
+      // Ausente (resposta antiga) → undefined: `getVariationGroups` cai no grupo único.
+      variationGroups: Array.isArray(product.variationGroups)
+        ? // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          product.variationGroups.map((g: any) => ({
+            id: g.id,
+            name: typeof g.name === "string" ? g.name : "",
+            sortOrder: typeof g.sortOrder === "number" ? g.sortOrder : undefined,
+            variations: (g.variations || []).map(mapVariation),
+          }))
+        : undefined,
     }));
   }, [productsData]);
 

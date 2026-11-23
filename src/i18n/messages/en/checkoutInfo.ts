@@ -112,6 +112,7 @@ export default {
   selectOption: "Select an option",
   variationMissing: "Option not selected yet",
   includedInTicketPrice: "Included in ticket",
+  includedInKit: "Included in the kit",
   chooseVariation: "Choose an option",
   noParticipantFound: "No participant found",
   standaloneTicket: "Single ticket",

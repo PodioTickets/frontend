@@ -28,6 +28,9 @@ export interface CheckoutParticipant {
   }>;
   products?: Array<{
     productId: string;
+    /** Opções escolhidas (uma por variação do kit). */
+    variationIds?: string[];
+    /** Legado = `variationIds[0]`. */
     variationId?: string;
     quantity: number;
   }>;
@@ -145,6 +148,9 @@ export interface CheckoutParticipantDetail {
   }>;
   products?: Array<{
     productId: string;
+    /** Opções escolhidas (uma por variação do kit). */
+    variationIds?: string[];
+    /** Legado = `variationIds[0]`. */
     variationId?: string;
     quantity: number;
   }>;
@@ -161,6 +167,10 @@ export interface CheckoutProductItem {
   name: string;
   variationId: string | null;
   variationName: string | null;
+  /** Todas as opções escolhidas (kit com várias variações). */
+  variationIds?: string[];
+  /** "M" (1 escolha) ou "Tamanho da camisa: M · Tamanho do short: G". */
+  variationLabel?: string | null;
   quantity: number;
   unitPrice: number;
   totalPrice: number;

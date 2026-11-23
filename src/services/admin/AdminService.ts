@@ -910,7 +910,11 @@ export class AdminService {
    */
   async swapRegistrationTicket(
     registrationId: string,
-    body: { ticketId: string; products: Array<{ productId: string; variationId?: string | null }> },
+    body: {
+      ticketId: string;
+      /** `variationIds` = uma opção por variação do kit; `variationId` = a primeira (legado). */
+      products: Array<{ productId: string; variationIds?: string[]; variationId?: string | null }>;
+    },
   ): Promise<{ registrationId: string; emailSent: boolean }> {
     const res = await this.apiClient.post<{ data?: { registrationId?: string; emailSent?: boolean } }>(
       `/api/v1/admin/registrations/${registrationId}/swap-ticket`,

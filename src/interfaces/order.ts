@@ -188,6 +188,9 @@ export interface PatchParticipantsRequest {
 export interface PatchProductsRequest {
   products: Array<{
     productId: string;
+    /** Opções escolhidas (uma por variação do kit, na ordem dos grupos) ou só o opt-out. */
+    variationIds?: string[];
+    /** Legado = `variationIds[0]`. */
     variationId?: string;
     quantity: number;
     participantEmail: string;

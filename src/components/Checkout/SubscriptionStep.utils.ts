@@ -1,6 +1,7 @@
 import { isSemInteresseVariation } from "@/utils/semInteresseVariation";
 import { formatDateBR } from "@/utils/datetimeBR";
 import { formatBRL } from "@/lib/money";
+import { resolveSelection } from "@/lib/productVariationGroups";
 
 export interface Product {
   id: string;
@@ -22,8 +23,23 @@ export interface Product {
     availableStock?: number;
     /** Unidades já vendidas (confirmadas no pagamento). */
     soldCount?: number;
+    /** Variação (grupo) a que a opção pertence. `null` = opt-out "Sem interesse" / legado. */
+    groupId?: string | null;
+  }>;
+  /**
+   * Variações do kit (cada uma é uma pergunta com opções), ordenadas. Ausente em
+   * respostas antigas → `getVariationGroups` monta 1 grupo com `variationType`.
+   */
+  variationGroups?: Array<{
+    id: string;
+    name: string;
+    sortOrder?: number;
+    variations: Product["variations"];
   }>;
 }
+
+/** Seleção salva de um produto: lista de ids (nova) ou id único (sessionStorage legado). */
+export type ProductVariationSelection = string[] | string | null;
 
 /**
  * Política atual (espelha `holdsStock` do backend, product-stock.util.ts): TODO
@@ -168,6 +184,18 @@ export function billableReaisForProductSelection(
 
   // Variação com preço específico → total absoluto (não subtrai a base).
   return v;
+}
+
+/**
+ * Opção que define o preço de uma seleção com várias variações: a PRIMEIRA (mesma
+ * que vai em `variationId` no payload). No fluxo novo opção não tem preço próprio
+ * (cobra a base); opções legadas com preço seguem a regra de sempre.
+ */
+export function primarySelectedVariation(
+  product: Product,
+  ids: readonly string[],
+): Product["variations"][number] | null {
+  return resolveSelection(product, ids)[0]?.option.variation ?? null;
 }
 
 export const getVariationKey = (participantIndex: number, productId: string) => {

@@ -12,8 +12,7 @@ export interface BestSellingVariationItem {
   /** UUID do produto (API topProductVariations) */
   productId?: string;
   /** UUID da variação ou undefined se "Sem variação" (API topProductVariations) */
-  variationId?: string | null;
-  id?: string;
+  variationId?: string | null;  id?: string;
   /** Quantidade vendida (para o drawer; API: quantitySold) */
   quantity?: number;
   /** Receita total em centavos (para o drawer; opcional, API pode não enviar) */

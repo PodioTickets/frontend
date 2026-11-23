@@ -11,6 +11,7 @@ import {
   ReactNode,
 } from "react";
 import { useSearchParams } from "next/navigation";
+import type { ProductVariationSelection } from "@/components/Checkout/SubscriptionStep.utils";
 
 /** Le um JSON do sessionStorage com fallback SSR-safe e tolerante a parse error. */
 function readStoredJson<T>(key: string | null, fallback: T): T {
@@ -41,7 +42,12 @@ interface ParticipantFormData {
   emergencyContactName?: string;
   hasEmergencyContact?: boolean;
   questionAnswers?: Record<string, string | string[]>;
-  productVariations?: Record<string, string | null>;
+  /**
+   * productId → opções escolhidas (uma por variação do kit, na ordem dos grupos,
+   * ou só o opt-out). Sessões antigas no sessionStorage guardam um id único
+   * (string) — leia sempre via `selectionIds`.
+   */
+  productVariations?: Record<string, ProductVariationSelection>;
 }
 
 interface CheckoutState {
