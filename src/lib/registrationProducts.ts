@@ -1,5 +1,9 @@
 import type { IncludedProduct } from "@/components/Ticket/ProductVariationCard";
 import { isSemInteresseVariation } from "@/utils/semInteresseVariation";
+import {
+  registrationItemChosenVariations,
+  registrationItemVariationLabel,
+} from "@/lib/productVariationGroups";
 
 /**
  * Normaliza os produtos de UMA registration (`reg.products[]`) no shape
@@ -24,6 +28,25 @@ export function buildRegistrationProducts(reg: any): {
 
   const toIncludedProduct = (item: any, basePriceCents: number): IncludedProduct => {
     const prod = item.product || {};
+    /* Kit com várias variações: `item.variations` passou a ser a lista das opções
+     * ESCOLHIDAS (com `groupName`). Respostas antigas usam o mesmo campo para as
+     * opções vivas do seletor — distinguimos pelo shape. */
+    const chosen = registrationItemChosenVariations(item);
+    const groups = item.variationGroups ?? prod.variationGroups;
+    const options =
+      chosen.length === 0 && Array.isArray(item.variations)
+        ? item.variations
+        : Array.isArray(item.variationOptions)
+          ? item.variationOptions
+          : Array.isArray(groups)
+            ? groups.flatMap((g: { variations?: unknown[] }) => g.variations ?? [])
+            : undefined;
+    const selectedVariationIds =
+      chosen.length > 0
+        ? chosen.map((c) => c.id).filter(Boolean)
+        : item.variation?.id
+          ? [item.variation.id]
+          : undefined;
     return {
       // O endpoint de update é keyed pelo id do PRODUTO (catálogo).
       id: prod.id ?? item.id,
@@ -42,7 +65,11 @@ export function buildRegistrationProducts(reg: any): {
             price: item.variation.price ?? 0,
           }
         : undefined,
-      variations: item.variations,
+      variations: options,
+      variationGroups: Array.isArray(groups) ? groups : undefined,
+      selectedVariationIds,
+      chosenVariations: chosen.length > 0 ? chosen : undefined,
+      variationLabel: registrationItemVariationLabel(item),
     };
   };
 

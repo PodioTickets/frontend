@@ -96,6 +96,9 @@ interface ParticipantWithTicket {
 import { NationalitySelect } from "./NationalitySelect";
 import { readSavedState, type SavedSnapshotMap } from "@/lib/participantSnapshot";
 
+/** Tipos de pergunta que o checkout desenha (os 5 do modal do painel). */
+const KNOWN_QUESTION_TYPES = new Set(["text", "select", "multiple_choice", "true_false", "number"]);
+
 export function InformationStep({
   event,
   onNext,
@@ -1679,8 +1682,13 @@ export function InformationStep({
   ) => {
     const answer = getQuestionAnswer(participantIndex, question.id);
     const isRequired = question.isRequired;
+    // Tipo fora dos 5 do painel (dado legado/API): desenha como lista (com opções) ou
+    // texto — sumir com ela travava a etapa se fosse obrigatória.
+    const type = KNOWN_QUESTION_TYPES.has(question.type)
+      ? question.type
+      : question.options?.length ? "select" : "text";
 
-    switch (question.type) {
+    switch (type) {
       case "text": {
         const questionError = fieldErrors[participantIndex]?.[`question_${question.id}`];
         return (

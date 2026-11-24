@@ -49,6 +49,8 @@ interface TicketProductsSectionProps {
     excludeProductIds: string[];
   }) => void;
   readOnly?: boolean;
+  /** Abre o modal de kit (sem id = criar). Kit = vários itens como variações; p/ o participante é um produto. */
+  onOpenKit?: (productId?: string) => void;
 }
 
 function SortableTicketProductCard({
@@ -166,6 +168,7 @@ export function TicketProductsSection({
   openCreateProductModal,
   openAddExistingProductsModal,
   readOnly = false,
+  onOpenKit,
 }: TicketProductsSectionProps) {
   const [activeProductDragId, setActiveProductDragId] = useState<string | null>(null);
 
@@ -241,6 +244,20 @@ export function TicketProductsSection({
             Adicionar produtos existentes
           </Button>
           <Button
+            variant="outline"
+            className="border-gray-6 text-gray-12 w-full md:w-auto"
+            onClick={() => {
+              if (!eventId) {
+                toast.error("Evento não encontrado");
+                return;
+              }
+              onOpenKit?.();
+            }}
+          >
+            <Plus className="size-5" />
+            Criar um novo kit
+          </Button>
+          <Button
             className="w-full md:w-auto"
             onClick={() => {
               if (!eventId) {
@@ -290,6 +307,7 @@ export function TicketProductsSection({
                         toast.error("Evento não encontrado");
                         return;
                       }
+                      if (product.product?.isKit) return onOpenKit?.(product.productId);
                       openCreateProductModal({
                         eventId,
                         productId: product.productId,

@@ -5,7 +5,16 @@
  */
 
 import type { Product } from "@/components/Checkout/SubscriptionStep.utils";
-import { autoSelectedVariationId } from "@/lib/checkoutProductStep";
+import {
+  autoSelectableOptions,
+  getVariationGroups,
+  groupSelection,
+  isOptedOut,
+  isSelectionComplete,
+  normalizeSelection,
+  selectionIds,
+  setGroupSelection,
+} from "@/lib/productVariationGroups";
 
 export interface SwapParticipantInfo {
   /** ISO "YYYY-MM-DD…" */
@@ -56,29 +65,52 @@ export function swapBlockedReason(
   return null;
 }
 
+/** Seleção da troca: productId → opções escolhidas (uma por variação) ou id único legado. */
+export type SwapSelection = Record<string, readonly string[] | string | null | undefined>;
+
+/**
+ * Escolhas efetivas do produto: as do admin + as auto-selecionadas (variação de
+ * opção única) nas variações que ele não escolheu. Opt-out não recebe auto-seleção.
+ */
+export function effectiveSwapSelection(product: Product, selected: SwapSelection): string[] {
+  let ids = normalizeSelection(product, selectionIds(selected[product.id]));
+  if (isOptedOut(product, ids)) return ids;
+  const groups = getVariationGroups(product);
+  for (const { groupId, option } of autoSelectableOptions(product)) {
+    const group = groups.find((g) => g.id === groupId);
+    if (group && !groupSelection(group, ids)) ids = setGroupSelection(product, ids, groupId, option.id);
+  }
+  return ids;
+}
+
 /**
  * Payload de produtos da troca — MESMA regra do checkout (`checkoutProductStep`): só entra
- * produto com variação (escolhida ou auto-selecionada quando há opção única); produto
- * sem variação nunca vira item, como na compra.
+ * produto com variação (escolhida ou auto-selecionada quando há opção única) e com UMA
+ * opção por variação; produto sem variação nunca vira item, como na compra.
  */
 export function buildSwapProductsPayload(
   products: Product[],
-  selected: Record<string, string | null | undefined>,
-): Array<{ productId: string; variationId: string }> {
-  const out: Array<{ productId: string; variationId: string }> = [];
+  selected: SwapSelection,
+): Array<{ productId: string; variationIds: string[]; variationId: string }> {
+  const out: Array<{ productId: string; variationIds: string[]; variationId: string }> = [];
   for (const p of products) {
-    const variationId = selected[p.id] || autoSelectedVariationId(p);
-    if (variationId) out.push({ productId: p.id, variationId });
+    const variationIds = effectiveSwapSelection(p, selected);
+    if (variationIds.length > 0 && isSelectionComplete(p, variationIds)) {
+      out.push({ productId: p.id, variationIds, variationId: variationIds[0] });
+    }
   }
   return out;
 }
 
-/** Algum obrigatório com variação ainda sem escolha? (gate do "Concluir"). */
-export function hasMissingRequiredVariation(
-  products: Product[],
-  selected: Record<string, string | null | undefined>,
-): boolean {
-  return products.some(
-    (p) => p.isRequired && (p.variations?.length ?? 0) > 0 && !(selected[p.id] || autoSelectedVariationId(p)),
-  );
+/**
+ * Gate do "Concluir": obrigatório com variação ainda incompleto, ou qualquer produto
+ * com escolha começada mas faltando variação (o backend rejeitaria a troca).
+ */
+export function hasMissingRequiredVariation(products: Product[], selected: SwapSelection): boolean {
+  return products.some((p) => {
+    const ids = effectiveSwapSelection(p, selected);
+    if (isSelectionComplete(p, ids)) return false;
+    // Incluso no ingresso = obrigatório (regra do checkout); `isRequired` legado continua valendo.
+    return p.isRequired || p.isIncludedInTicket || ids.length > 0;
+  });
 }

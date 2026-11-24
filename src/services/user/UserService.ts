@@ -231,15 +231,20 @@ export class UserService extends AuthService {
     }
   }
 
+  /**
+   * Troca a(s) variação(ões) do produto. Kit com várias variações manda TODAS as
+   * escolhas (`variationIds`, uma por variação) + `variationId` = a primeira (legado).
+   */
   async updateRegistrationProductVariation(
     registrationId: string,
     productId: string,
-    variationId: string
+    variation: string | string[]
   ): Promise<any> {
+    const variationIds = Array.isArray(variation) ? variation : [variation];
     try {
       const response = await this.apiClient.patch(
         `/api/v1/registrations/${registrationId}/products/${productId}/variation`,
-        { variationId }
+        { variationIds, variationId: variationIds[0] }
       );
       return response.data;
     } catch (error: any) {

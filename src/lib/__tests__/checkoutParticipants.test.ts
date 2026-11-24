@@ -122,9 +122,9 @@ describe("buildProductsPatchPayload", () => {
       { email: "b@x.com", productVariations: { p1: "v9" } },
     ]);
     expect(r.products).toEqual([
-      { productId: "p1", variationId: "v1", quantity: 1, participantEmail: "a@x.com", participantIndex: 0 },
-      { productId: "p2", variationId: "v2", quantity: 1, participantEmail: "a@x.com", participantIndex: 0 },
-      { productId: "p1", variationId: "v9", quantity: 1, participantEmail: "b@x.com", participantIndex: 1 },
+      { productId: "p1", variationIds: ["v1"], variationId: "v1", quantity: 1, participantEmail: "a@x.com", participantIndex: 0 },
+      { productId: "p2", variationIds: ["v2"], variationId: "v2", quantity: 1, participantEmail: "a@x.com", participantIndex: 0 },
+      { productId: "p1", variationIds: ["v9"], variationId: "v9", quantity: 1, participantEmail: "b@x.com", participantIndex: 1 },
     ]);
   });
   it("ignora variação nula (produto recusado / sem interesse)", () => {
@@ -132,7 +132,7 @@ describe("buildProductsPatchPayload", () => {
       { email: "a@x.com", productVariations: { p1: null, p2: "v2" } },
     ]);
     expect(r.products).toEqual([
-      { productId: "p2", variationId: "v2", quantity: 1, participantEmail: "a@x.com", participantIndex: 0 },
+      { productId: "p2", variationIds: ["v2"], variationId: "v2", quantity: 1, participantEmail: "a@x.com", participantIndex: 0 },
     ]);
   });
   it("participante sem productVariations é ignorado; email ausente vira ''", () => {
@@ -141,7 +141,7 @@ describe("buildProductsPatchPayload", () => {
       { productVariations: { p1: "v1" } },
     ]);
     expect(r.products).toEqual([
-      { productId: "p1", variationId: "v1", quantity: 1, participantEmail: "", participantIndex: 1 },
+      { productId: "p1", variationIds: ["v1"], variationId: "v1", quantity: 1, participantEmail: "", participantIndex: 1 },
     ]);
   });
   it("2 participantes com o MESMO e-mail → participantIndex distingue os slots (bug do produto colapsado)", () => {
@@ -152,9 +152,31 @@ describe("buildProductsPatchPayload", () => {
       { email: "same@x.com", productVariations: { p2: "v2" } },
     ]);
     expect(r.products).toEqual([
-      { productId: "p1", variationId: "v1", quantity: 1, participantEmail: "same@x.com", participantIndex: 0 },
-      { productId: "p2", variationId: "v2", quantity: 1, participantEmail: "same@x.com", participantIndex: 1 },
+      { productId: "p1", variationIds: ["v1"], variationId: "v1", quantity: 1, participantEmail: "same@x.com", participantIndex: 0 },
+      { productId: "p2", variationIds: ["v2"], variationId: "v2", quantity: 1, participantEmail: "same@x.com", participantIndex: 1 },
     ]);
+  });
+  it("kit com várias variações → variationIds com todas + variationId = a 1ª", () => {
+    const r = buildProductsPatchPayload([
+      { email: "a@x.com", productVariations: { kit: ["camisa-m", "short-g"], vazio: [] } },
+    ]);
+    expect(r.products).toEqual([
+      {
+        productId: "kit",
+        variationIds: ["camisa-m", "short-g"],
+        variationId: "camisa-m",
+        quantity: 1,
+        participantEmail: "a@x.com",
+        participantIndex: 0,
+      },
+    ]);
+  });
+  it("isComplete deixa de fora o kit com variação faltando", () => {
+    const r = buildProductsPatchPayload(
+      [{ email: "a@x.com", productVariations: { kit: ["camisa-m"], outro: "v1" } }],
+      (productId, ids) => productId !== "kit" || ids.length === 2,
+    );
+    expect(r.products.map((p) => p.productId)).toEqual(["outro"]);
   });
 });
 

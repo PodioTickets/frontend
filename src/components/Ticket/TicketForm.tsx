@@ -39,12 +39,14 @@ import {
 import { useOrganizerPermissions } from "@/contexts/OrganizerPermissionsContext";
 import { TicketBatchSection } from "./TicketBatchSection";
 import { TicketProductsSection } from "./TicketProductsSection";
+import { CreateKitModal, type KitFormPayload } from "@/components/Kit/CreateKitModal";
 
 import type { Batch, ProductData, Product, TicketFormProps } from "./TicketForm.types";
 import {
   defaultBatch,
   unwrapSavedProductFromApi,
   isPersistedBatchId,
+  findDuplicateBatchPeriod,
   isBatchEndBeforeSaleStart,
   buildTicketFormSnapshot,
   sanitizeDistanceInput,
@@ -674,72 +676,110 @@ export function TicketForm({
     loadTicket();
   }, [mode, ticketId, eventId, modalityTemplates, orgNav, backUrl]);
 
+  // Produto/kit salvo (modal de produto ou de kit) → entra ou é atualizado na lista do ingresso.
+  const upsertSavedProduct = useCallback(async (data: { product?: unknown }) => {
+    try {
+      const entity = unwrapSavedProductFromApi(data?.product);
+      if (!entity) {
+        toast.error("Não foi possível obter os dados do produto após salvar.");
+        return;
+      }
+
+      let formattedBasePrice: string | undefined = undefined;
+      const bp = entity.basePrice;
+      if (bp !== undefined && bp !== null) {
+        if (typeof bp === "number") {
+          formattedBasePrice = (bp / 100).toFixed(2).replace(".", ",");
+        } else if (typeof bp === "string") {
+          formattedBasePrice = bp;
+        }
+      }
+
+      const id = String(entity.id ?? "").trim();
+      const name = String(entity.name ?? "").trim();
+      const normalizedProduct: Product = {
+        id,
+        name,
+        image: typeof entity.image === "string" ? entity.image : undefined,
+        isIncludedInTicket: entity.isIncludedInTicket !== false,
+        basePrice: formattedBasePrice,
+        isKit: entity.isKit === true,
+      };
+
+      if (!id || !name) {
+        toast.error("Dados do produto inválidos");
+        return;
+      }
+
+      setProducts((prevProducts) => {
+        const existingIndex = prevProducts.findIndex(
+          (p) => p.productId === normalizedProduct.id,
+        );
+        if (existingIndex >= 0) {
+          const updated = [...prevProducts];
+          updated[existingIndex] = {
+            id: normalizedProduct.id,
+            product: normalizedProduct,
+            productId: normalizedProduct.id,
+            ticketId: prevProducts[existingIndex].ticketId,
+          };
+          return updated;
+        }
+        return [
+          ...prevProducts,
+          {
+            id: normalizedProduct.id,
+            product: normalizedProduct,
+            productId: normalizedProduct.id,
+            ticketId: ticketId || "",
+          },
+        ];
+      });
+
+      // Invalida o cache de produtos para que a lista de tickets mostre a imagem atualizada ao voltar
+      void queryClient.invalidateQueries({ queryKey: queryKeys.events.products(eventId) });
+    } catch (error) {
+      console.error("Error in createProductCallback:", error);
+    }
+  }, [queryClient, eventId, ticketId]);
+
+  // Modal de kit: `kit` = produto completo da API (com `variationGroups`) na edição.
+  const [kitModal, setKitModal] = useState<{ kit?: { id: string } & Record<string, unknown> } | null>(null);
+  const openKitModal = useCallback(
+    async (productId?: string) => {
+      if (!productId) return setKitModal({});
+      try {
+        setKitModal({ kit: await organizerService.getProductById(productId) });
+      } catch {
+        toast.error("Não foi possível carregar o kit");
+      }
+    },
+    [],
+  );
+  const saveKit = useCallback(
+    async (payload: KitFormPayload) => {
+      const id = kitModal?.kit?.id;
+      const saved = id
+        ? await organizerService.updateProduct(eventId, id, payload)
+        : await organizerService.createProduct(eventId, { ...payload, isKit: true });
+      await upsertSavedProduct({ product: saved });
+      toast.success(id ? "Kit atualizado" : "Kit criado");
+      setKitModal(null);
+    },
+    [kitModal, eventId, upsertSavedProduct],
+  );
+  const deleteKit = useCallback(async () => {
+    const id = kitModal?.kit?.id;
+    if (!id) return;
+    await organizerService.deleteProduct(eventId, id);
+    setProducts((prev) => prev.filter((p) => p.productId !== id));
+    toast.success("Kit excluído");
+    setKitModal(null);
+  }, [kitModal, eventId]);
+
   // Setup modal callbacks
   useEffect(() => {
-    const createProductCallback = async (data: { product?: unknown }) => {
-      try {
-        const entity = unwrapSavedProductFromApi(data?.product);
-        if (!entity) {
-          toast.error("Não foi possível obter os dados do produto após salvar.");
-          return;
-        }
-
-        let formattedBasePrice: string | undefined = undefined;
-        const bp = entity.basePrice;
-        if (bp !== undefined && bp !== null) {
-          if (typeof bp === "number") {
-            formattedBasePrice = (bp / 100).toFixed(2).replace(".", ",");
-          } else if (typeof bp === "string") {
-            formattedBasePrice = bp;
-          }
-        }
-
-        const id = String(entity.id ?? "").trim();
-        const name = String(entity.name ?? "").trim();
-        const normalizedProduct: Product = {
-          id,
-          name,
-          image: typeof entity.image === "string" ? entity.image : undefined,
-          isIncludedInTicket: entity.isIncludedInTicket !== false,
-          basePrice: formattedBasePrice,
-        };
-
-        if (!id || !name) {
-          toast.error("Dados do produto inválidos");
-          return;
-        }
-
-        setProducts((prevProducts) => {
-          const existingIndex = prevProducts.findIndex(
-            (p) => p.productId === normalizedProduct.id,
-          );
-          if (existingIndex >= 0) {
-            const updated = [...prevProducts];
-            updated[existingIndex] = {
-              id: normalizedProduct.id,
-              product: normalizedProduct,
-              productId: normalizedProduct.id,
-              ticketId: prevProducts[existingIndex].ticketId,
-            };
-            return updated;
-          }
-          return [
-            ...prevProducts,
-            {
-              id: normalizedProduct.id,
-              product: normalizedProduct,
-              productId: normalizedProduct.id,
-              ticketId: ticketId || "",
-            },
-          ];
-        });
-
-        // Invalida o cache de produtos para que a lista de tickets mostre a imagem atualizada ao voltar
-        void queryClient.invalidateQueries({ queryKey: queryKeys.events.products(eventId) });
-      } catch (error) {
-        console.error("Error in createProductCallback:", error);
-      }
-    };
+    const createProductCallback = upsertSavedProduct;
 
     const addProductsCallback = async (data: { products?: Product[] }) => {
       if (isProcessingRef.current) return;
@@ -799,7 +839,7 @@ export function TicketForm({
       setOnCreateProductDelete(undefined);
       setOnAddProductsSave(undefined);
     };
-  }, [setOnCreateProductSave, setOnCreateProductDelete, setOnAddProductsSave, ticketId]);
+  }, [setOnCreateProductSave, setOnCreateProductDelete, setOnAddProductsSave, ticketId, upsertSavedProduct]);
 
   const isEdit = mode === "edit";
 
@@ -962,6 +1002,14 @@ export function TicketForm({
     if (batchWithInvalidPeriod !== -1) {
       toast.error(
         `No lote ${batchWithInvalidPeriod + 1}, a data de término da venda não pode ser anterior à data de início.`,
+      );
+      return false;
+    }
+
+    const duplicatePeriod = findDuplicateBatchPeriod(batches);
+    if (duplicatePeriod) {
+      toast.error(
+        `Os lotes ${duplicatePeriod[0] + 1} e ${duplicatePeriod[1] + 1} têm a mesma data de início e término. Altere o período de um deles.`,
       );
       return false;
     }
@@ -1457,9 +1505,10 @@ export function TicketForm({
             </div>
           </div>
 
-          {/* Produtos do kit */}
+          {/* Produtos do kit (produtos e kits) */}
           {(hasKit || products.length > 0) && (
             <TicketProductsSection
+              onOpenKit={openKitModal}
               products={products}
               setProducts={setProducts}
               eventId={eventId}
@@ -1471,6 +1520,15 @@ export function TicketForm({
               readOnly={readOnly}
             />
           )}
+          <CreateKitModal
+            isOpen={kitModal !== null}
+            onClose={() => setKitModal(null)}
+            eventId={eventId}
+            kit={kitModal?.kit}
+            readOnly={readOnly}
+            onSave={saveKit}
+            onDelete={kitModal?.kit ? deleteKit : undefined}
+          />
 
           {/* Configurações adicionais — mesmo markup do formulário do evento
               (`InformationForm`). Abre sozinho se o ingresso já tem alguma ativa. */}

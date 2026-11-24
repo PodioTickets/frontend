@@ -14,6 +14,13 @@ import { isBrazilianCountry } from "@/validators/Auth.validator";
 import { formatDateBR } from "@/utils/datetimeBR";
 import { formatBRL as formatPrice } from "@/lib/money";
 import { useT } from "@/i18n/client";
+import type { ProductVariationSelection } from "./SubscriptionStep.utils";
+import {
+  getOptOutOption,
+  getVariationGroups,
+  groupSelection,
+  selectionIds,
+} from "@/lib/productVariationGroups";
 
 interface Product {
   id: string;
@@ -24,11 +31,28 @@ interface Product {
   isRequired: boolean;
   isIncludedInTicket: boolean;
   variationType?: string;
-  variations?: Array<{
+  variations?: Array<ProductVariationOption>;
+  /** Variações do kit (cada uma com suas opções). Ausente em respostas antigas. */
+  variationGroups?: Array<{
     id: string;
     name: string;
-    price: number;
+    sortOrder?: number;
+    variations?: Array<ProductVariationOption>;
   }>;
+}
+
+interface ProductVariationOption {
+  id: string;
+  name: string;
+  price: number;
+  groupId?: string | null;
+}
+
+/** Uma linha por variação do kit: título (nome da variação) + opção escolhida. */
+interface VariationRow {
+  key: string;
+  title: string | null;
+  selected: ProductVariationOption | null;
 }
 
 interface ParticipantModalData {
@@ -44,7 +68,7 @@ interface ParticipantModalData {
     nationality?: string;
     emergencyPhone?: string;
     emergencyContactName?: string;
-    productVariations?: Record<string, string | null>;
+    productVariations?: Record<string, ProductVariationSelection>;
   };
   ticket: Ticket;
   requiredProducts?: Product[];
@@ -169,9 +193,26 @@ export function ParticipantSummaryModal({
     }
   };
 
+  /* Linhas de variação do produto: uma por variação do kit (título = nome da
+   * variação). "Sem interesse" fica só na 1ª linha (recusou o kit inteiro). */
+  const buildVariationRows = (product: Product, ids: string[]): VariationRow[] => {
+    const fallbackTitle = product.variationType || null;
+    const optOut = getOptOutOption(product);
+    const groups = getVariationGroups(product);
+    if (optOut && ids.includes(optOut.id)) {
+      return [{ key: "opt-out", title: groups[0]?.name ?? fallbackTitle, selected: optOut.variation }];
+    }
+    if (groups.length === 0) return [{ key: "none", title: fallbackTitle, selected: null }];
+    return groups.map((group) => ({
+      key: group.id,
+      title: group.name ?? fallbackTitle,
+      selected: groupSelection(group, ids)?.variation ?? null,
+    }));
+  };
+
   const getParticipantProducts = () => {
-    const requiredProds: Array<Product & { selectedVariation?: { id: string; name: string; price: number } }> = [];
-    const additionalProds: Array<Product & { selectedVariation?: { id: string; name: string; price: number } }> = [];
+    const requiredProds: Array<Product & { variationRows: VariationRow[] }> = [];
+    const additionalProds: Array<Product & { variationRows: VariationRow[] }> = [];
 
     if (!products || products.length === 0) return { requiredProducts: requiredProds, additionalProducts: additionalProds };
 
@@ -179,18 +220,13 @@ export function ParticipantSummaryModal({
     const ticketProducts = products.filter((product) => ticketProductIds.includes(product.id));
 
     ticketProducts.forEach((product) => {
-      const selectedVariationId = participant.productVariations?.[product.id];
-      let selectedVariation;
+      const ids = selectionIds(participant.productVariations?.[product.id]);
+      const productWithVariation = { ...product, variationRows: buildVariationRows(product, ids) };
 
-      if (selectedVariationId && product.variations) {
-        selectedVariation = product.variations.find((v) => v.id === selectedVariationId);
-      }
-
-      const productWithVariation = { ...product, selectedVariation };
-
-      if (product.isRequired || product.isIncludedInTicket) {
+      // Mesma regra do checkout: incluso = obrigatório; pago = opcional.
+      if (product.isIncludedInTicket) {
         requiredProds.push(productWithVariation);
-      } else if (selectedVariationId) {
+      } else if (ids.length > 0) {
         additionalProds.push(productWithVariation);
       }
     });
@@ -414,26 +450,29 @@ export function ParticipantSummaryModal({
                           </p>
                         </div>
                       </div>
-                      <div className="p-4">
-                        <div className="flex flex-col gap-2">
-                          <p className="font-family-dm-sans font-normal text-base leading-[1.3] text-gray-12">
-                            {product.variationType || t("chooseSize")}
-                          </p>
-                          <div className="flex items-center justify-between gap-2 min-w-0">
-                            <p className="font-family-dm-sans font-normal text-base leading-[1.3] text-gray-12 truncate min-w-0">
-                              {product.selectedVariation?.name || t("notSelected")}
+                      <div className="p-4 flex flex-col gap-4">
+                        {product.variationRows.map((row, rowIndex) => (
+                          <div key={row.key} className="flex flex-col gap-2">
+                            <p className="font-family-dm-sans font-normal text-base leading-[1.3] text-gray-12">
+                              {row.title || t("chooseSize")}
                             </p>
-                            {product.selectedVariation ? (
-                              <p className="font-family-dm-sans font-bold text-base leading-[1.3] text-gray-12 shrink-0 tabular-nums">
-                                {formatVariationSidePriceFromCents(
-                                  product.basePrice,
-                                  product.selectedVariation.price,
-                                  product.isIncludedInTicket,
-                                )}
+                            <div className="flex items-center justify-between gap-2 min-w-0">
+                              <p className="font-family-dm-sans font-normal text-base leading-[1.3] text-gray-12 truncate min-w-0">
+                                {row.selected?.name || t("notSelected")}
                               </p>
-                            ) : null}
+                              {/* Preço só na 1ª variação — o kit é cobrado uma vez. */}
+                              {row.selected && rowIndex === 0 ? (
+                                <p className="font-family-dm-sans font-bold text-base leading-[1.3] text-gray-12 shrink-0 tabular-nums">
+                                  {formatVariationSidePriceFromCents(
+                                    product.basePrice,
+                                    row.selected.price,
+                                    product.isIncludedInTicket,
+                                  )}
+                                </p>
+                              ) : null}
+                            </div>
                           </div>
-                        </div>
+                        ))}
                       </div>
                     </div>
                   ))}
@@ -473,26 +512,29 @@ export function ParticipantSummaryModal({
                           </p>
                         </div>
                       </div>
-                      <div className="p-4">
-                        <div className="flex flex-col gap-2">
-                          <p className="font-family-dm-sans font-normal text-base leading-[1.3] text-gray-12">
-                            {product.variationType || t("chooseSize")}
-                          </p>
-                          <div className="flex items-center justify-between gap-2 min-w-0">
-                            <p className="font-family-dm-sans font-normal text-base leading-[1.3] text-gray-12 truncate min-w-0">
-                              {product.selectedVariation?.name || t("notSelected")}
+                      <div className="p-4 flex flex-col gap-4">
+                        {product.variationRows.map((row, rowIndex) => (
+                          <div key={row.key} className="flex flex-col gap-2">
+                            <p className="font-family-dm-sans font-normal text-base leading-[1.3] text-gray-12">
+                              {row.title || t("chooseSize")}
                             </p>
-                            {product.selectedVariation ? (
-                              <p className="font-family-dm-sans font-bold text-base leading-[1.3] text-gray-12 shrink-0 tabular-nums">
-                                {formatVariationSidePriceFromCents(
-                                  product.basePrice,
-                                  product.selectedVariation.price,
-                                  product.isIncludedInTicket,
-                                )}
+                            <div className="flex items-center justify-between gap-2 min-w-0">
+                              <p className="font-family-dm-sans font-normal text-base leading-[1.3] text-gray-12 truncate min-w-0">
+                                {row.selected?.name || t("notSelected")}
                               </p>
-                            ) : null}
+                              {/* Preço só na 1ª variação — o kit é cobrado uma vez. */}
+                              {row.selected && rowIndex === 0 ? (
+                                <p className="font-family-dm-sans font-bold text-base leading-[1.3] text-gray-12 shrink-0 tabular-nums">
+                                  {formatVariationSidePriceFromCents(
+                                    product.basePrice,
+                                    row.selected.price,
+                                    product.isIncludedInTicket,
+                                  )}
+                                </p>
+                              ) : null}
+                            </div>
                           </div>
-                        </div>
+                        ))}
                       </div>
                     </div>
                   ))}

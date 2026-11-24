@@ -1,5 +1,7 @@
 import { isBrazilianCountry } from "@/validators/Auth.validator";
 import { getPhoneDigitsForBackend } from "@/utils/phone";
+import type { ProductVariationSelection } from "@/components/Checkout/SubscriptionStep.utils";
+import { selectionIds } from "@/lib/productVariationGroups";
 
 /**
  * Builder ÚNICO do payload de `PATCH /orders/:id/participants`. Compartilhado
@@ -223,6 +225,9 @@ export function buildParticipantsPatchPayload(
 
 export interface ProductPatchItem {
   productId: string;
+  /** Opções escolhidas (uma por variação, na ordem dos grupos) ou só o opt-out. */
+  variationIds: string[];
+  /** Legado = `variationIds[0]` (backend antigo só lê este). */
   variationId?: string;
   quantity: number;
   participantEmail: string;
@@ -240,20 +245,29 @@ export interface ProductPatchItem {
  * entre o `handleNext` da página `/produtos` e o eager-patch do `SubscriptionStep`
  * pra não divergirem — o servidor recomputa o `pricing` (taxa/cupom sobre o
  * subtotal com produtos) a cada mudança.
+ *
+ * Kit com várias variações: cada produto vai com `variationIds` (todas as
+ * escolhas) + `variationId` (a primeira, legado). `isComplete` (opcional) deixa
+ * de fora seleções incompletas — o eager-patch usa para não mandar um kit com
+ * variação faltando (o backend rejeitaria o PATCH inteiro).
  */
 export function buildProductsPatchPayload(
-  participants: Array<{ email?: string; productVariations?: Record<string, string | null> }>,
+  participants: Array<{ email?: string; productVariations?: Record<string, ProductVariationSelection> }>,
+  isComplete?: (productId: string, variationIds: string[]) => boolean,
 ): { products: ProductPatchItem[] } {
   const products: ProductPatchItem[] = [];
   // O índice do forEach é o slot canônico (participante↔ingresso) — mesma ordem de
   // `reservedTickets`/`participants` no backend. Enviado como `participantIndex`.
   participants.forEach((p, participantIndex) => {
     if (!p.productVariations) return;
-    Object.entries(p.productVariations).forEach(([productId, variationId]) => {
-      if (!variationId) return;
+    Object.entries(p.productVariations).forEach(([productId, selection]) => {
+      const variationIds = selectionIds(selection);
+      if (variationIds.length === 0) return;
+      if (isComplete && !isComplete(productId, variationIds)) return;
       products.push({
         productId,
-        variationId,
+        variationIds,
+        variationId: variationIds[0],
         quantity: 1,
         participantEmail: p.email ?? "",
         participantIndex,

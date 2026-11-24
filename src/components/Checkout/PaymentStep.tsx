@@ -67,6 +67,7 @@ const COUPON_ERROR_KEYS: Record<string, Parameters<Translator<"checkout">>[0]> =
 import { validateCardNumber, validateExpiry, validateCVV } from "@/utils/cardValidation";
 import { getPendingCoupon, getPendingCouponKind } from "@/hooks/usePendingCoupon";
 import { isSemInteresseVariation } from "@/utils/semInteresseVariation";
+import { resolveSelection, selectionIds, selectionLabel } from "@/lib/productVariationGroups";
 import toast from "react-hot-toast";
 import { CheckoutCardErrorModal } from "./CheckoutCardErrorModal";
 import { Checkbox } from "@/components/CheckBox";
@@ -537,6 +538,8 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
     price: number;
     quantity: number;
     size?: string;
+    /** Várias variações escolhidas — `size` já traz "Grupo: Opção · …" (sem prefixo "Tamanho:"). */
+    multiChoice?: boolean;
     image?: string | null;
     images?: string[];
     isIncluded: boolean;
@@ -554,8 +557,9 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
     const { includeIncluded = false } = options;
     const items: ParticipantProduct[] = [];
 
-    Object.entries(participant.productVariations).forEach(([productId, variationId]) => {
-      if (!variationId) return;
+    Object.entries(participant.productVariations).forEach(([productId, selection]) => {
+      const ids = selectionIds(selection);
+      if (ids.length === 0) return;
 
       const product = productsData.products.find((p: any) =>
         p.id === productId || p.id.startsWith(productId) || productId.startsWith(p.id)
@@ -568,9 +572,9 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
       // pra cálculo de preço/orderItems eles são pulados.
       if (isIncluded && !includeIncluded) return;
 
-      const variation = product.variations?.find((v: any, i: number) =>
-        (v.id || `${product.id}-${i}`) === variationId
-      );
+      // Kit com várias variações: o preço segue a 1ª opção (mesma do `variationId`).
+      const chosen = resolveSelection<any>(product, ids);
+      const variation = chosen[0]?.option.variation;
 
       // Variação "Sem interesse" (opt-out do kit) não aparece no resumo —
       // mesma regra do desktop (orderItems pula isIncludedInTicket que cobre
@@ -596,7 +600,9 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
         name: product.name,
         price,
         quantity: 1,
-        size: variation?.name,
+        // 1 escolha: "M"; várias: "Tamanho da camisa: M · Tamanho do short: G".
+        size: selectionLabel(product, ids) || variation?.name,
+        multiChoice: chosen.length > 1,
         image: product.image ?? null,
         images: Array.isArray(product.images) ? product.images.filter(Boolean) : [],
         isIncluded,
@@ -728,8 +734,9 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
       if (!participant?.productVariations) return;
 
       // Para cada produto selecionado pelo participante
-      Object.entries(participant.productVariations).forEach(([productId, variationId]) => {
-        if (!variationId) return;
+      Object.entries(participant.productVariations).forEach(([productId, selection]) => {
+        const ids = selectionIds(selection);
+        if (ids.length === 0) return;
 
         // Encontrar o produto
         const product = productsData.products.find((p: any) =>
@@ -737,10 +744,8 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
         );
         if (!product) return;
 
-        // Encontrar a variação selecionada
-        const variation = product.variations?.find((v: any, i: number) =>
-          (v.id || `${product.id}-${i}`) === variationId
-        );
+        // Opção que define o preço: a 1ª escolhida (mesma do `variationId`).
+        const variation = resolveSelection<any>(product, ids)[0]?.option.variation;
 
         // "Sem interesse" (opt-out): não cobra nem lista em lugar nenhum.
         if (variation && isSemInteresseVariation({ name: variation.name ?? "" })) return;
@@ -767,7 +772,7 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
             name: product.name,
             price,
             image: product.image || undefined,
-            size: variation?.name || undefined,
+            size: selectionLabel(product, ids) || variation?.name || undefined,
             participantIndex,
             productId: product.id,
           });
@@ -1468,6 +1473,7 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
         price: number;
         quantity: number;
         size?: string;
+        multiChoice?: boolean;
         image?: string | null;
         images?: string[];
         isIncluded: boolean;
@@ -1677,9 +1683,11 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
                           </div>
                           <div className="px-3 py-2.5">
                             <div className="flex gap-1 items-center">
-                              <p className="text-sm text-gray-12 font-family-dm-sans">
-                                {t("sizeLabel")}
-                              </p>
+                              {!product.multiChoice && (
+                                <p className="text-sm text-gray-12 font-family-dm-sans">
+                                  {t("sizeLabel")}
+                                </p>
+                              )}
                               <p className="text-sm font-semibold text-gray-12 font-manrope">
                                 {product.size || "N/A"}
                               </p>

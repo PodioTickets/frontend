@@ -4,7 +4,7 @@ import type { Product } from "@/components/Checkout/SubscriptionStep.utils";
 import {
   buildParticipantTicketSlots,
   productOffersChoice,
-  autoSelectedVariationId,
+  autoSelectedVariationIds,
   buildAutoSelectedProductsPayload,
 } from "../checkoutProductStep";
 
@@ -45,48 +45,66 @@ describe("buildParticipantTicketSlots", () => {
 
 describe("productOffersChoice", () => {
   it("true só com mais de uma variação", () => {
-    expect(productOffersChoice(product({ variations: [{}, {}] as never }))).toBe(true);
-    expect(productOffersChoice(product({ variations: [{}] as never }))).toBe(false);
+    expect(productOffersChoice(product({ variations: [{ name: "P" }, { name: "M" }] as never }))).toBe(true);
+    expect(productOffersChoice(product({ variations: [{ name: "P" }] as never }))).toBe(false);
     expect(productOffersChoice(product({ variations: [] }))).toBe(false);
+  });
+  it("opção única + opt-out \"Sem interesse\" também é escolha", () => {
+    expect(
+      productOffersChoice(product({ variations: [{ name: "Única" }, { name: "Sem interesse" }] as never })),
+    ).toBe(true);
+  });
+  it("várias variações: escolha quando ALGUMA tem mais de uma opção", () => {
+    const g = (id: string, names: string[]) => ({
+      id,
+      name: id,
+      variations: names.map((n) => ({ id: `${id}-${n}`, name: n })),
+    });
+    expect(
+      productOffersChoice(product({ variationGroups: [g("camisa", ["U"]), g("short", ["U"])] as never })),
+    ).toBe(false);
+    expect(
+      productOffersChoice(product({ variationGroups: [g("camisa", ["U"]), g("short", ["P", "M"])] as never })),
+    ).toBe(true);
   });
 });
 
-describe("autoSelectedVariationId", () => {
-  it("null quando o produto não exige escolha de variação", () => {
+describe("autoSelectedVariationIds", () => {
+  it("vazio quando o produto não exige escolha de variação", () => {
     // não obrigatório E incluído no ingresso → não exige
     expect(
-      autoSelectedVariationId(
-        product({ isRequired: false, isIncludedInTicket: true, variations: [{ id: "v1" }] as never }),
+      autoSelectedVariationIds(
+        product({ isRequired: false, isIncludedInTicket: true, variations: [{ id: "v1", name: "U" }] as never }),
       ),
-    ).toBeNull();
+    ).toEqual([]);
   });
-  it("null quando não há exatamente uma variação", () => {
+  it("vazio quando não há exatamente uma variação", () => {
     expect(
-      autoSelectedVariationId(
-        product({ isRequired: true, variations: [{ id: "v1" }, { id: "v2" }] as never }),
+      autoSelectedVariationIds(
+        product({ isRequired: true, variations: [{ id: "v1", name: "P" }, { id: "v2", name: "M" }] as never }),
       ),
-    ).toBeNull();
+    ).toEqual([]);
   });
   it("auto-seleciona a variação única quando obrigatório", () => {
     expect(
-      autoSelectedVariationId(
-        product({ isRequired: true, variations: [{ id: "v1" }] as never }),
+      autoSelectedVariationIds(
+        product({ isRequired: true, variations: [{ id: "v1", name: "U" }] as never }),
       ),
-    ).toBe("v1");
+    ).toEqual(["v1"]);
   });
   it("auto-seleciona quando NÃO incluído no ingresso", () => {
     expect(
-      autoSelectedVariationId(
-        product({ isIncludedInTicket: false, variations: [{ id: "v1" }] as never }),
+      autoSelectedVariationIds(
+        product({ isIncludedInTicket: false, variations: [{ id: "v1", name: "U" }] as never }),
       ),
-    ).toBe("v1");
+    ).toEqual(["v1"]);
   });
   it("fallback de id quando a variação não tem id explícito", () => {
     expect(
-      autoSelectedVariationId(
-        product({ id: "prod9", isRequired: true, variations: [{}] as never }),
+      autoSelectedVariationIds(
+        product({ id: "prod9", isRequired: true, variations: [{ name: "U" }] as never }),
       ),
-    ).toBe("prod9-0");
+    ).toEqual(["prod9-0"]);
   });
 });
 
@@ -95,7 +113,7 @@ describe("buildAutoSelectedProductsPayload", () => {
     const slots = buildParticipantTicketSlots([{ tickets: [ticket("t1")] }], [], { t1: 2 });
     const participants = [{ email: "a@x.com" }, { email: "b@x.com" }];
     const prods: Record<string, Product[]> = {
-      t1: [product({ id: "kit", isRequired: true, variations: [{ id: "v1" }] as never })],
+      t1: [product({ id: "kit", isRequired: true, variations: [{ id: "v1", name: "U" }] as never })],
     };
     const payload = buildAutoSelectedProductsPayload(
       slots,
@@ -103,8 +121,22 @@ describe("buildAutoSelectedProductsPayload", () => {
       (ticketId) => prods[ticketId] ?? [],
     );
     expect(payload).toEqual([
-      { productId: "kit", variationId: "v1", quantity: 1, participantEmail: "a@x.com", participantIndex: 0 },
-      { productId: "kit", variationId: "v1", quantity: 1, participantEmail: "b@x.com", participantIndex: 1 },
+      { productId: "kit", variationIds: ["v1"], variationId: "v1", quantity: 1, participantEmail: "a@x.com", participantIndex: 0 },
+      { productId: "kit", variationIds: ["v1"], variationId: "v1", quantity: 1, participantEmail: "b@x.com", participantIndex: 1 },
+    ]);
+  });
+  it("kit com várias variações de opção única → todas no payload (variationId = a 1ª)", () => {
+    const slots = buildParticipantTicketSlots([{ tickets: [ticket("t1")] }], [], { t1: 1 });
+    const kit = product({
+      id: "kit",
+      isRequired: true,
+      variationGroups: [
+        { id: "g1", name: "Camisa", variations: [{ id: "c-u", name: "U" }] },
+        { id: "g2", name: "Short", variations: [{ id: "s-u", name: "U" }] },
+      ] as never,
+    });
+    expect(buildAutoSelectedProductsPayload(slots, [{ email: "a@x.com" }], () => [kit])).toEqual([
+      { productId: "kit", variationIds: ["c-u", "s-u"], variationId: "c-u", quantity: 1, participantEmail: "a@x.com", participantIndex: 0 },
     ]);
   });
   it("pula slots sem participante correspondente", () => {
@@ -112,7 +144,7 @@ describe("buildAutoSelectedProductsPayload", () => {
     const payload = buildAutoSelectedProductsPayload(
       slots,
       [{ email: "a@x.com" }], // só 1 participante p/ 2 slots
-      () => [product({ id: "kit", isRequired: true, variations: [{ id: "v1" }] as never })],
+      () => [product({ id: "kit", isRequired: true, variations: [{ id: "v1", name: "U" }] as never })],
     );
     expect(payload).toHaveLength(1);
     expect(payload[0].participantEmail).toBe("a@x.com");
@@ -122,7 +154,7 @@ describe("buildAutoSelectedProductsPayload", () => {
     const payload = buildAutoSelectedProductsPayload(
       slots,
       [{ email: "a@x.com" }],
-      () => [product({ id: "kit", isRequired: true, variations: [{ id: "v1" }, { id: "v2" }] as never })],
+      () => [product({ id: "kit", isRequired: true, variations: [{ id: "v1", name: "P" }, { id: "v2", name: "M" }] as never })],
     );
     expect(payload).toHaveLength(0);
   });

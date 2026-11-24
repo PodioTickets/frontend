@@ -37,6 +37,14 @@ import { ImageWithInitialFallback } from "../ImageWithInitialFallback";
 import { Button } from "../Button";
 import { formatAnswer } from "@/utils/questionAnswer";
 import { isSemInteresseVariation } from "@/utils/semInteresseVariation";
+import {
+  type ChosenVariation,
+  getVariationGroups,
+  groupSelection,
+  registrationItemChosenVariations,
+  registrationItemVariationLabel,
+  setGroupSelection,
+} from "@/lib/productVariationGroups";
 import { FormField } from "@/components/FormField";
 import { SearchSelect } from "@/components/SearchSelect";
 import { ResendTicketsModal } from "./ResendTicketsModal";
@@ -69,6 +77,12 @@ interface ModalProduct {
   productImage: string | null;
   variationType?: string | null;
   variationName?: string | null;
+  /** Todas as opções escolhidas (uma por variação do kit). Legado: `[variationId]`. */
+  variationIds?: string[];
+  /** Escolhas com o nome da variação (contrato `variations[]` da inscrição). */
+  chosenVariations?: ChosenVariation[];
+  /** "M" (1 escolha) ou "Tamanho da camisa: M · Tamanho do short: G". */
+  variationLabel?: string | null;
   price: number | string;
   isIncluded?: boolean;
   variationEdited?: boolean;
@@ -81,7 +95,35 @@ interface ProductVariationOption {
   price?: number;
   stock?: number;
   availableStock?: number;
+  groupId?: string | null;
 }
+
+/** Produto do catálogo (de `getProductById`) — só o que a edição de variação usa. */
+interface ProductVariationsSource {
+  id: string;
+  variationType?: string | null;
+  variations?: ProductVariationOption[];
+  variationGroups?: Array<{
+    id: string;
+    name: string;
+    sortOrder?: number;
+    variations?: ProductVariationOption[];
+  }>;
+}
+
+const toVariationsSource = (
+  pid: string,
+  prod: Partial<Omit<ProductVariationsSource, "id">> | null | undefined,
+): ProductVariationsSource => ({
+  id: pid,
+  variationType: prod?.variationType ?? null,
+  variations: prod?.variations ?? [],
+  variationGroups: Array.isArray(prod?.variationGroups) ? prod.variationGroups : undefined,
+});
+
+/** Ids escolhidos do item (lista nova, ou a variação única legada). */
+const itemVariationIds = (chosen: ChosenVariation[], legacyId: string | null | undefined): string[] =>
+  chosen.length > 0 ? chosen.map((c) => c.id).filter(Boolean) : legacyId ? [legacyId] : [];
 
 /** Resposta de pergunta do organizador (snapshot/relacional). */
 interface AnswerItem {
@@ -298,13 +340,14 @@ export function ViewRegistrationModal() {
 
   // Edição da variação dos produtos (organizador). No modo edição cada card mostra
   // o select box (Figma); o menu é um dropdown FLUTUANTE portalado (não corta no
-  // scroll). `editingProducts` = modo edição ligado; `openVariationPid` = card com o
-  // menu aberto; `savingProductId` = card salvando.
+  // scroll). `editingProducts` = modo edição ligado; `openVariationPid` = menu aberto
+  // (`produto::variação` — kit com várias variações tem um select por variação);
+  // `savingProductId` = card salvando.
   const [editingProducts, setEditingProducts] = useState(false);
   const [openVariationPid, setOpenVariationPid] = useState<string | null>(null);
   const [savingProductId, setSavingProductId] = useState<string | null>(null);
   const [productVariations, setProductVariations] = useState<
-    Record<string, ProductVariationOption[]>
+    Record<string, ProductVariationsSource>
   >({});
   const [loadingVariations, setLoadingVariations] = useState(false);
 
@@ -739,6 +782,7 @@ export function ViewRegistrationModal() {
       const variationPrice = item.selectedVariation?.price;
       const price =
         variationPrice != null && variationPrice > 0 ? variationPrice : unitPrice;
+      const chosen = registrationItemChosenVariations(item);
       return {
         id: item.id,
         // productId p/ a edição de variação (o `id` do snapshot é o productId).
@@ -748,6 +792,9 @@ export function ViewRegistrationModal() {
         productImage: image || null,
         variationType: item.variationType || null,
         variationName: item.selectedVariation?.name || null,
+        variationIds: itemVariationIds(chosen, item.selectedVariation?.id),
+        chosenVariations: chosen,
+        variationLabel: registrationItemVariationLabel(item),
         price: isIncluded ? 0 : price,
         quantity: item.quantity || 1,
         isIncluded,
@@ -757,6 +804,7 @@ export function ViewRegistrationModal() {
     }
 
     // Legado (findOneLive)
+    const chosen = registrationItemChosenVariations(item);
     return {
       id: item.id,
       productId: item.product?.id || item.productId || null,
@@ -765,6 +813,9 @@ export function ViewRegistrationModal() {
       productImage: item.product?.image || null,
       variationType: item.product?.variationType || null,
       variationName: item.variation?.name || item.variationName || null,
+      variationIds: itemVariationIds(chosen, item.variation?.id || item.variationId),
+      chosenVariations: chosen,
+      variationLabel: registrationItemVariationLabel(item),
       price: item.unitPrice || item.totalPrice || 0,
       quantity: item.quantity || 1,
       isIncluded: item.unitPrice === 0 && item.totalPrice === 0,
@@ -1000,9 +1051,9 @@ export function ViewRegistrationModal() {
       toFetch.map(async (pid) => {
         try {
           const prod = await organizerService.getProductById(pid);
-          return [pid, (prod?.variations ?? []) as ProductVariationOption[]] as const;
+          return [pid, toVariationsSource(pid, prod)] as const;
         } catch {
-          return [pid, [] as ProductVariationOption[]] as const;
+          return [pid, toVariationsSource(pid, null)] as const;
         }
       }),
     )
@@ -1021,44 +1072,45 @@ export function ViewRegistrationModal() {
     setOpenVariationPid(null);
   };
 
-  const toggleVariationList = async (pid: string) => {
-    if (openVariationPid === pid) {
+  const toggleVariationList = async (pid: string, menuKey: string) => {
+    if (openVariationPid === menuKey) {
       setOpenVariationPid(null);
       return;
     }
-    setOpenVariationPid(pid);
+    setOpenVariationPid(menuKey);
     if (productVariations[pid]) return;
     setLoadingVariations(true);
     try {
       const prod = await organizerService.getProductById(pid);
-      setProductVariations((prev) => ({
-        ...prev,
-        [pid]: (prod?.variations ?? []) as ProductVariationOption[],
-      }));
+      setProductVariations((prev) => ({ ...prev, [pid]: toVariationsSource(pid, prod) }));
     } catch {
-      setProductVariations((prev) => ({ ...prev, [pid]: [] }));
+      setProductVariations((prev) => ({ ...prev, [pid]: toVariationsSource(pid, null) }));
     } finally {
       setLoadingVariations(false);
     }
   };
 
+  /** Troca a opção de UMA variação; o PATCH leva todas as escolhas do kit. */
   const handlePickVariation = async (
     pid: string,
-    variationId: string,
-    currentVariationId: string,
+    groupId: string,
+    optionId: string,
+    currentIds: string[],
   ) => {
     if (!registrationId || savingProductId) return;
-    if (variationId === currentVariationId) {
+    if (currentIds.includes(optionId)) {
       setOpenVariationPid(null);
       return;
     }
+    const source = productVariations[pid];
+    const nextIds = source ? setGroupSelection(source, currentIds, groupId, optionId) : [optionId];
     setSavingProductId(pid);
     try {
       const updated =
         await organizerService.updateRegistrationProductVariationAsOrganizer(
           registrationId,
           pid,
-          variationId,
+          nextIds,
         );
       setRegistrationData(updated);
       setOpenVariationPid(null);
@@ -1248,11 +1300,31 @@ export function ViewRegistrationModal() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-start">
           {(products as ModalProduct[]).map((product, index) => {
             const pid = product.productId || "";
-            // Só variações reais (oculta "Sem interesse").
-            const vars = (productVariations[pid] ?? []).filter(
-              (v) => !isSemInteresseVariation({ name: v.name }),
-            );
+            // Uma select por variação do kit; só opções reais (oculta "Sem interesse").
+            const source = productVariations[pid];
+            const currentIds = product.variationIds ?? [];
+            const sourceGroups = source ? getVariationGroups(source) : [];
+            // Carregando / sem variação: um select vazio ("Carregando…" / "Nenhuma variação disponível").
+            const editGroups =
+              sourceGroups.length > 0
+                ? sourceGroups
+                : [{ id: "__none__", name: product.variationType ?? null, options: [] }];
             const inEdit = editingProducts && !!pid;
+            // Leitura: 1 escolha → "Tamanho: XL"; várias → uma linha por variação.
+            const readRows =
+              (product.chosenVariations?.length ?? 0) > 1
+                ? product.chosenVariations!.map((c) => ({
+                    key: c.id,
+                    title: c.groupName || product.variationType || "Variação",
+                    value: c.name,
+                  }))
+                : product.variationName || product.variationLabel
+                  ? [{
+                      key: "single",
+                      title: product.variationType || "Variação",
+                      value: product.variationName || product.variationLabel || "",
+                    }]
+                  : [];
             return (
               <div
                 key={product.id || index}
@@ -1275,33 +1347,50 @@ export function ViewRegistrationModal() {
                       {product.productName}
                     </p>
                     {inEdit ? (
-                      // Modo edição (Figma): select box full-width "Selecione a opção".
-                      <VariationFloatingDropdown
-                        currentName={product.variationName ?? null}
-                        currentId={product.variationId || ""}
-                        variations={vars}
-                        loading={loadingVariations && vars.length === 0}
-                        saving={savingProductId === pid}
-                        open={openVariationPid === pid}
-                        onToggle={() => toggleVariationList(pid)}
-                        onClose={() => setOpenVariationPid(null)}
-                        onSelect={(vid) =>
-                          handlePickVariation(pid, vid, product.variationId || "")
-                        }
-                      />
+                      // Modo edição (Figma): select box full-width "Selecione a opção" — uma por variação.
+                      <div className="flex flex-col gap-2 w-full">
+                        {editGroups.map((group) => {
+                          const menuKey = `${pid}::${group.id}`;
+                          const picked = groupSelection(group, currentIds);
+                          const vars = group.options.map((o) => ({ ...o.variation, id: o.id }));
+                          return (
+                            <div key={group.id} className="flex flex-col gap-1 w-full">
+                              {editGroups.length > 1 && group.name && (
+                                <span className="font-family-dm-sans text-sm text-gray-11">
+                                  {group.name}
+                                </span>
+                              )}
+                              <VariationFloatingDropdown
+                                currentName={
+                                  picked?.variation.name ??
+                                  (editGroups.length === 1 ? product.variationName ?? null : null)
+                                }
+                                currentId={picked?.id ?? (editGroups.length === 1 ? product.variationId || "" : "")}
+                                variations={vars}
+                                loading={loadingVariations && vars.length === 0}
+                                saving={savingProductId === pid}
+                                open={openVariationPid === menuKey}
+                                onToggle={() => toggleVariationList(pid, menuKey)}
+                                onClose={() => setOpenVariationPid(null)}
+                                onSelect={(vid) => handlePickVariation(pid, group.id, vid, currentIds)}
+                              />
+                            </div>
+                          );
+                        })}
+                      </div>
                     ) : (
-                      // Leitura: "Tamanho: XL" (Figma 6310).
-                      <div className="flex justify-end w-full min-w-0">
-                        {product.variationName ? (
-                          <div className="flex gap-1 items-center min-w-0">
+                      // Leitura: "Tamanho: XL" (Figma 6310); kit com várias variações → uma linha por variação.
+                      <div className="flex flex-col items-end gap-1 w-full min-w-0">
+                        {readRows.map((row) => (
+                          <div key={row.key} className="flex gap-1 items-center min-w-0">
                             <span className="font-family-dm-sans text-base text-gray-12 whitespace-nowrap shrink-0">
-                              {product.variationType || "Variação"}:
+                              {row.title}:
                             </span>
                             <span className="font-manrope font-semibold text-base text-gray-12 truncate">
-                              {product.variationName}
+                              {row.value}
                             </span>
                           </div>
-                        ) : null}
+                        ))}
                       </div>
                     )}
                   </div>
