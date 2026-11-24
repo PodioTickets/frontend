@@ -68,6 +68,23 @@ export function getBatchSalePeriodBounds(
   return { startMs: start.getTime(), endMs: end.getTime() };
 }
 
+/**
+ * Dois lotes por data com a MESMA janela (início e término, data + hora) — não pode
+ * (regra do usuário 24/11; o back valida igual). Retorna os índices do 1º par ou null.
+ */
+export function findDuplicateBatchPeriod(batches: Batch[]): [number, number] | null {
+  const seen = new Map<string, number>();
+  for (let i = 0; i < batches.length; i++) {
+    const bounds = getBatchSalePeriodBounds(batches[i]);
+    if (!bounds) continue;
+    const key = `${bounds.startMs}|${bounds.endMs}`;
+    const prev = seen.get(key);
+    if (prev !== undefined) return [prev, i];
+    seen.set(key, i);
+  }
+  return null;
+}
+
 export function isBatchEndBeforeSaleStart(batch: Batch): boolean {
   const bounds = getBatchSalePeriodBounds(batch);
   if (!bounds) return false;

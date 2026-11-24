@@ -145,8 +145,9 @@ export function AdminTicketSwap({ registrationId }: { registrationId: string }) 
     swapBlockedReason(participantInfo, { ageLimit: ticket.ageLimit, gender: ticket.gender }, event?.eventDate);
 
   const newProducts: Product[] = selectedTicket ? getProductsForTicket(selectedTicket.id) : [];
-  const kitProducts = newProducts.filter((p) => p.isRequired);
-  const extraProducts = newProducts.filter((p) => !p.isRequired);
+  // Mesma regra do checkout: incluso no ingresso = kit (obrigatório); pago = adicional.
+  const kitProducts = newProducts.filter((p) => p.isIncludedInTicket);
+  const extraProducts = newProducts.filter((p) => !p.isIncludedInTicket);
   // Mesma regra do checkout: só há etapa de Produtos se algum produto oferece escolha (>1 opção).
   const hasSelectableProducts = newProducts.some(productOffersChoice);
 

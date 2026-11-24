@@ -48,6 +48,8 @@ export interface Product {
   /** API retorna em centavos (number); exibição em reais */
   basePrice?: number | string;
   isIncludedInTicket?: boolean;
+  /** Kit (editado no modal de kit; itens como variações) × produto. P/ o participante, iguais. */
+  isKit?: boolean;
 }
 
 export interface TicketFormProps {

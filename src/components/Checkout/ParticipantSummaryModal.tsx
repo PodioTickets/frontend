@@ -223,7 +223,8 @@ export function ParticipantSummaryModal({
       const ids = selectionIds(participant.productVariations?.[product.id]);
       const productWithVariation = { ...product, variationRows: buildVariationRows(product, ids) };
 
-      if (product.isRequired || product.isIncludedInTicket) {
+      // Mesma regra do checkout: incluso = obrigatório; pago = opcional.
+      if (product.isIncludedInTicket) {
         requiredProds.push(productWithVariation);
       } else if (ids.length > 0) {
         additionalProds.push(productWithVariation);

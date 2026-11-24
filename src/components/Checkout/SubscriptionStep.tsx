@@ -232,29 +232,10 @@ type ProductOption = VariationOptionView<Product["variations"][number]>;
 /** Estado de uma opção no dropdown (esgotado / preço à direita), decidido pela tela. */
 export type ProductOptionState = { disabled?: boolean; suffix?: string };
 
-/**
- * Card de produto do checkout. Kit com várias variações → um card por variação
- * (Figma "Prévia do kit"): foto + nome do kit + linha de preço; o preço só no 1º
- * card, os demais mostram "Incluso no kit". `group` ausente = kit sem variação
- * (nada para escolher, card sem dropdown).
- */
-function ProductCard({
-  product,
-  cardIndex,
-  title,
-  options,
-  selected,
-  selectedId,
-  onSelect,
-  disabled,
-  dataAttribute,
-  variant,
-  showMissing,
-}: {
-  product: Product;
-  cardIndex: number;
-  /** Título do dropdown (nome da variação). `null` = card sem dropdown. */
-  title: string | null;
+/** Um select do card: uma variação do kit (ex.: "Tamanho da camisa"). */
+type ProductCardSelect = {
+  key: string;
+  title: string;
   options: DropdownOption[];
   selected: Product["variations"][number] | null;
   selectedId: string | null;
@@ -262,18 +243,27 @@ function ProductCard({
   /** Opt-out escolhido na 1ª variação: as demais ficam desabilitadas e limpas. */
   disabled: boolean;
   dataAttribute: string;
+};
+
+/**
+ * Card de produto do checkout: foto + nome + preço e UM select por variação. Kit com
+ * várias variações (camisa, short…) = um card só com vários selects (23/11); produto
+ * sem variação = card sem select.
+ */
+function ProductCard({
+  product,
+  selects,
+  variant,
+  showMissing,
+}: {
+  product: Product;
+  selects: ProductCardSelect[];
   variant: "mobile" | "desktop";
   showMissing: boolean;
 }) {
   const t = useT("checkoutInfo");
   const hidePricing = useHidePricing();
-  const sideLabel = selected && !hidePricing
-    ? previewVariationListPriceLabelForProduct(product, selected.price, selected.name)
-    : undefined;
-  const priceLine =
-    cardIndex === 0
-      ? formatProductCardBasePriceLabel(product, t("includedInTicketPrice"))
-      : t("includedInKit");
+  const priceLine = formatProductCardBasePriceLabel(product, t("includedInTicketPrice"));
 
   const missingBadge = showMissing && (
     <span className="self-start inline-flex items-center h-[27px] px-3 rounded-xl bg-[#fff7c2]">
@@ -281,29 +271,33 @@ function ProductCard({
     </span>
   );
 
-  const dropdown = (triggerVariant: "mobile" | "desktop") =>
-    disabled ? (
+  const dropdown = (sel: ProductCardSelect, triggerVariant: "mobile" | "desktop") => {
+    const sideLabel = sel.selected && !hidePricing
+      ? previewVariationListPriceLabelForProduct(product, sel.selected.price, sel.selected.name)
+      : undefined;
+    return sel.disabled ? (
       <div className="opacity-50 pointer-events-none" aria-disabled>
         <DropdownTrigger selected={null} sideLabel={undefined} variant={triggerVariant} />
       </div>
     ) : (
       <Dropdown
-        options={options}
-        dataAttribute={dataAttribute}
+        options={sel.options}
+        dataAttribute={sel.dataAttribute}
         width="w-full"
         maxHeight="max-h-[200px]"
-        selectedIds={selectedId ? [selectedId] : []}
-        onSelect={onSelect}
+        selectedIds={sel.selectedId ? [sel.selectedId] : []}
+        onSelect={sel.onSelect}
         trigger={() => (
-          <DropdownTrigger selected={selected} sideLabel={sideLabel} variant={triggerVariant} />
+          <DropdownTrigger selected={sel.selected} sideLabel={sideLabel} variant={triggerVariant} />
         )}
       />
     );
+  };
 
   if (variant === "mobile") {
     return (
       <div className="bg-gray-2 border border-gray-6 rounded-xl">
-        <div className={`flex flex-col gap-3 p-4 ${title != null ? "border-b border-gray-6" : ""}`}>
+        <div className="flex flex-col gap-3 p-4">
           {missingBadge}
           <div className="flex gap-3">
             <ProductCardGallery product={product} />
@@ -315,12 +309,12 @@ function ProductCard({
             </div>
           </div>
         </div>
-        {title != null && (
-          <div className="p-4">
-            <p className="text-base text-gray-12 mb-2">{title}</p>
-            {dropdown("mobile")}
+        {selects.map((sel) => (
+          <div key={sel.key} className="p-4 border-t border-gray-6">
+            <p className="text-base text-gray-12 mb-2">{sel.title}</p>
+            {dropdown(sel, "mobile")}
           </div>
-        )}
+        ))}
       </div>
     );
   }
@@ -337,19 +331,19 @@ function ProductCard({
           )}
         </div>
       </div>
-      {title != null && (
-        <div className="flex flex-col gap-2 border-t border-gray-6 pt-3">
-          <p className="text-sm text-gray-12">{title}</p>
-          {dropdown("desktop")}
+      {selects.map((sel) => (
+        <div key={sel.key} className="flex flex-col gap-2 border-t border-gray-6 pt-3">
+          <p className="text-sm text-gray-12">{sel.title}</p>
+          {dropdown(sel, "desktop")}
         </div>
-      )}
+      ))}
     </div>
   );
 }
 
 /**
- * Cards de UM produto: um por variação; o opt-out "Sem interesse" entra só no
- * dropdown da 1ª variação. Kit sem variação → um card sem dropdown.
+ * Card de UM produto/kit com um select por variação; o opt-out "Sem interesse" entra
+ * só no select da 1ª variação. Kit sem variação → card sem select.
  */
 function ProductVariationCards({
   product,
@@ -371,65 +365,48 @@ function ProductVariationCards({
   const optOut = getOptOutOption(product);
   const optedOut = !!optOut && selection.includes(optOut.id);
 
-  // Só o opt-out (sem variação real): um card cujo dropdown tem só "Sem interesse".
-  const cards: Array<VariationGroupView<Product["variations"][number]> | null> =
+  // Só o opt-out (sem variação real): um select que tem só "Sem interesse".
+  const selectGroups: Array<VariationGroupView<Product["variations"][number]>> =
     groups.length > 0
       ? groups
       : optOut
         ? [{ id: OPT_OUT_ONLY_GROUP_ID, name: null, options: [] }]
-        : [null];
+        : [];
 
   const toDropdownOption = (option: ProductOption): DropdownOption => {
     const state = getOptionState?.(product, option) ?? {};
     return { id: option.id, label: option.variation.name, suffix: state.suffix, disabled: state.disabled };
   };
 
+  let missing = false;
+  const selects: ProductCardSelect[] = selectGroups.map((group, index) => {
+    const isFirst = index === 0;
+    const options = group.options.map(toDropdownOption);
+    if (isFirst && optOut) options.push(toDropdownOption(optOut));
+    const picked = isFirst && optedOut ? optOut : optedOut ? null : groupSelection(group, selection);
+    const disabled = !isFirst && optedOut;
+    if (options.length > 0 && !picked && !disabled) missing = true;
+    return {
+      key: group.id,
+      title: group.name ?? variationSectionTitle(product, t("chooseVariation")),
+      options,
+      selected: picked?.variation ?? null,
+      selectedId: picked?.id ?? null,
+      onSelect: (opt) => {
+        if (opt.id) onChange(setGroupSelection(product, selection, group.id, opt.id));
+      },
+      disabled,
+      dataAttribute: isFirst ? `variation-${product.id}` : `variation-${product.id}-${index}`,
+    };
+  });
+
   return (
-    <>
-      {cards.map((group, index) => {
-        if (!group) {
-          return (
-            <ProductCard
-              key={product.id}
-              product={product}
-              cardIndex={0}
-              title={null}
-              options={[]}
-              selected={null}
-              selectedId={null}
-              onSelect={() => {}}
-              disabled={false}
-              dataAttribute={`variation-${product.id}`}
-              variant={variant}
-              showMissing={false}
-            />
-          );
-        }
-        const isFirst = index === 0;
-        const options = group.options.map(toDropdownOption);
-        if (isFirst && optOut) options.push(toDropdownOption(optOut));
-        const picked = isFirst && optedOut ? optOut : optedOut ? null : groupSelection(group, selection);
-        const disabled = !isFirst && optedOut;
-        return (
-          <ProductCard
-            key={`${product.id}-${group.id}`}
-            product={product}
-            cardIndex={index}
-            title={group.name ?? variationSectionTitle(product, t("chooseVariation"))}
-            options={options}
-            selected={picked?.variation ?? null}
-            selectedId={picked?.id ?? null}
-            onSelect={(opt) => {
-              if (opt.id) onChange(setGroupSelection(product, selection, group.id, opt.id));
-            }}
-            disabled={disabled}
-            dataAttribute={isFirst ? `variation-${product.id}` : `variation-${product.id}-${index}`}
-            variant={variant}
-            showMissing={!!requiredSection && options.length > 0 && !picked && !disabled}
-          />
-        );
-      })}
-    </>
+    <ProductCard
+      product={product}
+      selects={selects}
+      variant={variant}
+      showMissing={!!requiredSection && missing}
+    />
   );
 }
 
@@ -616,7 +593,9 @@ export function SubscriptionStep({
     );
     if (!participantTicket) return [];
     const ticketProducts = getProductsForTicket(participantTicket.ticketId);
-    return ticketProducts.filter((p) => p.isRequired);
+    // Seção obrigatória = incluso no ingresso (sem valor, sem "Sem interesse" no kit).
+    // Não incluso = opcional, mesmo com `isRequired` legado (regra do usuário 24/11).
+    return ticketProducts.filter((p) => p.isIncludedInTicket);
   };
 
   const getAdditionalProductsForParticipant = (participantIndex: number): Product[] => {
@@ -625,10 +604,8 @@ export function SubscriptionStep({
     );
     if (!participantTicket) return [];
     const ticketProducts = getProductsForTicket(participantTicket.ticketId);
-    // Opcionais (não obrigatórios). Os inclusos continuam aqui para SEREM
-    // EXIBIDOS, mas como cobram 0 (billableReaisForProductSelection), o resumo os
-    // classifica como "Incluso/grátis" (priceReais === 0), não como item adicional pago.
-    return ticketProducts.filter((p) => !p.isRequired);
+    // Opcionais = os pagos (não inclusos no ingresso).
+    return ticketProducts.filter((p) => !p.isIncludedInTicket);
   };
 
   useEffect(() => {
