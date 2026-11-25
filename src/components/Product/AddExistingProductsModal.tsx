@@ -507,8 +507,8 @@ export function AddExistingProductsModal() {
                                 </h3>
                                 <div className="flex flex-col gap-3">
                                   <span className="text-sm font-family-dm-sans text-gray-11">
-                                    {/* Mesma regra do checkout: incluso = obrigatório; pago = opcional. */}
-                                    {product.isIncludedInTicket
+                                    {/* Mesma regra do checkout: `isRequired` = obrigatório; senão opcional. */}
+                                    {product.isRequired
                                       ? "Obrigatório"
                                       : "Opcional"}
                                   </span>

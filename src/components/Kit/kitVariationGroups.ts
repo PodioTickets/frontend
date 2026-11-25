@@ -34,6 +34,8 @@ export interface KitVariationGroup {
   id?: string;
   name: string;
   options: KitVariationOption[];
+  /** Chip de sugestão que criou o grupo (mantém o chip ativo mesmo após renomear). Só no formulário. */
+  origin?: string;
 }
 
 export const SEM_INTERESSE_NAME = "Sem interesse";
@@ -71,8 +73,18 @@ export function createOption(name: string): KitVariationOption {
   return { key: newKey("opt"), name, stockLimited: false, available: "", soldCount: 0 };
 }
 
-export function createGroup(name: string, optionNames: string[] = []): KitVariationGroup {
-  return { key: newKey("grp"), name, options: optionNames.map(createOption) };
+export function createGroup(name: string, optionNames: string[] = [], origin?: string): KitVariationGroup {
+  return { key: newKey("grp"), name, options: optionNames.map(createOption), origin };
+}
+
+/**
+ * Chip de sugestão que "representa" o grupo: o que o criou; senão, o de mesmo nome
+ * (kit carregado da API); senão, "Personalizar".
+ */
+export function suggestionLabelOfGroup(group: KitVariationGroup): string {
+  if (group.origin) return group.origin;
+  const named = VARIATION_SUGGESTIONS.find((s) => s.groupName !== null && sameName(s.groupName, group.name));
+  return named?.label ?? VARIATION_SUGGESTIONS.find((s) => s.groupName === null)!.label;
 }
 
 // ─── API → formulário ────────────────────────────────────────────────────────

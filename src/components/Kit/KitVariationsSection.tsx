@@ -12,6 +12,7 @@ import {
   NEW_OPTION_NAME,
   VARIATION_SUGGESTIONS,
   createGroup,
+  suggestionLabelOfGroup,
   createOption,
   optionStockLabel,
   sameName,
@@ -164,7 +165,7 @@ export function KitVariationsSection({
     updateGroup(groupKey, (g) => ({ ...g, options: g.options.filter((o) => o.key !== optionKey) }));
 
   const addSuggestion = (s: (typeof VARIATION_SUGGESTIONS)[number]) => {
-    const group = createGroup(s.groupName ?? NEW_GROUP_NAME, s.options);
+    const group = createGroup(s.groupName ?? NEW_GROUP_NAME, s.options, s.label);
     setGroups((prev) => [...prev, group]);
     if (s.groupName === null) setEditing({ kind: "group", groupKey: group.key });
   };
@@ -387,19 +388,23 @@ export function KitVariationsSection({
           </p>
           <div className="flex flex-wrap justify-center gap-2">
             {VARIATION_SUGGESTIONS.map((s) => {
-              const used = s.groupName !== null && groups.some((g) => sameName(g.name, s.groupName!));
+              // Verde enquanto existir grupo vindo deste chip (mesmo renomeado).
+              // "Personalizar" continua clicável para criar outra variação livre.
+              const active = groups.some((g) => suggestionLabelOfGroup(g) === s.label);
+              const locked = active && s.groupName !== null;
               return (
                 <button
                   key={s.label}
                   type="button"
-                  disabled={used}
-                  aria-pressed={used}
+                  disabled={locked}
+                  aria-pressed={active}
                   onClick={() => addSuggestion(s)}
                   className={cn(
                     "rounded-full border px-4 py-3 font-family-dm-sans text-sm font-medium leading-[1.3]",
-                    used
-                      ? "cursor-default border-primary-8 bg-primary-3 text-primary-12"
-                      : "cursor-pointer border-gray-6 bg-gray-2 text-gray-12 hover:border-gray-8",
+                    active
+                      ? "border-primary-8 bg-primary-3 text-primary-12"
+                      : "border-gray-6 bg-gray-2 text-gray-12 hover:border-gray-8",
+                    locked ? "cursor-default" : "cursor-pointer",
                   )}
                 >
                   {s.label}
