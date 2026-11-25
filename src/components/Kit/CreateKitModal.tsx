@@ -137,12 +137,15 @@ export function CreateKitModal({
     productImages,
     primaryImageIndex,
     isIncludedInTicket,
-    isRequired,
+    isRequired: isIncludedInTicket && isRequired,
     basePrice,
-    hasVariations,
-    groups: groups.map((g) => [g.name, g.options.map((o) => [o.name, o.stockLimited, o.available])]),
-    buyerCanEditVariation,
-    variationChangeDeadlineDays,
+    // "Sim" sem nenhuma variação criada = mesmo payload que "Não".
+    hasVariations: activeGroups.length > 0,
+    // Só o que vai no payload: variação desligada descarta os grupos (e a edição pelo comprador,
+    // que só existe com variação) — ligar, criar opção e desligar volta ao "sem alteração".
+    groups: activeGroups.map((g) => [g.name, g.options.map((o) => [o.name, o.stockLimited, o.available])]),
+    buyerCanEditVariation: activeGroups.length > 0 && buyerCanEditVariation,
+    variationChangeDeadlineDays: activeGroups.length > 0 && buyerCanEditVariation ? variationChangeDeadlineDays : null,
   });
   const isDirty = baseline !== null && snapshot !== baseline;
 
@@ -217,7 +220,8 @@ export function CreateKitModal({
         images: productImages.length > 0 ? productImages : undefined,
         primaryImageIndex: productImages.length > 1 ? primaryImageIndex : undefined,
         isIncludedInTicket,
-        isRequired,
+        // Igual ao produto: só incluso pode ser obrigatório; pago é sempre opcional.
+        isRequired: isIncludedInTicket && isRequired,
         basePrice: Math.round(parsePriceReais(basePrice) * 100),
         variationGroups: variationGroupsPayload(activeGroups, isIncludedInTicket),
         buyerVariationEditAllowed: buyerEditAllowed,
@@ -334,15 +338,13 @@ export function CreateKitModal({
                     <YesNo value={isIncludedInTicket} name="Este kit está incluso no ingresso?" onChange={setIsIncludedInTicket} />
                   </div>
 
-                  <div className="flex flex-col gap-2">
-                    <p className={questionClass}>Este kit é obrigatório?</p>
-                    <YesNo value={isRequired} name="Este kit é obrigatório?" onChange={setIsRequired} />
-                    <p className="font-family-dm-sans text-sm leading-[1.3] text-gray-11">
-                      {isRequired
-                        ? "O participante precisa escolher o kit para concluir a inscrição."
-                        : "Aparece em Produtos adicionais; o participante pode marcar Sem interesse."}
-                    </p>
-                  </div>
+                  {/* Igual ao modal de produto: obrigatório/opcional só para kit incluso; pago mostra só o preço. */}
+                  {isIncludedInTicket && (
+                    <div className="flex flex-col gap-2">
+                      <p className={questionClass}>Este kit é obrigatório?</p>
+                      <YesNo value={isRequired} name="Este kit é obrigatório?" onChange={setIsRequired} />
+                    </div>
+                  )}
 
                   {!isIncludedInTicket && (
                     <div className="flex w-full flex-col gap-2 md:w-[280px]">
