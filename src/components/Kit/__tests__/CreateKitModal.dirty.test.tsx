@@ -30,7 +30,7 @@ describe("CreateKitModal — Salvar alterações", () => {
 
   it("\"Este kit é obrigatório?\" vem Não e vai no payload como isRequired", async () => {
     const onSave = vi.fn();
-    render(<CreateKitModal isOpen onClose={() => {}} eventId="e1" kit={kit} onSave={onSave} />);
+    render(<CreateKitModal isOpen onClose={() => {}} eventId="e1" kit={{ ...kit, isIncludedInTicket: true }} onSave={onSave} />);
     const group = screen.getByRole("radiogroup", { name: "Este kit é obrigatório?" });
     expect(within(group).getByLabelText("Não")).toBeChecked();
     fireEvent.click(within(group).getByLabelText("Sim"));
@@ -38,6 +38,29 @@ describe("CreateKitModal — Salvar alterações", () => {
     expect(save).not.toBeDisabled();
     fireEvent.click(save);
     await vi.waitFor(() => expect(onSave).toHaveBeenCalled());
-    expect(onSave.mock.calls[0][0]).toMatchObject({ isRequired: true, isIncludedInTicket: false });
+    expect(onSave.mock.calls[0][0]).toMatchObject({ isRequired: true, isIncludedInTicket: true });
+  });
+
+  it("kit sem variação: ligar, criar opção e desligar volta a desabilitar", () => {
+    const semVariacao = { ...kit, variationGroups: [] };
+    render(<CreateKitModal isOpen onClose={() => {}} eventId="e1" kit={semVariacao} onSave={() => {}} />);
+    const save = screen.getByRole("button", { name: "Salvar alterações" });
+    const variacao = () => screen.getByRole("radiogroup", { name: "Algum item deste kit possui variação?" });
+    expect(save).toBeDisabled();
+    fireEvent.click(within(variacao()).getByLabelText("Sim"));
+    fireEvent.click(screen.getByRole("button", { name: "Tamanho da camisa" }));
+    expect(save).not.toBeDisabled();
+    fireEvent.click(within(variacao()).getByLabelText("Não"));
+    expect(save).toBeDisabled();
+  });
+
+  it("kit pago: sem a pergunta de obrigatório e salva como opcional (igual ao produto)", async () => {
+    const onSave = vi.fn();
+    render(<CreateKitModal isOpen onClose={() => {}} eventId="e1" kit={{ ...kit, isRequired: true }} onSave={onSave} />);
+    expect(screen.queryByRole("radiogroup", { name: "Este kit é obrigatório?" })).not.toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText("Nome descritivo do kit"), { target: { value: "Kit Novo" } });
+    fireEvent.click(screen.getByRole("button", { name: "Salvar alterações" }));
+    await vi.waitFor(() => expect(onSave).toHaveBeenCalled());
+    expect(onSave.mock.calls[0][0]).toMatchObject({ isRequired: false, isIncludedInTicket: false });
   });
 });

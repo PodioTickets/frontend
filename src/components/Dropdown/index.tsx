@@ -465,6 +465,9 @@ export function Dropdown({
   const [isOpen, setIsOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
   const triggerRef = useRef<HTMLDivElement>(null);
+  /** Raiz (gatilho + menu inline/absoluto) e menu em portal — "fora" é fora DESTA instância. */
+  const rootRef = useRef<HTMLDivElement>(null);
+  const portalMenuRef = useRef<HTMLDivElement>(null);
   const [portalPlacement, setPortalPlacement] = useState<{
     top?: number;
     bottom?: number;
@@ -600,11 +603,13 @@ export function Dropdown({
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      const target = event.target as HTMLElement;
-      const dropdown = target.closest(`[data-${dataAttribute}-dropdown]`);
-      const button = target.closest(`[data-${dataAttribute}-button]`);
+      const target = event.target as Node;
+      // Antes: qualquer elemento com o data-attribute contava como "dentro" — clicar no gatilho
+      // de OUTRO dropdown (ex.: ⋮ das opções do kit) deixava vários abertos ao mesmo tempo.
+      const inside =
+        rootRef.current?.contains(target) || portalMenuRef.current?.contains(target);
 
-      if (!dropdown && !button && isOpen) {
+      if (!inside && isOpen) {
         startTransition(() => {
           setIsOpen(false);
         });
@@ -618,7 +623,7 @@ export function Dropdown({
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
     };
-  }, [isOpen, dataAttribute]);
+  }, [isOpen]);
 
   const handleSelect = useCallback(
     (option: DropdownOption) => {
@@ -843,6 +848,7 @@ export function Dropdown({
       typeof document !== "undefined"
       ? createPortal(
         <div
+          ref={portalMenuRef}
           {...dropdownDataAttr}
           className={`bg-gray-1 rounded-lg shadow-lg border border-gray-6 z-300 overflow-hidden ${className}`}
           style={{
@@ -868,6 +874,7 @@ export function Dropdown({
 
   return (
     <div
+      ref={rootRef}
       className={
         menuInline ? "relative flex w-full flex-col" : "relative h-full"
       }

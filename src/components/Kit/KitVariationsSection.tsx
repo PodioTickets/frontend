@@ -12,7 +12,6 @@ import {
   NEW_OPTION_NAME,
   VARIATION_SUGGESTIONS,
   createGroup,
-  suggestionLabelOfGroup,
   createOption,
   optionStockLabel,
   sameName,
@@ -157,6 +156,13 @@ export function KitVariationsSection({
 }) {
   const [editing, setEditing] = useState<Editing>(null);
   const [stockTarget, setStockTarget] = useState<{ groupKey: string; optionKey: string } | null>(null);
+  /** Chip clicado agora: fica verde só como retorno do clique (~0,4s), não como estado. */
+  const [flashedChip, setFlashedChip] = useState<string | null>(null);
+  useEffect(() => {
+    if (!flashedChip) return;
+    const t = setTimeout(() => setFlashedChip(null), 400);
+    return () => clearTimeout(t);
+  }, [flashedChip]);
 
   const updateGroup = (groupKey: string, fn: (g: KitVariationGroup) => KitVariationGroup) =>
     setGroups((prev) => prev.map((g) => (g.key === groupKey ? fn(g) : g)));
@@ -165,7 +171,8 @@ export function KitVariationsSection({
     updateGroup(groupKey, (g) => ({ ...g, options: g.options.filter((o) => o.key !== optionKey) }));
 
   const addSuggestion = (s: (typeof VARIATION_SUGGESTIONS)[number]) => {
-    const group = createGroup(s.groupName ?? NEW_GROUP_NAME, s.options, s.label);
+    setFlashedChip(s.label);
+    const group = createGroup(s.groupName ?? NEW_GROUP_NAME, s.options);
     setGroups((prev) => [...prev, group]);
     if (s.groupName === null) setEditing({ kind: "group", groupKey: group.key });
   };
@@ -388,23 +395,24 @@ export function KitVariationsSection({
           </p>
           <div className="flex flex-wrap justify-center gap-2">
             {VARIATION_SUGGESTIONS.map((s) => {
-              // Verde enquanto existir grupo vindo deste chip (mesmo renomeado).
-              // "Personalizar" continua clicável para criar outra variação livre.
-              const active = groups.some((g) => suggestionLabelOfGroup(g) === s.label);
-              const locked = active && s.groupName !== null;
+              // Verde só no clique (pressionado + ~0,4s), depois volta ao normal. Tamanho/Cor travam
+              // se já existe grupo com o nome (evita duplicar); "Personalizar" sempre clicável.
+              const flashing = flashedChip === s.label;
+              const locked = s.groupName !== null && groups.some((g) => sameName(g.name, s.groupName!));
               return (
                 <button
                   key={s.label}
                   type="button"
                   disabled={locked}
-                  aria-pressed={active}
                   onClick={() => addSuggestion(s)}
                   className={cn(
                     "rounded-full border px-4 py-3 font-family-dm-sans text-sm font-medium leading-[1.3]",
-                    active
+                    "transition-colors duration-150",
+                    flashing
                       ? "border-primary-8 bg-primary-3 text-primary-12"
-                      : "border-gray-6 bg-gray-2 text-gray-12 hover:border-gray-8",
+                      : "border-gray-6 bg-gray-2 text-gray-12 hover:border-gray-8 active:border-primary-8 active:bg-primary-3 active:text-primary-12",
                     locked ? "cursor-default" : "cursor-pointer",
+                    locked && !flashing && "opacity-50",
                   )}
                 >
                   {s.label}
