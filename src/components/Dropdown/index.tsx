@@ -553,11 +553,21 @@ export function Dropdown({
       // Limita maxHeight ao espaço disponível pra evitar que o menu
       // transborde a viewport (e o usuário não consiga rolar pra ver mais
       // variações).
+      // Largura fixa (`w-[160px]`) vale também no portal — sem isso o menu
+      // herdava a largura do gatilho (ex.: ícone de 24px) e saía cortado.
+      // Demais larguras (`w-full`, padrão) seguem a largura do gatilho.
+      const fixedWidth = Number(width.match(/^w-\[(\d+)px\]$/)?.[1]) || null;
+      const menuWidth = fixedWidth ?? r.width;
+      const rawLeft = align === "end" ? r.right - menuWidth : r.left;
+      const left = Math.max(
+        gap,
+        Math.min(rawLeft, window.innerWidth - menuWidth - gap)
+      );
       const next = {
         top: useBottom ? r.bottom + gap : undefined,
         bottom: useBottom ? undefined : window.innerHeight - r.top + gap,
-        left: r.left,
-        width: r.width,
+        left,
+        width: menuWidth,
         maxHeight: Math.max(
           120,
           Math.min(desired, useBottom ? spaceBelow : spaceAbove)
@@ -586,7 +596,7 @@ export function Dropdown({
       window.removeEventListener("scroll", update, true);
       window.removeEventListener("resize", update);
     };
-  }, [menuInPortal, menuInline, isOpen, position, containerHeight]);
+  }, [menuInPortal, menuInline, isOpen, position, align, width, containerHeight]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {

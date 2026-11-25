@@ -43,6 +43,8 @@ export interface KitFormPayload {
   images?: string[];
   primaryImageIndex?: number;
   isIncludedInTicket: boolean;
+  /** Obrigatório = seção do kit no checkout, sem "Sem interesse"; opcional = "Produtos adicionais". */
+  isRequired: boolean;
   basePrice: number;
   variationGroups: ReturnType<typeof variationGroupsPayload>;
   buyerVariationEditAllowed: boolean;
@@ -93,11 +95,14 @@ export function CreateKitModal({
     handleDragOver,
   } = useProductImageUpload();
   const [isIncludedInTicket, setIsIncludedInTicket] = useState(false);
+  const [isRequired, setIsRequired] = useState(false);
   const [basePrice, setBasePrice] = useState("");
-  const [hasVariations, setHasVariations] = useState<boolean | null>(null);
+  const [hasVariations, setHasVariations] = useState<boolean | null>(false);
   const [groups, setGroups] = useState<KitVariationGroup[]>([]);
   const [buyerCanEditVariation, setBuyerCanEditVariation] = useState(false);
   const [variationChangeDeadlineDays, setVariationChangeDeadlineDays] = useState("30");
+  /** "Configurações adicionais" (mesmo padrão do modal de cupom): fechado ao criar; na edição abre se a opção já está ligada. */
+  const [showAdvanced, setShowAdvanced] = useState(false);
   /** Erros por variação aparecem só depois de tentar criar/salvar (Figma tela 08). */
   const [showGroupErrors, setShowGroupErrors] = useState(false);
   const [previewOpen, setPreviewOpen] = useState(false);
@@ -132,6 +137,7 @@ export function CreateKitModal({
     productImages,
     primaryImageIndex,
     isIncludedInTicket,
+    isRequired,
     basePrice,
     hasVariations,
     groups: groups.map((g) => [g.name, g.options.map((o) => [o.name, o.stockLimited, o.available])]),
@@ -155,17 +161,20 @@ export function CreateKitModal({
       setProductImages([]);
       setPrimaryImageIndex(0);
       setIsIncludedInTicket(false);
+      setIsRequired(false);
       setBasePrice("");
-      setHasVariations(null);
+      setHasVariations(false);
       setGroups([]);
       setBuyerCanEditVariation(false);
       setVariationChangeDeadlineDays("30");
+      setShowAdvanced(false);
     } else {
       setProductName(String(rec.name ?? ""));
       const imgs = Array.isArray(rec.images) ? rec.images.filter((i): i is string => typeof i === "string") : [];
       setProductImages(imgs.length > 0 ? imgs : typeof rec.image === "string" && rec.image ? [rec.image] : []);
       setPrimaryImageIndex(typeof rec.primaryImageIndex === "number" ? rec.primaryImageIndex : 0);
       setIsIncludedInTicket(rec.isIncludedInTicket === true);
+      setIsRequired(rec.isRequired === true);
       setBasePrice(formatPriceFromApi(rec.basePrice as number | string | undefined));
       const loaded = groupsFromApiProduct(rec);
       setGroups(loaded);
@@ -173,6 +182,7 @@ export function CreateKitModal({
       const buyerEdit = buyerVariationEditStateFromApiProduct(rec);
       setBuyerCanEditVariation(buyerEdit.allowed);
       setVariationChangeDeadlineDays(buyerEdit.deadlineDays);
+      setShowAdvanced(buyerEdit.allowed);
     }
     setBaseline("pending");
     // Setters do hook de imagens são estáveis; `kit` só importa na abertura.
@@ -207,6 +217,7 @@ export function CreateKitModal({
         images: productImages.length > 0 ? productImages : undefined,
         primaryImageIndex: productImages.length > 1 ? primaryImageIndex : undefined,
         isIncludedInTicket,
+        isRequired,
         basePrice: Math.round(parsePriceReais(basePrice) * 100),
         variationGroups: variationGroupsPayload(activeGroups, isIncludedInTicket),
         buyerVariationEditAllowed: buyerEditAllowed,
@@ -323,6 +334,16 @@ export function CreateKitModal({
                     <YesNo value={isIncludedInTicket} name="Este kit está incluso no ingresso?" onChange={setIsIncludedInTicket} />
                   </div>
 
+                  <div className="flex flex-col gap-2">
+                    <p className={questionClass}>Este kit é obrigatório?</p>
+                    <YesNo value={isRequired} name="Este kit é obrigatório?" onChange={setIsRequired} />
+                    <p className="font-family-dm-sans text-sm leading-[1.3] text-gray-11">
+                      {isRequired
+                        ? "O participante precisa escolher o kit para concluir a inscrição."
+                        : "Aparece em Produtos adicionais; o participante pode marcar Sem interesse."}
+                    </p>
+                  </div>
+
                   {!isIncludedInTicket && (
                     <div className="flex w-full flex-col gap-2 md:w-[280px]">
                       <label htmlFor="kit-price" className={labelClass}>
@@ -349,11 +370,11 @@ export function CreateKitModal({
 
                   <Divider />
 
-                  <div className="flex flex-col gap-4">
-                    <div className="flex flex-col gap-2">
-                      <h3 className="font-manrope text-base font-bold leading-[1.1] text-gray-12">Imagens do kit</h3>
-                      <p className="font-family-dm-sans text-sm leading-[1.3] text-gray-11">
-                        Adicione fotos dos itens do kit para os participantes visualizarem.
+                  <div className="flex flex-col gap-6">
+                    <div className="flex flex-col gap-1">
+                      <h3 className="font-manrope text-lg font-semibold leading-[1.1] text-gray-12">Adicione imagens do kit</h3>
+                      <p className="font-family-dm-sans text-sm font-normal leading-[1.3] text-gray-11">
+                        Boas fotos ajudam na decisão do participante
                       </p>
                     </div>
                     <KitImageGallery
@@ -389,50 +410,70 @@ export function CreateKitModal({
                   />
 
                   {activeGroups.length > 0 && (
-                    <>
-                      <Divider />
-                      <div className="flex flex-col gap-2">
-                        <p className={questionClass}>Deseja liberar a edição da variação pelo comprador?</p>
-                        <YesNo
-                          value={buyerCanEditVariation}
-                          name="Deseja liberar a edição da variação pelo comprador?"
-                          onChange={setBuyerCanEditVariation}
-                        />
-                      </div>
-                      {buyerCanEditVariation && (
-                        <div className="flex flex-col gap-4">
-                          <div className="flex flex-col gap-2">
-                            <p className={questionClass}>
-                              Até quantos dias antes do evento o participante pode alterar a variação?
-                            </p>
-                            <div className="flex w-fit items-stretch overflow-hidden rounded-xl border border-gray-7 bg-gray-1 focus-within:border-primary-8">
-                              <input
-                                type="text"
-                                inputMode="numeric"
-                                maxLength={4}
-                                value={variationChangeDeadlineDays}
-                                onChange={(e) => setVariationChangeDeadlineDays(e.target.value.replace(/\D/g, "").slice(0, 4))}
-                                className="w-18 shrink-0 bg-transparent px-2 py-3 text-center font-family-dm-sans text-base font-semibold leading-[1.3] text-gray-12 outline-none placeholder:text-gray-11"
-                                placeholder="30"
-                                aria-label="Dias antes do evento para alterar a variação"
+                    <div className="flex flex-col gap-5">
+                      <button
+                        type="button"
+                        onClick={() => setShowAdvanced((v) => !v)}
+                        aria-expanded={showAdvanced}
+                        className="pointer-events-auto flex cursor-pointer items-center gap-2 self-start text-primary-11 transition-colors hover:text-primary-12"
+                      >
+                        <span className="font-family-dm-sans text-base font-medium leading-[1.3]">Configurações adicionais</span>
+                        <ArrowButton isOpen={showAdvanced} />
+                      </button>
+                      <AnimatePresence initial={false}>
+                        {showAdvanced && (
+                          <motion.div
+                            initial={{ height: 0, opacity: 0 }}
+                            animate={{ height: "auto", opacity: 1 }}
+                            exit={{ height: 0, opacity: 0 }}
+                            transition={{ duration: 0.2 }}
+                            className="flex flex-col gap-6 overflow-hidden"
+                          >
+                            <div className="flex flex-col gap-2">
+                              <p className={questionClass}>Deseja liberar a edição da variação pelo comprador?</p>
+                              <YesNo
+                                value={buyerCanEditVariation}
+                                name="Deseja liberar a edição da variação pelo comprador?"
+                                onChange={setBuyerCanEditVariation}
                               />
-                              <div className="flex items-center border-l border-gray-6 bg-gray-3 px-4 py-3">
-                                <span className="font-family-dm-sans text-sm leading-[1.3] text-gray-11">Dias antes do evento</span>
+                            </div>
+                            {buyerCanEditVariation && (
+                              <div className="flex flex-col gap-4">
+                                <div className="flex flex-col gap-2">
+                                  <p className={questionClass}>
+                                    Até quantos dias antes do evento o participante pode alterar a variação?
+                                  </p>
+                                  <div className="flex w-fit items-stretch overflow-hidden rounded-xl border border-gray-7 bg-gray-1 focus-within:border-primary-8">
+                                    <input
+                                      type="text"
+                                      inputMode="numeric"
+                                      maxLength={4}
+                                      value={variationChangeDeadlineDays}
+                                      onChange={(e) => setVariationChangeDeadlineDays(e.target.value.replace(/\D/g, "").slice(0, 4))}
+                                      className="w-18 shrink-0 bg-transparent px-2 py-3 text-center font-family-dm-sans text-base font-semibold leading-[1.3] text-gray-12 outline-none placeholder:text-gray-11"
+                                      placeholder="30"
+                                      aria-label="Dias antes do evento para alterar a variação"
+                                    />
+                                    <div className="flex items-center border-l border-gray-6 bg-gray-3 px-4 py-3">
+                                      <span className="font-family-dm-sans text-sm leading-[1.3] text-gray-11">Dias antes do evento</span>
+                                    </div>
+                                  </div>
+                                </div>
+                                {variationDeadlineDateLabel && (
+                                  <div className="flex w-full items-center gap-2 rounded-lg border border-primary-6 bg-primary-3 px-3 py-2">
+                                    <CalendarIcon className="size-5 shrink-0 text-primary-12" />
+                                    <p className="font-family-dm-sans text-sm leading-[1.3] text-primary-12">
+                                      Participantes podem alterar até dia {variationDeadlineDateLabel}. Após esta data, o participante
+                                      não poderá mais editar a variação do produto.
+                                    </p>
+                                  </div>
+                                )}
                               </div>
-                            </div>
-                          </div>
-                          {variationDeadlineDateLabel && (
-                            <div className="flex w-full items-center gap-2 rounded-lg border border-primary-6 bg-primary-3 px-3 py-2">
-                              <CalendarIcon className="size-5 shrink-0 text-primary-12" />
-                              <p className="font-family-dm-sans text-sm leading-[1.3] text-primary-12">
-                                Participantes podem alterar até dia {variationDeadlineDateLabel}. Após esta data, o participante
-                                não poderá mais editar a variação do produto.
-                              </p>
-                            </div>
-                          )}
-                        </div>
-                      )}
-                    </>
+                            )}
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
+                    </div>
                   )}
 
                   {(hasVariations === false || activeGroups.length > 0) && (

@@ -110,7 +110,7 @@ export function hasMissingRequiredVariation(products: Product[], selected: SwapS
   return products.some((p) => {
     const ids = effectiveSwapSelection(p, selected);
     if (isSelectionComplete(p, ids)) return false;
-    // Incluso no ingresso = obrigatório (regra do checkout); `isRequired` legado continua valendo.
-    return p.isRequired || p.isIncludedInTicket || ids.length > 0;
+    // Obrigatório = `isRequired` (mesma regra do checkout).
+    return p.isRequired || ids.length > 0;
   });
 }

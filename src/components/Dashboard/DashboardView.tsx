@@ -417,7 +417,9 @@ export function DashboardView({
         {/* Bottom Section */}
         <div className="grid grid-cols-[392px_1fr] gap-3 w-full">
           {/* Lotes próximos de esgotamento (Figma 7688:162632) */}
+          {/* h-0 + min-h-full: a altura da linha vem só do mapa de calor — trocar de página não estica os dois cards. */}
           <LotsNearDepletionCard
+            className="h-0 min-h-full"
             lots={paginatedLotsNearDepletion}
             sliceStart={lotsNearDepletionSliceStart}
             page={lotsNearDepletionPage}

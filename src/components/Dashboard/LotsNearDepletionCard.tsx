@@ -44,8 +44,10 @@ export function LotsNearDepletionCard({
       </p>
       {/* Desktop: 4 linhas iguais (1/4 da lista, mesmo com menos lotes na página — usuário, 2026-11-11), cada
           uma com pelo menos a altura do conteúdo: linha com "Lote N de M" não corta a de baixo (2026-11-13;
-          antes `flex-basis: 25%` estourava e o `overflow-hidden` cortava o padding da última). Mobile: conteúdo. */}
-      <div className="grid flex-1 auto-rows-auto border-y border-gray-6 bg-gray-2 md:[grid-template-rows:repeat(4,1fr)]">
+          antes `flex-basis: 25%` estourava e o `overflow-hidden` cortava o padding da última). Mobile: conteúdo.
+          2026-11-25: linhas compactas (py-3/gap-2) para "Lote N de M" caber na altura do mapa de calor ao lado; se
+          ainda assim passar (nome muito longo), a lista rola em vez de esticar os dois cards. */}
+      <div className="grid min-h-0 flex-1 auto-rows-auto overflow-y-auto border-y border-gray-6 bg-gray-2 md:[grid-template-rows:repeat(4,1fr)]">
         {lots.map((lot, index) => {
           // Lote sem vaga = "Esgotado" (o back marca como Crítico).
           const style = STATUS_STYLE[lot.remaining === 0 ? "Esgotado" : lot.status] ?? STATUS_STYLE.Normal;
@@ -58,7 +60,7 @@ export function LotsNearDepletionCard({
           return (
             <div
               key={`${sliceStart + index}-${lot.name}`}
-              className="flex flex-col justify-center gap-3 border-b border-gray-4 px-4 py-[18px] last:border-b-0"
+              className="flex flex-col justify-center gap-2 border-b border-gray-4 px-4 py-3 last:border-b-0"
             >
               <div className="flex items-center gap-3 break-words">
                 <div className="flex min-w-0 flex-1 flex-col gap-2">

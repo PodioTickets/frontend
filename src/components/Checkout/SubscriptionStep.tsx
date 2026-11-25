@@ -593,9 +593,9 @@ export function SubscriptionStep({
     );
     if (!participantTicket) return [];
     const ticketProducts = getProductsForTicket(participantTicket.ticketId);
-    // Seção obrigatória = incluso no ingresso (sem valor, sem "Sem interesse" no kit).
-    // Não incluso = opcional, mesmo com `isRequired` legado (regra do usuário 24/11).
-    return ticketProducts.filter((p) => p.isIncludedInTicket);
+    // Seção obrigatória = `isRequired` (organizador marca no modal; sem "Sem interesse").
+    // Opcional (padrão) vai para "Produtos adicionais" — incluso ou pago (regra 25/11).
+    return ticketProducts.filter((p) => p.isRequired);
   };
 
   const getAdditionalProductsForParticipant = (participantIndex: number): Product[] => {
@@ -604,8 +604,8 @@ export function SubscriptionStep({
     );
     if (!participantTicket) return [];
     const ticketProducts = getProductsForTicket(participantTicket.ticketId);
-    // Opcionais = os pagos (não inclusos no ingresso).
-    return ticketProducts.filter((p) => !p.isIncludedInTicket);
+    // Opcionais = não obrigatórios (inclusos ou pagos).
+    return ticketProducts.filter((p) => !p.isRequired);
   };
 
   useEffect(() => {
