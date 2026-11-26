@@ -134,14 +134,13 @@ export function groupsFromApiProduct(product: unknown): KitVariationGroup[] {
 // ─── Estoque ─────────────────────────────────────────────────────────────────
 
 /**
- * Limite (`stock`) a gravar para a opção.
- * - Kit incluso: o formulário não mostra estoque — mantém o limite salvo (nova = 0).
+ * Limite (`stock`) a gravar para a opção. Vale para kit incluso ou pago: o back segura o
+ * estoque da variação nos dois casos (`holdsStock` em product-stock.util).
  * - Sem "Limitar estoque": 0 (segue o estoque do ingresso).
  * - Já limitada: aplica ao limite salvo o mesmo delta do restante (preserva vendas/reservas).
  * - Passou a limitar agora: o restante desejado vira o limite (o back parte o restante dele).
  */
-export function optionStockToPersist(o: KitVariationOption, isIncludedInTicket: boolean): number {
-  if (isIncludedInTicket) return o.persistedStock ?? 0;
+export function optionStockToPersist(o: KitVariationOption): number {
   if (!o.stockLimited) return 0;
   const remaining = Math.max(0, parseInt(o.available, 10) || 0);
   if ((o.persistedStock ?? 0) > 0 && o.persistedAvailable != null) {
@@ -151,13 +150,10 @@ export function optionStockToPersist(o: KitVariationOption, isIncludedInTicket: 
 }
 
 /** Texto à direita da linha da opção ("3 vendidos · 7 disponíveis", "Esgotado"). */
-export function optionStockLabel(
-  o: KitVariationOption,
-  isIncludedInTicket: boolean,
-): { text: string; soldOut: boolean } {
+export function optionStockLabel(o: KitVariationOption): { text: string; soldOut: boolean } {
   const sold = o.soldCount;
   const soldText = `${sold} ${sold === 1 ? "vendido" : "vendidos"}`;
-  if (!isIncludedInTicket && o.stockLimited) {
+  if (o.stockLimited) {
     const available = Math.max(0, parseInt(o.available, 10) || 0);
     if (available === 0) return { text: `${soldText} · Esgotado`, soldOut: true };
     return { text: `${soldText} · ${available} ${available === 1 ? "disponível" : "disponíveis"}`, soldOut: false };
@@ -168,7 +164,7 @@ export function optionStockLabel(
 // ─── Validação e payload ─────────────────────────────────────────────────────
 
 /** Erro por variação (chave = `group.key`), mostrado logo abaixo da lista. */
-export function validateGroups(groups: KitVariationGroup[], isIncludedInTicket: boolean): Record<string, string> {
+export function validateGroups(groups: KitVariationGroup[]): Record<string, string> {
   const errors: Record<string, string> = {};
   groups.forEach((g, i) => {
     const label = g.name.trim() || "Variação";
@@ -178,10 +174,7 @@ export function validateGroups(groups: KitVariationGroup[], isIncludedInTicket: 
       errors[g.key] = `Já existe uma variação chamada ${label}.`;
     } else if (g.options.length === 0) {
       errors[g.key] = `${label}: adicione pelo menos uma opção.`;
-    } else if (
-      !isIncludedInTicket &&
-      g.options.some((o) => o.stockLimited && optionStockToPersist(o, false) <= 0)
-    ) {
+    } else if (g.options.some((o) => o.stockLimited && optionStockToPersist(o) <= 0)) {
       errors[g.key] = `${label}: informe uma quantidade em estoque maior que zero.`;
     }
   });
@@ -190,7 +183,6 @@ export function validateGroups(groups: KitVariationGroup[], isIncludedInTicket: 
 
 export function variationGroupsPayload(
   groups: KitVariationGroup[],
-  isIncludedInTicket: boolean,
 ): Array<{ id?: string; name: string; variations: Array<{ id?: string; name: string; price?: number; stock: number }> }> {
   return groups.map((g) => ({
     ...(g.id ? { id: g.id } : {}),
@@ -199,7 +191,7 @@ export function variationGroupsPayload(
       ...(o.id ? { id: o.id } : {}),
       name: o.name.trim(),
       ...(o.price != null ? { price: o.price } : {}),
-      stock: optionStockToPersist(o, isIncludedInTicket),
+      stock: optionStockToPersist(o),
     })),
   }));
 }

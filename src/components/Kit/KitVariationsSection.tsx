@@ -143,14 +143,12 @@ export function KitVariationsSection({
   setHasVariations,
   groups,
   setGroups,
-  isIncludedInTicket,
   errors,
 }: {
   hasVariations: boolean | null;
   setHasVariations: (v: boolean) => void;
   groups: KitVariationGroup[];
   setGroups: (updater: (prev: KitVariationGroup[]) => KitVariationGroup[]) => void;
-  isIncludedInTicket: boolean;
   /** Erros do "Criar kit" por variação (`group.key`). */
   errors: Record<string, string>;
 }) {
@@ -267,7 +265,7 @@ export function KitVariationsSection({
                   const isEditingOption =
                     editing?.kind === "option" && editing.groupKey === group.key && editing.optionKey === option.key;
                   const isNewOption = isEditingOption && editing?.kind === "option" && editing.isNew;
-                  const stock = optionStockLabel(option, isIncludedInTicket);
+                  const stock = optionStockLabel(option);
                   return (
                     <div
                       key={option.key}
@@ -339,14 +337,10 @@ export function KitVariationsSection({
                                     onClick: () =>
                                       setEditing({ kind: "option", groupKey: group.key, optionKey: option.key, isNew: false }),
                                   },
-                                  ...(isIncludedInTicket
-                                    ? []
-                                    : [
-                                      {
-                                        label: "Configurar estoque",
-                                        onClick: () => setStockTarget({ groupKey: group.key, optionKey: option.key }),
-                                      },
-                                    ]),
+                                  {
+                                    label: "Configurar estoque",
+                                    onClick: () => setStockTarget({ groupKey: group.key, optionKey: option.key }),
+                                  },
                                   { label: "Excluir opção", danger: true, onClick: () => removeOption(group.key, option.key) },
                                 ].map((item, i) => (
                                   <button

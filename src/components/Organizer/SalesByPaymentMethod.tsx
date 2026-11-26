@@ -46,24 +46,6 @@ export const METHOD_LABEL: Record<string, string> = {
   FREE: "Gratuito",
 };
 
-/**
- * Métodos sempre listados (os configuráveis no evento), mesmo sem vendas — o back só
- * devolve métodos com vendas e o organizador precisa ver "Cartão de débito: 0".
- * Boleto/Cripto/Gratuito seguem aparecendo só quando têm venda.
- */
-const ALWAYS_SHOWN_METHODS = ["PIX", "CREDIT_CARD", "DEBIT_CARD"] as const;
-
-function withAlwaysShownMethods(items: SalesByPaymentMethodItem[]): SalesByPaymentMethodItem[] {
-  const present = new Set(items.map((i) => i.method));
-  const zeros = ALWAYS_SHOWN_METHODS.filter((m) => !present.has(m)).map((method) => ({
-    method,
-    salesCount: 0,
-    totalAmount: 0,
-    percentage: 0,
-  }));
-  return [...items, ...zeros];
-}
-
 function formatBRL(cents: number): string {
   return (cents / 100).toLocaleString("pt-BR", {
     style: "currency",
@@ -78,9 +60,8 @@ function formatBRL(cents: number): string {
 const BAR_COLOR = "#0E7490";
 
 export function SalesByPaymentMethod({ data }: Props) {
-  const { totals } = data;
-  const hasData = data.items.length > 0;
-  const items = withAlwaysShownMethods(data.items);
+  const { items, totals } = data;
+  const hasData = items.length > 0;
 
   return (
     <div className="bg-gray-1 border border-gray-6 rounded-xl overflow-hidden flex flex-col w-full h-full">
@@ -107,7 +88,7 @@ export function SalesByPaymentMethod({ data }: Props) {
             {items.map((item) => {
               const label = METHOD_LABEL[item.method] ?? item.method;
               const pct = Math.max(0, Math.min(100, item.percentage));
-              const pctLabel = pct === 0 ? "0%" : `${pct.toFixed(pct < 10 ? 1 : pct % 1 === 0 ? 0 : 1)}%`;
+              const pctLabel = `${pct.toFixed(pct < 10 ? 1 : pct % 1 === 0 ? 0 : 1)}%`;
               const labelInsideBar = pct >= 22;
               return (
                 <div key={item.method} className="flex flex-col gap-2 w-full">
@@ -128,25 +109,22 @@ export function SalesByPaymentMethod({ data }: Props) {
 
                   {/* Barra */}
                   <div className="relative w-full h-10 rounded-lg bg-gray-4 overflow-hidden">
-                    {/* Sem vendas (ex.: débito zerado): só o trilho cinza + "0%". */}
-                    {pct > 0 && (
-                      <div
-                        className="absolute top-0 left-0 h-full rounded-lg flex items-center px-3"
-                        style={{
-                          width: `${Math.max(pct, 4)}%`,
-                          backgroundColor: BAR_COLOR,
-                        }}
-                      >
-                        {labelInsideBar && (
-                          <span className="font-family-dm-sans font-bold text-[14px] leading-[1.1] text-white tabular-nums">
-                            {pctLabel}
-                          </span>
-                        )}
-                      </div>
-                    )}
+                    <div
+                      className="absolute top-0 left-0 h-full rounded-lg flex items-center px-3"
+                      style={{
+                        width: `${Math.max(pct, 4)}%`,
+                        backgroundColor: BAR_COLOR,
+                      }}
+                    >
+                      {labelInsideBar && (
+                        <span className="font-family-dm-sans font-bold text-[14px] leading-[1.1] text-white tabular-nums">
+                          {pctLabel}
+                        </span>
+                      )}
+                    </div>
                     {!labelInsideBar && (
                       <span
-                        className={`absolute top-1/2 -translate-y-1/2 font-family-dm-sans font-bold text-[14px] leading-[1.1] tabular-nums ${pct > 0 ? "text-white" : "text-gray-11"}`}
+                        className="absolute top-1/2 -translate-y-1/2 font-family-dm-sans font-bold text-[14px] leading-[1.1] text-white tabular-nums"
                         style={{ left: 12 }}
                       >
                         {pctLabel}
