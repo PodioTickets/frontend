@@ -128,8 +128,8 @@ export function CreateKitModal({
   const showBasePriceError = basePriceInvalid && basePrice !== "";
   const activeGroups = hasVariations ? groups : [];
   const groupErrors = useMemo(
-    () => (showGroupErrors ? validateGroups(hasVariations ? groups : [], isIncludedInTicket) : {}),
-    [showGroupErrors, groups, hasVariations, isIncludedInTicket],
+    () => (showGroupErrors ? validateGroups(hasVariations ? groups : []) : {}),
+    [showGroupErrors, groups, hasVariations],
   );
 
   const snapshot = JSON.stringify({
@@ -206,7 +206,7 @@ export function CreateKitModal({
     if (hasVariations && groups.length === 0) {
       return void toast.error("Escolha uma variação ou marque que o kit não tem variação.");
     }
-    if (Object.keys(validateGroups(activeGroups, isIncludedInTicket)).length > 0) {
+    if (Object.keys(validateGroups(activeGroups)).length > 0) {
       setShowGroupErrors(true);
       return;
     }
@@ -223,7 +223,7 @@ export function CreateKitModal({
         // Igual ao produto: só incluso pode ser obrigatório; pago é sempre opcional.
         isRequired: isIncludedInTicket && isRequired,
         basePrice: Math.round(parsePriceReais(basePrice) * 100),
-        variationGroups: variationGroupsPayload(activeGroups, isIncludedInTicket),
+        variationGroups: variationGroupsPayload(activeGroups),
         buyerVariationEditAllowed: buyerEditAllowed,
         variationEditDeadlineDays: buyerEditAllowed ? (Number.isFinite(daysParsed) ? daysParsed : 30) : 0,
       });
@@ -407,7 +407,6 @@ export function CreateKitModal({
                     }}
                     groups={groups}
                     setGroups={(updater) => setGroups(updater)}
-                    isIncludedInTicket={isIncludedInTicket}
                     errors={groupErrors}
                   />
 

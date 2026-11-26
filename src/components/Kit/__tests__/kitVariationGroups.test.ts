@@ -59,44 +59,37 @@ describe("groupsFromApiProduct", () => {
 
 describe("optionStockToPersist", () => {
   it("sem limite grava 0", () => {
-    expect(optionStockToPersist(opt({ persistedStock: 10, persistedAvailable: 7 }), false)).toBe(0);
+    expect(optionStockToPersist(opt({ persistedStock: 10, persistedAvailable: 7 }))).toBe(0);
   });
   it("passou a limitar: o restante vira o limite", () => {
-    expect(optionStockToPersist(opt({ stockLimited: true, available: "50", persistedStock: 0 }), false)).toBe(50);
+    expect(optionStockToPersist(opt({ stockLimited: true, available: "50", persistedStock: 0 }))).toBe(50);
   });
   it("já limitada: aplica o delta do restante ao limite salvo", () => {
     // limite 10, restante 7 (3 vendidos) → restante 12 = limite 15
     expect(
-      optionStockToPersist(opt({ stockLimited: true, available: "12", persistedStock: 10, persistedAvailable: 7 }), false),
+      optionStockToPersist(opt({ stockLimited: true, available: "12", persistedStock: 10, persistedAvailable: 7 })),
     ).toBe(15);
-  });
-  it("kit incluso mantém o limite salvo", () => {
-    expect(optionStockToPersist(opt({ stockLimited: true, available: "3", persistedStock: 40 }), true)).toBe(40);
-    expect(optionStockToPersist(opt(), true)).toBe(0);
   });
 });
 
 describe("optionStockLabel", () => {
   it("sem venda e sem limite não mostra nada", () => {
-    expect(optionStockLabel(opt(), false).text).toBe("");
+    expect(optionStockLabel(opt()).text).toBe("");
   });
   it("vendas e disponíveis", () => {
-    expect(optionStockLabel(opt({ soldCount: 3 }), false).text).toBe("3 vendidos");
-    expect(optionStockLabel(opt({ soldCount: 0, stockLimited: true, available: "50" }), false).text).toBe(
+    expect(optionStockLabel(opt({ soldCount: 3 })).text).toBe("3 vendidos");
+    expect(optionStockLabel(opt({ soldCount: 0, stockLimited: true, available: "50" })).text).toBe(
       "0 vendidos · 50 disponíveis",
     );
-    expect(optionStockLabel(opt({ soldCount: 1, stockLimited: true, available: "1" }), false).text).toBe(
+    expect(optionStockLabel(opt({ soldCount: 1, stockLimited: true, available: "1" })).text).toBe(
       "1 vendido · 1 disponível",
     );
   });
   it("esgotado", () => {
-    expect(optionStockLabel(opt({ soldCount: 8, stockLimited: true, available: "0" }), false)).toEqual({
+    expect(optionStockLabel(opt({ soldCount: 8, stockLimited: true, available: "0" }))).toEqual({
       text: "8 vendidos · Esgotado",
       soldOut: true,
     });
-  });
-  it("kit incluso só mostra vendas", () => {
-    expect(optionStockLabel(opt({ soldCount: 2, stockLimited: true, available: "5" }), true).text).toBe("2 vendidos");
   });
 });
 
@@ -106,7 +99,7 @@ describe("validateGroups", () => {
     const b = createGroup("Cor da garrafa");
     const c = createGroup("camisa ", ["M"]);
     const d = createGroup("  ", ["M"]);
-    const errors = validateGroups([a, b, c, d], false);
+    const errors = validateGroups([a, b, c, d]);
     expect(errors[a.key]).toBeUndefined();
     expect(errors[b.key]).toBe("Cor da garrafa: adicione pelo menos uma opção.");
     expect(errors[c.key]).toMatch(/Já existe uma variação/);
@@ -115,8 +108,7 @@ describe("validateGroups", () => {
   it("estoque limitado com zero é erro (0 no back = sem limite)", () => {
     const g = createGroup("Camisa", ["P"]);
     g.options[0] = { ...g.options[0], stockLimited: true, available: "0" };
-    expect(validateGroups([g], false)[g.key]).toMatch(/maior que zero/);
-    expect(validateGroups([g], true)[g.key]).toBeUndefined();
+    expect(validateGroups([g])[g.key]).toMatch(/maior que zero/);
   });
 });
 
@@ -128,7 +120,7 @@ describe("variationGroupsPayload", () => {
       opt({ id: "o1", name: " P ", price: 1500, stockLimited: true, available: "5", persistedStock: 0 }),
       opt({ name: "Nova" }),
     ];
-    expect(variationGroupsPayload([g], false)).toEqual([
+    expect(variationGroupsPayload([g])).toEqual([
       {
         id: "g1",
         name: "Camisa",

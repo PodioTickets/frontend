@@ -3,7 +3,7 @@ import { render, screen } from "@testing-library/react";
 import { SalesByPaymentMethod } from "../SalesByPaymentMethod";
 
 describe("SalesByPaymentMethod", () => {
-  it("mostra Cartão de débito com 0 quando só há PIX e crédito", () => {
+  it("não mostra Cartão de débito quando não há venda no débito", () => {
     render(
       <SalesByPaymentMethod
         data={{
@@ -15,15 +15,25 @@ describe("SalesByPaymentMethod", () => {
         }}
       />,
     );
+    expect(screen.getByText("PIX")).toBeInTheDocument();
+    expect(screen.getByText("Cartão de crédito")).toBeInTheDocument();
+    expect(screen.queryByText("Cartão de débito")).not.toBeInTheDocument();
+  });
+
+  it("mostra Cartão de débito quando há venda no débito", () => {
+    render(
+      <SalesByPaymentMethod
+        data={{
+          items: [{ method: "DEBIT_CARD", salesCount: 2, totalAmount: 20000, percentage: 100 }],
+          totals: { salesCount: 2, totalAmount: 20000 },
+        }}
+      />,
+    );
     expect(screen.getByText("Cartão de débito")).toBeInTheDocument();
-    expect(screen.getByText("0 vendas")).toBeInTheDocument();
-    expect(screen.getByText("0%")).toBeInTheDocument();
-    expect(screen.queryByText("Boleto")).not.toBeInTheDocument();
   });
 
   it("sem nenhuma venda mantém o estado vazio", () => {
     render(<SalesByPaymentMethod data={{ items: [], totals: { salesCount: 0, totalAmount: 0 } }} />);
     expect(screen.getByText("Nenhuma venda registrada")).toBeInTheDocument();
-    expect(screen.queryByText("Cartão de débito")).not.toBeInTheDocument();
   });
 });
