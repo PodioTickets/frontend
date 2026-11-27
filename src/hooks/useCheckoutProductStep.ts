@@ -6,7 +6,9 @@ import {
   buildParticipantTicketSlots,
   buildAutoSelectedProductsPayload,
   productOffersChoice,
+  withVariationlessProducts,
   type AutoSelectedProduct,
+  type VariationlessProductItem,
 } from "@/lib/checkoutProductStep";
 
 export interface CheckoutProductStep {
@@ -18,8 +20,12 @@ export interface CheckoutProductStep {
    *           como "ainda não decidir" (default seguro = manter o fluxo padrão).
    */
   hasSelectableProducts: boolean | null;
-  /** Variações auto-selecionadas a persistir via `patchProducts` ao pular a etapa. */
-  autoSelectedProducts: AutoSelectedProduct[];
+  /** Variações auto-selecionadas (+ produtos sem variação) a persistir via `patchProducts` ao pular a etapa. */
+  autoSelectedProducts: Array<AutoSelectedProduct | VariationlessProductItem>;
+  /** Completa o payload da etapa de Produtos com os produtos sem variação (ver `withVariationlessProducts`). */
+  withVariationless: <T extends { productId: string; participantIndex?: number }>(
+    chosen: T[],
+  ) => Array<T | VariationlessProductItem>;
   loading: boolean;
 }
 
@@ -60,10 +66,13 @@ export function useCheckoutProductStep(
     );
   }
 
+  const withVariationless = <T extends { productId: string; participantIndex?: number }>(chosen: T[]) =>
+    withVariationlessProducts(chosen, slots, participants, getProductsForTicket);
+
   const autoSelectedProducts =
     hasSelectableProducts === false
-      ? buildAutoSelectedProductsPayload(slots, participants, getProductsForTicket)
+      ? withVariationless(buildAutoSelectedProductsPayload(slots, participants, getProductsForTicket))
       : [];
 
-  return { hasSelectableProducts, autoSelectedProducts, loading };
+  return { hasSelectableProducts, autoSelectedProducts, withVariationless, loading };
 }

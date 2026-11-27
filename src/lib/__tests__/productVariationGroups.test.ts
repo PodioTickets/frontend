@@ -68,6 +68,15 @@ describe("getVariationGroups", () => {
     expect(getVariationGroups({ id: "p", variationGroups: [], variations: [opt("no", "Sem interesse")] })).toEqual([]);
     expect(getVariationGroups({ id: "p", variations: [] })).toEqual([]);
   });
+  it("variationGroups vazio ignora opções antigas sem grupo (variações removidas com vendas)", () => {
+    const semVariacao = {
+      id: "p",
+      variationGroups: [],
+      variations: [opt("no", "Sem interesse"), opt("old-p", "P"), opt("old-m", "M")],
+    };
+    expect(getVariationGroups(semVariacao)).toEqual([]);
+    expect(productOffersChoice(semVariacao)).toBe(true);
+  });
 });
 
 describe("seleção por variação", () => {

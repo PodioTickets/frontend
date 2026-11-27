@@ -54,7 +54,7 @@ function CourtesyFlow() {
   const { raceQuantities, participants, bindOrder } = useCheckout();
   const { orderId, startTimer, syncFromOrder } = useCheckoutTimer();
   const { reserveOrder, patchParticipants, patchProducts } = useCheckoutReservation();
-  const { hasSelectableProducts, autoSelectedProducts } = useCheckoutProductStep(eventId);
+  const { hasSelectableProducts, autoSelectedProducts, withVariationless } = useCheckoutProductStep(eventId);
   const { finalizeCourtesy } = useCourtesyRegistration();
 
   const [step, setStep] = useState<Step>("tickets");
@@ -140,7 +140,7 @@ function CourtesyFlow() {
     busyRef.current = true;
     setBusy(true);
     try {
-      const { products } = buildProductsPatchPayload(participants);
+      const products = withVariationless(buildProductsPatchPayload(participants).products);
       syncFromOrder(await patchProducts(orderId, { products }));
       if (await finalize()) setStep("done");
     } catch (err) {

@@ -113,6 +113,7 @@ export default {
   variationMissing: "Option not selected yet",
   includedInTicketPrice: "Included in ticket",
   chooseVariation: "Choose an option",
+  wantThisItem: "Do you want to receive this item?",
   noParticipantFound: "No participant found",
   standaloneTicket: "Single ticket",
   additionalItemsOne: "Add-on item",
