@@ -32,6 +32,25 @@ describe("SalesByPaymentMethod", () => {
     expect(screen.getByText("Cartão de débito")).toBeInTheDocument();
   });
 
+  it("ordena PIX, crédito e débito independente da ordem do back", () => {
+    render(
+      <SalesByPaymentMethod
+        data={{
+          items: [
+            { method: "DEBIT_CARD", salesCount: 5, totalAmount: 50000, percentage: 50 },
+            { method: "CREDIT_CARD", salesCount: 3, totalAmount: 30000, percentage: 30 },
+            { method: "PIX", salesCount: 2, totalAmount: 20000, percentage: 20 },
+          ],
+          totals: { salesCount: 10, totalAmount: 100000 },
+        }}
+      />,
+    );
+    const labels = screen
+      .getAllByText(/^(PIX|Cartão de crédito|Cartão de débito)$/)
+      .map((el) => el.textContent);
+    expect(labels).toEqual(["PIX", "Cartão de crédito", "Cartão de débito"]);
+  });
+
   it("sem nenhuma venda mantém o estado vazio", () => {
     render(<SalesByPaymentMethod data={{ items: [], totals: { salesCount: 0, totalAmount: 0 } }} />);
     expect(screen.getByText("Nenhuma venda registrada")).toBeInTheDocument();
