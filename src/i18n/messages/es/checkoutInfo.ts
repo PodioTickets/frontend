@@ -113,6 +113,7 @@ export default {
   variationMissing: "Falta elegir la opción",
   includedInTicketPrice: "Incluido en la entrada",
   chooseVariation: "Elige una opción",
+  wantThisItem: "¿Quieres recibir este artículo?",
   noParticipantFound: "No se encontró ningún participante",
   standaloneTicket: "Entrada individual",
   additionalItemsOne: "Artículo adicional",

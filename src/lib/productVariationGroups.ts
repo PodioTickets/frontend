@@ -82,7 +82,9 @@ export function getVariationGroups<V extends VariationLike>(
   });
 
   const groups = product.variationGroups;
-  if (Array.isArray(groups) && groups.length > 0) {
+  // Com `variationGroups` (mesmo vazio), opção sem grupo = removida pelo organizador e
+  // mantida só pelo histórico de vendas (back recusa escolher) → não vira variação.
+  if (Array.isArray(groups)) {
     return groups
       .map((g, index) => ({ g, index }))
       .sort((a, b) => (a.g.sortOrder ?? a.index) - (b.g.sortOrder ?? b.index) || a.index - b.index)

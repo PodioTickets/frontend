@@ -6,6 +6,7 @@ import {
   productOffersChoice,
   autoSelectedVariationIds,
   buildAutoSelectedProductsPayload,
+  withVariationlessProducts,
 } from "../checkoutProductStep";
 
 /**
@@ -157,5 +158,41 @@ describe("buildAutoSelectedProductsPayload", () => {
       () => [product({ id: "kit", isRequired: true, variations: [{ id: "v1", name: "P" }, { id: "v2", name: "M" }] as never })],
     );
     expect(payload).toHaveLength(0);
+  });
+});
+
+describe("withVariationlessProducts", () => {
+  const slots = buildParticipantTicketSlots([{ tickets: [ticket("t1")] }], [], { t1: 2 });
+  const participants = [{ email: "a@x.com" }, { email: "b@x.com" }];
+  const semVariacao = product({ id: "kit", variationGroups: [] as never });
+  const opcional = product({
+    id: "extra",
+    variationGroups: [] as never,
+    variations: [{ id: "no", name: "Sem interesse" }, { id: "old", name: "P" }] as never,
+  });
+  const comVariacao = product({
+    id: "camisa",
+    variationGroups: [{ id: "g", name: "Tamanho", variations: [{ id: "m", name: "M" }, { id: "g", name: "G" }] }] as never,
+  });
+
+  it("produto sem variação vai com variationIds vazio para cada participante (Sim / obrigatório)", () => {
+    const out = withVariationlessProducts([], slots, participants, () => [semVariacao, comVariacao]);
+    expect(out).toEqual([
+      { productId: "kit", variationIds: [], quantity: 1, participantEmail: "a@x.com", participantIndex: 0 },
+      { productId: "kit", variationIds: [], quantity: 1, participantEmail: "b@x.com", participantIndex: 1 },
+    ]);
+  });
+
+  it("'Não' (opt-out já escolhido) não é duplicado nem trocado; outro participante recebe", () => {
+    const naoDoA = { productId: "extra", variationIds: ["no"], variationId: "no", quantity: 1, participantEmail: "a@x.com", participantIndex: 0 };
+    const out = withVariationlessProducts([naoDoA], slots, participants, () => [opcional]);
+    expect(out).toEqual([
+      naoDoA,
+      { productId: "extra", variationIds: [], quantity: 1, participantEmail: "b@x.com", participantIndex: 1 },
+    ]);
+  });
+
+  it("participante sem e-mail fica de fora", () => {
+    expect(withVariationlessProducts([], slots, [{ email: "" }, {}], () => [semVariacao])).toEqual([]);
   });
 });

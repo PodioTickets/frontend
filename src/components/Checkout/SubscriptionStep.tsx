@@ -20,9 +20,8 @@ import {
 import type { Ticket } from "@/hooks/useTickets";
 import { isSemInteresseVariation } from "@/utils/semInteresseVariation";
 import { hasDisplayableDistance } from "@/utils/checkoutModalityDisplay";
-import { buildParticipantTicketSlots } from "@/lib/checkoutProductStep";
+import { buildParticipantTicketSlots, withVariationlessProducts } from "@/lib/checkoutProductStep";
 import {
-  type VariationGroupView,
   type VariationOptionView,
   autoSelectableOptions,
   getOptOutOption,
@@ -343,7 +342,8 @@ function ProductCard({
 
 /**
  * Card de UM produto/kit com um select por variação; o opt-out "Sem interesse" entra
- * só no select da 1ª variação. Kit sem variação → card sem select.
+ * só no select da 1ª variação. Kit sem variação → card sem select; sem variação mas
+ * opcional → select "Quer receber este item?" (Sim padrão / Não = "Sem interesse").
  */
 function ProductVariationCards({
   product,
@@ -365,13 +365,34 @@ function ProductVariationCards({
   const optOut = getOptOutOption(product);
   const optedOut = !!optOut && selection.includes(optOut.id);
 
-  // Só o opt-out (sem variação real): um select que tem só "Sem interesse".
-  const selectGroups: Array<VariationGroupView<Product["variations"][number]>> =
-    groups.length > 0
-      ? groups
-      : optOut
-        ? [{ id: OPT_OUT_ONLY_GROUP_ID, name: null, options: [] }]
-        : [];
+  // Sem variação, só o opt-out: "Quer receber este item?" Sim (padrão = seleção vazia) / Não (= "Sem interesse").
+  if (groups.length === 0 && optOut) {
+    const yes = { ...optOut.variation, name: t("yes"), price: 0 };
+    const no = { ...optOut.variation, name: t("no") };
+    const yesId = `${product.id}:${OPT_OUT_ONLY_GROUP_ID}`;
+    return (
+      <ProductCard
+        product={product}
+        variant={variant}
+        showMissing={false}
+        selects={[
+          {
+            key: OPT_OUT_ONLY_GROUP_ID,
+            title: t("wantThisItem"),
+            options: [
+              { id: yesId, label: yes.name },
+              { id: optOut.id, label: no.name },
+            ],
+            selected: optedOut ? no : yes,
+            selectedId: optedOut ? optOut.id : yesId,
+            onSelect: (opt) => onChange(opt.id === optOut.id ? [optOut.id] : []),
+            disabled: false,
+            dataAttribute: `variation-${product.id}`,
+          },
+        ]}
+      />
+    );
+  }
 
   const toDropdownOption = (option: ProductOption): DropdownOption => {
     const state = getOptionState?.(product, option) ?? {};
@@ -379,7 +400,7 @@ function ProductVariationCards({
   };
 
   let missing = false;
-  const selects: ProductCardSelect[] = selectGroups.map((group, index) => {
+  const selects: ProductCardSelect[] = groups.map((group, index) => {
     const isFirst = index === 0;
     const options = group.options.map(toDropdownOption);
     if (isFirst && optOut) options.push(toDropdownOption(optOut));
@@ -524,10 +545,19 @@ export function SubscriptionStep({
   useEffect(() => {
     if (!orderId) return;
     // Kit com variação faltando fica de fora até completar (o backend rejeitaria o PATCH).
-    const payload = buildProductsPatchPayload(participants, (productId, ids) => {
+    const chosen = buildProductsPatchPayload(participants, (productId, ids) => {
       const product = allProducts.find((p) => p.id === productId);
       return !product || isSelectionComplete(product, ids);
-    });
+    }).products;
+    // Produtos sem variação (obrigatório / "Sim") também vão — senão não entram na inscrição.
+    const payload = {
+      products: withVariationlessProducts(
+        chosen,
+        buildParticipantTicketSlots(categorizedTickets, uncategorizedTickets, raceQuantities),
+        participants,
+        (ticketId) => allProducts.filter((p) => (ticketProductsMap[ticketId] ?? []).includes(p.id)),
+      ),
+    };
     const sig = JSON.stringify(payload);
     if (lastProductsSigRef.current === sig) return;
     lastProductsSigRef.current = sig;
@@ -545,7 +575,18 @@ export function SubscriptionStep({
     return () => {
       if (productsDebounceRef.current) clearTimeout(productsDebounceRef.current);
     };
-  }, [orderId, participants, allProducts, patchProducts, syncFromOrder, queryClient]);
+  }, [
+    orderId,
+    participants,
+    allProducts,
+    ticketProductsMap,
+    categorizedTickets,
+    uncategorizedTickets,
+    raceQuantities,
+    patchProducts,
+    syncFromOrder,
+    queryClient,
+  ]);
 
   // Map ticketId → preço unitário (em reais) vindo da order.
   const orderTicketPriceById = useMemo(() => {

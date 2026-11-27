@@ -36,7 +36,7 @@ function CheckoutProdutosContent() {
   // (navegação direta por URL, ou Informações ainda indefinido ao sair), persiste
   // as variações auto-selecionadas e segue pro pagamento via `replace` — assim a
   // etapa não fica no histórico e o "voltar" do pagamento cai em Informações.
-  const { hasSelectableProducts, autoSelectedProducts } = useCheckoutProductStep(eventId);
+  const { hasSelectableProducts, autoSelectedProducts, withVariationless } = useCheckoutProductStep(eventId);
   const autoSkipRef = useRef(false);
 
   useEffect(() => {
@@ -75,7 +75,7 @@ function CheckoutProdutosContent() {
     }
 
     // Mesmo builder do eager-patch do SubscriptionStep — não pode divergir.
-    const { products } = buildProductsPatchPayload(participants);
+    const products = withVariationless(buildProductsPatchPayload(participants).products);
 
     setIsSubmitting(true);
     try {

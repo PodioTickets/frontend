@@ -59,7 +59,7 @@ function formatBRL(cents: number): string {
  * Não está mapeado no design system primário — usa hex direto pra match. */
 const BAR_COLOR = "#0E7490";
 
-/* Ordem fixa na tela: PIX, crédito, débito; demais métodos depois, na ordem do back. */
+/* Ordem na tela: mais vendas primeiro; empate → maior valor; empate → PIX, crédito, débito. */
 const METHOD_ORDER = ["PIX", "CREDIT_CARD", "DEBIT_CARD"];
 const methodRank = (method: string) => {
   const i = METHOD_ORDER.indexOf(method);
@@ -68,7 +68,12 @@ const methodRank = (method: string) => {
 
 export function SalesByPaymentMethod({ data }: Props) {
   const { totals } = data;
-  const items = [...data.items].sort((a, b) => methodRank(a.method) - methodRank(b.method));
+  const items = [...data.items].sort(
+    (a, b) =>
+      b.salesCount - a.salesCount ||
+      b.totalAmount - a.totalAmount ||
+      methodRank(a.method) - methodRank(b.method),
+  );
   const hasData = items.length > 0;
 
   return (

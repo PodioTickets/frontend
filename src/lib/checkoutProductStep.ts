@@ -1,6 +1,10 @@
 import type { Ticket } from "@/hooks/useTickets";
 import type { Product } from "@/components/Checkout/SubscriptionStep.utils";
-import { autoSelectedVariationIds, isSelectionComplete } from "@/lib/productVariationGroups";
+import {
+  autoSelectedVariationIds,
+  getVariationGroups,
+  isSelectionComplete,
+} from "@/lib/productVariationGroups";
 
 /**
  * Slot participante↔ingresso do checkout.
@@ -109,4 +113,45 @@ export function buildAutoSelectedProductsPayload(
   }
 
   return payload;
+}
+
+/** Item do `patchProducts` de produto SEM variação (nenhuma opção a enviar). */
+export interface VariationlessProductItem {
+  productId: string;
+  variationIds: string[];
+  quantity: number;
+  participantEmail: string;
+  participantIndex: number;
+}
+
+/**
+ * Acrescenta os produtos SEM variação do ingresso de cada participante (kit obrigatório
+ * sem variação, ou "Quer receber este item?" = Sim) com `variationIds: []`. O back só grava
+ * na inscrição o que recebe aqui — sem isto esses kits não viravam RegistrationProduct
+ * (PDF, export, inscrição). Quem respondeu "Não" já está em `chosen` (opt-out) e fica como está.
+ */
+export function withVariationlessProducts<T extends { productId: string; participantIndex?: number }>(
+  chosen: T[],
+  slots: ParticipantTicketSlot[],
+  participants: Array<{ email?: string }>,
+  getProductsForTicket: (ticketId: string) => Product[],
+): Array<T | VariationlessProductItem> {
+  const taken = new Set(chosen.map((p) => `${p.participantIndex}:${p.productId}`));
+  const extra: VariationlessProductItem[] = [];
+  for (const slot of slots) {
+    const participantEmail = participants[slot.participantIndex]?.email;
+    if (!participantEmail) continue;
+    for (const product of getProductsForTicket(slot.ticketId)) {
+      if (getVariationGroups(product).length > 0) continue;
+      if (taken.has(`${slot.participantIndex}:${product.id}`)) continue;
+      extra.push({
+        productId: product.id,
+        variationIds: [],
+        quantity: 1,
+        participantEmail,
+        participantIndex: slot.participantIndex,
+      });
+    }
+  }
+  return [...chosen, ...extra];
 }
