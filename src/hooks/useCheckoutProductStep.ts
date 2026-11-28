@@ -5,7 +5,7 @@ import { useCheckout } from "@/contexts/CheckoutContext";
 import {
   buildParticipantTicketSlots,
   buildAutoSelectedProductsPayload,
-  productOffersChoice,
+  productShowsInStep,
   withVariationlessProducts,
   type AutoSelectedProduct,
   type VariationlessProductItem,
@@ -62,7 +62,7 @@ export function useCheckoutProductStep(
     hasSelectableProducts = null;
   } else {
     hasSelectableProducts = slots.some((slot) =>
-      getProductsForTicket(slot.ticketId).some(productOffersChoice),
+      getProductsForTicket(slot.ticketId).some(productShowsInStep),
     );
   }
 
