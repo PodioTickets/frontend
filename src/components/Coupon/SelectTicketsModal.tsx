@@ -7,6 +7,7 @@ import { Button } from "@/components/Button";
 import { useTickets, type Ticket } from "@/hooks/useTickets";
 import { useTicketCategories } from "@/hooks/useTicketCategories";
 import { TicketIcon } from "../Icons/TicketIcon";
+import { hasDisplayableDistance } from "@/utils/checkoutModalityDisplay";
 
 /**
  * Preço efetivo do ingresso em centavos. Prioriza o lote ativo (fonte de verdade
@@ -65,8 +66,16 @@ export function SelectTicketsModal({
   const { tickets, loading } = useTickets(eventId, isOpen);
   const { categories } = useTicketCategories(eventId, isOpen);
 
-  // Mapear categorias por ID
-  const categoryMap = new Map(categories.map((cat) => [cat.id, cat.name]));
+  // Avulsos primeiro (sem título), depois uma seção por categoria, na ordem das categorias.
+  const categoryIds = new Set(categories.map((cat) => cat.id));
+  const groups: Array<{ id: string; title: string | null; tickets: Ticket[] }> = [
+    { id: "avulsos", title: null, tickets: tickets.filter((t) => !categoryIds.has(t.groupId)) },
+    ...categories.map((cat) => ({
+      id: cat.id,
+      title: cat.name,
+      tickets: tickets.filter((t) => t.groupId === cat.id),
+    })),
+  ].filter((g) => g.tickets.length > 0);
 
   useEffect(() => {
     if (isOpen) {
@@ -92,6 +101,21 @@ export function SelectTicketsModal({
     }
   };
 
+  // Ingresso que pode ser marcado agora (gratuito é inelegível a cupom/voucher).
+  const isSelectable = (ticket: Ticket) => isQuestion || !isFreeTicket(ticket);
+
+  /** Checkbox do cabeçalho: marca todos os elegíveis do grupo; se já estão todos, desmarca o grupo. */
+  const handleToggleGroup = (groupTickets: Ticket[]) => {
+    if (readOnly || singleSelect) return;
+    const ids = groupTickets.filter(isSelectable).map((t) => t.id);
+    const allSelected = ids.length > 0 && ids.every((id) => selectedIds.includes(id));
+    setSelectedIds((prev) =>
+      allSelected
+        ? prev.filter((id) => !groupTickets.some((t) => t.id === id))
+        : [...prev, ...ids.filter((id) => !prev.includes(id))],
+    );
+  };
+
   const handleConfirm = () => {
     onConfirm(selectedIds);
     onClose();
@@ -105,22 +129,19 @@ export function SelectTicketsModal({
   return (
     <div className="fixed inset-0 z-100 flex items-center justify-center md:p-4">
       {/* Backdrop */}
-      <div
-        className="absolute inset-0 bg-black/60"
-        onClick={onClose}
-      />
+      <div className="absolute inset-0 bg-black/60" onClick={onClose} />
 
       {/* Modal: fullscreen no mobile, dialog centralizado no desktop */}
       <div className="relative bg-gray-1 w-full h-full md:h-auto md:max-h-[90vh] md:max-w-[1098px] md:rounded-xl overflow-hidden flex flex-col shadow-lg pb-[max(0px,env(safe-area-inset-bottom))]">
         {/* Header */}
         <div className="border-b border-gray-6 px-4 py-3 flex items-center justify-between shrink-0">
-          <div className="flex items-center gap-2 md:gap-2.5 min-w-0">
+          <div className="flex items-center gap-2.5 min-w-0">
             <button
               onClick={onClose}
-              className="border border-gray-6 rounded-full p-2 hover:bg-gray-2 transition-colors shrink-0"
+              className="border border-gray-6 rounded-full size-8 flex items-center justify-center hover:bg-gray-2 transition-colors shrink-0"
               aria-label="Voltar"
             >
-              <ArrowLeft className="size-5 text-gray-12" />
+              <ArrowLeft className="size-4 text-gray-12" />
             </button>
             <h2 className="text-gray-12 text-lg md:text-xl font-semibold font-family-dm-sans leading-[1.3] truncate">
               {readOnly
@@ -132,7 +153,7 @@ export function SelectTicketsModal({
           </div>
           <button
             onClick={onClose}
-            className="text-gray-11 hover:text-gray-12 transition-colors p-1 rounded-lg hover:bg-gray-3 shrink-0"
+            className="text-gray-11 hover:text-gray-12 transition-colors size-9 flex items-center justify-center rounded-lg hover:bg-gray-3 shrink-0"
             aria-label="Fechar"
           >
             <X className="size-6" />
@@ -140,87 +161,76 @@ export function SelectTicketsModal({
         </div>
 
         {/* Content */}
-        <div className="flex-1 overflow-hidden flex flex-col">
-          <div className="flex-1 overflow-y-auto p-4 md:p-5">
-            {/* Info bar */}
-            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2 md:gap-4 mb-5 md:mb-7">
-              <p className="text-gray-11 text-sm md:text-base font-family-dm-sans leading-[1.3]">
-                {readOnly
-                  ? "Ingressos vinculados a este voucher (somente leitura)"
-                  : isQuestion
-                    ? "Selecione os ingressos aos quais esta pergunta será direcionada"
-                    : context === "voucher"
-                      ? "Selecione o ingresso que deseja vincular a este voucher"
-                      : "Selecione os ingressos que deseja vincular a este cupom"}
+        <div className="flex-1 overflow-y-auto px-4 md:pr-5 py-5 flex flex-col gap-5 md:gap-7">
+          {/* Info bar */}
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2 md:gap-4 font-family-dm-sans text-sm md:text-base leading-[1.3]">
+            <p className="text-gray-11">
+              {readOnly
+                ? "Ingressos vinculados a este voucher (somente leitura)"
+                : isQuestion
+                  ? "Selecione os ingressos aos quais esta pergunta será direcionada"
+                  : context === "voucher"
+                    ? "Selecione o ingresso que deseja vincular a este voucher"
+                    : "Selecione os ingressos em que este cupom será aplicado"}
+            </p>
+            <div className="flex items-center gap-6 shrink-0">
+              <p className="text-gray-11">
+                Total de ingressos: <span className="text-gray-12 tabular-nums">{tickets.length}</span>
               </p>
-              <div className="flex items-center gap-4 md:gap-6 shrink-0">
-                <div className="flex items-center gap-1">
-                  <span className="text-gray-11 text-sm md:text-base font-family-dm-sans leading-[1.3]">
-                    Total:
-                  </span>
-                  <span className="text-gray-12 text-sm md:text-base font-family-dm-sans leading-[1.3] tabular-nums">
-                    {tickets.length}
-                  </span>
-                </div>
-                <div className="flex items-center gap-1">
-                  <span className="text-gray-11 text-sm md:text-base font-family-dm-sans leading-[1.3]">
-                    Selecionados:
-                  </span>
-                  <span className="text-gray-12 text-sm md:text-base font-family-dm-sans leading-[1.3] tabular-nums">
-                    {selectedIds.length}
-                  </span>
-                </div>
-              </div>
+              <p className="text-gray-11">
+                Selecionados: <span className="text-gray-12 tabular-nums">{selectedIds.length}</span>
+              </p>
             </div>
-
-            {/* Tickets grid */}
-            {loading ? (
-              <div className="flex items-center justify-center py-20">
-                <p className="text-gray-11 text-base font-family-dm-sans">
-                  Carregando ingressos...
-                </p>
-              </div>
-            ) : tickets.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-20 gap-4">
-                <div className="size-16 flex items-center justify-center">
-                  <TicketIcon className="size-16 text-gray-8" />
-                </div>
-                <p className="text-gray-12 text-xl font-semibold font-manrope leading-[1.1]">
-                  Nenhum ingresso criado ainda...
-                </p>
-              </div>
-            ) : (
-              <>
-                {appliesToAll && (
-                  <div className="mb-4 md:mb-5 rounded-lg border border-primary-6 bg-primary-3 px-4 py-3">
-                    <p className="text-gray-12 text-sm md:text-base font-family-dm-sans leading-[1.3]">
-                      Este voucher se aplica a <strong>todos os ingressos</strong> do evento.
-                    </p>
-                  </div>
-                )}
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
-                  {tickets.map((ticket) => {
-                    const selected = appliesToAll || selectedIds.includes(ticket.id);
-                    // Gratuito e ainda não selecionado → inelegível a cupom/voucher.
-                    // (Já selecionado permanece removível, tratado no toggle.) Em
-                    // somente-leitura é apenas exibição, então não marca inelegível.
-                    const ineligible = !readOnly && !isQuestion && isFreeTicket(ticket) && !selected;
-                    return (
-                      <TicketCard
-                        key={ticket.id}
-                        ticket={ticket}
-                        categoryName={categoryMap.get(ticket.groupId) || "Ingresso avulso"}
-                        isSelected={selected}
-                        onToggle={() => handleToggleTicket(ticket.id)}
-                        readOnly={readOnly}
-                        ineligible={ineligible}
-                      />
-                    );
-                  })}
-                </div>
-              </>
-            )}
           </div>
+
+          {loading ? (
+            <div className="flex items-center justify-center py-20">
+              <p className="text-gray-11 text-base font-family-dm-sans">Carregando ingressos...</p>
+            </div>
+          ) : tickets.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-20 gap-4">
+              <div className="size-16 flex items-center justify-center">
+                <TicketIcon className="size-16 text-gray-8" />
+              </div>
+              <p className="text-gray-12 text-xl font-semibold font-manrope leading-[1.1]">
+                Nenhum ingresso criado ainda...
+              </p>
+            </div>
+          ) : (
+            <div className="flex flex-col gap-4">
+              {appliesToAll && (
+                <div className="rounded-lg border border-primary-6 bg-primary-3 px-4 py-3">
+                  <p className="text-gray-12 text-sm md:text-base font-family-dm-sans leading-[1.3]">
+                    Este voucher se aplica a <strong>todos os ingressos</strong> do evento.
+                  </p>
+                </div>
+              )}
+              {groups.map((group) => {
+                const table = (
+                  <TicketSelectTable
+                    tickets={group.tickets}
+                    headerClassName={group.title ? "bg-gray-4" : "bg-gray-3"}
+                    isSelected={(t) => appliesToAll || selectedIds.includes(t.id)}
+                    isSelectable={isSelectable}
+                    onToggle={(t) => handleToggleTicket(t.id)}
+                    onToggleAll={singleSelect ? undefined : () => handleToggleGroup(group.tickets)}
+                    readOnly={readOnly}
+                  />
+                );
+                return group.title ? (
+                  <div
+                    key={group.id}
+                    className="bg-gray-3 border border-gray-6 rounded-xl p-3 md:p-5 flex flex-col gap-4 md:gap-6"
+                  >
+                    <p className="font-manrope font-bold text-lg leading-[1.1] text-gray-12">{group.title}</p>
+                    {table}
+                  </div>
+                ) : (
+                  <div key={group.id}>{table}</div>
+                );
+              })}
+            </div>
+          )}
         </div>
 
         {/* Footer */}
@@ -238,8 +248,8 @@ export function SelectTicketsModal({
               {isQuestion
                 ? "Confirmar seleção"
                 : context === "voucher"
-                  ? "Adicionar ao voucher"
-                  : "Adicionar ao cupom"}
+                  ? "Aplicar ao voucher"
+                  : "Aplicar ao cupom"}
             </Button>
           )}
         </div>
@@ -248,69 +258,96 @@ export function SelectTicketsModal({
   );
 }
 
-interface TicketCardProps {
-  ticket: Ticket;
-  categoryName: string;
-  isSelected: boolean;
-  onToggle: () => void;
-  readOnly?: boolean;
-  /** Inelegível a cupom/voucher (gratuito): desabilita clique/checkbox e esmaece o card. */
-  ineligible?: boolean;
+interface TicketSelectTableProps {
+  tickets: Ticket[];
+  /** Fundo do cabeçalho: gray-3 nos avulsos, gray-4 dentro do card cinza da categoria (Figma). */
+  headerClassName: string;
+  isSelected: (ticket: Ticket) => boolean;
+  /** Gratuito é inelegível a cupom/voucher: linha esmaecida, sem marcar (desmarcar continua possível). */
+  isSelectable: (ticket: Ticket) => boolean;
+  onToggle: (ticket: Ticket) => void;
+  /** Ausente (seleção única) → cabeçalho sem checkbox. */
+  onToggleAll?: () => void;
+  readOnly: boolean;
 }
 
-function TicketCard({
-  ticket,
-  categoryName,
+/** Tabela de seleção de um grupo de ingressos: checkbox · Nome do ingresso · Modalidade/Distância. */
+function TicketSelectTable({
+  tickets,
+  headerClassName,
   isSelected,
+  isSelectable,
   onToggle,
-  readOnly = false,
-  ineligible = false,
-}: TicketCardProps) {
-  // Card só é interativo quando não é somente-leitura e é elegível.
-  const interactive = !readOnly && !ineligible;
-  // Esmaece (aparência "desabilitada") os cards inelegíveis e, em somente-leitura,
-  // os NÃO vinculados — assim só o ingresso selecionado permanece em destaque (verde).
-  const dimmed = ineligible || (readOnly && !isSelected);
+  onToggleAll,
+  readOnly,
+}: TicketSelectTableProps) {
+  const selectable = tickets.filter(isSelectable);
+  const allSelected = selectable.length > 0 && selectable.every(isSelected);
   return (
-    <div
-      className={`bg-gray-2 border rounded-xl p-4 flex flex-col transition-colors ${interactive ? "cursor-pointer" : "cursor-default"} ${dimmed ? "opacity-60" : ""} ${isSelected
-        ? "border-primary-8 bg-primary-4"
-        : interactive
-          ? "border-gray-6 hover:bg-gray-3"
-          : "border-gray-6"
-        }`}
-      onClick={interactive ? onToggle : undefined}
-      title={ineligible ? "Ingresso gratuito não é elegível a cupom/voucher" : undefined}
-    >
-      <div className="flex flex-col gap-2 mb-4">
-        <p className="text-gray-11 text-base font-family-dm-sans leading-[1.3] truncate">
-          {categoryName}
-        </p>
-        <div className="flex items-center gap-2">
-          <TicketIcon className="size-5 text-gray-12" />
-          <p className="text-gray-12 text-base font-bold font-manrope leading-[1.1] truncate">
-            {ticket.name}
-          </p>
-        </div>
-      </div>
-      <div className="border-t border-gray-6 pt-4 flex items-center justify-between gap-2">
-        <div className="flex flex-col min-w-0">
-          <p className="text-gray-12 text-base font-bold font-manrope leading-[1.1]">
-            {ticket.price}
-          </p>
-          {ineligible && (
-            <span className="text-gray-10 text-xs font-family-dm-sans leading-[1.3] mt-1">
-              Gratuito · não elegível
-            </span>
+    <div className="bg-gray-2 border-[1.5px] border-gray-6 rounded-lg overflow-hidden w-full">
+      <div className={`${headerClassName} border-b border-gray-6 h-11 flex items-center`}>
+        <div className="pl-4 flex items-center shrink-0 w-10">
+          {onToggleAll && (
+            <Checkbox
+              checked={allSelected}
+              onCheckedChange={onToggleAll}
+              disabled={readOnly || selectable.length === 0}
+              aria-label="Selecionar todos"
+            />
           )}
         </div>
-        <Checkbox
-          checked={isSelected}
-          onCheckedChange={interactive ? onToggle : undefined}
-          disabled={!interactive}
-          onClick={(e) => e.stopPropagation()}
-        />
+        <p className="flex-1 min-w-0 p-4 font-inter text-sm font-medium leading-[1.3] text-gray-12">
+          Nome do ingresso
+        </p>
+        <p className="flex-1 min-w-0 p-4 text-center font-inter text-sm font-medium leading-[1.3] text-gray-12">
+          Modalidade/Distância
+        </p>
       </div>
+      {tickets.map((ticket) => {
+        const selected = isSelected(ticket);
+        // Gratuito ainda não marcado → inelegível. Já marcado (vínculo antigo) segue removível.
+        const ineligible = !readOnly && !isSelectable(ticket) && !selected;
+        const interactive = !readOnly && !ineligible;
+        return (
+          <div
+            key={ticket.id}
+            className={`bg-gray-1 border-b border-gray-6 last:border-b-0 min-h-[52px] flex items-center transition-colors ${
+              interactive ? "cursor-pointer hover:bg-gray-2" : "cursor-default"
+            } ${ineligible || (readOnly && !selected) ? "opacity-60" : ""}`}
+            onClick={interactive ? () => onToggle(ticket) : undefined}
+            title={ineligible ? "Ingresso gratuito não é elegível a cupom/voucher" : undefined}
+          >
+            <div className="pl-4 flex items-center shrink-0 w-10">
+              <Checkbox
+                checked={selected}
+                onCheckedChange={interactive ? () => onToggle(ticket) : undefined}
+                disabled={!interactive}
+                onClick={(e) => e.stopPropagation()}
+                aria-label={ticket.name}
+              />
+            </div>
+            <div className="flex-1 min-w-0 px-4 py-2 flex flex-col justify-center gap-1">
+              <p className="font-family-dm-sans font-semibold text-sm leading-[1.3] text-gray-12 truncate">
+                {ticket.name}
+              </p>
+              {ineligible && (
+                <span className="font-family-dm-sans text-xs leading-[1.3] text-gray-10">
+                  Gratuito · não elegível
+                </span>
+              )}
+            </div>
+            <div className="flex-1 min-w-0 px-4 py-2 flex flex-col items-center justify-center gap-2 text-sm leading-[1.3] text-center">
+              <p className="font-inter font-semibold text-gray-12">{ticket.modality || "—"}</p>
+              {hasDisplayableDistance(ticket.distance) && (
+                <p className="font-family-dm-sans font-medium text-gray-11">
+                  {ticket.distance}
+                  {ticket.distanceUnit || "KM"}
+                </p>
+              )}
+            </div>
+          </div>
+        );
+      })}
     </div>
   );
 }

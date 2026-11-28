@@ -24,11 +24,12 @@ import { buildParticipantTicketSlots, withVariationlessProducts } from "@/lib/ch
 import {
   type VariationOptionView,
   autoSelectableOptions,
-  getOptOutOption,
   getVariationGroups,
   groupSelection,
+  isGroupOptedOut,
   isOptedOut,
   isSelectionComplete,
+  offeredOptOutOption,
   productOffersChoice,
   resolveSelection,
   selectionIds,
@@ -276,7 +277,7 @@ function ProductCard({
       : undefined;
     return sel.disabled ? (
       <div className="opacity-50 pointer-events-none" aria-disabled>
-        <DropdownTrigger selected={null} sideLabel={undefined} variant={triggerVariant} />
+        <DropdownTrigger selected={sel.selected} sideLabel={undefined} variant={triggerVariant} />
       </div>
     ) : (
       <Dropdown
@@ -362,8 +363,33 @@ function ProductVariationCards({
 }) {
   const t = useT("checkoutInfo");
   const groups = getVariationGroups(product);
-  const optOut = getOptOutOption(product);
+  // Kit obrigatório não oferece "Sem interesse" em nenhuma variação.
+  const optOut = offeredOptOutOption(product);
   const optedOut = !!optOut && selection.includes(optOut.id);
+
+  // Obrigatório sem variação: "Quer receber este item?" travado em Sim (não dá para recusar).
+  if (groups.length === 0 && product.isRequired) {
+    const yes: Product["variations"][number] = { name: t("yes"), price: 0, stock: 0 };
+    return (
+      <ProductCard
+        product={product}
+        variant={variant}
+        showMissing={false}
+        selects={[
+          {
+            key: OPT_OUT_ONLY_GROUP_ID,
+            title: t("wantThisItem"),
+            options: [],
+            selected: yes,
+            selectedId: null,
+            onSelect: () => {},
+            disabled: true,
+            dataAttribute: `variation-${product.id}`,
+          },
+        ]}
+      />
+    );
+  }
 
   // Sem variação, só o opt-out: "Quer receber este item?" Sim (padrão = seleção vazia) / Não (= "Sem interesse").
   if (groups.length === 0 && optOut) {
@@ -402,11 +428,14 @@ function ProductVariationCards({
   let missing = false;
   const selects: ProductCardSelect[] = groups.map((group, index) => {
     const isFirst = index === 0;
+    // "Sem interesse" em TODA variação e nenhuma trava a outra (27/11). Todas em
+    // "Sem interesse" = kit recusado inteiro.
     const options = group.options.map(toDropdownOption);
-    if (isFirst && optOut) options.push(toDropdownOption(optOut));
-    const picked = isFirst && optedOut ? optOut : optedOut ? null : groupSelection(group, selection);
-    const disabled = !isFirst && optedOut;
-    if (options.length > 0 && !picked && !disabled) missing = true;
+    if (optOut) options.push(toDropdownOption(optOut));
+    const picked =
+      groupSelection(group, selection) ?? (optOut && isGroupOptedOut(product, selection, group) ? optOut : null);
+    const disabled = false;
+    if (options.length > 0 && !picked) missing = true;
     return {
       key: group.id,
       title: group.name ?? variationSectionTitle(product, t("chooseVariation")),

@@ -194,19 +194,19 @@ export function ParticipantSummaryModal({
   };
 
   /* Linhas de variação do produto: uma por variação do kit (título = nome da
-   * variação). "Sem interesse" fica só na 1ª linha (recusou o kit inteiro). */
+   * variação). Variação sem opção escolhida e com o opt-out na seleção = "Sem interesse". */
   const buildVariationRows = (product: Product, ids: string[]): VariationRow[] => {
     const fallbackTitle = product.variationType || null;
     const optOut = getOptOutOption(product);
     const groups = getVariationGroups(product);
-    if (optOut && ids.includes(optOut.id)) {
-      return [{ key: "opt-out", title: groups[0]?.name ?? fallbackTitle, selected: optOut.variation }];
+    const hasOptOut = !!optOut && ids.includes(optOut.id);
+    if (groups.length === 0) {
+      return [{ key: "none", title: fallbackTitle, selected: hasOptOut && optOut ? optOut.variation : null }];
     }
-    if (groups.length === 0) return [{ key: "none", title: fallbackTitle, selected: null }];
     return groups.map((group) => ({
       key: group.id,
       title: group.name ?? fallbackTitle,
-      selected: groupSelection(group, ids)?.variation ?? null,
+      selected: groupSelection(group, ids)?.variation ?? (hasOptOut && optOut ? optOut.variation : null),
     }));
   };
 
