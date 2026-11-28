@@ -5,6 +5,7 @@ import {
   buildVariationLabel,
   getOptOutOption,
   getVariationGroups,
+  isOptedOut,
   isSelectionComplete,
   normalizeSelection,
   productOffersChoice,
@@ -88,13 +89,22 @@ describe("seleção por variação", () => {
     ids = setGroupSelection(kit, ids, "camisa", "c-m");
     expect(ids).toEqual(["c-m", "s-g"]);
   });
-  it("opt-out limpa as outras variações; opção real tira o opt-out", () => {
-    const optedOut = setGroupSelection(kit, ["c-m", "s-g"], "camisa", "no");
-    expect(optedOut).toEqual(["no"]);
-    expect(isSelectionComplete(kit, optedOut)).toBe(true);
-    const back = setGroupSelection(kit, optedOut, "camisa", "c-p");
-    expect(back).toEqual(["c-p"]);
-    expect(isSelectionComplete(kit, back)).toBe(false);
+  it("'Sem interesse' vale só para a variação escolhida; as outras continuam livres (27/11)", () => {
+    const camisaNao = setGroupSelection(kit, ["c-m", "s-g"], "camisa", "no");
+    expect(camisaNao).toEqual(["s-g", "no"]);
+    expect(isSelectionComplete(kit, camisaNao)).toBe(true);
+    expect(isOptedOut(kit, camisaNao)).toBe(false);
+    expect(selectionLabel(kit, camisaNao)).toBe("Tamanho da camisa: Sem interesse · Tamanho do short: G");
+    // As duas em "Sem interesse" = kit recusado inteiro.
+    const tudoNao = setGroupSelection(kit, camisaNao, "short", "no");
+    expect(tudoNao).toEqual(["no"]);
+    expect(isOptedOut(kit, tudoNao)).toBe(true);
+    // Escolher opção real numa variação: a outra segue em "Sem interesse".
+    const back = setGroupSelection(kit, tudoNao, "camisa", "c-p");
+    expect(back).toEqual(["c-p", "no"]);
+    expect(isSelectionComplete(kit, back)).toBe(true);
+    // Todas com opção real → o opt-out sai.
+    expect(setGroupSelection(kit, back, "short", "s-g")).toEqual(["c-p", "s-g"]);
   });
   it("isSelectionComplete exige uma opção por variação", () => {
     expect(isSelectionComplete(kit, ["c-p"])).toBe(false);
@@ -103,7 +113,8 @@ describe("seleção por variação", () => {
   });
   it("normalizeSelection descarta ids estranhos e ordena", () => {
     expect(normalizeSelection(kit, ["s-g", "lixo", "c-m"])).toEqual(["c-m", "s-g"]);
-    expect(normalizeSelection(kit, ["c-m", "no"])).toEqual(["no"]);
+    expect(normalizeSelection(kit, ["no", "c-m"])).toEqual(["c-m", "no"]);
+    expect(normalizeSelection(kit, ["c-m", "s-g", "no"])).toEqual(["c-m", "s-g"]);
   });
   it("selectionIds aceita o valor legado (string) do sessionStorage", () => {
     expect(selectionIds("v1")).toEqual(["v1"]);
@@ -116,7 +127,7 @@ describe("escolha / auto-seleção", () => {
   it("productOffersChoice: opt-out conta como escolha", () => {
     expect(productOffersChoice(kit)).toBe(true);
   });
-  it("variação de opção única é auto-selecionada, exceto a 1ª quando há opt-out", () => {
+  it("variação de opção única é auto-selecionada, exceto quando há opt-out (todo select tem 'Sem interesse')", () => {
     const withOptOutFirstSingle = {
       ...kit,
       variationGroups: [
@@ -124,7 +135,7 @@ describe("escolha / auto-seleção", () => {
         { id: "short", name: "Short", sortOrder: 1, variations: [opt("s-u", "U", "short")] },
       ],
     };
-    expect(autoSelectedVariationIds(withOptOutFirstSingle)).toEqual(["s-u"]);
+    expect(autoSelectedVariationIds(withOptOutFirstSingle)).toEqual([]);
     expect(autoSelectedVariationIds({ ...withOptOutFirstSingle, variations: [] })).toEqual(["c-u", "s-u"]);
   });
 });

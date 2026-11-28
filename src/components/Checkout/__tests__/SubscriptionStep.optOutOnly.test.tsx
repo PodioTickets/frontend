@@ -66,4 +66,57 @@ describe("Kit sem variação (só opt-out) no checkout", () => {
     await choose("Sim");
     expect(onSelectionChange).toHaveBeenLastCalledWith(0, "kit-1", []);
   });
+
+  it("kit obrigatório sem variação: 'Sim' travado, sem opção de 'Não'", () => {
+    render(
+      <ProductsSection
+        title="Produtos do kit"
+        products={[{ ...kit, id: "obr", isRequired: true, variations: [] }]}
+        participantIndex={0}
+        selectedVariations={{}}
+        onSelectionChange={vi.fn()}
+        variant="desktop"
+      />,
+    );
+    expect(screen.getByText("Quer receber este item?")).toBeInTheDocument();
+    expect(screen.getByText("Sim")).toBeInTheDocument();
+    expect(screen.queryByText("Não")).not.toBeInTheDocument();
+    expect(document.querySelector("[aria-disabled]")).toHaveTextContent("Sim");
+  });
+
+  it("kit obrigatório com variação não oferece 'Sem interesse' (mesmo com a opção antiga no banco)", async () => {
+    const obrigatorio: Product = {
+      ...kit,
+      id: "kit-2",
+      isRequired: true,
+      variations: [
+        { id: "no", name: "Sem interesse", price: 0, stock: 0, groupId: null },
+        { id: "c-p", name: "P", price: 0, stock: 0, groupId: "g" },
+        { id: "c-m", name: "M", price: 0, stock: 0, groupId: "g" },
+      ],
+      variationGroups: [
+        {
+          id: "g",
+          name: "Camisa",
+          variations: [
+            { id: "c-p", name: "P", price: 0, stock: 0, groupId: "g" },
+            { id: "c-m", name: "M", price: 0, stock: 0, groupId: "g" },
+          ],
+        },
+      ],
+    };
+    const { container } = render(
+      <ProductsSection
+        title="Produtos do kit"
+        products={[obrigatorio]}
+        participantIndex={0}
+        selectedVariations={{}}
+        onSelectionChange={vi.fn()}
+        variant="desktop"
+      />,
+    );
+    await act(async () => fireEvent.click(container.querySelector("[data-variation-kit-2-button]") as HTMLElement));
+    expect(screen.getByText("M")).toBeInTheDocument();
+    expect(screen.queryByText("Sem interesse")).not.toBeInTheDocument();
+  });
 });
