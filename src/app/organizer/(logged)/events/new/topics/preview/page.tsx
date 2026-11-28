@@ -70,7 +70,7 @@ export default function PreviewEventPage() {
   }, [authChecked, formData.createdEventId]);
 
   const handleBack = () => {
-    orgNav.push("/organizer/events/new/topics");
+    orgNav.push("/organizer/events/new/banner");
   };
 
   if (!authChecked || loading) {

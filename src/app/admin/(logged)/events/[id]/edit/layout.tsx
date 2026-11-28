@@ -9,7 +9,6 @@ import { EditEventProvider, useEditEvent } from "@/contexts/EditEventContext";
 import { OrganizerInfoIcon } from "@/components/Icons/Organizer/InfoIcon";
 import { OrganizerTicketIcon } from "@/components/Icons/Organizer/TicketIcon";
 import { QuestionIcon } from "@/components/Icons/QuestionIcon";
-import { TopicsIcon } from "@/components/Icons/TopicsIcon";
 import Link from "next/link";
 import { BannerIcon } from "@/components/Icons/Organizer/BannerIcon";
 import { FinancialStepIcon } from "@/components/Icons/Organizer/FinancialStepIcon";
@@ -21,9 +20,9 @@ function EditProgressBar() {
   const eventId = params.id as string;
 
   const getStepStatus = (step: number): "completed" | "active" | "default" => {
-    const isBannerStep = pathname.includes("/edit/banner");
+    // Etapa "Página" = banner + tópicos (`/edit/topics` só redireciona para ela).
+    const isBannerStep = pathname.includes("/edit/banner") || pathname.includes("/edit/topics");
     const isTicketsStep = pathname.includes("/edit/tickets");
-    const isTopicsStep = pathname.includes("/edit/topics");
     const isQuestionnaireStep = pathname.includes("/edit/questionnaire");
     const isFinancialStep = pathname.includes("/edit/financial");
 
@@ -32,7 +31,6 @@ function EditProgressBar() {
       pathNoQuery.endsWith("/edit") &&
       !isBannerStep &&
       !isTicketsStep &&
-      !isTopicsStep &&
       !isQuestionnaireStep;
 
     let currentStepIndex = -1;
@@ -40,9 +38,8 @@ function EditProgressBar() {
     if (isInformationStep) currentStepIndex = 0;
     else if (isBannerStep) currentStepIndex = 1;
     else if (isTicketsStep) currentStepIndex = 2;
-    else if (isTopicsStep) currentStepIndex = 3;
-    else if (isQuestionnaireStep) currentStepIndex = 4;
-    else if (isFinancialStep) currentStepIndex = 5;
+    else if (isQuestionnaireStep) currentStepIndex = 3;
+    else if (isFinancialStep) currentStepIndex = 4;
 
     if (currentStepIndex === -1) return "default";
     if (step - 1 < currentStepIndex) return "completed";
@@ -59,7 +56,7 @@ function EditProgressBar() {
     },
     {
       step: 2,
-      label: "Banner",
+      label: "Página",
       icon: BannerIcon,
       href: `/admin/events/${eventId}/edit/banner`,
     },
@@ -71,18 +68,12 @@ function EditProgressBar() {
     },
     {
       step: 4,
-      label: "Tópicos",
-      icon: TopicsIcon,
-      href: `/admin/events/${eventId}/edit/topics`,
-    },
-    {
-      step: 5,
       label: "Questionário",
       icon: QuestionIcon,
       href: `/admin/events/${eventId}/edit/questionnaire`,
     },
     {
-      step: 6,
+      step: 5,
       label: "Pagamento",
       icon: FinancialStepIcon,
       href: `/admin/events/${eventId}/edit/financial`,

@@ -129,7 +129,6 @@ export function getOptOutOption<V extends VariationLike>(
   return { id: variationOptionId(product.id, flat[index], index), variation: flat[index] };
 }
 
-/** Recusou o kit INTEIRO: "Sem interesse" sem nenhuma opção real escolhida. */
 /**
  * "Sem interesse" que o checkout OFERECE: kit obrigatório nunca tem a opção (mesmo que
  * sobre uma opção antiga no banco). Leitura de inscrição continua com `getOptOutOption`.
@@ -140,23 +139,30 @@ export function offeredOptOutOption<V extends VariationLike>(
   return product.isRequired ? null : getOptOutOption(product);
 }
 
-export function isOptedOut(product: ProductWithVariationsLike, ids: readonly string[]): boolean {
-  const optOut = getOptOutOption(product);
-  if (!optOut || !ids.includes(optOut.id)) return false;
-  return !getVariationGroups(product).some((g) => groupSelection(g, ids));
+/**
+ * "Sem interesse" POR VARIAÇÃO (27/11): no estado do checkout cada variação recusada vira
+ * `<idDoOptOut>::<idDaVariação>` — assim recusar a Camisa não mexe no Short (que pode estar
+ * ainda sem resposta). Para a API vai o formato do back: opções reais + o id do opt-out
+ * (`toApiVariationIds`). Seleção vinda do back (opt-out "puro") = variações sem opção
+ * escolhida estão em "Sem interesse".
+ */
+export const GROUP_OPT_OUT_SEPARATOR = "::";
+
+export function groupOptOutId(optOutId: string, groupId: string): string {
+  return `${optOutId}${GROUP_OPT_OUT_SEPARATOR}${groupId}`;
 }
 
-/**
- * "Sem interesse" numa variação (27/11): cada select tem a opção. A seleção guarda as
- * opções reais + o id do opt-out; variação sem opção real escolhida = "Sem interesse".
- */
-export function isGroupOptedOut(
-  product: ProductWithVariationsLike,
-  ids: readonly string[],
-  group: VariationGroupView,
-): boolean {
-  const optOut = getOptOutOption(product);
-  return !!optOut && ids.includes(optOut.id) && !groupSelection(group, ids);
+/** Ids no formato da API: marcadores por variação viram o id do opt-out (uma vez, no fim). */
+export function toApiVariationIds(ids: readonly string[]): string[] {
+  const real: string[] = [];
+  const optOuts: string[] = [];
+  for (const id of ids) {
+    const sep = id.indexOf(GROUP_OPT_OUT_SEPARATOR);
+    const target = sep >= 0 ? optOuts : real;
+    const value = sep >= 0 ? id.slice(0, sep) : id;
+    if (!target.includes(value) && !real.includes(value) && !optOuts.includes(value)) target.push(value);
+  }
+  return [...real.filter((id) => !optOuts.includes(id)), ...optOuts];
 }
 
 /** Opção escolhida num grupo (ou `null`). */
@@ -167,28 +173,47 @@ export function groupSelection<V extends VariationLike>(
   return group.options.find((o) => ids.includes(o.id)) ?? null;
 }
 
+/** "Sem interesse" nessa variação (marcador dela, ou opt-out puro vindo do back e sem opção escolhida). */
+export function isGroupOptedOut(
+  product: ProductWithVariationsLike,
+  ids: readonly string[],
+  group: { id: string; options: VariationOptionView[] },
+): boolean {
+  const optOut = getOptOutOption(product);
+  if (!optOut || group.options.some((o) => ids.includes(o.id))) return false;
+  return ids.includes(groupOptOutId(optOut.id, group.id)) || ids.includes(optOut.id);
+}
+
+/** Recusou o kit INTEIRO: todas as variações em "Sem interesse" (sem variação: o opt-out puro). */
+export function isOptedOut(product: ProductWithVariationsLike, ids: readonly string[]): boolean {
+  const optOut = getOptOutOption(product);
+  if (!optOut) return false;
+  const groups = getVariationGroups(product);
+  if (groups.length === 0) return ids.includes(optOut.id);
+  return groups.every((g) => isGroupOptedOut(product, ids, g));
+}
+
 /**
- * Seleção normalizada: no máximo uma opção por grupo, na ordem dos grupos, e o opt-out
- * por último quando alguma variação ficou com "Sem interesse" (sozinho = recusa o kit).
- * Ids que não pertencem ao produto são descartados.
+ * Seleção normalizada (formato do checkout): por variação, na ordem, a opção escolhida ou o
+ * marcador de "Sem interesse"; variação sem resposta fica de fora. Sem variação: o opt-out
+ * puro. Ids que não pertencem ao produto são descartados.
  */
 export function normalizeSelection(product: ProductWithVariationsLike, ids: readonly string[]): string[] {
   const optOut = getOptOutOption(product);
   const groups = getVariationGroups(product);
+  if (groups.length === 0) return optOut && ids.includes(optOut.id) ? [optOut.id] : [];
   const out: string[] = [];
   for (const group of groups) {
     const picked = groupSelection(group, ids);
     if (picked) out.push(picked.id);
-  }
-  if (optOut && ids.includes(optOut.id) && (groups.length === 0 || out.length < groups.length)) {
-    out.push(optOut.id);
+    else if (optOut && isGroupOptedOut(product, ids, group)) out.push(groupOptOutId(optOut.id, group.id));
   }
   return out;
 }
 
 /**
- * Escolhe `optionId` no grupo `groupId`. O opt-out vale só para ESSA variação (as outras
- * continuam livres); variação que já estava em "Sem interesse" continua assim.
+ * Escolhe `optionId` (uma opção real ou o opt-out) no grupo `groupId`. Só ESSA variação muda:
+ * as outras mantêm a resposta que tinham (ou continuam sem resposta).
  */
 export function setGroupSelection(
   product: ProductWithVariationsLike,
@@ -200,16 +225,21 @@ export function setGroupSelection(
   const groups = getVariationGroups(product);
   const isOptOut = !!optOut && optionId === optOut.id;
   const target = groups.find((g) => g.id === groupId);
-  if (!isOptOut && (!target || !target.options.some((o) => o.id === optionId))) {
+  if (!target || (!isOptOut && !target.options.some((o) => o.id === optionId))) {
     return normalizeSelection(product, ids);
   }
+  const current = normalizeSelection(product, ids);
   const out: string[] = [];
   for (const group of groups) {
-    const picked = group.id === groupId ? (isOptOut ? null : optionId) : groupSelection(group, ids)?.id;
-    if (picked) out.push(picked);
+    if (group.id === groupId) {
+      out.push(isOptOut && optOut ? groupOptOutId(optOut.id, group.id) : optionId);
+      continue;
+    }
+    const picked = groupSelection(group, current);
+    if (picked) out.push(picked.id);
+    else if (optOut && isGroupOptedOut(product, current, group)) out.push(groupOptOutId(optOut.id, group.id));
   }
-  if (optOut && (isOptOut || ids.includes(optOut.id))) out.push(optOut.id);
-  return normalizeSelection(product, out);
+  return out;
 }
 
 /** Uma opção (ou "Sem interesse") por variação. Produto sem variação já está completo. */
@@ -283,12 +313,13 @@ export function buildVariationLabel(choices: ReadonlyArray<{ name: string; group
 export function selectionLabel(product: ProductWithVariationsLike, ids: readonly string[]): string {
   if (isOptedOut(product, ids)) return "";
   const optOut = getOptOutOption(product);
-  const hasOptOut = !!optOut && ids.includes(optOut.id);
   return buildVariationLabel(
     getVariationGroups(product).flatMap((group) => {
       const picked = groupSelection(group, ids);
       if (picked) return [{ name: picked.variation.name, groupName: group.name }];
-      return hasOptOut && optOut ? [{ name: optOut.variation.name, groupName: group.name }] : [];
+      return optOut && isGroupOptedOut(product, ids, group)
+        ? [{ name: optOut.variation.name, groupName: group.name }]
+        : [];
     }),
   );
 }

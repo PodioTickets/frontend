@@ -11,7 +11,6 @@ import { CheckIcon } from "@/components/Icons/CheckIcon";
 import { OrganizerInfoIcon } from "@/components/Icons/Organizer/InfoIcon";
 import { OrganizerTicketIcon } from "@/components/Icons/Organizer/TicketIcon";
 import { QuestionIcon } from "@/components/Icons/QuestionIcon";
-import { TopicsIcon } from "@/components/Icons/TopicsIcon";
 import { BannerIcon } from "@/components/Icons/Organizer/BannerIcon";
 import { FinancialStepIcon } from "@/components/Icons/Organizer/FinancialStepIcon";
 import { saveLastCreateEventWizardPath } from "@/lib/createEventWizardPersistence";
@@ -38,17 +37,21 @@ function ProgressBar() {
   const pathname = useOrganizerPathname();
   const resolveStepIndex = (): number => {
     if (pathname.startsWith("/organizer/events/new/information")) return 0;
-    if (pathname.startsWith("/organizer/events/new/banner")) return 1;
-    if (pathname.startsWith("/organizer/events/new/tickets")) return 2;
+    // Etapa "Página" = banner + tópicos (`/new/topics` só redireciona para ela).
     if (
-      pathname.startsWith("/organizer/events/new/topics") ||
+      pathname.startsWith("/organizer/events/new/banner") ||
+      pathname.startsWith("/organizer/events/new/topics")
+    )
+      return 1;
+    if (
+      pathname.startsWith("/organizer/events/new/tickets") ||
       pathname.startsWith("/organizer/events/new/preview-event") ||
       pathname.startsWith("/organizer/events/new/coupons") ||
       pathname.startsWith("/organizer/events/new/vouchers")
     )
-      return 3;
-    if (pathname.startsWith("/organizer/events/new/questionnaire")) return 4;
-    if (pathname.startsWith("/organizer/events/new/financial")) return 5;
+      return 2;
+    if (pathname.startsWith("/organizer/events/new/questionnaire")) return 3;
+    if (pathname.startsWith("/organizer/events/new/financial")) return 4;
     return -1;
   };
 
@@ -153,7 +156,7 @@ function ProgressBar() {
                   </div>
                 </div>
                 <p className="text-gray-12 text-base font-semibold font-manrope leading-[1.1] text-center whitespace-nowrap">
-                  Banner
+                  Página
                 </p>
               </div>
             );
@@ -223,45 +226,6 @@ function ProgressBar() {
                     {status === "completed" ? (
                       <CheckIcon className="size-5 text-white" />
                     ) : (
-                      <TopicsIcon
-                        className={`size-5 ${status === "active" ? "text-white" : "text-gray-12"
-                          }`}
-                      />
-                    )}
-                  </div>
-                </div>
-                <p className="text-gray-12 text-base font-semibold font-manrope leading-[1.1] text-center whitespace-nowrap">
-                  Tópicos
-                </p>
-              </div>
-            );
-          })()}
-
-          {(() => {
-            const status = getStepStatus(5);
-            return (
-              <div
-                className={stepLinkClass}
-              >
-                <div
-                  className={`rounded-[52px] size-12 p-1 flex items-center justify-center shrink-0 relative ${status === "completed"
-                    ? "border border-[#3e7949]"
-                    : status === "active"
-                      ? "border border-[#3a3a3a]"
-                      : ""
-                    }`}
-                >
-                  <div
-                    className={`rounded-[32px] size-full p-2 flex items-center justify-center ${status === "completed"
-                      ? "bg-[#3e7949]"
-                      : status === "active"
-                        ? "bg-[#3a3a3a]"
-                        : "bg-gray-6"
-                      }`}
-                  >
-                    {status === "completed" ? (
-                      <CheckIcon className="size-5 text-white" />
-                    ) : (
                       <QuestionIcon
                         className={`size-5 ${status === "active" ? "text-white" : "text-gray-12"
                           }`}
@@ -277,7 +241,7 @@ function ProgressBar() {
           })()}
 
           {(() => {
-            const status = getStepStatus(6);
+            const status = getStepStatus(5);
             return (
               <div
                 className={stepLinkClass}

@@ -101,7 +101,7 @@ export default function IngressosPage() {
         },
         { clientPage: "events/new/tickets" },
       );
-      orgNav.push("/organizer/events/new/topics");
+      orgNav.push("/organizer/events/new/questionnaire");
     } catch (e) {
       console.error(e);
       toast.error("Não foi possível salvar os ingressos.");

@@ -116,6 +116,12 @@ describe("buildParticipantsPatchPayload", () => {
 });
 
 describe("buildProductsPatchPayload", () => {
+  it("'Sem interesse' por variação vai no formato da API (opções reais + opt-out no fim)", () => {
+    const r = buildProductsPatchPayload([
+      { email: "a@x.com", productVariations: { kit: ["no::camisa", "s-g"] } },
+    ]);
+    expect(r.products[0]).toMatchObject({ productId: "kit", variationIds: ["s-g", "no"], variationId: "s-g" });
+  });
   it("agrega variações não-nulas por participante (quantity 1)", () => {
     const r = buildProductsPatchPayload([
       { email: "a@x.com", productVariations: { p1: "v1", p2: "v2" } },

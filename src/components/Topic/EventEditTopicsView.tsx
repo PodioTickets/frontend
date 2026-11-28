@@ -13,6 +13,8 @@ import toast from "react-hot-toast";
 import { Loading } from "@/components/Loading";
 import { SortableTopicsList } from "@/components/Topic/SortableTopicsList";
 import { scheduleTopicEditorPreload } from "@/lib/topicEditorLoader";
+import { uploadEventImage } from "@/lib/uploadEventImage";
+import { EventBannerField } from "@/components/Organizer/EventBannerField";
 import {
   buildTopicSectionsFromEvent,
   clearTopicsPreviewDraft,
@@ -26,19 +28,32 @@ import {
 } from "@/lib/eventTopicSections";
 
 /**
- * Tela de edição de Tópicos do evento, compartilhada entre admin e organizer.
- * Antes duplicada byte a byte (só diferiam o hook de navegação e o prefixo de
- * rota). O chamador injeta `navigate` + `eventBasePath` (ex.:
- * `/admin/events/<id>` ou `/organizer/events/<id>`).
+ * Etapa "Página" do evento (Figma 8248:176586): Banner + Tópicos numa tela só (antes
+ * eram 2 etapas). Compartilhada entre admin e organizer, na edição e na criação.
+ * O chamador injeta `navigate` + `eventBasePath` (ex.: `/admin/events/<id>`).
+ * "Salvar alterações" sobe o banner novo (se escolhido) e salva os tópicos.
  */
 export function EventEditTopicsView({
   eventId,
   navigate,
   eventBasePath,
+  banner,
+  previewHref = `${eventBasePath}/edit/topics/preview`,
+  leaveTarget = `${eventBasePath}/edit/tickets`,
+  backHref,
+  continueFlow,
 }: {
   eventId: string;
   navigate: (href: string) => void;
   eventBasePath: string;
+  /** Bloco do banner acima dos tópicos; `onUploaded` persiste a URL no evento. */
+  banner?: { url?: string | null; onUploaded: (url: string) => Promise<void> };
+  previewHref?: string;
+  /** Destino do "sair sem salvar" (próxima etapa). */
+  leaveTarget?: string;
+  backHref?: string;
+  /** Criação do evento: o botão principal salva tudo e AVANÇA para `leaveTarget` (sempre habilitado). */
+  continueFlow?: { label: string };
 }) {
   const { authChecked } = useWizardAuth();
   const { openTopicModal, setOnModalSave, setOnModalDelete } = useTopicModal();
@@ -52,6 +67,7 @@ export function EventEditTopicsView({
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [committedSectionsJson, setCommittedSectionsJson] = useState<string | null>(null);
+  const [pendingBanner, setPendingBanner] = useState<File | null>(null);
 
   useEffect(() => {
     const loadTopics = async () => {
@@ -87,14 +103,16 @@ export function EventEditTopicsView({
     loadTopics();
   }, [authChecked, eventId]);
 
-  const isDirty = useMemo(
+  const topicsDirty = useMemo(
     () =>
       committedSectionsJson !== null &&
       JSON.stringify(sections) !== committedSectionsJson,
     [sections, committedSectionsJson],
   );
+  const isDirty = topicsDirty || pendingBanner !== null;
 
   const discardLocalChanges = useCallback(() => {
+    setPendingBanner(null);
     if (committedSectionsJson == null) return;
     try {
       setSections(JSON.parse(committedSectionsJson) as TopicSectionRow[]);
@@ -110,7 +128,7 @@ export function EventEditTopicsView({
     beginNavigationAfterSave,
     dismissLeavePrompt,
   } = useUnsavedLeaveGuard(isDirty, {
-    navigateTarget: `${eventBasePath}/edit/tickets`,
+    navigateTarget: leaveTarget,
     onDiscard: discardLocalChanges,
   });
 
@@ -120,7 +138,31 @@ export function EventEditTopicsView({
     await organizerService.reorderEventTopics(eventId, mapped);
   };
 
+  /** Salva a etapa: sobe o banner pendente (se houver) e salva os tópicos alterados. */
   const handleSave = async (): Promise<boolean> => {
+    if (continueFlow && banner && !banner.url && !pendingBanner) {
+      toast.error("Selecione e ajuste o banner antes de continuar.");
+      return false;
+    }
+    if (pendingBanner && banner) {
+      setSaving(true);
+      try {
+        const url = await uploadEventImage(pendingBanner);
+        await banner.onUploaded(url);
+        setPendingBanner(null);
+      } catch (error: unknown) {
+        toast.error(error instanceof Error ? error.message : "Erro ao fazer upload do banner");
+        setSaving(false);
+        return false;
+      }
+      setSaving(false);
+    }
+    // Na criação sempre valida/salva (o tópico obrigatório precisa estar preenchido).
+    if (!topicsDirty && !continueFlow) return true;
+    return saveTopics();
+  };
+
+  const saveTopics = async (): Promise<boolean> => {
     if (!eventId) {
       toast.error("Evento não encontrado. Por favor, crie o evento primeiro.");
       return false;
@@ -236,6 +278,13 @@ export function EventEditTopicsView({
     } finally {
       setSaving(false);
     }
+  };
+
+  const handlePrimary = async () => {
+    const ok = await handleSave();
+    // `beginNavigationAfterSave` evita a corrida com o `history.back()` do guard de
+    // alterações (sem ele o 1º clique salvava e não avançava).
+    if (ok && continueFlow) beginNavigationAfterSave();
   };
 
   const handleSaveAndLeave = async () => {
@@ -421,9 +470,14 @@ export function EventEditTopicsView({
   return (
     <>
       <WizardStepLayout
-        title="Tópicos"
-        description="Adicione e organize seções de conteúdo que aparecem na página do evento."
+        title={banner ? "Página" : "Tópicos"}
+        description={
+          banner
+            ? "Banner e tópicos que o participante vê ao abrir o evento"
+            : "Adicione e organize seções de conteúdo que aparecem na página do evento."
+        }
         showDescriptionOnMobile
+        backHref={backHref}
         className="bg-gray-2 flex-1 pb-28 md:pb-44 md:px-[124px] pt-0 mt-0 min-w-0"
         maxWidth="max-w-[843px]"
         actions={
@@ -433,20 +487,22 @@ export function EventEditTopicsView({
               disabled={sections.length === 0}
               onClick={() => {
                 writeTopicsPreviewDraft({ v: 1, eventId, sections });
-                navigate(`${eventBasePath}/edit/topics/preview`);
+                navigate(previewHref);
               }}
               className="h-[52px] w-full border-gray-6 font-manrope text-base font-bold text-gray-12 max-md:h-12 md:w-auto md:px-11 md:text-[20px] disabled:cursor-not-allowed disabled:opacity-50"
             >
               Prévia
             </Button>
             <Button
-              onClick={() => void handleSave()}
-              disabled={saving || loading || !isDirty}
+              onClick={() => void handlePrimary()}
+              disabled={saving || loading || (!continueFlow && !isDirty)}
               className="h-[52px] w-full font-manrope text-base font-bold max-md:h-12 disabled:cursor-not-allowed disabled:opacity-50 md:w-auto md:px-11 md:text-[20px]"
             >
               {saving
                 ? "Salvando..."
-                : (
+                : continueFlow
+                  ? continueFlow.label
+                  : (
                   <>
                     <span className="md:hidden">Confirmar informações</span>
                     <span className="hidden md:inline">Salvar alterações</span>
@@ -457,6 +513,21 @@ export function EventEditTopicsView({
         }
       >
         <div className="flex min-w-0 w-full max-w-full flex-col items-stretch px-0 max-md:px-05">
+          {banner && (
+            <>
+              <EventBannerField
+                bannerUrl={banner.url}
+                pendingFile={pendingBanner}
+                onPendingFileChange={setPendingBanner}
+              />
+              <div className="flex flex-col gap-3 pb-6">
+                <h2 className="font-manrope text-xl font-bold leading-[1.1] text-gray-12">Tópicos</h2>
+                <p className="font-family-dm-sans text-sm leading-[1.3] text-gray-11 md:text-base">
+                  Blocos de texto que aparecem abaixo do banner, na ordem em que você criar
+                </p>
+              </div>
+            </>
+          )}
           <SortableTopicsList
             topics={sections}
             onReorder={handleTopicsReorder}
@@ -471,7 +542,7 @@ export function EventEditTopicsView({
             >
               <Plus className="size-5 shrink-0" />
               <span className="md:hidden">Adicione mais um tópico</span>
-              <span className="hidden md:inline">Adicionar tópico</span>
+              <span className="hidden md:inline">{banner ? "Adicione mais um tópico" : "Adicionar tópico"}</span>
             </Button>
           </div>
         </div>
@@ -481,7 +552,11 @@ export function EventEditTopicsView({
         open={leavePromptOpen}
         onClose={dismissLeavePrompt}
         title="Alterações não salvas"
-        description="Você fez alterações nos tópicos. Se sair agora, elas serão perdidas."
+        description={
+          banner
+            ? "Você fez alterações no banner ou nos tópicos. Se sair agora, elas serão perdidas."
+            : "Você fez alterações nos tópicos. Se sair agora, elas serão perdidas."
+        }
         onSaveAndLeave={handleSaveAndLeave}
         onLeaveWithoutSaving={confirmLeaveWithoutSaving}
       />

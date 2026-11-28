@@ -14,6 +14,7 @@ import {
   normalizeSelection,
   selectionIds,
   setGroupSelection,
+  toApiVariationIds,
 } from "@/lib/productVariationGroups";
 
 export interface SwapParticipantInfo {
@@ -94,8 +95,9 @@ export function buildSwapProductsPayload(
 ): Array<{ productId: string; variationIds: string[]; variationId: string }> {
   const out: Array<{ productId: string; variationIds: string[]; variationId: string }> = [];
   for (const p of products) {
-    const variationIds = effectiveSwapSelection(p, selected);
-    if (variationIds.length > 0 && isSelectionComplete(p, variationIds)) {
+    const ids = effectiveSwapSelection(p, selected);
+    if (ids.length > 0 && isSelectionComplete(p, ids)) {
+      const variationIds = toApiVariationIds(ids);
       out.push({ productId: p.id, variationIds, variationId: variationIds[0] });
     }
   }

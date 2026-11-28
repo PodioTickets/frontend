@@ -49,7 +49,7 @@ export default function QuestionnairePage() {
   }, [setOnModalSave, loadQuestions]);
 
   const handleBack = () => {
-    orgNav.push("/organizer/events/new/topics");
+    orgNav.push("/organizer/events/new/tickets");
   };
 
   const handleCreateQuestion = () => {

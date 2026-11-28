@@ -30,7 +30,6 @@ import { ThreePointsIcon } from "@/components/Icons/Organizer/ThreePointsIcon";
 import { OrganizerInfoIcon } from "@/components/Icons/Organizer/InfoIcon";
 import { OrganizerTicketIcon } from "@/components/Icons/Organizer/TicketIcon";
 import { BannerIcon } from "@/components/Icons/Organizer/BannerIcon";
-import { TopicsIcon } from "@/components/Icons/TopicsIcon";
 import { QuestionIcon } from "@/components/Icons/QuestionIcon";
 import { FinancialStepIcon } from "@/components/Icons/Organizer/FinancialStepIcon";
 import {
@@ -995,7 +994,7 @@ export default function OrganizerEventsPage() {
                                   className="px-3 py-2.5 text-sm font-family-dm-sans rounded-md hover:bg-gray-3 text-gray-12 flex items-center gap-2"
                                 >
                                   <BannerIcon className="size-4 text-gray-11" />
-                                  Banner
+                                  Página
                                 </Link>
                                 <Link
                                   href={`/organizer/events/${event.id}/edit/tickets`}
@@ -1004,14 +1003,6 @@ export default function OrganizerEventsPage() {
                                 >
                                   <OrganizerTicketIcon className="size-4 text-gray-11" />
                                   Ingressos
-                                </Link>
-                                <Link
-                                  href={`/organizer/events/${event.id}/edit/topics`}
-                                  onClick={() => setMobileEditMenuOpenForId(null)}
-                                  className="px-3 py-2.5 text-sm font-family-dm-sans rounded-md hover:bg-gray-3 text-gray-12 flex items-center gap-2"
-                                >
-                                  <TopicsIcon className="size-4 text-gray-11" />
-                                  Tópicos
                                 </Link>
                                 <Link
                                   href={`/organizer/events/${event.id}/edit/questionnaire`}

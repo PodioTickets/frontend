@@ -138,7 +138,7 @@ export default function EditQuestionnairePage() {
     beginNavigationAfterSave,
     dismissLeavePrompt,
   } = useUnsavedLeaveGuard(isDirty, {
-    navigateTarget: `/admin/events/${eventId}/edit/topics`,
+    navigateTarget: `/admin/events/${eventId}/edit/tickets`,
     onDiscard: discardLocalChanges,
   });
 

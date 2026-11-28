@@ -49,9 +49,8 @@ export function getDiscountOptions(eventId: string, onLinkClick?: () => void): E
 export function getEditStepOptions(eventId: string, onLinkClick?: () => void): EventTabStripOption[] {
   return [
     { id: "informacoes", label: "Informações", href: `/organizer/events/${eventId}/edit`, onClick: onLinkClick },
-    { id: "banner", label: "Banner", href: `/organizer/events/${eventId}/edit/banner`, onClick: onLinkClick },
+    { id: "banner", label: "Página", href: `/organizer/events/${eventId}/edit/banner`, onClick: onLinkClick },
     { id: "ingressos", label: "Ingressos", href: `/organizer/events/${eventId}/edit/tickets`, onClick: onLinkClick },
-    { id: "topicos", label: "Tópicos", href: `/organizer/events/${eventId}/edit/topics`, onClick: onLinkClick },
     { id: "questionario", label: "Questionário", href: `/organizer/events/${eventId}/edit/questionnaire`, onClick: onLinkClick },
     // Espelha o passo 6 do `EditProgressBar`. Rótulo "Pagamento" segue o stepper do
     // organizador (o admin usa "Financeiro" no menu equivalente).

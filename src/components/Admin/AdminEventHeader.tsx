@@ -34,9 +34,8 @@ function getDiscountOptions(eventId: string): EventTabStripOption[] {
 function getEditStepOptions(eventId: string): EventTabStripOption[] {
   return [
     { id: "informacoes", label: "Informações", href: `/admin/events/${eventId}/edit` },
-    { id: "banner", label: "Banner", href: `/admin/events/${eventId}/edit/banner` },
+    { id: "banner", label: "Página", href: `/admin/events/${eventId}/edit/banner` },
     { id: "ingressos", label: "Ingressos", href: `/admin/events/${eventId}/edit/tickets` },
-    { id: "topicos", label: "Tópicos", href: `/admin/events/${eventId}/edit/topics` },
     { id: "questionario", label: "Questionário", href: `/admin/events/${eventId}/edit/questionnaire` },
     // Menu do admin usa "Financeiro" (o organizador chama de "Pagamento" no passo equivalente).
     { id: "financeiro-edit", label: "Financeiro", href: `/admin/events/${eventId}/edit/financial` },

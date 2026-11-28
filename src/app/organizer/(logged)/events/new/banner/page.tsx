@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useEffect, useRef } from "react";
+import toast from "react-hot-toast";
 import { useOrganizerNavigate } from "@/hooks/useOrganizerNavigate";
 import { useOrganizerAppSurface } from "@/contexts/OrganizerAppSurfaceContext";
 import { organizerExternalHref } from "@/lib/organizerPathPresentation";
@@ -8,17 +9,10 @@ import { organizerService } from "@/services";
 import { useWizardAuth } from "@/hooks/useWizardAuth";
 import { useCreateEvent } from "@/contexts/CreateEventContext";
 import { useAuth } from "@/hooks/useAuth";
-import { useOrganizerPermissions } from "@/contexts/OrganizerPermissionsContext";
 import { Loading } from "@/components/Loading";
-import { BannerSection, type BannerSectionOrganizerData } from "@/components/Organizer/BannerSection";
-import { WizardStepLayout } from "@/components/Organizer/WizardStepLayout";
-import {
-  composeRegistrationDateTime,
-  ensureCreateEventSyncedFromDraft,
-} from "@/lib/createEventDraftSync";
+import { EventEditTopicsView } from "@/components/Topic/EventEditTopicsView";
+import { ensureCreateEventSyncedFromDraft } from "@/lib/createEventDraftSync";
 import { organizerNewEventClientPage } from "@/lib/organizerAudit";
-import { getAvatarUrl } from "@/utils/avatar";
-import toast from "react-hot-toast";
 
 function readStoredCreatedEventId(): string | null {
   if (typeof window === "undefined") return null;
@@ -35,14 +29,17 @@ function readStoredCreatedEventId(): string | null {
   }
 }
 
+/**
+ * Etapa "Página" (Banner + Tópicos) da criação do evento. O evento já existe aqui
+ * (a etapa Informações cria o rascunho); os tópicos precisam dele.
+ */
 export default function BannerPage() {
   const orgNav = useOrganizerNavigate();
   const appSurface = useOrganizerAppSurface();
-  const { isAuthenticated, user } = useAuth();
-  const { organization: org } = useOrganizerPermissions();
+  const { isAuthenticated } = useAuth();
   const { formData, updateFormData } = useCreateEvent();
   const { authChecked } = useWizardAuth();
-  const [syncingEvent, setSyncingEvent] = useState(false);
+  const syncStartedRef = useRef(false);
 
   useEffect(() => {
     if (authChecked && !isAuthenticated) {
@@ -50,62 +47,32 @@ export default function BannerPage() {
     }
   }, [authChecked, isAuthenticated, orgNav]);
 
+  // Rascunho sem id no contexto: tenta o salvo; se não houver, cria a partir do rascunho
+  // (antes isso só acontecia no "Próximo" desta etapa — os tópicos precisam do evento).
   useEffect(() => {
-    if (!authChecked || formData.createdEventId) return;
+    if (!authChecked || formData.createdEventId || syncStartedRef.current) return;
     const fromStorage = readStoredCreatedEventId();
-    if (fromStorage) updateFormData({ createdEventId: fromStorage });
-  }, [authChecked, formData.createdEventId, updateFormData]);
+    if (fromStorage) {
+      updateFormData({ createdEventId: fromStorage });
+      return;
+    }
+    syncStartedRef.current = true;
+    ensureCreateEventSyncedFromDraft({ formData, updateFormData }).catch((error: unknown) => {
+      toast.error(error instanceof Error ? error.message : "Erro ao criar o evento. Tente novamente.");
+    });
+  }, [authChecked, formData, updateFormData]);
+
+  const eventId = formData.createdEventId;
 
   const handleBannerUploaded = async (url: string) => {
     updateFormData({ bannerUrl: url });
-    const draftId = formData.createdEventId;
-    if (draftId) {
-      await organizerService.updateEvent(draftId, { bannerUrl: url }, { clientPage: organizerNewEventClientPage("banner") });
+    if (eventId) {
+      await organizerService.updateEvent(eventId, { bannerUrl: url }, { clientPage: organizerNewEventClientPage("banner") });
       toast.success("Banner enviado com sucesso!");
-    } else {
-      toast.success("Banner salvo no rascunho.");
     }
   };
 
-  const handleNext = async () => {
-    if (!formData.createdEventId) {
-      setSyncingEvent(true);
-      try {
-        await ensureCreateEventSyncedFromDraft({ formData, updateFormData });
-        toast.success("Evento criado. Continue com os ingressos.");
-      } catch (error: unknown) {
-        const message = error instanceof Error ? error.message : "Erro ao criar o evento. Tente novamente.";
-        toast.error(message);
-        return;
-      } finally {
-        setSyncingEvent(false);
-      }
-    }
-    orgNav.push("/organizer/events/new/tickets");
-  };
-
-  // Card de organizador na prévia mostra o NOME FANTASIA (tradeName), igual aos
-  // fluxos de edição/review (que derivam de `getEventOrganizer(event)`). Antes o
-  // create usava o nome do usuário (conta) → card exibia o nome errado.
-  // Precedência: nome fantasia → razão social → nome do usuário (fallback).
-  const userName =
-    [user?.firstName, user?.lastName].filter(Boolean).join(" ").trim() ||
-    user?.firstName?.trim() ||
-    "";
-
-  const organizer: BannerSectionOrganizerData = {
-    name: org?.tradeName?.trim() || org?.name?.trim() || userName || "Organizador",
-    logoSrc: org?.logoUrl
-      ? getAvatarUrl(org.logoUrl)
-      : user?.avatarUrl
-        ? getAvatarUrl(user.avatarUrl)
-        : null,
-    document: org?.document ?? user?.documentNumber,
-  };
-
-  const backHref = organizerExternalHref("/organizer/events/new/information", appSurface);
-
-  if (!authChecked) {
+  if (!authChecked || !eventId) {
     return (
       <div className="flex min-h-screen items-center justify-center">
         <Loading />
@@ -114,50 +81,15 @@ export default function BannerPage() {
   }
 
   return (
-    // `pb-5` no mobile (e não o `pb-28` das outras etapas): esta etapa NÃO
-    // passa `actions`, então não existe barra fixa no rodapé para o padding
-    // compensar — ele só deixava uma faixa vazia no fim da página.
-    <WizardStepLayout
-      title="Banner"
-      description="Imagens principais do evento que aparecem na página pública."
-      showDescriptionOnMobile
-      stickyMobileHeader
-      backHref={backHref}
-      className="bg-gray-2 flex-1 pb-5 md:pb-44 md:px-[124px] pt-0 -mx-4 md:mx-0 md:pt-10 min-w-0"
-      maxWidth="max-w-[1060px]"
-    >
-      <BannerSection
-        bannerUrl={formData.bannerUrl}
-        eventName={formData.name}
-        // Data e hora ficam SEPARADAS no form; sem compor, o card da prévia perde o
-        // "às HH:MM" que a tela do evento mostra. Mesmo helper do save.
-        eventDate={composeRegistrationDateTime(formData.eventDate, formData.eventTime)}
-        // O form guarda data e hora SEPARADAS; o card lê o ISO do `Event`. Compomos
-        // com o mesmo helper do save pra prévia e evento salvo baterem.
-        registrationStartDate={composeRegistrationDateTime(
-          formData.registrationStartDate,
-          formData.registrationStartTime,
-        )}
-        registrationEndDate={composeRegistrationDateTime(
-          formData.registrationEndDate,
-          formData.registrationEndTime,
-        )}
-        street={formData.street}
-        locationName={formData.locationName}
-        city={formData.city}
-        state={formData.state}
-        socialLinks={{
-          instagram: formData.instagram,
-          facebook: formData.facebook,
-          youtube: formData.youtube,
-          tiktok: formData.tiktok,
-          website: formData.website,
-        }}
-        organizer={organizer}
-        onBannerUploaded={handleBannerUploaded}
-        onNext={handleNext}
-        nextLoading={syncingEvent}
-      />
-    </WizardStepLayout>
+    <EventEditTopicsView
+      eventId={eventId}
+      navigate={(href) => orgNav.push(href)}
+      eventBasePath={`/organizer/events/${eventId}`}
+      banner={{ url: formData.bannerUrl, onUploaded: handleBannerUploaded }}
+      previewHref="/organizer/events/new/topics/preview"
+      leaveTarget="/organizer/events/new/tickets"
+      backHref={organizerExternalHref("/organizer/events/new/information", appSurface)}
+      continueFlow={{ label: "Salvar e continuar" }}
+    />
   );
 }

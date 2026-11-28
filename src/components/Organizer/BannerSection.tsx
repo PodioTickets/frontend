@@ -4,7 +4,7 @@ import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import Image from "next/image";
 import { EventPublicInfoCardDesktop } from "@/components/Event/EventPublicInfoCard";
 import type { Event } from "@/interfaces/event";
-import { surfaceHeader } from "@/lib/authSurface";
+import { uploadEventImage } from "@/lib/uploadEventImage";
 import { Button } from "@/components/Button";
 import { ArrowButton } from "@/components/ArrowButton";
 import {
@@ -205,40 +205,7 @@ export function BannerSection({
     socialLinks?.website,
   ]);
 
-  const uploadImageFile = useCallback(async (file: File): Promise<string> => {
-    const apiUrl = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:3333").replace(/\/$/, "");
-
-    const fd = new FormData();
-    fd.append("file", file);
-    // Auth por cookie httpOnly: `credentials: "include"`; 401 cai no !ok abaixo.
-    // `X-PT-Surface` declara a superfície (fetch cru não passa pelo ApiClient).
-    const response = await fetch(`${apiUrl}/api/v1/upload/image`, {
-      method: "POST",
-      credentials: "include",
-      headers: surfaceHeader(),
-      body: fd,
-    });
-
-    let result: Record<string, unknown> = {};
-    try { result = JSON.parse(await response.text()) as Record<string, unknown>; } catch { /* empty */ }
-
-    if (!response.ok) {
-      throw new Error(
-        (result.message as string) ||
-        ((result.error as { message?: string })?.message) ||
-        "Erro ao fazer upload"
-      );
-    }
-
-    const nested = result.data as Record<string, unknown> | undefined;
-    let url: string | undefined =
-      (result.imageUrl as string) || (result.url as string) ||
-      (nested?.url as string) || (nested?.imageUrl as string) ||
-      Object.values(result).find((v): v is string => typeof v === "string" && (v.startsWith("http") || v.startsWith("/")));
-
-    if (!url) throw new Error("Resposta do servidor inválida — URL não encontrada");
-    return url.startsWith("http") ? url : `${apiUrl}${url.startsWith("/") ? "" : "/"}${url}`;
-  }, []);
+  const uploadImageFile = uploadEventImage;
 
   const applyCroppedBanner = useCallback((file: File) => {
     setSelectedBannerFile(file);

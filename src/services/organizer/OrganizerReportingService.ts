@@ -1,6 +1,7 @@
 import type { Event } from "@/interfaces/event";
 import type { AnticipationQuote } from "@/utils/anticipation";
 import { OrganizerServiceBase } from "./OrganizerServiceBase";
+import { toApiVariationIds } from "@/lib/productVariationGroups";
 import type {
   CreateOrganizerRequest,
   Organizer,
@@ -828,7 +829,7 @@ export class OrganizerReportingService extends OrganizerServiceBase {
     productId: string,
     variation: string | string[],
   ): Promise<Registration> {
-    const variationIds = Array.isArray(variation) ? variation : [variation];
+    const variationIds = toApiVariationIds(Array.isArray(variation) ? variation : [variation]);
     const { data: response } = await this.apiClient.patch<{
       data: { registration: Registration };
     }>(

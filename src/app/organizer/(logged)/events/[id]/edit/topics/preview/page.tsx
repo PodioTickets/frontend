@@ -68,7 +68,7 @@ export default function EditFlowEventPreviewPage() {
   }, [authChecked, eventId]);
 
   const handleBack = () => {
-    orgNav.push(`/organizer/events/${eventId}/edit/topics`);
+    orgNav.push(`/organizer/events/${eventId}/edit/banner`);
   };
 
   if (!authChecked || loading) {

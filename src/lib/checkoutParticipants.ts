@@ -1,7 +1,7 @@
 import { isBrazilianCountry } from "@/validators/Auth.validator";
 import { getPhoneDigitsForBackend } from "@/utils/phone";
 import type { ProductVariationSelection } from "@/components/Checkout/SubscriptionStep.utils";
-import { selectionIds } from "@/lib/productVariationGroups";
+import { selectionIds, toApiVariationIds } from "@/lib/productVariationGroups";
 
 /**
  * Builder ÚNICO do payload de `PATCH /orders/:id/participants`. Compartilhado
@@ -261,9 +261,11 @@ export function buildProductsPatchPayload(
   participants.forEach((p, participantIndex) => {
     if (!p.productVariations) return;
     Object.entries(p.productVariations).forEach(([productId, selection]) => {
-      const variationIds = selectionIds(selection);
-      if (variationIds.length === 0) return;
-      if (isComplete && !isComplete(productId, variationIds)) return;
+      const ids = selectionIds(selection);
+      if (ids.length === 0) return;
+      if (isComplete && !isComplete(productId, ids)) return;
+      // "Sem interesse" por variação (marcadores do checkout) → formato da API.
+      const variationIds = toApiVariationIds(ids);
       products.push({
         productId,
         variationIds,

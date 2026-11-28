@@ -23,18 +23,13 @@ function getNextIncompleteStep(event: any, ticketCount: number): string {
     topics.some((t: any) => !t.isDefault) ||
     topics.some((t: any) => typeof t.content === "string" && t.content.trim().length > 0);
 
-  // Tópicos configurados → info + banner + ingressos já foram feitos
+  // Página feita (banner + tópicos) → ingressos; com ingressos → questionário.
   if (hasBanner && hasConfiguredTopics) {
+    if (ticketCount === 0) return "/organizer/events/new/tickets";
     return "/organizer/events/new/questionnaire";
   }
 
-  // Banner existe → info já foi feita; verifica ingressos
-  if (hasBanner) {
-    if (ticketCount === 0) return "/organizer/events/new/tickets";
-    return "/organizer/events/new/topics";
-  }
-
-  // Nome existe → info já foi feita; vai para banner
+  // Nome existe → info já foi feita; vai para a Página (banner + tópicos)
   if (typeof event.name === "string" && event.name.trim().length > 0) {
     return "/organizer/events/new/banner";
   }
@@ -51,7 +46,6 @@ const WIZARD_STEP_ORDER = [
   "/organizer/events/new/information",
   "/organizer/events/new/banner",
   "/organizer/events/new/tickets",
-  "/organizer/events/new/topics",
   "/organizer/events/new/questionnaire",
   "/organizer/events/new/financial",
 ] as const;

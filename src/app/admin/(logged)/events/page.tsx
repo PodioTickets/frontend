@@ -22,7 +22,6 @@ import { ThreePointsIcon } from "@/components/Icons/Organizer/ThreePointsIcon";
 import { OrganizerInfoIcon } from "@/components/Icons/Organizer/InfoIcon";
 import { OrganizerTicketIcon } from "@/components/Icons/Organizer/TicketIcon";
 import { BannerIcon } from "@/components/Icons/Organizer/BannerIcon";
-import { TopicsIcon } from "@/components/Icons/TopicsIcon";
 import { QuestionIcon } from "@/components/Icons/QuestionIcon";
 import { FinancialStepIcon } from "@/components/Icons/Organizer/FinancialStepIcon";
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
@@ -289,19 +288,13 @@ export default function AdminEventsPage() {
               <DropdownMenu.Item asChild>
                 <Link href={`/admin/events/${ev.id}/edit/banner`} className="flex items-center gap-2 px-3 py-2.5 text-sm font-family-dm-sans rounded-md hover:bg-gray-3 text-gray-12 cursor-pointer outline-none">
                   <BannerIcon className="size-4 text-gray-11" />
-                  Banner
+                  Página
                 </Link>
               </DropdownMenu.Item>
               <DropdownMenu.Item asChild>
                 <Link href={`/admin/events/${ev.id}/edit/tickets`} className="flex items-center gap-2 px-3 py-2.5 text-sm font-family-dm-sans rounded-md hover:bg-gray-3 text-gray-12 cursor-pointer outline-none">
                   <OrganizerTicketIcon className="size-4 text-gray-11" />
                   Ingressos
-                </Link>
-              </DropdownMenu.Item>
-              <DropdownMenu.Item asChild>
-                <Link href={`/admin/events/${ev.id}/edit/topics`} className="flex items-center gap-2 px-3 py-2.5 text-sm font-family-dm-sans rounded-md hover:bg-gray-3 text-gray-12 cursor-pointer outline-none">
-                  <TopicsIcon className="size-4 text-gray-11" />
-                  Tópicos
                 </Link>
               </DropdownMenu.Item>
               <DropdownMenu.Item asChild>

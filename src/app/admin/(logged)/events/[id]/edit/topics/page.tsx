@@ -1,18 +1,17 @@
 "use client";
 
+import { useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { EventEditTopicsView } from "@/components/Topic/EventEditTopicsView";
+import { Loading } from "@/components/Loading";
 
-export default function EditTopicsPage() {
+/** Tópicos agora ficam na etapa "Página" (`/edit/banner`); link antigo redireciona. */
+export default function EditTopicsRedirect() {
   const router = useRouter();
-  const params = useParams();
-  const eventId = params.id as string;
+  const eventId = useParams().id as string;
 
-  return (
-    <EventEditTopicsView
-      eventId={eventId}
-      navigate={(href) => router.push(href)}
-      eventBasePath={`/admin/events/${eventId}`}
-    />
-  );
+  useEffect(() => {
+    router.replace(`/admin/events/${eventId}/edit/banner`);
+  }, [router, eventId]);
+
+  return <Loading />;
 }

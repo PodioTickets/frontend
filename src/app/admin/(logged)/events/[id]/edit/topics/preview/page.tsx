@@ -67,7 +67,7 @@ export default function EditFlowEventPreviewPage() {
   }, [authChecked, eventId]);
 
   const handleBack = () => {
-    router.push(`/admin/events/${eventId}/edit/topics`);
+    router.push(`/admin/events/${eventId}/edit/banner`);
   };
 
   if (!authChecked || loading) {

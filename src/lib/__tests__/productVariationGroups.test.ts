@@ -5,7 +5,9 @@ import {
   buildVariationLabel,
   getOptOutOption,
   getVariationGroups,
+  isGroupOptedOut,
   isOptedOut,
+  toApiVariationIds,
   isSelectionComplete,
   normalizeSelection,
   productOffersChoice,
@@ -89,22 +91,30 @@ describe("seleção por variação", () => {
     ids = setGroupSelection(kit, ids, "camisa", "c-m");
     expect(ids).toEqual(["c-m", "s-g"]);
   });
-  it("'Sem interesse' vale só para a variação escolhida; as outras continuam livres (27/11)", () => {
-    const camisaNao = setGroupSelection(kit, ["c-m", "s-g"], "camisa", "no");
-    expect(camisaNao).toEqual(["s-g", "no"]);
-    expect(isSelectionComplete(kit, camisaNao)).toBe(true);
+  it("'Sem interesse' vale só para a variação escolhida; as outras não mudam sozinhas (27/11)", () => {
+    // Bug relatado: recusar a Camisa com o Short ainda vazio virava "Sem interesse" no Short também.
+    const camisaNao = setGroupSelection(kit, [], "camisa", "no");
+    expect(camisaNao).toEqual(["no::camisa"]);
+    expect(isGroupOptedOut(kit, camisaNao, getVariationGroups(kit)[1])).toBe(false);
+    expect(isSelectionComplete(kit, camisaNao)).toBe(false);
     expect(isOptedOut(kit, camisaNao)).toBe(false);
-    expect(selectionLabel(kit, camisaNao)).toBe("Tamanho da camisa: Sem interesse · Tamanho do short: G");
-    // As duas em "Sem interesse" = kit recusado inteiro.
-    const tudoNao = setGroupSelection(kit, camisaNao, "short", "no");
-    expect(tudoNao).toEqual(["no"]);
+    // Short escolhido depois: Camisa continua "Sem interesse".
+    const comShort = setGroupSelection(kit, camisaNao, "short", "s-g");
+    expect(comShort).toEqual(["no::camisa", "s-g"]);
+    expect(isSelectionComplete(kit, comShort)).toBe(true);
+    expect(selectionLabel(kit, comShort)).toBe("Tamanho da camisa: Sem interesse · Tamanho do short: G");
+    expect(toApiVariationIds(comShort)).toEqual(["s-g", "no"]);
+    // As duas em "Sem interesse" = kit recusado inteiro; para a API vai só o opt-out.
+    const tudoNao = setGroupSelection(kit, comShort, "short", "no");
     expect(isOptedOut(kit, tudoNao)).toBe(true);
-    // Escolher opção real numa variação: a outra segue em "Sem interesse".
-    const back = setGroupSelection(kit, tudoNao, "camisa", "c-p");
-    expect(back).toEqual(["c-p", "no"]);
-    expect(isSelectionComplete(kit, back)).toBe(true);
-    // Todas com opção real → o opt-out sai.
-    expect(setGroupSelection(kit, back, "short", "s-g")).toEqual(["c-p", "s-g"]);
+    expect(toApiVariationIds(tudoNao)).toEqual(["no"]);
+    // Opção real numa variação: a outra segue em "Sem interesse".
+    expect(setGroupSelection(kit, tudoNao, "camisa", "c-p")).toEqual(["c-p", "no::short"]);
+  });
+  it("seleção vinda do back (opt-out puro) = variações sem opção em 'Sem interesse'", () => {
+    expect(normalizeSelection(kit, ["s-g", "no"])).toEqual(["no::camisa", "s-g"]);
+    expect(isOptedOut(kit, ["no"])).toBe(true);
+    expect(setGroupSelection(kit, ["no"], "short", "s-g")).toEqual(["no::camisa", "s-g"]);
   });
   it("isSelectionComplete exige uma opção por variação", () => {
     expect(isSelectionComplete(kit, ["c-p"])).toBe(false);
@@ -113,7 +123,7 @@ describe("seleção por variação", () => {
   });
   it("normalizeSelection descarta ids estranhos e ordena", () => {
     expect(normalizeSelection(kit, ["s-g", "lixo", "c-m"])).toEqual(["c-m", "s-g"]);
-    expect(normalizeSelection(kit, ["no", "c-m"])).toEqual(["c-m", "no"]);
+    expect(normalizeSelection(kit, ["no::camisa", "lixo"])).toEqual(["no::camisa"]);
     expect(normalizeSelection(kit, ["c-m", "s-g", "no"])).toEqual(["c-m", "s-g"]);
   });
   it("selectionIds aceita o valor legado (string) do sessionStorage", () => {

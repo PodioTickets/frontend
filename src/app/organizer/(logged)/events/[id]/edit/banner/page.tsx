@@ -1,21 +1,19 @@
 "use client";
 
 import { useParams } from "next/navigation";
+import toast from "react-hot-toast";
 import { organizerService } from "@/services";
 import { useEditEvent } from "@/contexts/EditEventContext";
-import { BannerSection, type BannerSectionOrganizerData } from "@/components/Organizer/BannerSection";
-import { WizardStepLayout } from "@/components/Organizer/WizardStepLayout";
-import { composeRegistrationDateTime } from "@/lib/createEventDraftSync";
+import { useOrganizerNavigate } from "@/hooks/useOrganizerNavigate";
+import { EventEditTopicsView } from "@/components/Topic/EventEditTopicsView";
 import { organizerEventEditClientPage } from "@/lib/organizerAudit";
-import { getEventOrganizer } from "@/utils/organization";
-import { getAvatarUrl } from "@/utils/avatar";
-import type { Event } from "@/interfaces/event";
-import toast from "react-hot-toast";
 
+/** Etapa "Página" (Banner + Tópicos) da edição do evento. */
 export default function EditBannerPage() {
   const params = useParams();
   const eventId = params.id as string;
-  const { formData, updateFormData, event } = useEditEvent();
+  const orgNav = useOrganizerNavigate();
+  const { formData, updateFormData } = useEditEvent();
 
   const handleBannerUploaded = async (url: string) => {
     updateFormData({ bannerUrl: url });
@@ -23,48 +21,12 @@ export default function EditBannerPage() {
     toast.success("Banner enviado com sucesso!");
   };
 
-  const organizerPreview = event ? getEventOrganizer(event as Event) : null;
-  const org = event?.organization;
-  const orgTradeName = org?.tradeName?.trim() ?? null;
-  const orgLegalName = org?.name?.trim() ?? null;
-
-  const organizer: BannerSectionOrganizerData = {
-    name: organizerPreview?.name?.trim() || "Organização",
-    logoSrc: organizerPreview?.logoUrl ? getAvatarUrl(organizerPreview.logoUrl) : null,
-    showLegalSubtitle: Boolean(orgTradeName && orgLegalName && orgTradeName !== orgLegalName),
-    legalName: orgLegalName,
-    document: org?.document,
-  };
-
   return (
-    <WizardStepLayout
-      title="Banner"
-      description="Imagens principais do evento que aparecem na página pública."
-      showDescriptionOnMobile
-      className="bg-gray-2 flex-1 pb-5 -mx-4 md:px-5 pt-0 mt-0 min-w-0"
-      maxWidth="max-w-7xl"
-    >
-      <BannerSection
-        bannerUrl={formData.bannerUrl}
-        eventName={formData.name}
-        // Data e hora ficam SEPARADAS no form; sem compor, o card da prévia perde o
-        // "às HH:MM" que a tela do evento mostra. Mesmo helper do save.
-        eventDate={composeRegistrationDateTime(formData.eventDate, formData.eventTime)}
-        street={formData.street}
-        locationName={formData.locationName}
-        city={formData.city}
-        state={formData.state}
-        socialLinks={{
-          instagram: formData.instagram,
-          facebook: formData.facebook,
-          youtube: formData.youtube,
-          tiktok: formData.tiktok,
-          website: formData.website,
-        }}
-        organizer={organizer}
-        previewEvent={event as Event}
-        onBannerUploaded={handleBannerUploaded}
-      />
-    </WizardStepLayout>
+    <EventEditTopicsView
+      eventId={eventId}
+      navigate={(href) => orgNav.push(href)}
+      eventBasePath={`/organizer/events/${eventId}`}
+      banner={{ url: formData.bannerUrl, onUploaded: handleBannerUploaded }}
+    />
   );
 }

@@ -3,6 +3,7 @@ import type { CouponPreviewResult } from "@/lib/orderCouponDiscount";
 import type { AgeCouponEligibility } from "@/lib/ageCoupon";
 import { normalizeNationality } from "@/utils/nationality";
 import { serviceMessage } from "@/i18n/serviceMessages";
+import { toApiVariationIds } from "@/lib/productVariationGroups";
 
 /**
  * Dominio de dados do usuario (perfil, ingressos/pedidos, cupom/voucher preview,
@@ -240,7 +241,7 @@ export class UserService extends AuthService {
     productId: string,
     variation: string | string[]
   ): Promise<any> {
-    const variationIds = Array.isArray(variation) ? variation : [variation];
+    const variationIds = toApiVariationIds(Array.isArray(variation) ? variation : [variation]);
     try {
       const response = await this.apiClient.patch(
         `/api/v1/registrations/${registrationId}/products/${productId}/variation`,

@@ -17,6 +17,7 @@ import { useT } from "@/i18n/client";
 import type { ProductVariationSelection } from "./SubscriptionStep.utils";
 import {
   getOptOutOption,
+  isGroupOptedOut,
   getVariationGroups,
   groupSelection,
   selectionIds,
@@ -199,14 +200,15 @@ export function ParticipantSummaryModal({
     const fallbackTitle = product.variationType || null;
     const optOut = getOptOutOption(product);
     const groups = getVariationGroups(product);
-    const hasOptOut = !!optOut && ids.includes(optOut.id);
     if (groups.length === 0) {
-      return [{ key: "none", title: fallbackTitle, selected: hasOptOut && optOut ? optOut.variation : null }];
+      return [{ key: "none", title: fallbackTitle, selected: optOut && ids.includes(optOut.id) ? optOut.variation : null }];
     }
     return groups.map((group) => ({
       key: group.id,
       title: group.name ?? fallbackTitle,
-      selected: groupSelection(group, ids)?.variation ?? (hasOptOut && optOut ? optOut.variation : null),
+      selected:
+        groupSelection(group, ids)?.variation ??
+        (optOut && isGroupOptedOut(product, ids, group) ? optOut.variation : null),
     }));
   };
 

@@ -1,19 +1,18 @@
 "use client";
 
+import { useEffect } from "react";
 import { useParams } from "next/navigation";
 import { useOrganizerNavigate } from "@/hooks/useOrganizerNavigate";
-import { EventEditTopicsView } from "@/components/Topic/EventEditTopicsView";
+import { Loading } from "@/components/Loading";
 
-export default function EditTopicsPage() {
+/** Tópicos agora ficam na etapa "Página" (`/edit/banner`); link antigo redireciona. */
+export default function EditTopicsRedirect() {
   const orgNav = useOrganizerNavigate();
-  const params = useParams();
-  const eventId = params.id as string;
+  const eventId = useParams().id as string;
 
-  return (
-    <EventEditTopicsView
-      eventId={eventId}
-      navigate={(href) => orgNav.push(href)}
-      eventBasePath={`/organizer/events/${eventId}`}
-    />
-  );
+  useEffect(() => {
+    orgNav.replace(`/organizer/events/${eventId}/edit/banner`);
+  }, [orgNav, eventId]);
+
+  return <Loading />;
 }
