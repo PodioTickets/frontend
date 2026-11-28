@@ -7,6 +7,7 @@ import {
   autoSelectedVariationIds,
   buildAutoSelectedProductsPayload,
   withVariationlessProducts,
+  productShowsInStep,
 } from "../checkoutProductStep";
 
 /**
@@ -192,7 +193,27 @@ describe("withVariationlessProducts", () => {
     ]);
   });
 
+  it("escolha de produto que não é do ingresso do participante é descartada", () => {
+    const fora = { productId: "outro", variationIds: ["x"], variationId: "x", quantity: 1, participantEmail: "a@x.com", participantIndex: 0 };
+    expect(withVariationlessProducts([fora], slots, participants, () => [comVariacao])).toEqual([]);
+  });
+
   it("participante sem e-mail fica de fora", () => {
     expect(withVariationlessProducts([], slots, [{ email: "" }, {}], () => [semVariacao])).toEqual([]);
+  });
+});
+
+describe("productShowsInStep", () => {
+  it("kit obrigatório sem variação aparece na etapa (Sim travado); opcional sem nada não", () => {
+    expect(productShowsInStep(product({ id: "obr", isRequired: true, variationGroups: [] as never }))).toBe(true);
+    expect(productShowsInStep(product({ id: "opc", isRequired: false, variationGroups: [] as never }))).toBe(false);
+  });
+  it("obrigatório com variação de opção única continua fora (auto-selecionado)", () => {
+    const unico = product({
+      id: "u",
+      isRequired: true,
+      variationGroups: [{ id: "g", name: "Tam", variations: [{ id: "x", name: "U" }] }] as never,
+    });
+    expect(productShowsInStep(unico)).toBe(false);
   });
 });

@@ -4,6 +4,7 @@ import {
   autoSelectedVariationIds,
   getVariationGroups,
   isSelectionComplete,
+  productOffersChoice,
 } from "@/lib/productVariationGroups";
 
 /**
@@ -56,6 +57,15 @@ export function buildParticipantTicketSlots(
  * exibir a etapa de Produtos. Regra em `productVariationGroups`.
  */
 export { productOffersChoice } from "@/lib/productVariationGroups";
+
+/**
+ * O produto aparece na etapa de Produtos: tem escolha real, ou é kit obrigatório sem
+ * variação (card com "Quer receber este item?" travado em Sim — pedido 27/11). Só esse
+ * caso extra: obrigatório com variação de opção única continua auto-selecionado e pulado.
+ */
+export function productShowsInStep(product: Product): boolean {
+  return productOffersChoice(product) || (product.isRequired && getVariationGroups(product).length === 0);
+}
 
 /**
  * Opções auto-selecionadas para um produto (uma por variação de opção única),
@@ -136,6 +146,14 @@ export function withVariationlessProducts<T extends { productId: string; partici
   participants: Array<{ email?: string }>,
   getProductsForTicket: (ticketId: string) => Product[],
 ): Array<T | VariationlessProductItem> {
+  // Também descarta escolha de produto que não é (mais) do ingresso do participante — o back
+  // recusa o PATCH inteiro nesse caso (ex.: kit desvinculado no meio da compra, troca de ingresso).
+  const linked = new Set(
+    slots.flatMap((slot) => getProductsForTicket(slot.ticketId).map((p) => `${slot.participantIndex}:${p.id}`)),
+  );
+  chosen = chosen.filter(
+    (p) => typeof p.participantIndex !== "number" || linked.has(`${p.participantIndex}:${p.productId}`),
+  );
   const taken = new Set(chosen.map((p) => `${p.participantIndex}:${p.productId}`));
   const extra: VariationlessProductItem[] = [];
   for (const slot of slots) {
